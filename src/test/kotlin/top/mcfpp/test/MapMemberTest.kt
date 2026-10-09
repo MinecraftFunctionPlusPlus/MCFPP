@@ -5,7 +5,6 @@ import top.mcfpp.analysis.*
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.nbt.NBTMap
-import top.mcfpp.core.lang.nbt.NBTMapConcrete
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
@@ -28,8 +27,33 @@ class MapMemberTest {
     }
 
     @Test fun constantAndRuntimeMapsExposeTheSameMemberSignatures() {
-        compile("func main(){}")
-        assertSame(NBTMap.data, NBTMapConcrete.data)
+        val main = compile("""
+            func observe(values as map<int>) {}
+            func main(){ var known = {entries:[]} as map<int>; }
+        """)
+        val known = assertIs<NBTMap>(main.scope.getVar("known"))
+        val runtime = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("observe").single().scope.getVar("values")!!
+        assertNotNull(StorageAccess.snapshot(known))
+        assertNull(StorageAccess.snapshot(runtime))
+        assertSame(NBTMap.data, known.type.instanceData)
+        assertSame(NBTMap.data, runtime.type.instanceData)
+        for (name in listOf("size", "isEmpty", "toText")) {
+            val declarations = known.type.instanceData.scope.getFunctionCandidates(name)
+            val candidates = declarations.joinToString { "${it.identifier}<${(it as? top.mcfpp.model.function.NativeFunction)?.readOnlyParams.orEmpty()}>(${it.normalParams})" }
+            val member = assertIs<top.mcfpp.model.function.NativeFunction>(known.getMemberFunction(name, emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first, "Known $name; declarations: $candidates")
+            val runtimeMember = assertIs<top.mcfpp.model.function.NativeFunction>(runtime.getMemberFunction(name, emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first, "Runtime $name; declarations: $candidates")
+            fun declarationFor(value: NBTMap, resolved: top.mcfpp.model.function.NativeFunction): Function =
+                value.type.instanceData.scope.getFunctionCandidates(name).single { declaration ->
+                    val bound = (declaration as? top.mcfpp.model.function.NativeFunction)
+                        ?.replaceGenericParams(mapOf("E" to value.genericType))
+                    bound != null && bound.javaMethod == resolved.javaMethod &&
+                        top.mcfpp.model.function.ParameterMatcher.sameSignature(bound, resolved)
+                }
+            assertSame(declarationFor(known, member), declarationFor(assertIs<NBTMap>(runtime), runtimeMember), name)
+            assertTrue(top.mcfpp.model.function.ParameterMatcher.sameSignature(member, runtimeMember))
+            assertEquals(member.returnType.typeId, runtimeMember.returnType.typeId)
+            assertEquals(member.javaMethod, runtimeMember.javaMethod)
+        }
     }
 
     @Test fun overwritingAKeyKeepsOneEntryAndViewsShareWrites() {
@@ -190,7 +214,7 @@ class MapMemberTest {
         val before = binding.data.facts.fork()
         val commands = main.commands.analyzeAll().filterNot { it.startsWith("#") }
         Function.currFunction = main
-        top.mcfpp.backend.MapOperations.put(values, top.mcfpp.core.lang.nbt.MCStringConcrete(top.mcfpp.nbt.tags.primitive.StringTag("first")),
+        top.mcfpp.backend.MapOperations.put(values, top.mcfpp.core.lang.nbt.MCString(top.mcfpp.nbt.tags.primitive.StringTag("first")),
             MCFPPTypeVar(top.mcfpp.type.MCFPPBaseType.Int))
         assertTrue(Project.errorCount > 0)
         assertEquals(before, binding.data.facts)

@@ -1,15 +1,21 @@
 package top.mcfpp.test
 
+import org.apache.logging.log4j.core.LogEvent
+import org.apache.logging.log4j.core.Logger
+import org.apache.logging.log4j.core.appender.AbstractAppender
+import org.apache.logging.log4j.core.config.Property
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
-import top.mcfpp.analysis.ValueSnapshot
+import top.mcfpp.annotations.MNIFunction
+import top.mcfpp.annotations.MNIOperator
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.MCInt
-import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.io.DatapackCreator
+import top.mcfpp.io.MCFPPFile
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.property.NativeAccessor
@@ -44,10 +50,78 @@ class NativeTemplateCommandContractTest {
                 val function = NativeFunction(name, javaMethod = method).apply { returnType = MCFPPBaseType.Int }
                 val result = function.invoke(emptyList(), null)
                 assertTrue(result.isError, name)
-                assertNull(ValueSnapshot.of(result), name)
+                assertNull(top.mcfpp.analysis.StorageAccess.snapshot(result), name)
                 assertEquals(errors + 1, Project.errorCount, name)
                 assertEquals(before, main.commands.size, name)
             }
+        }
+
+        val logger = assertIs<Logger>(LogProcessor.logger)
+        val captured = arrayListOf<String>()
+        val appender = object : AbstractAppender("native-registration-contract", null, null, false, Property.EMPTY_ARRAY) {
+            override fun append(event: LogEvent) { captured.add(event.message.formattedMessage) }
+        }
+        appender.start()
+        try {
+            logger.addAppender(appender)
+            MCFPPStringTest.readFromString("func main(){}")
+            assertEquals(0, Project.errorCount)
+            val registrationMain = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
+            val commands = registrationMain.commands.toList()
+            val errors = Project.errorCount
+            val template = DataTemplate("NativeRegistration", "default.test")
+            captured.clear()
+            template.injectedBy(NativeRegistrationContractHelper::class.java)
+            val diagnostics = captured.joinToString("\n")
+            assertEquals(errors + 4, Project.errorCount, diagnostics)
+            assertEquals(4, Regex("must use NativeCallContext").findAll(diagnostics).count(), diagnostics)
+            for (name in listOf("legacyFree", "wrongSignature", "legacyUnary", "legacyBinary")) {
+                val diagnostic = "Method $name in class top.mcfpp.test.NativeRegistrationContractHelper must use NativeCallContext"
+                assertEquals(1, Regex(Regex.escape(diagnostic)).findAll(diagnostics).count(), diagnostics)
+                assertFalse(template.scope.functions.containsKey(name), name)
+            }
+            assertNull(template.getOperator("!", null))
+            assertNull(template.getOperator("+", MCFPPBaseType.Int))
+            val registered = assertIs<NativeFunction>(template.scope.functions.getValue("valid").single())
+            assertEquals(NativeRegistrationContractHelper::class.java.getMethod("valid", NativeCallContext::class.java), registered.javaMethod)
+            assertSame(template, registered.owner)
+            assertEquals(top.mcfpp.type.MCFPPPrivateType.Void, registered.caller)
+            assertEquals(top.mcfpp.type.MCFPPPrivateType.Void, registered.returnType)
+            assertTrue(registered.readOnlyParams.isEmpty())
+            assertTrue(registered.normalParams.isEmpty())
+            registrationMain.runInFunction { registered.invoke(emptyList(), null) }
+            assertEquals(errors + 4, Project.errorCount)
+            assertEquals(commands, registrationMain.commands)
+
+            captured.clear()
+            MCFPPStringTest.readFromString("""
+                func rejected() = top.mcfpp.test.NativeRegistrationContractHelper.legacyFree;
+                func accepted() = top.mcfpp.test.NativeRegistrationContractHelper.valid;
+                func main(){}
+            """.trimIndent())
+            val declarationDiagnostics = captured.joinToString("\n")
+            assertFalse(assertNotNull(MCFPPFile.currFile).syntaxError, declarationDiagnostics)
+            assertEquals(1, Project.errorCount, declarationDiagnostics)
+            val diagnostic = "Method legacyFree in class top.mcfpp.test.NativeRegistrationContractHelper must use NativeCallContext"
+            assertEquals(1, Regex(Regex.escape(diagnostic)).findAll(declarationDiagnostics).count(), declarationDiagnostics)
+            assertEquals(1, Regex("must use NativeCallContext").findAll(declarationDiagnostics).count(), declarationDiagnostics)
+            val functions = GlobalScope.localNamespaces.getValue("default.test").scope.functions
+            assertFalse(functions.containsKey("rejected"))
+            val accepted = assertIs<NativeFunction>(functions.getValue("accepted").single())
+            assertTrue(java.lang.reflect.Modifier.isStatic(accepted.javaMethod.modifiers))
+            assertContentEquals(arrayOf<Class<*>>(NativeCallContext::class.java), accepted.javaMethod.parameterTypes)
+            assertEquals(Function.Companion.OwnerType.NONE, accepted.ownerType)
+            assertEquals(top.mcfpp.type.MCFPPPrivateType.Void, accepted.returnType)
+            assertTrue(accepted.readOnlyParams.isEmpty())
+            assertTrue(accepted.normalParams.isEmpty())
+            val acceptedMain = functions.getValue("main").single()
+            val acceptedCommands = acceptedMain.commands.toList()
+            acceptedMain.runInFunction { accepted.invoke(emptyList(), null) }
+            assertEquals(1, Project.errorCount)
+            assertEquals(acceptedCommands, acceptedMain.commands)
+        } finally {
+            logger.removeAppender(appender)
+            appender.stop()
         }
     }
 
@@ -176,7 +250,7 @@ class NativeTemplateCommandContractTest {
             assertTrue(body.any { "stack_frame[0].loot.id set from storage mcfpp:system stack_frame[0].id" in it })
             assertTrue(body.any { "set from storage mcfpp:system stack_frame[0].loot" in it })
             for (name in listOf("first", "second", "third")) {
-                assertNull(ValueSnapshot.of(observe(main).scope.getVar(name)))
+                assertNull(top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(observe(main).scope.getVar(name))))
             }
             val worldFunctions = functions.filterValues { lines -> lines.any { "run loot replace block 0 0 0 " in it } }.keys
             val preparations = functions.mapValues { (name, lines) ->
@@ -239,12 +313,20 @@ class NativeTemplateCommandContractTest {
             }
             val results = listOf("maximum", "current", "visible").map { assertNotNull(observe.scope.getVar(it)) }
             assertIs<MCInt>(results[0]);assertIs<MCInt>(results[1]);assertIs<ScoreBool>(results[2])
-            results.forEach { assertTrue(it.hasAssigned);assertNull(ValueSnapshot.of(it)) }
+            results.forEach {
+                val binding = assertNotNull(it.storageBinding)
+                assertEquals(top.mcfpp.analysis.ValueState.INITIALIZED, binding.data.facts.read(binding.place)?.state)
+                assertNull(top.mcfpp.analysis.StorageAccess.snapshot(it))
+            }
             val bar = assertIs<DataTemplateObject>(observe.scope.getVar("bar"))
             val published = listOf("max", "value", "visible").map { name ->
                 assertIs<NativeAccessor>(bar.templateType.scope.getProperty(name)!!.accessor).function.returnVar
             }
-            published.forEach { assertTrue(it.hasAssigned);assertNull(ValueSnapshot.of(it)) }
+            published.forEach {
+                val binding = assertNotNull(it.storageBinding)
+                assertEquals(top.mcfpp.analysis.ValueState.INITIALIZED, binding.data.facts.read(binding.place)?.state)
+                assertNull(top.mcfpp.analysis.StorageAccess.snapshot(it))
+            }
             assertEquals(results.map { it.type }, published.map { it.type })
             assertEquals(3, published.map { assertNotNull(it.storageBinding).place }.toSet().size)
             val functions = exported(executionOutput)
@@ -324,8 +406,32 @@ class NativeTemplateCommandContractTest {
         @JvmStatic @NoExternalWrites fun missingResult(@Suppress("UNUSED_PARAMETER") context: NativeCallContext) {}
 
         @JvmStatic @NoExternalWrites fun failedResult(context: NativeCallContext) {
-            context.publishResult(MCIntConcrete(7))
+            context.publishResult(top.mcfpp.core.lang.MCInt(7))
             LogProcessor.error("Native operation rejected its input")
         }
     }
+}
+
+object NativeRegistrationContractHelper {
+    @JvmStatic @MNIFunction fun legacyFree() {
+        error("An invalid host signature must be rejected before invocation")
+    }
+
+    @JvmStatic @MNIFunction(normalParams = ["string value"])
+    fun wrongSignature(@Suppress("UNUSED_PARAMETER") value: String) {
+        error("An invalid host signature must be rejected before invocation")
+    }
+
+    @JvmStatic @MNIOperator(operator = "!", returnType = "int")
+    fun legacyUnary(@Suppress("UNUSED_PARAMETER") caller: Any?, @Suppress("UNUSED_PARAMETER") result: Any?) {
+        error("An invalid host signature must be rejected before invocation")
+    }
+
+    @JvmStatic @MNIOperator(operator = "+", paramType = "int", returnType = "int")
+    fun legacyBinary(@Suppress("UNUSED_PARAMETER") caller: Any?, @Suppress("UNUSED_PARAMETER") value: Any?,
+                     @Suppress("UNUSED_PARAMETER") result: Any?) {
+        error("An invalid host signature must be rejected before invocation")
+    }
+
+    @JvmStatic @MNIFunction fun valid(@Suppress("UNUSED_PARAMETER") context: NativeCallContext) {}
 }

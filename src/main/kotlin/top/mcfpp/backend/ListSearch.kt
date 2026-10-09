@@ -10,7 +10,7 @@ import top.mcfpp.nbt.tags.collection.ListTag
 
 /** Shared command backend. The workspace owns frozen source/needle payloads and per-call scratch data. */
 object ListSearch {
-    private fun score() = MCInt().apply { sbObject = SbObject.MCFPP_TEMP; hasAssigned = true; isDynamic = true; isTemp = true }
+    private fun score() = MCInt().apply { sbObject = SbObject.MCFPP_TEMP; isTemp = true }
     fun key(value: MCInt) = "${value.name} ${value.sbObject}"
     private fun write(command: Command) = Function.addCommand(command)
 
@@ -39,7 +39,7 @@ object ListSearch {
             write(if (last) recurse else Command("execute if score ${key(result)} matches -1 run").build(recurse))
         }
         emit(Command("execute if score ${key(size)} matches 1.. run").build(loop.first))
-        return result
+        return top.mcfpp.analysis.StorageAccess.publishScore(result, top.mcfpp.analysis.StorageLayout.Scoreboard(result.name, result.sbObject.toString()))
     }
 
     /** Build output only when a match exists; the caller writes it back to its captured receiver address. */

@@ -4,8 +4,8 @@ import top.mcfpp.Project
 import top.mcfpp.backend.LegacyFloatComparison
 import top.mcfpp.backend.NumericConversions
 import top.mcfpp.core.lang.MCFloat
-import top.mcfpp.core.lang.MCFloatConcrete
-import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.analysis.CompilerValue
+import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
@@ -48,24 +48,31 @@ class LegacyFloatLayoutTest {
             Float.MAX_VALUE to 1e30f, 1.25f to 1.25f)
         for ((a, b) in pairs) for (operation in listOf("<", ">", "<=", ">=", "==", "!=")) {
             Function.currFunction.commands.clear()
-            val left = MCFloatConcrete(a)
-            val right = MCFloatConcrete(b)
+            val left = MCFloat(a)
+            val right = MCFloat(b)
             val result = left.binaryComputation(right, operation) as ScoreBool
+            val registers = listOf(left, right).map { assertNotNull(StorageAccess.legacyFloatRegisters(it)) }
             val commands = Function.currFunction.commands.analyzeAll()
-            val machine = ScoreCommandExecutor(commands)
+            val machine = ScoreCommandExecutor(listOf("data modify storage mcfpp:system stack_frame prepend value {}") +
+                commands + "data remove storage mcfpp:system stack_frame[0]")
             val expected = when (operation) {
                 "<" -> a < b; ">" -> a > b; "<=" -> a <= b; ">=" -> a >= b; "==" -> a == b; else -> a != b
             }
             assertEquals(if (expected) 1 else 0, machine.read(result), "$a $operation $b")
-            for (value in listOf(left, right)) {
-                val encoded = MCFloat.floatToMCFloat(value.value)
-                listOf(value.sign, value.int0, value.int1, value.exp).forEachIndexed { index, score ->
-                    assertEquals(encoded[index], machine.read(score))
+            for ((operand, value) in listOf(left, right).withIndex()) {
+                val bits = assertIs<CompilerValue.FloatBits>(assertIs<CompilerValue.Typed>(StorageAccess.snapshot(value)).payload)
+                val encoded = MCFloat.floatToMCFloat(Float.fromBits(bits.bits))
+                registers[operand].forEachIndexed { index, score ->
+                    assertEquals(encoded[index], machine.values.getValue("${score.player} ${score.objective}"))
                 }
             }
+            assertEquals(0, machine.stackDepth)
             assertFalse(commands.any { "run return" in it || "run function" in it || MCFloat.tempFloatEntityUUID in it })
         }
-        assertFalse(MCFloat.ssObj is MCFPPValue<*>)
+        assertNull(StorageAccess.snapshot(MCFloat.ssObj))
+        assertEquals(top.mcfpp.analysis.ValueState.UNINITIALIZED, StorageAccess.ensure(MCFloat.ssObj).let {
+            it.data.facts.read(it.place)?.state
+        })
         assertEquals(0, Project.errorCount)
     }
 
@@ -96,8 +103,8 @@ class LegacyFloatLayoutTest {
     @Test fun nonFiniteValuesCannotBeEncodedOrMaterializedOnLegacyTargets() {
         reset()
         assertFailsWith<IllegalArgumentException> { MCFloat.floatToMCFloat(Float.NaN) }
-        assertTrue(NumericConversions.toNBT(MCFloatConcrete(Float.POSITIVE_INFINITY)).isError)
-        assertTrue(MCFloatConcrete(Float.NaN).toDynamic(false).isError)
+        assertTrue(NumericConversions.toNBT(MCFloat(Float.POSITIVE_INFINITY)).isError)
+        assertTrue(MCFloat(Float.NaN).isError)
         assertEquals(2, Project.errorCount)
         assertTrue(Function.currFunction.commands.isEmpty())
         MCFPPStringTest.readFromString("func main(){ dynamic var invalid = 9999999999999999999999999999999999999999.0; }", version = "1.20.1")

@@ -1,10 +1,9 @@
 package top.mcfpp.test
 
 import top.mcfpp.Project
+import top.mcfpp.analysis.*
 import top.mcfpp.core.lang.MCAny
 import top.mcfpp.core.lang.MCInt
-import top.mcfpp.core.lang.MCIntConcrete
-import top.mcfpp.core.lang.nbt.MCByteConcrete
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.ParameterMatcher
@@ -66,7 +65,9 @@ class TypeKernelTest {
         assertEquals(0, Project.errorCount)
         val function = GlobalScope.localNamespaces["default.test"]!!.scope.functions.getValue("arithmetic").single()
         val erased = function.scope.getVar("erased") as MCAny
-        assertFalse(erased is top.mcfpp.core.lang.MCAnyConcrete)
+        assertNull(StorageAccess.snapshot(erased))
+        val binding = StorageAccess.ensure(erased)
+        assertEquals(ValueState.INITIALIZED, binding.data.facts.read(binding.place)!!.state)
         assertEquals(MCFPPBaseType.Bool, erased.inferredType)
         assertFalse(function.commands.analyzeAll().any { it.contains("execute store score") })
         assertEquals(MCFPPBaseType.Bool, function.scope.getVar("result")!!.type)
@@ -74,8 +75,9 @@ class TypeKernelTest {
     @Test fun primitiveMembersHaveOneSignatureTableForAllValueStates() {
         MCFPPStringTest.readFromString("func main(){}", version = "26.3")
         assertEquals(0, Project.errorCount)
-        for (type in listOf(MCFPPBaseType.Int, MCFPPBaseType.Float, MCFPPBaseType.Bool)) {
-            val known = type.defaultValueVar().getMemberFunction("toText", emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first
+        for ((type, value) in listOf(MCFPPBaseType.Int to CompilerValue.Integral(0),
+            MCFPPBaseType.Float to CompilerValue.FloatBits(0f.toRawBits()), MCFPPBaseType.Bool to CompilerValue.Bool(false))) {
+            val known = StorageAccess.literal(type, value).getMemberFunction("toText", emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first
             val runtime = type.buildUnConcrete("runtime").getMemberFunction("toText", emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first
             assertIs<top.mcfpp.model.function.NativeFunction>(known)
             assertSame(known, runtime)
@@ -166,10 +168,12 @@ class TypeKernelTest {
         assertFalse(MCFPPNBTType.Short.isSubOf(MCFPPBaseType.Int))
         assertNull(TypeRelations.resolveImplicitConversion(MCFPPNBTType.Byte, MCFPPBaseType.Int))
         assertNull(TypeRelations.resolveNumericOperator("+", MCFPPNBTType.Byte, MCFPPNBTType.Byte))
-        assertEquals(37.toByte(), (MCFPPNBTType.Byte.build("value", 37.toByte()) as MCByteConcrete).value)
+        val encodedByte = StorageAccess.literal(MCFPPNBTType.Byte, CompilerValue.Integral(37), "value")
+        assertEquals(CompilerValue.Typed(MCFPPNBTType.Byte.typeId, CompilerValue.Integral(37)), StorageAccess.snapshot(encodedByte))
+        assertEquals(37.toByte(), assertIs<top.mcfpp.nbt.tags.primitive.ByteTag>(StorageAccess.constantEncoding(encodedByte)).value)
         assertEquals(TypeRelations.Conversion.INT_TO_FLOAT, TypeRelations.resolveImplicitConversion(MCFPPBaseType.Int, MCFPPBaseType.Float))
         assertNull(TypeRelations.resolveImplicitConversion(MCFPPBaseType.Float, MCFPPBaseType.Int))
-        val byte = MCByteConcrete(1)
+        val byte = StorageAccess.literal(MCFPPNBTType.Byte, CompilerValue.Integral(1))
         assertFalse(byte.canImplicitCast(MCFPPBaseType.Int))
         assertTrue(byte.implicitCast(MCFPPBaseType.Float).isError)
     }
@@ -184,7 +188,10 @@ class TypeKernelTest {
     }
 
     @Test fun anyMatchingUsesActualTypeEvenWhenValueIsUnknown() {
-        val value = MCAny("erased").apply { bindPayload(MCInt("runtime")) }
+        val runtime = MCInt("runtime")
+        StorageAccess.bindIncomingParameter(runtime)
+        val value = MCAny("erased").apply { bindPayload(runtime) }
+        assertNull(StorageAccess.snapshot(value))
         assertTrue(ParameterMatcher.accepts(value, MCFPPBaseType.Int))
         assertTrue(ParameterMatcher.accepts(value, MCFPPBaseType.Float))
         assertFalse(ParameterMatcher.accepts(value, MCFPPBaseType.String))
@@ -199,7 +206,7 @@ class TypeKernelTest {
         if (default) {
             appendNormalParam(MCFPPBaseType.Int, "fallback")
             normalParams.last().hasDefault = true
-            normalParams.last().defaultVar = MCIntConcrete(0)
+            normalParams.last().defaultVar = MCInt(0)
         }
     }
 
@@ -294,7 +301,7 @@ class TypeKernelTest {
         MCFPPStringTest.readFromString("func arithmetic(){ var value as object = 3; value.toText(); }", version = "26.3")
         assertTrue(Project.errorCount > 0)
         assertTrue(ParameterMatcher.accepts(MCInt("runtime"), MCFPPBaseType.Int))
-        assertTrue(ParameterMatcher.accepts(MCIntConcrete(1), MCFPPBaseType.Int))
+        assertTrue(ParameterMatcher.accepts(MCInt(1), MCFPPBaseType.Int))
     }
 
     @Test fun severalGenericBindingsUseTheSameDirectionalConversionQuery() {
@@ -310,22 +317,23 @@ class TypeKernelTest {
         val readonly = listOf(top.mcfpp.core.lang.MCFPPTypeVar(MCFPPBaseType.Int), top.mcfpp.core.lang.MCFPPTypeVar(MCFPPBaseType.Float))
         assertTrue(function.isSelf("generic", readonly, listOf(MCFPPListType(MCFPPBaseType.Int).buildUnConcrete("items"), MCInt("promoted"))))
         assertFalse(function.isSelf("generic", readonly, listOf(MCFPPListType(MCFPPBaseType.Float).buildUnConcrete("items"), MCInt("promoted"))))
-        assertTrue(function.isSelf("generic", readonly, listOf(MCFPPListType(MCFPPBaseType.Int).buildUnConcrete("items"), MCIntConcrete(1))))
+        assertTrue(function.isSelf("generic", readonly, listOf(MCFPPListType(MCFPPBaseType.Int).buildUnConcrete("items"), MCInt(1))))
     }
 
     @Test fun nominalTemplateUpcastRetainsExtraDataWithoutExposingExtraMembers() {
         val template = DataTemplate("Child", "test")
         template.extends(DataTemplate.baseDataTemplate)
         template.scope.putVar("count", MCInt("count"))
-        val source = top.mcfpp.core.lang.obj.DataTemplateObjectConcrete(template, hashMapOf("count" to MCIntConcrete(7)), "source")
+        val source = StorageAccess.literal(template.getType(), CompilerValue.Record(mapOf(
+            "count" to CompilerValue.Typed(MCFPPBaseType.Int.typeId, CompilerValue.Integral(7)))), "source")
         val target = source.implicitCast(DataTemplate.baseDataTemplate.getType())
         assertFalse(target.isError)
         assertIs<top.mcfpp.core.lang.obj.DataTemplateObject>(target)
-        assertNotNull(top.mcfpp.analysis.ValueSnapshot.of(target))
+        assertNotNull(top.mcfpp.analysis.StorageAccess.snapshot(target))
         val encoded = top.mcfpp.analysis.StorageAccess.constantEncoding(target) as top.mcfpp.nbt.tags.CompoundTag
         assertEquals(7, (encoded["count"] as top.mcfpp.nbt.tags.primitive.IntTag).value)
         assertEquals(source.storageBinding!!.place, target.storageBinding!!.place)
-        assertNull(target.instanceField.getVar("count"))
+        assertNull(target.getMemberVar("count", top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
     }
 
 }

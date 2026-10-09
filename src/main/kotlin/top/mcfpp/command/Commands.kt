@@ -3,10 +3,8 @@ package top.mcfpp.command
 import top.mcfpp.Project
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.bool.ScoreBool
-import top.mcfpp.core.lang.entity.EntityVar
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.nbt.EntityUUIDVar
-import top.mcfpp.core.lang.nbt.EntityUUIDVarConcrete
 import top.mcfpp.lib.EntitySelector
 import top.mcfpp.lib.EntitySource
 import top.mcfpp.lib.NBTPath
@@ -357,22 +355,13 @@ object Commands {
      */
     @JvmStatic
     fun runAsEntity(entityVar: EntityUUIDVar, command: Command): Array<Command>{
-        return if(entityVar is EntityUUIDVarConcrete){
-            if(!entityVar.isName){
-                arrayOf(Command("execute as ${Utils.fromNBTArrayUUID(entityVar.value as IntArrayTag)} run").build(command))
-            }else{
-                arrayOf(Command("execute as ${(entityVar.value as StringTag).value} run").build(command))
-            }
-        }else{
-            if(!entityVar.isName){
-                arrayOf(
-                    Command("data modify entity ${Project.config.tempItemEntityUUID} Thrower set from").build(entityVar.nbtPath.toCommandPart()),
-                    Command("execute as ${Project.config.tempItemEntityUUID} on origin run").build(command)
-                )
-            }else{
-                Command("execute as").buildMacro(entityVar).build("run").build(command).buildMacroFunction()
-            }
-        }
+        val known = top.mcfpp.analysis.StorageAccess.constantEncoding(entityVar) as? IntArrayTag
+        if (known != null) return arrayOf(Command("execute as ${Utils.fromNBTArrayUUID(known)} run").build(command))
+        top.mcfpp.analysis.StorageAccess.materialize(entityVar)
+        return arrayOf(
+            Command("data modify entity ${Project.config.tempItemEntityUUID} Thrower set from").build(entityVar.nbtPath.toCommandPart()),
+            Command("execute as ${Project.config.tempItemEntityUUID} on origin run").build(command)
+        )
     }
 
     /**
@@ -384,7 +373,7 @@ object Commands {
      * @return 生成的命令。数组的最后一个命令为`execute`命令
      */
     @JvmStatic
-    fun runAsEntity(selector: EntityVar, command: Command): Array<Command>{
+    fun runAsEntity(selector: top.mcfpp.core.lang.entity.SelectorVar, command: Command): Array<Command>{
         val c = Command("execute as").build(selector.toCommandPart()).build("run").build(command)
         return if(c.isMacro){
             c.buildMacroFunction()

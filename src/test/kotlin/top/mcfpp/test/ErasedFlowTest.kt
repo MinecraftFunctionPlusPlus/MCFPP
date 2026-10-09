@@ -3,7 +3,7 @@ package top.mcfpp.test
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.analysis.TypeKnowledge
-import top.mcfpp.analysis.ValueSnapshot
+import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.core.lang.MCAny
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.bool.ScoreBool
@@ -169,7 +169,7 @@ class ErasedFlowTest {
         val main = functions.getValue("main").single()
         assertEquals(setOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.Bool.typeId),
             ((main.scope.getVar("value") as MCAny).typeKnowledge as TypeKnowledge.Candidates).types)
-        assertNull(ValueSnapshot.of(main.scope.getVar("value")))
+        assertNull(StorageAccess.snapshot(assertNotNull(main.scope.getVar("value"))))
         assertEquals(1, execute(main).read(main.scope.getVar("result") as ScoreBool))
     }
 }

@@ -7,8 +7,6 @@ import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.core.lang.PropertyVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.nbt.NBTList
-import top.mcfpp.core.lang.bool.CommandBoolPart
-import top.mcfpp.core.lang.bool.ExecuteBool
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.model.compound.DataTemplate
@@ -20,10 +18,11 @@ import top.mcfpp.util.TempPool
 object NativePredicateOperations {
     fun resourcePredicate(context: NativeCallContext) = context.withArguments { args ->
         val errors = Project.errorCount
-        val template = GlobalScope.getTemplate("mcfpp.minecraft.resource", "Predicate")!!
+        val template = GlobalScope.getCanonicalTemplate("mcfpp.minecraft.resource", "Predicate")!!
         val result = (template.getType().buildUnConcrete(TempPool.getVarIdentify()) as DataTemplateObject).apply { isTemp = true }
-        val binding = StorageAccess.bindIncomingParameter(result)
+        val binding = StorageAccess.ensure(result)
         Function.addCommand(Commands.dataSetValue(binding.path, CompoundTag()))
+        StorageAccess.publishNbt(result)
         DataTemplate.assignField(result, "id", args.single())
         if (Project.errorCount == errors && !result.isError && args.none { it.isError }) context.publishResult(result)
     }
@@ -43,10 +42,11 @@ object NativePredicateOperations {
     fun appendCountRangePart(context: NativeCallContext) = appendPart(context, "CountRangePart", listOf("count"))
 
     private fun createPart(identifier: String, fields: List<String>, args: List<Var<*>>): DataTemplateObject {
-        val template = GlobalScope.getTemplate("mcfpp.minecraft.item", identifier)!!
+        val template = GlobalScope.getCanonicalTemplate("mcfpp.minecraft.item", identifier)!!
         val result = (template.getType().buildUnConcrete(TempPool.getVarIdentify()) as DataTemplateObject).apply { isTemp = true }
-        val binding = StorageAccess.bindIncomingParameter(result)
+        val binding = StorageAccess.ensure(result)
         Function.addCommand(Commands.dataSetValue(binding.path, CompoundTag()))
+        StorageAccess.publishNbt(result)
         for ((field, value) in fields.zip(args)) DataTemplate.assignField(result, field, value)
         return result
     }
@@ -68,10 +68,11 @@ object NativePredicateOperations {
     }
 
     fun orPart(context: NativeCallContext) = context.withAdapters { receiver, args ->
-        val template = GlobalScope.getTemplate("mcfpp.minecraft.item", "OrItemPredicatePart")!!
+        val template = GlobalScope.getCanonicalTemplate("mcfpp.minecraft.item", "OrItemPredicatePart")!!
         val result = (template.getType().buildUnConcrete(TempPool.getVarIdentify()) as DataTemplateObject).apply { isTemp = true }
-        val binding = StorageAccess.bindIncomingParameter(result)
+        val binding = StorageAccess.ensure(result)
         Function.addCommand(Commands.dataSetValue(binding.path, CompoundTag()))
+        StorageAccess.publishNbt(result)
         DataTemplate.assignField(result, "predicate1", receiver)
         DataTemplate.assignField(result, "predicate2", args[0])
         context.publishResult(result)
@@ -83,8 +84,8 @@ object NativePredicateOperations {
     private fun query(context: NativeCallContext, condition: String) = context.withAdapters { receiver, _ ->
         val field = DataTemplate.getField(receiver as DataTemplateObject, "id")!!
         val predicate = if (field is PropertyVar) field.get() else field
-        val result = ExecuteBool()
-        result.value.add(CommandBoolPart(false, Command("$condition predicate").build(predicate.toCommandPart())))
-        context.publishResult(result)
+        val result = top.mcfpp.core.lang.bool.ScoreBool()
+        Function.addCommands(Command("execute store success score ${result.name} ${result.boolObject} $condition predicate").build(predicate.toCommandPart()).buildMacroFunction())
+        context.publishResult(StorageAccess.publishBoolean(result, top.mcfpp.analysis.StorageLayout.Scoreboard(result.name, result.boolObject.toString())))
     }
 }

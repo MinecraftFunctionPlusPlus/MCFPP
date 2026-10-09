@@ -3,11 +3,8 @@ package top.mcfpp.lib
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.nbt.MCString
-import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
-import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.core.lang.obj.DataTemplateObject
-import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.CompoundTag
@@ -45,7 +42,7 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
         if(hasLimitPredicate){
             for (predicate in predicates) {
                 if(predicate is LimitPredicate){
-                    if(predicate.limit is MCIntConcrete){
+                    if(predicate.limit is MCInt && top.mcfpp.analysis.StorageAccess.snapshot(predicate.limit) != null){
                         return (predicate.limit).value
                     }
                     break
@@ -55,15 +52,18 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
         return Int.MAX_VALUE
     }
 
+    private fun knownResourceId(value: DataTemplateObject): String? {
+        val root = top.mcfpp.analysis.StorageAccess.snapshot(value) as? top.mcfpp.analysis.CompilerValue.Typed ?: return null
+        val record = root.payload as? top.mcfpp.analysis.CompilerValue.Record ?: return null
+        val field = record.fields["id"] as? top.mcfpp.analysis.CompilerValue.Typed ?: return null
+        return (field.payload as? top.mcfpp.analysis.CompilerValue.Text)?.value
+    }
     fun getType(): HashMap<NamespaceID, Boolean>{
         val map = HashMap<NamespaceID, Boolean>()
         if(hasTypePredicate){
             for (predicate in predicates) {
                 if(predicate is TypePredicate){
-                    if(predicate.type is DataTemplateObjectConcrete){
-                        val id = predicate.type.value["id"] as? MCStringConcrete
-                        if (id != null) map[id.value.value.toNamespaceID()] = predicate.reverse
-                    }
+                    knownResourceId(predicate.type)?.let { map[it.toNamespaceID()] = predicate.reverse }
                 }
             }
         }
@@ -220,9 +220,7 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
         return predicates.any {
             if (it !is TypePredicate || it.reverse) false
             else {
-                val entityType = it.type as? DataTemplateObjectConcrete
-                val id = entityType?.value?.get("id") as? MCStringConcrete
-                id?.value?.value == "minecraft:player"
+                knownResourceId(it.type) == "minecraft:player"
             }
         }
     }
@@ -234,7 +232,7 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
         if(hasLimitPredicate){
             for (predicate in predicates) {
                 if(predicate is LimitPredicate){
-                    if(predicate.limit is MCIntConcrete && predicate.limit.value == 1){
+                    if(predicate.limit is MCInt && top.mcfpp.analysis.StorageAccess.snapshot(predicate.limit) != null && predicate.limit.value == 1){
                         return true
                     }
                     break
@@ -285,50 +283,63 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
     }
 
     fun x(value: MCInt) = addPredicate(XPredicate(value))
-    fun x(value: Int) = addPredicate(XPredicate(MCIntConcrete(value)))
+    fun x(value: Int) = addPredicate(XPredicate(MCInt(value)))
     fun y(value: MCInt) = addPredicate(YPredicate(value))
-    fun y(value: Int) = addPredicate(YPredicate(MCIntConcrete(value)))
+    fun y(value: Int) = addPredicate(YPredicate(MCInt(value)))
     fun z(value: MCInt) = addPredicate(ZPredicate(value))
-    fun z(value: Int) = addPredicate(ZPredicate(MCIntConcrete(value)))
+    fun z(value: Int) = addPredicate(ZPredicate(MCInt(value)))
     fun distance(value: RangeVar) = addPredicate(DistancePredicate(value))
-    fun distance(value: Pair<Float?, Float?>) = addPredicate(DistancePredicate(RangeVarConcrete(value)))
+    fun distance(value: Pair<Float?, Float?>) = addPredicate(DistancePredicate(RangeVar(value)))
     fun dx(value: MCInt) = addPredicate(DXPredicate(value))
-    fun dx(value: Int) = addPredicate(DXPredicate(MCIntConcrete(value)))
+    fun dx(value: Int) = addPredicate(DXPredicate(MCInt(value)))
     fun dy(value: MCInt) = addPredicate(DYPredicate(value))
-    fun dy(value: Int) = addPredicate(DYPredicate(MCIntConcrete(value)))
+    fun dy(value: Int) = addPredicate(DYPredicate(MCInt(value)))
     fun dz(value: MCInt) = addPredicate(DZPredicate(value))
-    fun dz(value: Int) = addPredicate(DZPredicate(MCIntConcrete(value)))
+    fun dz(value: Int) = addPredicate(DZPredicate(MCInt(value)))
     fun scores(value: Map<String, RangeVar>) = addPredicate(ScoresPredicate(value))
     fun tag(value: MCString, reverse: Boolean) = addPredicate(TagPredicate(value, reverse))
-    fun tag(value: String, reverse: Boolean) = addPredicate(TagPredicate(MCStringConcrete(StringTag(value)), reverse))
+    fun tag(value: String, reverse: Boolean) = addPredicate(TagPredicate(MCString(StringTag(value)), reverse))
     fun team(value: MCString, reverse: Boolean) = addPredicate(TeamPredicate(value, reverse))
-    fun team(value: String, reverse: Boolean) = addPredicate(TeamPredicate(MCStringConcrete(StringTag(value)), reverse))
+    fun team(value: String, reverse: Boolean) = addPredicate(TeamPredicate(MCString(StringTag(value)), reverse))
     fun name(value: MCString, reverse: Boolean) = addPredicate(NamePredicate(value, reverse))
-    fun name(value: String, reverse: Boolean) = addPredicate(NamePredicate(MCStringConcrete(StringTag(value)), reverse))
+    fun name(value: String, reverse: Boolean) = addPredicate(NamePredicate(MCString(StringTag(value)), reverse))
     fun type(value: DataTemplateObject, reverse: Boolean) = addPredicate(TypePredicate(value, reverse))
     fun type(value: String, reverse: Boolean): EntitySelector {
-        val entityType = GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.resource")!!.scope.getTemplate("EntityType")!!.getType()
-            .build(hashMapOf("id" to MCStringConcrete(StringTag(value)))) as DataTemplateObjectConcrete
+        val type = GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.resource")!!.scope.getTemplate("EntityType")!!.getType()
+        val entityType = top.mcfpp.analysis.StorageAccess.literal(type, top.mcfpp.analysis.CompilerValue.Record(mapOf(
+            "id" to top.mcfpp.analysis.CompilerValue.Typed(top.mcfpp.type.MCFPPBaseType.String.typeId, top.mcfpp.analysis.CompilerValue.Text(value))))) as DataTemplateObject
         return addPredicate(TypePredicate(entityType, reverse))
     }
     fun predicate(value: DataTemplateObject, reverse: Boolean) = addPredicate(PredicatePredicate(value, reverse))
-    fun predicate(value: String, reverse: Boolean) = addPredicate(PredicatePredicate(DataTemplate.newInstance("mcfpp.minecraft.resource", "LootTablePredicate", CompoundTag("value" to value)),reverse))
+    fun predicate(value: String, reverse: Boolean): EntitySelector {
+        val type = GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.resource")!!.scope.getTemplate("LootTablePredicate")!!.getType()
+        val resource = top.mcfpp.analysis.StorageAccess.literal(type, top.mcfpp.analysis.CompilerValue.Record(mapOf(
+            "id" to top.mcfpp.analysis.CompilerValue.Typed(top.mcfpp.type.MCFPPBaseType.String.typeId,
+                top.mcfpp.analysis.CompilerValue.Text(value))))) as DataTemplateObject
+        return addPredicate(PredicatePredicate(resource, reverse))
+    }
     fun xRotation(value: RangeVar) = addPredicate(XRotationPredicate(value))
-    fun xRotation(value: Pair<Float?, Float?>) = addPredicate(XRotationPredicate(RangeVarConcrete(value)))
+    fun xRotation(value: Pair<Float?, Float?>) = addPredicate(XRotationPredicate(RangeVar(value)))
     fun yRotation(value: RangeVar) = addPredicate(YRotationPredicate(value))
-    fun yRotation(value: Pair<Float?, Float?>) = addPredicate(YRotationPredicate(RangeVarConcrete(value)))
+    fun yRotation(value: Pair<Float?, Float?>) = addPredicate(YRotationPredicate(RangeVar(value)))
     fun nbt(value: NBTBasedData) = addPredicate(NBTPredicate(value))
-    fun nbt(value: CompoundTag) = addPredicate(NBTPredicate(NBTBasedDataConcrete(value)))
+    fun nbt(value: CompoundTag) = addPredicate(NBTPredicate(NBTBasedData(value)))
     fun level(value: RangeVar) = addPredicate(LevelPredicate(value))
-    fun level(value: Pair<Float?, Float?>) = addPredicate(LevelPredicate(RangeVarConcrete(value)))
+    fun level(value: Pair<Float?, Float?>) = addPredicate(LevelPredicate(RangeVar(value)))
     fun gamemode(value: MCString, reverse: Boolean) = addPredicate(GamemodePredicate(value, reverse))
-    fun gamemode(value: String, reverse: Boolean) = addPredicate(GamemodePredicate(MCStringConcrete(StringTag(value)), reverse))
+    fun gamemode(value: String, reverse: Boolean) = addPredicate(GamemodePredicate(MCString(StringTag(value)), reverse))
     fun advancement(value: DataTemplateObject, reverse: Boolean) = addPredicate(AdvancementsPredicate(value, reverse))
-    fun advancement(value: String, reverse: Boolean) = addPredicate(AdvancementsPredicate(DataTemplate.newInstance("mcfpp.minecraft.resource", "Advancement", CompoundTag("value" to value)), reverse))
+    fun advancement(value: String, reverse: Boolean): EntitySelector {
+        val type = GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.resource")!!.scope.getTemplate("Advancement")!!.getType()
+        val resource = top.mcfpp.analysis.StorageAccess.literal(type, top.mcfpp.analysis.CompilerValue.Record(mapOf(
+            "id" to top.mcfpp.analysis.CompilerValue.Typed(top.mcfpp.type.MCFPPBaseType.String.typeId,
+                top.mcfpp.analysis.CompilerValue.Text(value))))) as DataTemplateObject
+        return addPredicate(AdvancementsPredicate(resource, reverse))
+    }
     fun limit(value: MCInt) = addPredicate(LimitPredicate(value))
-    fun limit(value: Int) = addPredicate(LimitPredicate(MCIntConcrete(value)))
+    fun limit(value: Int) = addPredicate(LimitPredicate(MCInt(value)))
     fun sort(value: MCString) = addPredicate(SortPredicate(value))
-    fun sort(value: String) = addPredicate(SortPredicate(MCStringConcrete(StringTag(value))))
+    fun sort(value: String) = addPredicate(SortPredicate(MCString(StringTag(value))))
 
     companion object{
 

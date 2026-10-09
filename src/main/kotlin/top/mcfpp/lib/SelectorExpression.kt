@@ -16,37 +16,25 @@ import java.util.Collections
 /** Selector structure is known even when a captured operand's runtime value is not. */
 class SelectorExpression(val kind: EntitySelector.Companion.SelectorType, predicates: List<Filter>, val ownerFrame: Int = 0) {
     val predicates: List<Filter> = Collections.unmodifiableList(ArrayList(predicates))
-    data class Operand(val reference: ValueRef, val encoding: StorageLayout.Nbt?, val slot: String?) {
-        fun adapter(types: Map<TypeId, MCFPPType>, frameOffset: Int): Var<*>? {
+    override fun equals(other: Any?) = other is SelectorExpression && kind == other.kind && predicates == other.predicates && ownerFrame == other.ownerFrame
+    override fun hashCode() = 31 * (31 * kind.hashCode() + predicates.hashCode()) + ownerFrame
+    data class Operand(val reference: ValueRef, val location: Location? = null) {
+        fun adapter(types: Map<TypeId, MCFPPType>, owner: StoredData?, frameOffset: Int): Var<*>? {
             val type = types[reference.type] ?: MCFPPType.resolveTypeId(reference.type) ?: return null
             if (reference is ValueRef.Constant) {
                 StorageAccess.restore(type, reference.value, TempPool.getVarIdentify(), types)?.let { return it }
-                if (type is MCFPPDataTemplateType) {
-                    val payload = (reference.value as? CompilerValue.Typed)?.payload as? CompilerValue.Record ?: return null
-                    val fields = hashMapOf<String, Var<*>>()
-                    for ((key, part) in payload.fields) {
-                        val fieldType = type.template.scope.getVar(key)?.type ?: return null
-                        fields[key] = StorageAccess.restore(fieldType, part, key, types) ?: return null
-                    }
-                    return type.build(TempPool.getVarIdentify(), fields)
-                }
                 return null
             }
-            val source = encoding ?: return null
-            val name = slot ?: return null
             val place = (reference as? ValueRef.Read)?.place ?: return null
-            val address = Regex("stack_frame\\[(\\d+)]\\.(\\w+)").matchEntire(source.path) ?: return null
-            if (address.groupValues[2] != name) return null
-            val path = NBTPath(StorageSource(source.source)).memberIndex("stack_frame[${address.groupValues[1].toInt() + frameOffset}]").memberIndex(name)
-            val data = StoredData(place, path)
-            data.types[type.typeId] = type
-            data.facts.initialize(place, ValueFacts(TypeKnowledge.Exact(type.typeId), ValueKnowledge.Unknown))
-            if (type == MCFPPBaseType.Range) return SelectorRangeOperand(path).apply {
-                storageBinding = StorageBinding(data, place, path)
-                hasAssigned = true
+            val data = owner?.source(place) ?: return null
+            val actual = location?.inFrame(frameOffset) ?: return null
+            val binding = StorageBinding(data, place, data.path, location = actual)
+            val name = data.declarations[place]?.name ?: TempPool.getVarIdentify()
+            if (type == MCFPPBaseType.Range) return SelectorRangeOperand(binding.path).apply {
+                storageBinding = binding
                 isTemp = true
             }
-            return StorageAccess.adapter(type, name, StorageBinding(data, place, path)).apply { isTemp = true }
+            return StorageAccess.adapter(type, name, binding).apply { isTemp = true }
         }
     }
     data class Filter(val identifier: String, val reverse: Boolean, val operand: Operand)
@@ -54,7 +42,7 @@ class SelectorExpression(val kind: EntitySelector.Companion.SelectorType, predic
         val selector = EntitySelector(kind)
         val offset = binding?.let { frame(it.path) - ownerFrame } ?: 0
         for (filter in predicates) {
-            val operand = filter.operand.adapter(types, offset) ?: return null
+            val operand = filter.operand.adapter(types, binding?.data, offset) ?: return null
             selector.addPredicate(predicate(filter.identifier, filter.reverse, operand) ?: return null)
         }
         return selector
@@ -73,13 +61,13 @@ class SelectorExpression(val kind: EntitySelector.Companion.SelectorType, predic
         )))
     }
     companion object {
-        fun capture(selector: EntitySelector, previous: SelectorExpression? = null, actualFrame: Int = 0): SelectorExpression? {
+        fun capture(selector: EntitySelector, ownerData: StoredData, previous: SelectorExpression? = null, actualFrame: Int = 0): SelectorExpression? {
             val owner = previous?.ownerFrame ?: actualFrame
             val filters = selector.predicates.mapIndexed { index, filter ->
                 previous?.predicates?.getOrNull(index)?.let { return@mapIndexed it }
                 if (filter is ScoresPredicate) return null
-                val snapshot = ValueSnapshot.of(filter.v)
-                val operand = if (snapshot != null) Operand(ValueRef.Constant(filter.v.type.typeId, snapshot), null, null)
+                val snapshot = top.mcfpp.analysis.StorageAccess.snapshot(filter.v)
+                val operand = if (snapshot != null) Operand(ValueRef.Constant(filter.v.type.typeId, snapshot))
                 else {
                     val captured = StorageAccess.capture(filter.v)
                     if (captured.isError || !StorageAccess.hasRuntimeRepresentation(captured)) return null
@@ -89,10 +77,15 @@ class SelectorExpression(val kind: EntitySelector.Companion.SelectorType, predic
                     val frozen = captured.type.buildUnConcrete(slot).apply {
                         isTemp = true
                         nbtPath = path
-                        StorageAccess.bindIncomingParameter(this)
+                        StorageAccess.publishNbt(this)
                     }
-                    Operand(ValueRef.Read(frozen.type.typeId, frozen.storageBinding!!.place),
-                        StorageLayout.Nbt((path.source as StorageSource).storage, "stack_frame[$owner].$slot"), slot)
+                    val binding = StorageAccess.ensure(frozen)
+                    val produced = StorageAccess.ensure(captured)
+                    binding.data.types.putAll(produced.data.types)
+                    binding.data.facts.copyFrom(produced.data.facts.withoutValues(), produced.place, binding.place, includeRoot = false)
+                    ownerData.retainSource(binding.data)
+                    ownerData.types.putAll(binding.data.types)
+                    Operand(ValueRef.Read(frozen.type.typeId, binding.place), binding.location)
                 }
                 Filter(filter.identifier, (filter as? CanReverseEntitySelectorPredicate)?.reverse ?: false, operand)
             }
@@ -100,17 +93,18 @@ class SelectorExpression(val kind: EntitySelector.Companion.SelectorType, predic
         }
         fun frame(path: NBTPath): Int {
             val first = path.pathList.firstOrNull() as? MemberPath
-            val member = first?.value as? MCStringConcrete
+            val member = (first?.value as? MCString)?.takeIf { StorageAccess.snapshot(it) != null }
             val name = member?.value?.value
             Regex("stack_frame\\[(\\d+)]").matchEntire(name.orEmpty())?.let { return it.groupValues[1].toInt() }
-            return if (name == "stack_frame") ((path.pathList.getOrNull(1) as? IntPath)?.value as? MCIntConcrete)?.value ?: 0 else 0
+            return if (name == "stack_frame") ((path.pathList.getOrNull(1) as? IntPath)?.value as? MCInt)
+                ?.takeIf { StorageAccess.snapshot(it) != null }?.value ?: 0 else 0
         }
         fun snapshot(selector: EntitySelector, type: TypeId): CompilerValue? {
             val filters = selector.predicates.map { filter ->
                 if (filter is ScoresPredicate) return null
-                val snapshot = ValueSnapshot.of(filter.v) ?: return null
+                val snapshot = top.mcfpp.analysis.StorageAccess.snapshot(filter.v) ?: return null
                 Filter(filter.identifier, (filter as? CanReverseEntitySelectorPredicate)?.reverse ?: false,
-                    Operand(ValueRef.Constant(filter.v.type.typeId, snapshot), null, null))
+                    Operand(ValueRef.Constant(filter.v.type.typeId, snapshot)))
             }
             return SelectorExpression(selector.selectorType, filters).snapshot(type)
         }
@@ -128,7 +122,7 @@ class SelectorExpression(val kind: EntitySelector.Companion.SelectorType, predic
                 val name = (filter.fields["name"] as? CompilerValue.Text)?.value ?: return null
                 val reverse = (filter.fields["reverse"] as? CompilerValue.Bool)?.value ?: return null
                 val operand = filter.fields["operand"] as? CompilerValue.Typed ?: return null
-                Filter(name, reverse, Operand(ValueRef.Constant(operand.type, operand), null, null))
+                Filter(name, reverse, Operand(ValueRef.Constant(operand.type, operand)))
             } ?: return null
             return SelectorExpression(kind, filters)
         }
@@ -169,7 +163,7 @@ private class SelectorRangeOperand(private val captured: NBTPath) : RangeVar() {
             return NBTBasedData().apply {
                 nbtPath = path
                 isTemp = true
-                StorageAccess.bindIncomingParameter(this)
+                StorageAccess.publishNbt(this)
             }
         }
         return Command("").buildMacro(endpoint("left"), false).build("..", false)

@@ -4,11 +4,9 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.FloatProviders
 import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.core.lang.MCFloat
-import top.mcfpp.core.lang.MCFPPValue
-import top.mcfpp.core.lang.entity.EntityVar
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.Var
-import top.mcfpp.core.lang.obj.EnumVarConcrete
+import top.mcfpp.core.lang.obj.EnumVar
 import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
@@ -457,7 +455,11 @@ object NativeStdCommandOperations {
     }
 
     private fun damageCommand(target: Var<*>, amount: Var<*>, kind: Var<*>, vararg extras: Any): Command {
-        val multi = if (target is SelectorVar) !target.value.selectingSingleEntity() else (target as EntityVar).isMulti()
+        if (target !is SelectorVar || !StorageAccess.hasActualPayload(target)) {
+            LogProcessor.error("Damage commands require an initialized selector target")
+            return Command()
+        }
+        val multi = !target.value.selectingSingleEntity()
         return if (multi) Command.buildAll("execute as", target, "run damage @s", amount, kind, *extras)
         else Command.buildAll("damage", target, amount, kind, *extras)
     }
@@ -487,7 +489,7 @@ object NativeStdCommandOperations {
     private fun cloneEnum(context: NativeCallContext, args: List<Var<*>>, index: Int): String? {
         val value = args[index]
         val snapshot = context.argumentSnapshot(index)
-        val member = snapshot?.let { StorageAccess.restore(value.type, it, value.identifier) } as? EnumVarConcrete
+        val member = snapshot?.let { StorageAccess.restore(value.type, it, value.identifier) } as? EnumVar
         if (member != null) return member.value.identifier
         LogProcessor.error("Clone enum command arguments require a complete enum value")
         return null
@@ -542,7 +544,7 @@ object NativeStdCommandOperations {
     }
 
     private fun emit(context: NativeCallContext, build: (List<Var<*>>) -> Command) = context.withArguments { args ->
-        if (!FloatProviders.enabled && args.any { it is MCFloat && it !is MCFPPValue<*> }) {
+        if (!FloatProviders.enabled && args.any { it is MCFloat && StorageAccess.snapshot(it) == null }) {
             LogProcessor.error("Dynamic float command arguments require a number-provider target")
             return@withArguments
         }

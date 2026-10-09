@@ -5,7 +5,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import top.mcfpp.Project
 import top.mcfpp.backend.NumericConversions
-import top.mcfpp.core.lang.MCFloatConcrete
+import top.mcfpp.core.lang.MCFloat
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
@@ -15,6 +15,20 @@ import kotlin.test.*
 import kotlin.test.Test
 
 class LegacyFloatConversionTest {
+    private fun runtime(value: top.mcfpp.core.lang.Var<*>): top.mcfpp.core.lang.Var<*> {
+        val result = value.type.buildUnConcrete("runtime_" + value.identifier).apply {
+            nbtPath = top.mcfpp.lib.NBTPath(top.mcfpp.lib.StorageSource("fixture:numeric"))
+                .memberIndex(identifier)
+        }
+        top.mcfpp.analysis.StorageAccess.declare(result, top.mcfpp.analysis.Symbol(
+            top.mcfpp.analysis.SymbolId.fresh(), result.identifier, result.type.typeId, mutable = true))
+        top.mcfpp.analysis.StorageAccess.write(result, value)
+        top.mcfpp.analysis.StorageAccess.materialize(result)
+        val binding = top.mcfpp.analysis.StorageAccess.ensure(result)
+        binding.data.facts.refine(binding.place, top.mcfpp.analysis.ValueFacts(
+            top.mcfpp.analysis.TypeKnowledge.Exact(result.type.typeId), top.mcfpp.analysis.ValueKnowledge.Unknown))
+        return top.mcfpp.analysis.StorageAccess.read(result)
+    }
     private val datapack = Path.of("src/main/resources/datapack/stdlib/data")
     private val functions = Files.walk(datapack.resolve("math.float/function")).use { paths ->
         paths.filter { it.toString().endsWith(".mcfunction") }.iterator().asSequence().associate { path ->
@@ -25,7 +39,7 @@ class LegacyFloatConversionTest {
     private val constants = Files.readAllLines(datapack.resolve("math/function/_init.mcfunction"))
         .filter { it.startsWith("scoreboard players set ") }
 
-    private fun machine(commands: List<String>) = ScoreCommandExecutor(constants + commands, functions)
+    private fun machine(commands: List<String>) = ScoreCommandExecutor(constants + listOf("data modify storage mcfpp:system stack_frame prepend value {}") + commands, functions)
     private fun parts(machine: ScoreCommandExecutor) =
         listOf("sign", "int0", "int1", "exp").map { machine.values.getValue("float_$it int") }
     private fun seed(sign: Int, high: Int, low: Int, exponent: Int) =
@@ -80,7 +94,7 @@ class LegacyFloatConversionTest {
 
     @Test fun oldConversionEntryRunsTheActualLibrary() {
         reset()
-        val result = NumericConversions.convert(MCFloatConcrete(-12.75f), top.mcfpp.type.MCFPPBaseType.Int) as MCInt
+        val result = NumericConversions.convert(MCFloat(-12.75f), top.mcfpp.type.MCFPPBaseType.Int) as MCInt
         val commands = Function.currFunction.commands.analyzeAll()
         assertTrue(commands.any { "function math.float:hpo/float/_toscore" in it })
         assertEquals(-12, machine(commands).read(result))
@@ -89,12 +103,13 @@ class LegacyFloatConversionTest {
 
     @Test fun oldPromotionEntryRunsTheActualLibrary() {
         reset()
-        val source = top.mcfpp.core.lang.MCIntConcrete(123456789).toDynamic(false) as MCInt
+        val source = runtime(MCInt(123456789)) as MCInt
         val result = NumericConversions.promoteToFloat(source)
+        val registers = assertNotNull(top.mcfpp.analysis.StorageAccess.legacyFloatRegisters(result))
         val commands = Function.currFunction.commands.analyzeAll()
         assertTrue(commands.any { "function math.float:hpo/float/_scoreto" in it })
         val actual = machine(commands)
-        assertEquals(listOf(1, 1234, 5678, 9), listOf(result.sign, result.int0, result.int1, result.exp).map(actual::read))
+        assertEquals(listOf(1, 1234, 5678, 9), registers.map { actual.values.getValue("${it.player} ${it.objective}") })
         assertEquals(123456789, actual.read(source))
         assertEquals(0, Project.errorCount)
     }
@@ -103,8 +118,8 @@ class LegacyFloatConversionTest {
         for (value in listOf(2147483648f, -2147483904f, Float.MAX_VALUE, -Float.MAX_VALUE)) {
             reset()
             Function.addCommand(top.mcfpp.command.Commands.stackIn())
-            val known=NumericConversions.convert(MCFloatConcrete(value),top.mcfpp.type.MCFPPBaseType.Int) as MCInt
-            val source=MCFloatConcrete(value).toDynamic(false)
+            val known=NumericConversions.convert(MCFloat(value),top.mcfpp.type.MCFPPBaseType.Int) as MCInt
+            val source=runtime(MCFloat(value))
             val runtime=NumericConversions.convert(source,top.mcfpp.type.MCFPPBaseType.Int) as MCInt
             val commands=Function.currFunction.commands.analyzeAll()
             assertEquals(2,commands.count {it=="function math.float:hpo/float/_toscore"})

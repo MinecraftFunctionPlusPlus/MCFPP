@@ -1,6 +1,5 @@
 package top.mcfpp.type
 
-import top.mcfpp.core.lang.value.MCTypeValue
 import top.mcfpp.model.compound.CompoundData
 
 /**
@@ -22,8 +21,10 @@ import top.mcfpp.model.compound.CompoundData
  */
 class MCFPPGenericParamType(
     var identifier:String,
-    parentType: ArrayList<out MCFPPType>
+    parentType: ArrayList<out MCFPPType>,
+    restoredIdentity: TypeId.Opaque? = null
 ) : MCFPPType(parentType), MCFPPTypeWithGeneric {   //TODO: 泛型的CompoundData
+    override val typeId: TypeId = restoredIdentity ?: super.typeId
 
     override val isValueType: Boolean get() = false
 
@@ -34,10 +35,6 @@ class MCFPPGenericParamType(
 
     override val typeName: String
         get() = identifier
-
-    fun toValue():MCTypeValue{
-        return MCTypeValue(identifier,parentType)
-    }
 
     override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPType {
         if(type.containsKey(identifier)){

@@ -2,7 +2,6 @@ package top.mcfpp.backend
 
 import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.core.lang.MCInt
-import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.core.lang.RangeVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.TypeDataTemplateObject
@@ -24,7 +23,7 @@ object NativeTimeOperations {
 
     fun factory(context: NativeCallContext, multiplier: Int) = context.withArguments { arguments ->
         val value = StorageAccess.read(arguments[0]) as MCInt
-        publishTime(context, if (multiplier == 1) value else value.times(MCIntConcrete(multiplier)))
+        publishTime(context, if (multiplier == 1) value else value.times(MCInt(multiplier)))
     }
 
     fun arithmetic(context: NativeCallContext, operator: String) = context.withAdapters { receiver, arguments ->

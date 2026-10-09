@@ -91,7 +91,7 @@ class DynamicIndexIRTest {
             assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), binding.data.facts.read(binding.place.index(index))!!.type)
             assertEquals(ValueKnowledge.Unknown, binding.data.facts.read(binding.place.index(index))!!.value)
         }
-        assertEquals(2, binding.data.listSizes[binding.place])
+        assertEquals(2, binding.data.facts.length(binding.place))
     }
 
     @Test fun staticScalarArgumentsWriteBackThroughTheirCapturedDynamicAddress() = modes {
@@ -110,6 +110,7 @@ class DynamicIndexIRTest {
         val root = main.scope.getVar("values")!!.storageBinding!!.place
         val call = main.typedIR!!.blocks.flatMap { it.instructions }.filterIsInstance<Instruction.Call>().last()
         assertEquals(setOf(root.unknownIndex()), assertIs<Effect.Writes>(call.effect).places)
+        assertEquals(emptySet(), assertIs<Effect.Writes>(call.effect).contents)
     }
 
     @Test fun recursiveCallsKeepDynamicIndexPayloadsInsideTheirOwnFrame() = modes {
@@ -183,7 +184,7 @@ class DynamicIndexIRTest {
         """)
         assertEquals(9, execute(main).read(main.scope.getVar("result") as MCInt))
         val copy = main.scope.getVar("copied")!!.storageBinding!!
-        assertEquals(1, copy.data.listSizes[copy.place])
+        assertEquals(1, copy.data.facts.length(copy.place))
         assertNotEquals(main.scope.getVar("values")!!.storageBinding!!.place.root, copy.place.root)
     }
 

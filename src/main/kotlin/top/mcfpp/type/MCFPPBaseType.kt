@@ -2,9 +2,7 @@ package top.mcfpp.type
 
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBool
-import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.MCString
-import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.lib.ChatComponent
 import top.mcfpp.lib.PlainChatComponent
 import top.mcfpp.mni.*
@@ -48,9 +46,10 @@ class MCFPPBaseType {
 
         override fun defaultValue() = null
 
-        override fun build(identifier: kotlin.String, value: kotlin.Any?): Var<*> = MCAnyConcrete(value, identifier)
+        override fun build(identifier: kotlin.String, value: kotlin.Any?): Var<*> =
+            top.mcfpp.analysis.StorageAccess.literal(this, value as top.mcfpp.analysis.CompilerValue, identifier)
         override fun build(identifier: kotlin.String, container: FieldContainer, value: kotlin.Any?): Var<*> {
-            return MCAnyConcrete(value, identifier).apply { this.container = container }
+            return build(identifier, value)
         }
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = MCAny(identifier)
 
@@ -77,9 +76,9 @@ class MCFPPBaseType {
 
         override fun defaultValue() = 0
 
-        override fun build(identifier: kotlin.String, container: FieldContainer, value: kotlin.Any?): Var<*> = MCIntConcrete(container, value as kotlin.Int, identifier)
-        override fun build(identifier: kotlin.String, value: kotlin.Any?): Var<*> = MCIntConcrete(value as kotlin.Int, identifier)
-        override fun build(value: kotlin.Any?): Var<*> = MCIntConcrete(value as kotlin.Int)
+        override fun build(identifier: kotlin.String, container: FieldContainer, value: kotlin.Any?): Var<*> = MCInt(container, value as kotlin.Int, identifier)
+        override fun build(identifier: kotlin.String, value: kotlin.Any?): Var<*> = MCInt(value as kotlin.Int, identifier)
+        override fun build(value: kotlin.Any?): Var<*> = MCInt(value as kotlin.Int)
         override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = MCInt(container, identifier)
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = MCInt(identifier)
 
@@ -107,12 +106,12 @@ class MCFPPBaseType {
             get() = StringTag::class.java
 
         override fun defaultValueVar(): Var<*> {
-            return MCStringConcrete(StringTag(""),"default")
+            return buildUnConcrete("default")
         }
 
         override fun defaultValue() = StringTag("")
 
-        override fun build(identifier: kotlin.String, value: kotlin.Any?): Var<*> = MCStringConcrete(value as StringTag, identifier)
+        override fun build(identifier: kotlin.String, value: kotlin.Any?): Var<*> = MCString(value as StringTag, identifier)
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = MCString(identifier)
     }
 
@@ -137,8 +136,8 @@ class MCFPPBaseType {
 
         override fun defaultValue() = 0.0f
 
-        override fun build(identifier: kotlin.String, container: FieldContainer, value: kotlin.Any?): Var<*> = MCFloatConcrete(container, value as kotlin.Float, identifier)
-        override fun build(identifier: kotlin.String, value: kotlin.Any?): Var<*> = MCFloatConcrete(value as kotlin.Float, identifier)
+        override fun build(identifier: kotlin.String, container: FieldContainer, value: kotlin.Any?): Var<*> = MCFloat(container, value as kotlin.Float, identifier)
+        override fun build(identifier: kotlin.String, value: kotlin.Any?): Var<*> = MCFloat(value as kotlin.Float, identifier)
         override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = MCFloat(container, identifier)
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = MCFloat(identifier)
 
@@ -165,8 +164,8 @@ class MCFPPBaseType {
 
         override fun defaultValue() = false
 
-        override fun build(identifier: kotlin.String, container: FieldContainer, value: kotlin.Any?): Var<*> = ScoreBoolConcrete(container, value as Boolean, identifier)
-        override fun build(identifier: kotlin.String, value: kotlin.Any?): Var<*> = ScoreBoolConcrete(value as Boolean, identifier)
+        override fun build(identifier: kotlin.String, container: FieldContainer, value: kotlin.Any?): Var<*> = ScoreBool(container, value as Boolean, identifier)
+        override fun build(identifier: kotlin.String, value: kotlin.Any?): Var<*> = ScoreBool(value as Boolean, identifier)
         override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = ScoreBool(container, identifier)
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = ScoreBool(identifier)
     }
@@ -200,7 +199,7 @@ class MCFPPBaseType {
 
         override fun defaultValue() = PlainChatComponent("")
 
-        override fun build(identifier: kotlin.String, value: kotlin.Any?): Var<*> = JsonTextConcrete(value as ChatComponent, identifier)
+        override fun build(identifier: kotlin.String, value: kotlin.Any?): Var<*> = JsonText(value as ChatComponent, identifier)
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = JsonText(identifier)
     }
 
@@ -220,7 +219,7 @@ class MCFPPBaseType {
         override fun defaultValue() = 0f to 0f
 
         @Suppress("UNCHECKED_CAST")
-        override fun build(identifier: kotlin.String, value: kotlin.Any?): Var<*> = RangeVarConcrete(value as Pair<Number?, Number?>, identifier)
+        override fun build(identifier: kotlin.String, value: kotlin.Any?): Var<*> = RangeVar(value as Pair<Number?, Number?>, identifier)
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = RangeVar(identifier)
     }
 

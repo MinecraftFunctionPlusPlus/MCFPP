@@ -25,7 +25,7 @@ class MCFPPTypeDataTemplateType(
     override fun defaultValue(): Any? = typeAs.defaultValue()
 
     override fun defaultValueVar(): Var<*> {
-        return build(top.mcfpp.util.TempPool.getVarIdentify(), defaultValue())
+        return buildUnConcrete(top.mcfpp.util.TempPool.getVarIdentify())
     }
 
     override fun build(identifier: String, value: Any?): Var<*> {

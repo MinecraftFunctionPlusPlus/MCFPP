@@ -28,6 +28,8 @@ class EffectAnalysisTest {
         val effects = EffectAnalysis.analyze(graph)
         assertEquals(setOf(Place(inner)), assertIs<Effect.Writes>(effects[leaf]).places)
         assertEquals(setOf(Place(outer)), assertIs<Effect.Writes>(effects[wrapper]).places)
+        assertEquals(emptySet(), assertIs<Effect.Writes>(effects[leaf]).contents)
+        assertEquals(emptySet(), assertIs<Effect.Writes>(effects[wrapper]).contents)
         assertEquals(setOf(Place(outer)), assertIs<Effect.Writes>(EffectAnalysis.callEffect(call, graph, effects)).places)
     }
 
@@ -36,7 +38,7 @@ class EffectAnalysisTest {
         val leftBody = body(listOf(Instruction.Call(null, right, emptyList(), Effect.Unknown)))
         val rightBody = body(listOf(Instruction.Call(null, left, emptyList(), Effect.Unknown)))
         assertEquals(setOf(Effect.Pure), EffectAnalysis.analyze(mapOf(left to leftBody, right to rightBody)).values.toSet())
-        val unknown = rightBody.copy(blocks = listOf(rightBody.blocks.single().copy(instructions = rightBody.blocks.single().instructions + Instruction.RawCommand("say observed"))))
+        val unknown = rightBody.copy(blocks = listOf(rightBody.blocks.single().copy(instructions = rightBody.blocks.single().instructions + Instruction.RawCommand("data remove storage fixture:external value"))))
         assertEquals(setOf(Effect.Unknown), EffectAnalysis.analyze(mapOf(left to leftBody, right to unknown)).values.toSet())
     }
 

@@ -4,7 +4,9 @@ import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.Var
-import top.mcfpp.core.lang.bool.ScoreBoolConcrete
+import top.mcfpp.analysis.CompilerValue
+import top.mcfpp.analysis.StorageAccess
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.model.function.Function
 
 class MCFPPCompileTimeVisitor(
@@ -16,6 +18,17 @@ class MCFPPCompileTimeVisitor(
     var curContinue = false
     var curReturn = false
     var returnValue:Var<*>? = null
+
+    private fun closedCondition(value: Any?): Boolean? {
+        val variable = value as? Var<*> ?: return null
+        if (variable.isError) return null
+        var snapshot = StorageAccess.snapshot(variable)
+        while (snapshot is CompilerValue.Typed) snapshot = snapshot.payload
+        return (snapshot as? CompilerValue.Bool)?.value ?: run {
+            LogProcessor.error("Compile-time conditions require a complete boolean value")
+            null
+        }
+    }
 
     override fun visitCurlBlock(ctx: mcfppParser.CurlBlockContext): Any? {
         Function.forcedField = field
@@ -30,14 +43,14 @@ class MCFPPCompileTimeVisitor(
 
     override fun visitIfStatement(ctx: mcfppParser.IfStatementContext): Any? {
         val condtion= exprVisitor.visit(ctx.bucketExpression().expression())
-        if(condtion is ScoreBoolConcrete && condtion.value){
+        if(closedCondition(condtion) ?: return null){
             visit(ctx.block())
         }
         else{
             var elseIfBool = false
             for(elseIfStatementContext in ctx.elseIfStatement()){
                 val elseIfCondition = exprVisitor.visit(elseIfStatementContext.bucketExpression().expression())
-                if(elseIfCondition is ScoreBoolConcrete && elseIfCondition.value){
+                if(closedCondition(elseIfCondition) ?: return null){
                     visit(elseIfStatementContext.block())
                     elseIfBool = true
                     break
@@ -61,7 +74,7 @@ class MCFPPCompileTimeVisitor(
     override fun visitWhileStatement(ctx: mcfppParser.WhileStatementContext): Any? {
         while(true){
             val condition = exprVisitor.visit(ctx.bucketExpression().expression())
-            if(condition is ScoreBoolConcrete && condition.value){
+            if(closedCondition(condition) ?: return null){
                 visit(ctx.block())
                 if(curBreak||curReturn){
                     curBreak = false
@@ -83,7 +96,7 @@ class MCFPPCompileTimeVisitor(
         if(!curBreak||!curReturn||!curContinue){
             while(true){
                 val condition = exprVisitor.visit(ctx.bucketExpression().expression())
-                if(condition is ScoreBoolConcrete && condition.value){
+                if(closedCondition(condition) ?: return null){
                     visit(ctx.block())
                     if(curBreak||curReturn){
                         curBreak = false

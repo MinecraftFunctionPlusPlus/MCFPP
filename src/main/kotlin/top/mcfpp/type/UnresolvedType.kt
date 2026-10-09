@@ -5,7 +5,8 @@ import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 
-class UnresolvedType(type: String) : MCFPPType() {
+class UnresolvedType(type: String, restoredIdentity: TypeId.Opaque? = null) : MCFPPType() {
+    override val typeId: TypeId = restoredIdentity ?: super.typeId
 
     override val isValueType: Boolean get() = false
 

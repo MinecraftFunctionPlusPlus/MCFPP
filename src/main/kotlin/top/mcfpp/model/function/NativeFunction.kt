@@ -2,7 +2,6 @@ package top.mcfpp.model.function
 
 import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.model.CanSelectMember
@@ -74,7 +73,8 @@ class NativeFunction : Function, Native {
             javaMethod.declaringClass.isAnnotationPresent(top.mcfpp.mni.annotation.NoExternalWrites::class.java)
         val writesReceiver = javaMethod.isAnnotationPresent(top.mcfpp.mni.annotation.WritesReceiver::class.java)
         val actualCaller = if (caller is top.mcfpp.core.lang.MCAny && caller !is top.mcfpp.core.lang.MCObject)
-            caller.semanticValue() else (caller as? Var<*>)?.let(top.mcfpp.analysis.StorageAccess::read) ?: caller
+            top.mcfpp.analysis.StorageAccess.actualView(caller) else (caller as? Var<*>)?.let(top.mcfpp.analysis.StorageAccess::read) ?: caller
+        val callEffect = top.mcfpp.analysis.EffectAnalysis.recordCall(this, normalArgs, actualCaller as? Var<*>)
         val observed = if (noWrites || writesReceiver) emptyList() else top.mcfpp.analysis.StorageAccess.visibleValues(currFunction.scope) +
             readOnlyArgs + normalArgs + listOfNotNull(actualCaller as? Var<*>)
         if (!javaMethod.parameterTypes.contentEquals(arrayOf(NativeCallContext::class.java))) {
@@ -116,7 +116,8 @@ class NativeFunction : Function, Native {
         } catch (e: Exception) {
             LogProcessor.error("Error when invoking native function: ${this.identifier}", e)
         } finally {
-            top.mcfpp.analysis.StorageAccess.barrier(observed)
+            if (!writesReceiver || Project.errorCount == errors)
+                top.mcfpp.analysis.StorageAccess.applyEffect(observed, callEffect)
         }
         if (Project.errorCount != errors)
             return UnknownVar(identifier).apply { type = returnType; isError = true }
@@ -166,23 +167,26 @@ class NativeFunction : Function, Native {
     fun replaceGenericParams(genericParams: Map<String, MCFPPType>) : NativeFunction{
         val n = NativeFunction(this.identifier, this.namespace, this.javaMethod)
         n.caller = this.caller
-        n.returnType = this.returnType
+        n.owner = this.owner
+        n.accessModifier = this.accessModifier
+        n.returnType = (this.returnType as? MCFPPTypeWithGeneric)?.replaceGenericParam(genericParams) ?: this.returnType
         for(np in normalParams){
-            if(np.type is MCFPPTypeWithGeneric){
-                val p = FunctionParam((np.type as MCFPPTypeWithGeneric).replaceGenericParam(genericParams), np.identifier, this, np.isStatic)
-                n.appendNormalParam(p)
-                n.scope.putVar(p.identifier, p.buildVar())
-            }else{
-                n.appendNormalParam(np)
-                n.scope.putVar(np.identifier, np.buildVar())
-            }
+            val type = (np.type as? MCFPPTypeWithGeneric)?.replaceGenericParam(genericParams) ?: np.type
+            val p = FunctionParam(type, np.identifier, n, np.isStatic, np.hasDefault, np.isReadOnly)
+            p.defaultValue = np.defaultValue
+            p.defaultTypes = np.defaultTypes
+            p.defaultContext = np.defaultContext
+            n.appendNormalParam(p)
+            n.scope.putVar(p.identifier, p.buildVar())
         }
         for(rp in readOnlyParams){
-            if(genericParams[rp.typeName] != null){
-                n.appendReadOnlyParam(genericParams[rp.typeName]!!, rp.identifier, rp.isStatic)
-            }else{
-                n.appendReadOnlyParam(rp.type, rp.identifier, rp.isStatic)
-            }
+            if (rp.identifier in genericParams) continue
+            val type = (rp.type as? MCFPPTypeWithGeneric)?.replaceGenericParam(genericParams) ?: rp.type
+            val p = FunctionParam(type, rp.identifier, n, rp.isStatic, rp.hasDefault, true)
+            p.defaultValue = rp.defaultValue
+            p.defaultTypes = rp.defaultTypes
+            p.defaultContext = rp.defaultContext
+            n.readOnlyParams.add(p)
         }
         return n
     }
@@ -224,17 +228,12 @@ class NativeFunction : Function, Native {
         for (param in r?.parameter()?:ArrayList()){
             val (p,v) = parseParam(param, isReadOnly = true)
             readOnlyParams.add(p)
-            if(v !is MCFPPValue<*>){
-                LogProcessor.error("ReadOnly params must have a concrete value")
-                throw Exception()
-            }
             scope.putVar(p.identifier, v)
         }
         hasDefaultValue = false
-        for (param in n.parameter()) {
-            var (p,v) = parseParam(param)
+        for (param in n?.parameter().orEmpty()) {
+            val (p,v) = parseParam(param)
             normalParams.add(p)
-            if(v is MCFPPValue<*> && p.type.hasRuntimeRepresentation) v = v.toDynamic(false)
             scope.putVar(p.identifier, v)
         }
     }

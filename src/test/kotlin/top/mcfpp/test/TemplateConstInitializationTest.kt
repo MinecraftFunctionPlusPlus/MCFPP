@@ -1,7 +1,6 @@
 package top.mcfpp.test
 
 import top.mcfpp.Project
-import top.mcfpp.analysis.ValueSnapshot
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.ObjectDataTemplate
@@ -77,7 +76,7 @@ class TemplateConstInitializationTest {
                 val field = defaults.scope.getVar(name)!!
                 assertTrue(field.isConst)
                 assertFalse(field.symbol!!.mutable)
-                assertNull(ValueSnapshot.of(field))
+                assertNull(top.mcfpp.analysis.StorageAccess.snapshot(field))
                 if (name == "inferred") {
                     assertTrue((field as MCInt).isDataOnly)
                     assertTrue(field.annotations.any { it is top.mcfpp.mni.annotation.DataOnly })

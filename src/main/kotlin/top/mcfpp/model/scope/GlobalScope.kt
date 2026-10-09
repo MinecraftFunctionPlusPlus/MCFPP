@@ -170,8 +170,8 @@ object GlobalScope : FieldContainer, IScope {
     fun getFunctionCandidates(namespace: String?, identifier: String, file: FileScope?): List<Function> {
         if (namespace == null) {
             val accessible = file?.getAccessibleFunctionCandidates(identifier).orEmpty()
-            val seen = accessible.map { it.namespace }.toSet()
-            return accessible + stdNamespaces.values.filter { it.identifier !in seen }.flatMap { it.scope.getFunctionCandidates(identifier) }
+            if (accessible.isNotEmpty()) return accessible
+            return stdNamespaces.values.flatMap { it.scope.getFunctionCandidates(identifier) }
         }
         return listOfNotNull(localNamespaces[namespace], libNamespaces[namespace], stdNamespaces[namespace])
             .firstNotNullOfOrNull { it.scope.getFunctionCandidates(identifier).takeIf { functions -> functions.isNotEmpty() } }.orEmpty()

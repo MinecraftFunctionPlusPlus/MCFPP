@@ -1,7 +1,6 @@
 package top.mcfpp.core.lang.obj
 
 import top.mcfpp.analysis.StorageAccess
-import top.mcfpp.core.lang.ConcreteVar
 import top.mcfpp.core.lang.PropertyVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.UnknownVar
@@ -15,14 +14,10 @@ import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 
-class StaticMemberView(type: CanSelectMember, identifier: String = TempPool.getVarIdentify()) :
-    ConcreteVar<StaticMemberView, CanSelectMember>(identifier, type) {
+class StaticMemberView(val declaration: CanSelectMember, identifier: String = TempPool.getVarIdentify()) :
+    Var<StaticMemberView>(identifier) {
 
     override var type: MCFPPType = MCFPPPrivateType.StaticMemberViewType
-
-    override fun toDynamic(replace: Boolean): Var<*> {
-        return this
-    }
 
     override fun doAssignedBy(b: Var<*>): StaticMemberView {
         LogProcessor.error("Cannot assign value to object type variable")
@@ -38,7 +33,7 @@ class StaticMemberView(type: CanSelectMember, identifier: String = TempPool.getV
     override fun getFromStack() {}
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        val objectOwner = (value as? MCFPPType)?.objectData as? ObjectCompoundData
+        val objectOwner = (declaration as? MCFPPType)?.objectData as? ObjectCompoundData
         (objectOwner as? DataTemplate)?.let(top.mcfpp.Project::prepareObjectInitializer)
         if (objectOwner is DataTemplate) {
             val template = objectOwner
@@ -47,8 +42,8 @@ class StaticMemberView(type: CanSelectMember, identifier: String = TempPool.getV
                 return UnknownVar(key).apply { isError = true } to true
             }
         }
-        return value.getMemberVar(key, accessModifier).apply {
-            first?.parent = value
+        return declaration.getMemberVar(key, accessModifier).apply {
+            first?.parent = declaration
             if(objectOwner != null) {
                 first?.let { member ->
                     val field = if (member is PropertyVar) member.field else member
@@ -65,16 +60,16 @@ class StaticMemberView(type: CanSelectMember, identifier: String = TempPool.getV
         normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        ((value as? MCFPPType)?.objectData as? DataTemplate)?.let(top.mcfpp.Project::prepareObjectInitializer)
-        return value.getMemberFunction(key, readOnlyArgs, normalArgs, accessModifier)
+        ((declaration as? MCFPPType)?.objectData as? DataTemplate)?.let(top.mcfpp.Project::prepareObjectInitializer)
+        return declaration.getMemberFunction(key, readOnlyArgs, normalArgs, accessModifier)
     }
 
     override fun getAccess(function: Function): Member.AccessModifier {
-        return value.getAccess(function)
+        return declaration.getAccess(function)
     }
 
     override fun replaceMemberVar(v: Var<*>) {
-        value.replaceMemberVar(v)
+        declaration.replaceMemberVar(v)
     }
 
 }

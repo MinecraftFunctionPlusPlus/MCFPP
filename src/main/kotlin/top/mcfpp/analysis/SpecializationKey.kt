@@ -22,7 +22,7 @@ class SpecializationKey(val declaration: SymbolId, arguments: List<Specializatio
 object SpecializationKeys {
     fun argument(value: Var<*>): SpecializationArgument = when {
         value.isError -> SpecializationArgument.Error
-        else -> ValueSnapshot.of(value)?.let { SpecializationArgument.Constant(it) } ?: SpecializationArgument.Unknown
+        else -> top.mcfpp.analysis.StorageAccess.snapshot(value)?.let { SpecializationArgument.Constant(it) } ?: SpecializationArgument.Unknown
     }
     fun isConstant(value: Var<*>): Boolean = argument(value) is SpecializationArgument.Constant
     fun forArguments(function: Function, arguments: Collection<Var<*>>) = forArguments(function.declarationId, arguments)

@@ -4,7 +4,6 @@ import top.mcfpp.Project
 import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.MCFPPTypeVar
-import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Generic
@@ -59,19 +58,14 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
         for (param in r.parameter()){
             val (p,v) = parseParam(param, isReadOnly = true)
             readOnlyParams.add(p)
-            if(v !is MCFPPValue<*>){
-                LogProcessor.error("ReadOnly params must have a concrete value")
-                throw Exception()
-            }
             scope.putVar(p.identifier, v)
             if (p.type == top.mcfpp.type.MCFPPConcreteType.Type)
                 scope.putType(p.identifier, top.mcfpp.type.MCFPPGenericParamType(p.identifier, arrayListOf()))
         }
         hasDefaultValue = false
         for (param in n.parameter()) {
-            var (p,v) = parseParam(param)
+            val (p,v) = parseParam(param)
             normalParams.add(p)
-            if(v is MCFPPValue<*> && p.type.hasRuntimeRepresentation) v = v.toDynamic(false)
             scope.putVar(p.identifier, v)
         }
     }

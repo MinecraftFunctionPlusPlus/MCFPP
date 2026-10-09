@@ -2,7 +2,6 @@ package top.mcfpp.type
 
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.VectorVar
-import top.mcfpp.core.lang.VectorVarConcrete
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.nbt.tags.Tag
@@ -22,16 +21,18 @@ class MCFPPVectorType(val dimension: Int): MCFPPType(arrayListOf(MCFPPBaseType.O
     override val nbtType: java.lang.Class<out Tag<*>>
         get() = ListTag::class.java
 
-    override fun defaultValue() = Array(dimension){0}
+    override fun defaultValue(): Any? = null
 
     companion object {
         val regex = Regex("^vec\\d+$")
     }
 
     @Suppress("UNCHECKED_CAST")
-    override fun build(identifier: String, container: FieldContainer, value: Any?): Var<*> = VectorVarConcrete(value as Array<Int>, container, identifier)
+    override fun build(identifier: String, container: FieldContainer, value: Any?): Var<*> = VectorVar(dimension, container, identifier).also {
+        top.mcfpp.analysis.StorageAccess.initializeLiteral(it, value as top.mcfpp.analysis.CompilerValue)
+    }
     @Suppress("UNCHECKED_CAST")
-    override fun build(identifier: String, value: Any?): Var<*> = VectorVarConcrete(value as Array<Int>, identifier)
+    override fun build(identifier: String, value: Any?): Var<*> = top.mcfpp.analysis.StorageAccess.literal(this, value as top.mcfpp.analysis.CompilerValue, identifier)
     override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = VectorVar(dimension, container, identifier)
     override fun buildUnConcrete(identifier: String): Var<*> = VectorVar(dimension, identifier)
 

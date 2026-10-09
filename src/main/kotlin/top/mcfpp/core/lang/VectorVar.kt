@@ -1,244 +1,48 @@
 package top.mcfpp.core.lang
 
+import top.mcfpp.analysis.CompilerValue
+import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.core.lang.nbt.NBTBasedData
-import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.property.Property
-import top.mcfpp.type.MCFPPType
+import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPVectorType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
-import top.mcfpp.util.TextTranslator
-import top.mcfpp.util.TextTranslator.translate
 
-open class VectorVar: Var<VectorVar>, Indexable, ScoreHolder {
-
+/** Fixed-dimensional typed access; components belong to its parent's Place. */
+class VectorVar : Var<VectorVar>, Indexable {
     val dimension: Int
-
-    val components: ArrayList<MCInt> = ArrayList()
-
-    override var parent : CanSelectMember? = null
-
-    final override var type: MCFPPType
-        get() = MCFPPVectorType(dimension)
-
-    constructor(
-        dimension: Int,
-        curr: FieldContainer,
-        identifier: String = TempPool.getVarIdentify()
-    ) : this(dimension, curr.prefix + identifier) {
-        this.identifier = identifier
-    }
-
-    constructor(dimension: Int, identifier: String = TempPool.getVarIdentify()) : super(identifier){
+    constructor(dimension: Int, identifier: String = TempPool.getVarIdentify()) : super(identifier) {
+        require(dimension > 0) { "Vector dimension must be positive" }
         this.dimension = dimension
-        //生成向量变量
-        for (i in 0..<dimension){
-            components.add(MCInt("$identifier$$i"))
-            components[i].holder = this
-        }
         type = MCFPPVectorType(dimension)
     }
-
-    constructor(b: VectorVar) : super(b){
-        this.dimension = b.dimension
-        for (i in 0..<dimension){
-            components.add(MCInt(b.components[i]))
-            components[i].holder = this
-        }
-        type = MCFPPVectorType(dimension)
+    constructor(dimension: Int, container: FieldContainer, identifier: String = TempPool.getVarIdentify()) : this(dimension, identifier)
+    constructor(values: Array<Int>, identifier: String = TempPool.getVarIdentify()) : this(values.size, identifier) {
+        StorageAccess.initializeLiteral(this, CompilerValue.Sequence(values.map {
+            CompilerValue.Typed(MCFPPBaseType.Int.typeId, CompilerValue.Integral(it.toLong()))
+        }))
     }
-
-    override fun doAssignedBy(b: Var<*>): VectorVar {
-        when(b){
-            is VectorVar -> {
-                if(b.dimension != dimension){
-                    LogProcessor.error("Cannot assign vector '$identifier' with different dimension '${b.identifier}'")
-                }
-                for (i in 0 until dimension){
-                    components[i].replacedBy(components[i].assignedBy(b.components[i]))
-                }
-            }
-            else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
-            }
-        }
-        return this
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        if(type !is MCFPPVectorType) {
-            val re = super.explicitCast(type)
-            if(!re.isError) return re
-        }
-        return when(type){
-            is MCFPPVectorType -> {
-                if(type.dimension != dimension){
-                    LogProcessor.error("Cannot cast ${type.typeName} '$identifier' with different dimension '${type.dimension}'")
-                }
-                LogProcessor.warn(TextTranslator.REDUNDANT_CAST_WARN.translate(this.type.typeName, type.typeName))
-                this
-            }
-            else -> buildCastErrorVar(type)
-        }
-    }
-
-    override fun canExplicitCast(type: MCFPPType): Boolean {
-        return type is MCFPPVectorType && type.dimension == dimension || type !is MCFPPVectorType && super.canExplicitCast(type)
-    }
-
-    override fun implicitCast(type: MCFPPType): Var<*> {
-        if(type !is MCFPPVectorType) {
-            val re = super.implicitCast(type)
-            if(!re.isError) return re
-        }
-        return when(type){
-            is MCFPPVectorType -> {
-                if(type.dimension != dimension){
-                    return buildCastErrorVar(type)
-                }
-                this
-            }
-            else -> buildCastErrorVar(type)
-        }
-    }
-
-    override fun canImplicitCast(type: MCFPPType): Boolean {
-        return (type !is MCFPPVectorType && super.canImplicitCast(type)) || (type is MCFPPVectorType && type.dimension == dimension)
-    }
-
-    override fun onScoreChange(score: MCInt) {
-        if(score is MCIntConcrete && isConcrete()){
-            this.replacedBy(this.toConcrete())
-        }
-    }
-
-    fun isConcrete(): Boolean{
-        if(this is VectorVarConcrete) return true
-        return components.all { it is MCIntConcrete }
-    }
-
-    fun toConcrete(): VectorVarConcrete {
-        if (this is VectorVarConcrete) return this
-        if(!isConcrete()) throw Exception("Cannot convert to concrete")
-        val value = components.map { (it as MCIntConcrete).value }.toTypedArray()
-        return VectorVarConcrete(this, value)
-    }
-
-    override fun clone(): VectorVar {
-        return VectorVar(this)
-    }
-
-    override fun getTempVar(): VectorVar {
-        if (isTemp) return this
-        val re = VectorVar(dimension)
-        re.isTemp = true
-        return re.assignedBy(this)
-    }
-
-    override fun storeToStack() {
-        components.forEach { it.storeToStack() }
-    }
-
-    override fun getFromStack() {
-        components.forEach { it.getFromStack() }
-    }
-
+    constructor(values: Array<Int>, container: FieldContainer, identifier: String = TempPool.getVarIdentify()) : this(values, identifier)
+    constructor(source: VectorVar) : super(source) { dimension = source.dimension }
+    override fun doAssignedBy(source: Var<*>): VectorVar = StorageAccess.write(this, source) as VectorVar
+    override fun clone(): VectorVar = VectorVar(this)
+    override fun getTempVar(): VectorVar = StorageAccess.capture(this) as VectorVar
+    override fun storeToStack() = StorageAccess.materialize(this)
+    override fun getFromStack() { StorageAccess.read(this) }
     override fun getByIndex(index: Var<*>): PropertyVar {
-        when(index){
-            is MCInt -> {
-                return PropertyVar(Property.buildSimpleProperty(getByIntIndex(index)), getByIntIndex(index), this)
-            }
-
-            else -> {
-                LogProcessor.error("Invalid index type ${index.type}")
-                return PropertyVar(Property.buildSimpleProperty(UnknownVar("error_${identifier}_index_${index.identifier}")),UnknownVar("error_${identifier}_index_${index.identifier}"),this)
-            }
+        var closed = StorageAccess.snapshot(index)
+        while (closed is CompilerValue.Typed) closed = closed.payload
+        val offset = (closed as? CompilerValue.Integral)?.value
+        val element = if (index.type == MCFPPBaseType.Int && offset != null && offset in 0L until dimension.toLong()) {
+            StorageAccess.element(this, index, MCFPPBaseType.Int)
+        } else {
+            LogProcessor.error("Vector index requires a complete int within its declared dimension")
+            UnknownVar("${identifier}_index").apply { isError = true }
         }
+        return PropertyVar(Property.buildSimpleProperty(element), element, this)
     }
-
-    private fun getByIntIndex(index: MCInt): MCInt {
-        if(index is MCIntConcrete){
-            val value = index.value
-            if(value < components.size){
-                return components[value]
-            }else{
-                LogProcessor.error("Index out of bounds")
-                throw IndexOutOfBoundsException()
-            }
-        }else{
-            TODO()
-        }
-    }
-
-    override fun toNBTVar(): NBTBasedData {
-        TODO("Not yet implemented")
-    }
-
-    override fun replaceScore(score: MCInt) {
-        components.forEachIndexed { index, v ->
-            if(v == this){
-                components[index] = score
-            }
-        }
-    }
-}
-
-class VectorVarConcrete : VectorVar, MCFPPValue<Array<Int>> {
-
-    override var value: Array<Int>
-
-    /**
-     * 创建一个固定的目标选择器
-     *
-     * @param identifier 标识符
-     * @param curr 域容器
-     * @param value 值
-     */
-    constructor(
-        value: Array<Int>,
-        curr: FieldContainer,
-        identifier: String = TempPool.getVarIdentify()
-    ) : super(value.size, curr, identifier) {
-        this.value = value
-        for (i in components.indices){
-            components[i] = MCIntConcrete(value[i], "$identifier$$i")
-        }
-    }
-
-    /**
-     * 创建一个固定的目标选择器。它的标识符和mc名一致
-     * @param identifier 标识符。如不指定，则为随机uuid
-     * @param value 值
-     */
-    constructor(value: Array<Int>, identifier: String = TempPool.getVarIdentify()) : super(value.size, identifier) {
-        this.value = value
-        for (i in components.indices){
-            components[i] = MCIntConcrete(value[i], "$identifier$$i")
-        }
-    }
-
-    constructor(v: VectorVar, value: Array<Int>) : super(v){
-        if(value.size != v.dimension){
-            this.value = Array(v.dimension) { 0 }
-            LogProcessor.error("Cannot assign vector with different dimension")
-            for (i in value.indices){
-                this.value[i] = value[i]
-                components[i] = MCIntConcrete(value[i], "$identifier$$i")
-            }
-        }else{
-            this.value = value
-            for (i in components.indices){
-                components[i] = MCIntConcrete(value[i], "$identifier$$i")
-            }
-        }
-    }
-
-    override fun toDynamic(replace: Boolean): Var<*> {
-        for (i in components){
-            (i as MCIntConcrete).toDynamic(false)
-        }
-        return VectorVar(this)
-    }
-
+    override fun toNBTVar(): NBTBasedData = StorageAccess.view(this, MCFPPNBTType.NBT) as NBTBasedData
 }

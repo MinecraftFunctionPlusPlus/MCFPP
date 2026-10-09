@@ -7,18 +7,16 @@ import top.mcfpp.command.Commands
 import top.mcfpp.command.FloatProviders
 import top.mcfpp.core.lang.MCFloat
 import top.mcfpp.core.lang.MCInt
-import top.mcfpp.core.lang.RangeVarConcrete
-import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.core.lang.RangeVar
 import top.mcfpp.core.lang.PropertyVar
 import top.mcfpp.core.lang.Pos2Var
 import top.mcfpp.core.lang.Pos3Var
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
-import top.mcfpp.core.lang.obj.EnumVarConcrete
+import top.mcfpp.core.lang.obj.EnumVar
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.nbt.MCString
-import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.compound.DataTemplate
@@ -30,7 +28,7 @@ import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.lib.SbObject
 
 internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*>>) -> Command) = context.withArguments { args ->
-    if (!FloatProviders.enabled && args.any { it is MCFloat && it !is MCFPPValue<*> }) {
+    if (!FloatProviders.enabled && args.any { it is MCFloat && StorageAccess.snapshot(it) == null }) {
         LogProcessor.error("Dynamic float command arguments require a number-provider target")
         return@withArguments
     }
@@ -38,11 +36,14 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
     val operation = build(args)
     if (top.mcfpp.Project.errorCount != errors || args.any { it.isError }) return@withArguments
     val result = (context.declaredReturnType.buildUnConcrete(TempPool.getVarIdentify()) as DataTemplateObject).apply { isTemp = true }
-    val binding = StorageAccess.bindIncomingParameter(result)
+    val binding = StorageAccess.ensure(result)
     Function.addCommand(Commands.dataSetValue(binding.path, CompoundTag()))
+    StorageAccess.publishNbt(result)
     val command = Command("execute store result").build(binding.path.memberIndex("result").toCommandPart())
         .build("int 1 store success").build(binding.path.memberIndex("success").toCommandPart()).build("byte 1 run").build(operation)
     Function.addCommands(command.buildMacroFunction())
+    binding.data.facts.initialize(binding.place.field("result"), top.mcfpp.analysis.ValueFacts(top.mcfpp.analysis.TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), top.mcfpp.analysis.ValueKnowledge.Unknown))
+    binding.data.facts.initialize(binding.place.field("success"), top.mcfpp.analysis.ValueFacts(top.mcfpp.analysis.TypeKnowledge.Exact(MCFPPBaseType.Bool.typeId), top.mcfpp.analysis.ValueKnowledge.Unknown))
     context.publishResult(result)
 }
 
@@ -52,7 +53,7 @@ object NativeMinecraftCommandOperations {
     }
     fun entityAddAttributeModifier(context: NativeCallContext) = context.withAdapters { receiver, args ->
         val target = attributeSelector(receiver) ?: return@withAdapters
-        val mode = context.argumentSnapshot(0)?.let { StorageAccess.restore(args[0].type, it, args[0].identifier) } as? EnumVarConcrete
+        val mode = context.argumentSnapshot(0)?.let { StorageAccess.restore(args[0].type, it, args[0].identifier) } as? EnumVar
         if (mode == null) {
             LogProcessor.error("Attribute modifier operations require a complete compile-time enum value")
             return@withAdapters
@@ -128,7 +129,7 @@ object NativeMinecraftCommandOperations {
             LogProcessor.error("Entity teleport commands require a single-entity selector destination")
             return@withAdapters
         }
-        val anchor = context.argumentSnapshot(2)?.let { StorageAccess.restore(args[2].type, it, args[2].identifier) } as? EnumVarConcrete
+        val anchor = context.argumentSnapshot(2)?.let { StorageAccess.restore(args[2].type, it, args[2].identifier) } as? EnumVar
         if (anchor == null) {
             LogProcessor.error("Entity teleport anchor requires a complete compile-time enum value")
             return@withAdapters
@@ -175,7 +176,7 @@ object NativeMinecraftCommandOperations {
     }
     fun playerSetGamemode(context: NativeCallContext) = context.withAdapters { receiver, args ->
         val players = playerSelector(receiver) ?: return@withAdapters
-        val mode = args[0] as? EnumVarConcrete ?: run {
+        val mode = (args[0] as? EnumVar)?.takeIf { StorageAccess.snapshot(it) != null } ?: run {
             LogProcessor.error("Gamemode requires a compile-time enum value")
             return@withAdapters
         }
@@ -257,7 +258,7 @@ object NativeMinecraftCommandOperations {
     private fun effectBooleanWord(context: NativeCallContext, value: Var<*>, index: Int): MCString {
         var snapshot = context.argumentSnapshot(index)
         while (snapshot is CompilerValue.Typed) snapshot = snapshot.payload
-        if (snapshot is CompilerValue.Bool) return MCStringConcrete(StringTag(snapshot.value.toString()))
+        if (snapshot is CompilerValue.Bool) return MCString(StringTag(snapshot.value.toString()))
         val score = StorageAccess.read(value) as ScoreBool
         val word = MCString(TempPool.getVarIdentify()).apply { isTemp = true }
         val binding = StorageAccess.bindIncomingParameter(word)
@@ -321,16 +322,16 @@ object NativeMinecraftCommandOperations {
     }
 
     private fun randomNumber(context: NativeCallContext, mode: String, sequence: Var<*>? = null) = context.withArguments { args ->
-        val range = context.argumentSnapshot(0)?.let { StorageAccess.restore(args[0].type, it, args[0].identifier) } as? RangeVarConcrete
+        val range = context.argumentSnapshot(0)?.let { StorageAccess.restore(args[0].type, it, args[0].identifier) } as? RangeVar
         if (range == null || range.value.first !is Int || range.value.second !is Int) {
             LogProcessor.error("Random commands require a complete range with integer endpoints")
             return@withArguments
         }
-        val result = MCInt().apply { sbObject = SbObject.MCFPP_TEMP; hasAssigned = true; isDynamic = true; isTemp = true }
+        val result = MCInt().apply { sbObject = SbObject.MCFPP_TEMP; isTemp = true }
         val command = Command.buildAll("execute store result score", result.name, result.sbObject, "run random", mode, range)
         if (sequence != null) command.build(sequence.toCommandPart())
         Function.addCommands(command.buildMacroFunction())
-        context.publishResult(result)
+        context.publishResult(StorageAccess.publishScore(result, top.mcfpp.analysis.StorageLayout.Scoreboard(result.name, result.sbObject.toString())))
     }
 
     fun randomReset(context: NativeCallContext) = context.withAdapters { receiver, args ->
@@ -359,14 +360,14 @@ object NativeMinecraftCommandOperations {
     }
 
     fun worldSetDifficulty(context: NativeCallContext) = context.withArguments { args ->
-        val difficulty = args[0] as? EnumVarConcrete ?: run {
+        val difficulty = (args[0] as? EnumVar)?.takeIf { StorageAccess.snapshot(it) != null } ?: run {
             LogProcessor.error("Difficulty requires a compile-time enum value")
             return@withArguments
         }
         captureCommandResult(context) { Command.buildAll("difficulty", difficulty.value.identifier) }
     }
     fun worldSetWeather(context: NativeCallContext) = context.withArguments { args ->
-        val weather = args[0] as? EnumVarConcrete ?: run {
+        val weather = (args[0] as? EnumVar)?.takeIf { StorageAccess.snapshot(it) != null } ?: run {
             LogProcessor.error("Weather requires a compile-time enum value")
             return@withArguments
         }
@@ -383,7 +384,7 @@ object NativeMinecraftCommandOperations {
         captureCommandResult(context) { Command("bossbar list") }
     }
     fun bossbarSetColor(context: NativeCallContext) = context.withAdapters { receiver, args ->
-        val color = args[0] as? EnumVarConcrete ?: run {
+        val color = (args[0] as? EnumVar)?.takeIf { StorageAccess.snapshot(it) != null } ?: run {
             LogProcessor.error("Bossbar color/style requires a compile-time enum value")
             return@withAdapters
         }
@@ -397,7 +398,7 @@ object NativeMinecraftCommandOperations {
         captureCommandResult(context) { Command.buildAll("bossbar set", templateField(receiver as DataTemplateObject, "id"), "players", players) }
     }
     fun bossbarSetStyle(context: NativeCallContext) = context.withAdapters { receiver, args ->
-        val style = args[0] as? EnumVarConcrete ?: run {
+        val style = (args[0] as? EnumVar)?.takeIf { StorageAccess.snapshot(it) != null } ?: run {
             LogProcessor.error("Bossbar color/style requires a compile-time enum value")
             return@withAdapters
         }
@@ -420,6 +421,10 @@ object NativeMinecraftCommandOperations {
         }
         Function.addCommands(Command("execute store result score $score run bossbar get").build(id.toCommandPart())
             .build(attribute).buildMacroFunction())
+        when (result) {
+            is MCInt -> StorageAccess.publishScore(result, top.mcfpp.analysis.StorageLayout.Scoreboard(result.name, result.sbObject.toString()))
+            is ScoreBool -> StorageAccess.publishBoolean(result, top.mcfpp.analysis.StorageLayout.Scoreboard(result.name, result.boolObject.toString()))
+        }
         context.publishResult(result)
     }
 

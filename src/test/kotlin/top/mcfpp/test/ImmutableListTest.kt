@@ -30,7 +30,9 @@ class ImmutableListTest {
         compile("func main(){}")
         val type = MCFPPImmutableListType(MCFPPBaseType.Int)
         val runtime = type.buildUnConcrete("runtime")
-        val known = type.build("constant")
+        val known = StorageAccess.listLiteral(type, emptyList(), "constant")
+        assertEquals(CompilerValue.Typed(type.typeId, CompilerValue.Sequence(emptyList())), StorageAccess.snapshot(known))
+        assertNull(StorageAccess.snapshot(runtime))
         val member = known.getMemberFunction("toText", emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first
         assertIs<top.mcfpp.model.function.NativeFunction>(member)
         assertSame(member, runtime.getMemberFunction("toText", emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first)

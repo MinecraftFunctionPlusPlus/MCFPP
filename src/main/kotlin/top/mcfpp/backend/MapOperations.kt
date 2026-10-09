@@ -7,7 +7,6 @@ import top.mcfpp.command.Commands
 import top.mcfpp.command.TargetCapabilities
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBool
-import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.SbObject
@@ -52,10 +51,10 @@ object MapOperations {
         is CompilerValue.Nbt -> (Tag.toNBT(part.snbt) as? StringTag)?.value
         else -> null
     }
-    private fun key(value: MCString) = text(ValueSnapshot.of(value))
-    private fun scratch() = NBTPath.temp.memberIndex(TempPool.getVarIdentify())
+    private fun key(value: MCString) = text(top.mcfpp.analysis.StorageAccess.snapshot(value))
+    private fun scratch() = NBTPath.stack.intIndex(0).memberIndex(TempPool.getVarIdentify())
     private fun emit(command: Command) = Function.addCommands(command.buildMacroFunction())
-    private fun score() = MCInt().apply { sbObject = SbObject.MCFPP_TEMP; hasAssigned = true; isDynamic = true; isTemp = true }
+    private fun score() = MCInt().apply { sbObject = SbObject.MCFPP_TEMP; isTemp = true }
     private fun address(value: MCInt) = "${value.name} ${value.sbObject}"
     private fun fail(message: String): Var<*> {
         LogProcessor.error(message)
@@ -63,11 +62,12 @@ object MapOperations {
     }
 
     fun captureKey(value: MCString): MCString {
-        key(value)?.let { return MCStringConcrete(StringTag(it)) }
+        key(value)?.let { return MCString(StringTag(it)) }
         return MCString().apply {
             nbtPath = NBTPath.stack.intIndex(0).memberIndex(identifier)
-            hasAssigned = true; isDynamic = true; isTemp = true
+            isTemp = true
             StorageAccess.encodeTo(nbtPath, value)
+            StorageAccess.publishNbt(this)
         }
     }
 
@@ -89,7 +89,7 @@ object MapOperations {
 
     private fun keys(list: NBTList): List<String>? {
         val binding = StorageAccess.ensure(list)
-        val size = binding.data.listSizes[binding.place] ?: return null
+        val size = binding.data.facts.length(binding.place) ?: return null
         return (0 until size).map { index ->
             val fact = binding.data.facts.read(binding.place.index(index).field("key")) ?: return null
             if (fact.type != TypeKnowledge.Exact(MCFPPBaseType.String.typeId)) return null
@@ -100,7 +100,7 @@ object MapOperations {
     private fun valueType(caller: NBTMap, list: NBTList): TypeKnowledge {
         val binding = StorageAccess.ensure(list)
         binding.data.facts.read(binding.place.unknownIndex().field("value"))?.let { return it.type }
-        val size = binding.data.listSizes[binding.place]
+        val size = binding.data.facts.length(binding.place)
         val rows = binding.data.facts.children(binding.place).keys.filter { it.path.last() is PathSegment.Index }
         if (size != null && size == rows.size && size > 0) return rows.map {
             binding.data.facts.read(it.field("value"))?.type ?: TypeKnowledge.Unknown
@@ -119,14 +119,14 @@ object MapOperations {
             return fail("Compiler-only map has no key '$name'")
         val place = (if (index != null && index >= 0) binding.place.index(index) else binding.place.unknownIndex()).field("value")
         val path = if (index != null && index >= 0) binding.path.intIndex(index).memberIndex("value") else {
-            val predicate = if (name != null) NBTBasedDataConcrete(CompoundTag().apply { put("key", StringTag(name)) })
+            val predicate = if (name != null) NBTBasedData(CompoundTag().apply { put("key", StringTag(name)) })
             else {
                 if (binding.data.layout == StorageLayout.CompilerOnly || TargetCapabilities.forVersion(Project.config.version)?.functionMacros != true)
                     return fail("Target '${Project.config.version}' cannot expose a map value at an unknown key without function macros")
                 NBTBasedData().apply {
                     nbtPath = NBTPath.stack.intIndex(0).memberIndex(identifier)
-                    hasAssigned = true; isDynamic = true
                     emit(Commands.dataSetValue(nbtPath, CompoundTag()))
+                    StorageAccess.publishNbt(this)
                     StorageAccess.encodeTo(nbtPath.memberIndex("key"), selected)
                 }
             }
@@ -144,7 +144,7 @@ object MapOperations {
     private fun canWrite(list: NBTList, source: Var<*>?, selected: MCString?): Boolean {
         val binding = StorageAccess.ensure(list)
         if (binding.data.layout == StorageLayout.CompilerOnly) {
-            if (selected?.let(::key) != null && keys(list) != null && (source == null || ValueSnapshot.of(source) != null)) return true
+            if (selected?.let(::key) != null && keys(list) != null && (source == null || top.mcfpp.analysis.StorageAccess.snapshot(source) != null)) return true
             fail("Compiler-only map mutation requires known keys and complete compile-time values")
             return false
         }
@@ -159,7 +159,8 @@ object MapOperations {
         return true
     }
 
-    private fun row(name: String, source: Var<*>) = NBTDictionaryConcrete(hashMapOf("key" to MCStringConcrete(StringTag(name)), "value" to source))
+    private fun row(name: String, source: Var<*>) = StorageAccess.dictionaryLiteral(MCFPPDictType(MCFPPBaseType.Any),
+        mapOf("key" to MCString(StringTag(name)), "value" to source)) as NBTDictionary
 
     fun put(caller: NBTMap, selected: MCString, source: Var<*>) {
         val list = entries(caller) ?: return
@@ -175,7 +176,7 @@ object MapOperations {
         val binding = StorageAccess.ensure(list)
         val incoming = StorageAccess.ensure(source)
         val actual = incoming.data.facts.read(incoming.place)?.type ?: TypeKnowledge.Unknown
-        val possible = if (binding.data.listSizes[binding.place] == 0) actual else valueType(caller, list).join(actual)
+        val possible = if (binding.data.facts.length(binding.place) == 0) actual else valueType(caller, list).join(actual)
         binding.data.types.putAll(incoming.data.types)
         val prepared = scratch()
         emit(Commands.dataSetValue(prepared, CompoundTag()))
@@ -210,22 +211,26 @@ object MapOperations {
     fun size(caller: NBTMap): MCInt {
         val list = entries(caller) ?: return MCInt().apply { isError = true }
         val binding = StorageAccess.ensure(list)
-        binding.data.listSizes[binding.place]?.let { return MCIntConcrete(it) }
+        binding.data.facts.length(binding.place)?.let { return MCInt(it) }
         if (binding.data.layout == StorageLayout.CompilerOnly) {
             fail("Compiler-only map size requires a known entry count")
             return MCInt().apply { isError = true }
         }
         binding.data.materialize()
-        return score().also { emit(Command("execute store result score ${address(it)} run data get").build(binding.path.toCommandPart())) }
+        return score().also {
+            emit(Command("execute store result score ${address(it)} run data get").build(binding.path.toCommandPart()))
+            StorageAccess.publishScore(it, StorageLayout.Scoreboard(it.name, it.sbObject.toString()))
+        }
     }
 
     fun isEmpty(caller: NBTMap): ScoreBool {
         val count = size(caller)
         if (count.isError) return ScoreBool().apply { isError = true }
-        if (count is MCIntConcrete) return ScoreBoolConcrete(count.value == 0)
+        if (count is MCInt && top.mcfpp.analysis.StorageAccess.snapshot(count) != null) return ScoreBool(count.value == 0)
         return ScoreBool().apply {
-            hasAssigned = true; isDynamic = true; isTemp = true
+            isTemp = true
             emit(Command("execute store success score $name $boolObject if score ${address(count)} matches 0"))
+            StorageAccess.publishBoolean(this, StorageLayout.Scoreboard(name, boolObject.toString()))
         }
     }
 
@@ -234,7 +239,7 @@ object MapOperations {
         val binding = StorageAccess.ensure(list)
         val name = key(selected)
         val names = keys(list)
-        if (name != null && names != null) return ScoreBoolConcrete(name in names)
+        if (name != null && names != null) return ScoreBool(name in names)
         if (binding.data.layout == StorageLayout.CompilerOnly) {
             fail("Compiler-only map lookup requires a known key and entry keys")
             return ScoreBool().apply { isError = true }
@@ -244,9 +249,9 @@ object MapOperations {
         StorageAccess.encodeTo(workspace.memberIndex("source"), list)
         StorageAccess.encodeTo(workspace.memberIndex("needle"), selected)
         val found = MapCommands.contains(workspace, ::emit)
-        val result = ScoreBool().apply { hasAssigned = true; isDynamic = true; isTemp = true }
+        val result = ScoreBool().apply { isTemp = true }
         Function.addCommand("scoreboard players operation ${result.name} ${result.boolObject} = ${MapCommands.key(found)}")
-        return result
+        return StorageAccess.publishBoolean(result, StorageLayout.Scoreboard(result.name, result.boolObject.toString()))
     }
 
     fun remove(caller: NBTMap, selected: MCString) {
@@ -256,7 +261,7 @@ object MapOperations {
         val names = keys(list)
         if (name != null && names != null) {
             val index = names.indexOf(name)
-            if (index >= 0) ListOperations.removeAt(list, MCIntConcrete(index))
+            if (index >= 0) ListOperations.removeAt(list, MCInt(index))
             return
         }
         val incoming = scratch()
@@ -273,9 +278,9 @@ object MapOperations {
         val names = keys(original)
         if (names != null) {
             // Capture every value before any write can invalidate an overlapping source.
-            val parts = names.map { name -> name to StorageAccess.capture(StorageAccess.read(element(source, MCStringConcrete(StringTag(name))))) }
-            if (parts.any { !canWrite(target, it.second, MCStringConcrete(StringTag(it.first))) }) return
-            for ((name, value) in parts) put(caller, MCStringConcrete(StringTag(name)), value)
+            val parts = names.map { name -> name to StorageAccess.capture(StorageAccess.read(element(source, MCString(StringTag(name))))) }
+            if (parts.any { !canWrite(target, it.second, MCString(StringTag(it.first))) }) return
+            for ((name, value) in parts) put(caller, MCString(StringTag(name)), value)
             return
         }
         if (StorageAccess.ensure(target).data.layout == StorageLayout.CompilerOnly) {
@@ -288,7 +293,7 @@ object MapOperations {
         }
         val targetBinding = StorageAccess.ensure(target)
         val sourceBinding = StorageAccess.ensure(original)
-        val possible = if (targetBinding.data.listSizes[targetBinding.place] == 0) valueType(source, original)
+        val possible = if (targetBinding.data.facts.length(targetBinding.place) == 0) valueType(source, original)
             else valueType(caller, target).join(valueType(source, original))
         targetBinding.data.types.putAll(sourceBinding.data.types)
         // A delayed initializer belongs before the source loop, never in a repeated overlay body.
@@ -304,12 +309,16 @@ object MapOperations {
 
     fun keys(caller: NBTMap): NBTList {
         val list = entries(caller) ?: return NBTList(genericType = MCFPPBaseType.String).apply { isError = true }
-        keys(list)?.let { return NBTListConcrete(ArrayList(it.map { name -> MCStringConcrete(StringTag(name)) }), TempPool.getVarIdentify(), MCFPPBaseType.String) }
+        keys(list)?.let { return StorageAccess.listLiteral(top.mcfpp.type.MCFPPListType(MCFPPBaseType.String),
+            it.map { name -> MCString(StringTag(name)) }) as NBTList }
         val workspace = scratch()
         emit(Commands.dataSetValue(workspace, CompoundTag()))
         StorageAccess.encodeTo(workspace.memberIndex("source"), list)
         MapCommands.keys(workspace, ::emit)
-        return NBTList(genericType = MCFPPBaseType.String).apply { nbtPath = workspace.memberIndex("output"); hasAssigned = true; isDynamic = true }
+        return NBTList(genericType = MCFPPBaseType.String).apply {
+            nbtPath = workspace.memberIndex("output")
+            StorageAccess.publishNbt(this)
+        }
     }
 
     fun dictionary(caller: NBTMap): NBTDictionary {
@@ -323,7 +332,7 @@ object MapOperations {
             fail("Runtime map dictionary projection cannot encode empty member names with the current NBT backend")
             return NBTDictionary().apply { isError = true }
         }
-        val parts = names.associateWith { name -> StorageAccess.capture(StorageAccess.read(element(caller, MCStringConcrete(StringTag(name))))) }
-        return NBTDictionaryConcrete(HashMap(parts)).apply { type = MCFPPDictType(caller.genericType) }
+        val parts = names.associateWith { name -> StorageAccess.capture(StorageAccess.read(element(caller, MCString(StringTag(name))))) }
+        return StorageAccess.dictionaryLiteral(MCFPPDictType(caller.genericType), parts) as NBTDictionary
     }
 }

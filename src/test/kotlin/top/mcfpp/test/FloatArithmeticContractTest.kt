@@ -14,7 +14,6 @@ import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.analysis.PrimitiveEvaluation
 import top.mcfpp.command.FloatProviders
 import top.mcfpp.core.lang.MCFloat
-import top.mcfpp.core.lang.MCFloatConcrete
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.model.function.Function
@@ -186,8 +185,8 @@ class FloatArithmeticContractTest {
                 for (operation in listOf("+", "-", "*", "/")) {
                     val errors = Project.errorCount
                     val commands = entry.commands.size
-                    val value = MCFloatConcrete(invalid)
-                    val operand = MCFloatConcrete(1f)
+                    val value = MCFloat(invalid)
+                    val operand = MCFloat(1f)
                     val result = when (operation) { "+" -> value.plus(operand); "-" -> value.minus(operand); "*" -> value.times(operand); else -> value.div(operand) }
                     assertTrue(result.isError)
                     assertEquals(errors + 1, Project.errorCount)
@@ -197,8 +196,8 @@ class FloatArithmeticContractTest {
                 for (operation in comparisons.values) {
                     val errors = Project.errorCount
                     val commands = entry.commands.size
-                    val value = MCFloatConcrete(invalid)
-                    val operand = MCFloatConcrete(1f)
+                    val value = MCFloat(invalid)
+                    val operand = MCFloat(1f)
                     val result = when (operation) {
                         ">" -> value.isBigger(operand); "<" -> value.isSmaller(operand)
                         ">=" -> value.isBiggerOrEqual(operand); "<=" -> value.isSmallerOrEqual(operand)
@@ -210,8 +209,8 @@ class FloatArithmeticContractTest {
                 }
                 if (version == "26.3") {
                     val errors = Project.errorCount
-                    assertTrue(FloatProviders.negate(MCFloatConcrete(invalid)).isError)
-                    assertTrue(FloatProviders.compare(MCFloatConcrete(invalid), MCFloatConcrete(1f), "==").isError)
+                    assertTrue(FloatProviders.negate(MCFloat(invalid)).isError)
+                    assertTrue(FloatProviders.compare(MCFloat(invalid), MCFloat(1f), "==").isError)
                     assertEquals(errors + 2, Project.errorCount)
                 }
             }

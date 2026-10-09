@@ -1,14 +1,11 @@
 package top.mcfpp.backend
 
 import top.mcfpp.analysis.StorageAccess
-import top.mcfpp.analysis.ValueSnapshot
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBool
-import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.core.lang.obj.DataTemplateObject
-import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.lib.*
 import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.model.function.Function
@@ -25,16 +22,18 @@ object NativePrintOperations {
             return@withArguments
         }
         val payload = when (value) {
-            is JsonTextConcrete -> value.value.toCommandPart()
             is JsonText -> value.toCommandPart()
-            is MCIntConcrete -> PlainChatComponent(value.value.toString()).toCommandPart()
-            is MCInt -> ScoreChatComponent(value).toCommandPart()
-            is ScoreBoolConcrete -> PlainChatComponent(if (value.value) "1" else "0").toCommandPart()
-            is ScoreBool -> ScoreChatComponent(value.asIntVar()).toCommandPart()
-            is MCStringConcrete -> PlainChatComponent(value.value.value).toCommandPart()
-            is MCString -> NBTChatComponent(value, false, null).toCommandPart()
-            is DataTemplateObjectConcrete -> PlainChatComponent(Tag.toSNBT(NBTUtil.varToNBT(value)!!)).toCommandPart()
-            is DataTemplateObject -> NBTChatComponent(value.toNBTVar(), false, null).toCommandPart()
+            is MCInt -> if (StorageAccess.snapshot(value) != null)
+                PlainChatComponent(value.value.toString()).toCommandPart()
+            else ScoreChatComponent(value).toCommandPart()
+            is ScoreBool -> if (StorageAccess.snapshot(value) != null)
+                PlainChatComponent(if (value.value) "1" else "0").toCommandPart()
+            else ScoreChatComponent(value.asIntVar()).toCommandPart()
+            is MCString -> if (StorageAccess.snapshot(value) != null)
+                PlainChatComponent(value.value.value).toCommandPart()
+            else NBTChatComponent(value, false, null).toCommandPart()
+            is DataTemplateObject -> StorageAccess.constantEncoding(value)?.let { PlainChatComponent(Tag.toSNBT(it)).toCommandPart() }
+                ?: NBTChatComponent(value.toNBTVar(), false, null).toCommandPart()
             is MCAny -> {
                 val encoded = NBTBasedData().apply {
                     isTemp = true
@@ -43,7 +42,7 @@ object NativePrintOperations {
                 StorageAccess.encodeTo(encoded.nbtPath, value)
                 NBTChatComponent(encoded, false, null).toCommandPart()
             }
-            is NBTBasedData -> if (ValueSnapshot.of(value) != null)
+            is NBTBasedData -> if (top.mcfpp.analysis.StorageAccess.snapshot(value) != null)
                 PlainChatComponent(Tag.toSNBT(NBTUtil.varToNBT(value)!!)).toCommandPart()
             else NBTChatComponent(value, false, null).toCommandPart()
             else -> {

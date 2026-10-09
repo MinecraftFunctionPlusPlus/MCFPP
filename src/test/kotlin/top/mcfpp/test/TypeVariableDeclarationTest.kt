@@ -1,7 +1,6 @@
 package top.mcfpp.test
 
 import top.mcfpp.Project
-import top.mcfpp.analysis.ValueSnapshot
 import top.mcfpp.analysis.containsTypeValue
 import top.mcfpp.core.lang.MCFPPTypeVar
 import top.mcfpp.model.compound.GenericDataTemplate
@@ -131,7 +130,7 @@ class TypeVariableDeclarationTest {
         var scope = GlobalScope.localNamespaces.getValue("default.test").scope
         val destination = scope.functions.getValue("main").single().scope.getVar("dst")!!
         assertFalse(destination is MCFPPTypeVar)
-        assertFalse(ValueSnapshot.of(destination)?.containsTypeValue() == true)
+        assertFalse(top.mcfpp.analysis.StorageAccess.snapshot(destination)?.containsTypeValue() == true)
         assertTrue(scope.functions.getValue("accept").single().compiledFunctions.isEmpty())
         MCFPPStringTest.readFromString("""
             func produce()->object{return int;}
@@ -141,7 +140,7 @@ class TypeVariableDeclarationTest {
         scope = GlobalScope.localNamespaces.getValue("default.test").scope
         val returned = scope.functions.getValue("produce").single().returnVar
         assertFalse(returned is MCFPPTypeVar)
-        assertFalse(ValueSnapshot.of(returned)?.containsTypeValue() == true)
+        assertFalse(top.mcfpp.analysis.StorageAccess.snapshot(returned)?.containsTypeValue() == true)
     }
 
     @Test fun dependentNormalSignaturesCannotBindMetaSlots() {

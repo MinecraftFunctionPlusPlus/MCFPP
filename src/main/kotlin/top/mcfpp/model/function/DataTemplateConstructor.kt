@@ -5,7 +5,6 @@ import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.antlr.MCFPPFieldVisitor
 import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.analysis.TypeUsage
-import top.mcfpp.analysis.ValueSnapshot
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.antlr.mcfppParser.CurlBlockContext
@@ -51,12 +50,26 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
         val receiver = if (data is ObjectCompoundData) StaticMemberView(data.getType())
             else target.scope.getVar("this") as DataTemplateObject
         if (receiver is DataTemplateObject) target.constructedReceiver = receiver
-        for ((name, expression) in data.preInit) {
+        val initializers = linkedMapOf<String, Pair<DataTemplate, mcfppParser.ExpressionContext>>()
+        val visited = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<DataTemplate, Boolean>())
+        fun collect(template: DataTemplate) {
+            if (!visited.add(template)) return
+            template.parent.filterIsInstance<DataTemplate>().forEach(::collect)
+            for ((name, expression) in template.preInit) {
+                if (data.scope.getVar(name)?.declaredParentTemplate === template)
+                    initializers[name] = template to expression
+            }
+        }
+        collect(data)
+        for ((name, declaration) in initializers) {
+            val (initializerOwner, expression) = declaration
             if (data !is ObjectCompoundData && name in data.deferredFields) continue
             val errors = Project.errorCount
-            val value = MCFPPExprVisitor().visitExpression(expression, data.scope.getVar(name)?.type)
+            val value = target.withFieldInitializerOwner(initializerOwner) {
+                MCFPPExprVisitor().visitExpression(expression, data.scope.getVar(name)?.type)
+            }
             if (value is UnknownVar || value.isError || Project.errorCount != errors) continue
-            TypeUsage.ordinaryDiagnostic(value.type, ValueSnapshot.of(value))?.let {
+            TypeUsage.ordinaryDiagnostic(value.type, StorageAccess.snapshot(value))?.let {
                 LogProcessor.error(it)
             }
             if (Project.errorCount != errors) {
@@ -68,10 +81,6 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
                 if (declaration != null && MCFPPFieldVisitor().completeTemplateField(data, declaration, value.type) == null) continue
             }
             val field = receiver.getMemberVar(name, Member.AccessModifier.PRIVATE).first ?: continue
-            if (field.isConst && !StorageAccess.hasRuntimeRepresentation(value) && ValueSnapshot.of(value) == null) {
-                LogProcessor.error("Compiler-only const field '$name' requires a complete value snapshot")
-                continue
-            }
             val assigned = field.assignedBy(value)
             if (assigned.isError || Project.errorCount != errors) continue
             if (data is ObjectCompoundData) {

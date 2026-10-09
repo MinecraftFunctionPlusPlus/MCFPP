@@ -6,6 +6,7 @@ import top.mcfpp.backend.NativePrintOperations;
 import top.mcfpp.backend.NativeDiagnosticOperations;
 import top.mcfpp.mni.annotation.NoExternalWrites;
 
+@NoExternalWrites
 public class System {
 
     @InsertCommand

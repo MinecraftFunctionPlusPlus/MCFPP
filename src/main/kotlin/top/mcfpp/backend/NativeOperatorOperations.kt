@@ -2,7 +2,6 @@ package top.mcfpp.backend
 
 import top.mcfpp.core.lang.MCFloat
 import top.mcfpp.core.lang.MCInt
-import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.core.lang.MCFPPTypeVar
 import top.mcfpp.core.lang.RangeVar
 import top.mcfpp.core.lang.bool.ScoreBool
@@ -18,9 +17,7 @@ object NativeOperatorOperations {
     }
 
     fun integer(context: NativeCallContext, operator: String) = context.withAdapters { receiver, arguments ->
-        val input = receiver as MCInt
-        // Context facts are frozen; core temporary arithmetic can mutate its receiver.
-        val left = if (input is MCIntConcrete) MCIntConcrete(input.value).apply { isTemp = true } else input
+        val left = receiver as MCInt
         val right = arguments[0] as MCInt
         context.publishResult(when (operator) {
             "+" -> left.plus(right)

@@ -2,7 +2,11 @@ package top.mcfpp.antlr
 
 import top.mcfpp.Project
 import top.mcfpp.Project.withCompilationContext
-import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.analysis.CompilerValue
+import top.mcfpp.analysis.DeclarationBinding
+import top.mcfpp.model.function.Function
+import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.exception.UndefinedException
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.compound.DataTemplate
@@ -34,14 +38,40 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
         val args = ArrayList<Any>()
         //参数解析
         for(c in ctx.annotationArgs()?.value()?: emptyList()){
-            val a = MCFPPExprVisitor().visitValue(c) as MCFPPValue<*>
-            if(a.value is Tag<*>){
-                args.add((a.value as Tag<*>).toJava())
-            }else{
-                args.add(a.value!!)
+            val bound = try { DeclarationBinding(Function.currFunction, emptyMap()).value(c) }
+                catch (failure: DeclarationBinding.Failure) {
+                    top.mcfpp.util.LogProcessor.error(failure.message ?: "Cannot bind annotation argument")
+                    return
+                }
+            val value = bound.constant?.let(::annotationValue)
+            if (value == null) {
+                top.mcfpp.util.LogProcessor.error("Annotation arguments require complete immutable values")
+                return
             }
+            args.add(value)
         }
         Annotation.build(annotation, args)?.let { annotationCache.add(it) }
+    }
+
+    private fun annotationValue(value: CompilerValue): Any? = when (value) {
+        is CompilerValue.Typed -> when (val payload = value.payload) {
+            is CompilerValue.Integral -> when (value.type) {
+                MCFPPNBTType.Byte.typeId -> payload.value.toByte()
+                MCFPPNBTType.Short.typeId -> payload.value.toShort()
+                MCFPPBaseType.Int.typeId -> payload.value.toInt()
+                else -> payload.value
+            }
+            else -> annotationValue(payload)
+        }
+        is CompilerValue.Text -> value.value
+        is CompilerValue.Bool -> value.value
+        is CompilerValue.Integral -> value.value
+        is CompilerValue.FloatBits -> Float.fromBits(value.bits)
+        is CompilerValue.DoubleBits -> Double.fromBits(value.bits)
+        is CompilerValue.Nbt -> Tag.toNBT(value.snbt).toJava()
+        is CompilerValue.Sequence -> value.elements.map { annotationValue(it) }
+        is CompilerValue.Record -> value.fields.mapValues { annotationValue(it.value) }
+        else -> null
     }
 
     override fun visitTemplateDeclaration(ctx: mcfppParser.TemplateDeclarationContext): Unit = withCompilationContext(ctx) {

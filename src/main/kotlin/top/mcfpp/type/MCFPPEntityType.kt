@@ -1,9 +1,8 @@
 package top.mcfpp.type
 
 import top.mcfpp.core.lang.*
-import top.mcfpp.core.lang.entity.PlayerVar
 import top.mcfpp.core.lang.entity.SelectorVar
-import top.mcfpp.core.lang.nbt.MCStringConcrete
+import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTDictionary
 import top.mcfpp.core.lang.obj.DataTemplateObject
@@ -18,6 +17,8 @@ import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 
 class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, val isName: Boolean = false) : MCFPPConcreteType(arrayListOf(MCFPPBaseType.Object)) {
+
+    override fun buildUnConcrete(identifier: String): Var<*> = SelectorVar(identifier).apply { type = this@MCFPPEntityType }
 
     override val typeId: TypeId get() = TypeId.Selector(limit, types?.toList(), isName)
 
@@ -38,21 +39,11 @@ class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, v
         get() = "entity"
 
     override fun defaultValueVar(): Var<*> {
-        return SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.SELF), "default")
+        return buildUnConcrete("default")
     }
 
     override fun build(identifier: String, value: Any?): Var<*> {
-        val qwq = EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES)
-        if (limit != null) qwq.limit(limit)
-        if (types != null) {
-            for (type in types)
-                if (type.startsWith('!')) {
-                    qwq.type(type.substring(1), true)
-                } else {
-                    qwq.type(type, false)
-                }
-        }
-        return SelectorVar(qwq, identifier)
+        return top.mcfpp.analysis.StorageAccess.literal(this, value as top.mcfpp.analysis.CompilerValue, identifier)
     }
 
 
@@ -79,16 +70,16 @@ class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, v
                 return value
             }
 
-            fun stringParam(op: (EntitySelector, MCStringConcrete) -> Unit): (CanSelectMember, Var<*>) -> Var<*> = { caller, v ->
+            fun stringParam(op: (EntitySelector, MCString) -> Unit): (CanSelectMember, Var<*>) -> Var<*> = { caller, v ->
                 val selector = (caller as SelectorVar).value
                 val value = checkParamType(v, MCFPPBaseType.String)
-                if(value != null && value !is MCStringConcrete){
+                if(value != null && value !is MCString){
                     LogProcessor.error("Must be concrete")
                     Void
                 }else if(value == null){
                     Void
                 }
-                op(selector, value as MCStringConcrete)
+                op(selector, value as MCString)
                 Void
             }
 
@@ -162,7 +153,7 @@ class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, v
                     }
 
                     override fun getByIndex(index: Var<*>): PropertyVar {
-                        if(index !is MCStringConcrete){
+                        if(index !is MCString){
                             LogProcessor.error("Index must be concrete string")
                             return PropertyVar(Property.buildSimpleProperty(UnknownVar("error")), Void, this)
                         }
@@ -277,12 +268,13 @@ class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, v
             get() = "Player"
 
         override fun defaultValueVar(): Var<*> {
-            return SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.NEAREST_PLAYER), "default")
+            return buildUnConcrete("default")
         }
 
         override fun build(identifier: String, value: Any?): Var<*> {
-            return PlayerVar(identifier)
+            return top.mcfpp.analysis.StorageAccess.literal(this, value as top.mcfpp.analysis.CompilerValue, identifier)
         }
+        override fun buildUnConcrete(identifier: String): Var<*> = SelectorVar(identifier).apply { type = this@Player }
     }
 
 }

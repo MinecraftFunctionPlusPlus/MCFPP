@@ -6,7 +6,6 @@ import top.mcfpp.model.compound.ObjectCompoundData
 import top.mcfpp.analysis.TypeUsage
 import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.analysis.StorageAccess
-import top.mcfpp.analysis.ValueSnapshot
 
 import org.antlr.v4.runtime.RuleContext
 import org.antlr.v4.runtime.tree.ParseTree
@@ -18,19 +17,13 @@ import top.mcfpp.antlr.mcfppParser.BlockContext
 import top.mcfpp.antlr.mcfppParser.CompileTimeFuncDeclarationContext
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.MCFloat
 import top.mcfpp.core.lang.MCNumber
 import top.mcfpp.core.lang.PropertyVar
 import top.mcfpp.core.lang.RangeVar
-import top.mcfpp.core.lang.RangeVarConcrete
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.bool.BaseBool
-import top.mcfpp.core.lang.bool.ExecuteBool
 import top.mcfpp.core.lang.bool.ScoreBool
-import top.mcfpp.core.lang.bool.ScoreBoolConcrete
-import top.mcfpp.core.lang.iterator.ConcreteIterator
-import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.Execute
 import top.mcfpp.lib.NBTPath
@@ -41,6 +34,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.scope.MCFPPFuncGetter
 import top.mcfpp.type.MCFPPEnumType
+import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
@@ -54,12 +48,103 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     // Statements following a branch must run in each branch function, including nested branches.
     private var followingStatements: List<mcfppParser.StatementContext> = emptyList()
 
-    private fun makeRuntime(value: Var<*>) {
-        if (value is MCFPPValue<*> &&
-            value.storageBinding?.data?.layout != top.mcfpp.analysis.StorageLayout.CompilerOnly &&
-            top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(value)) {
-            value.toDynamic(true)
+    private class LoopContext(
+        val visible: List<Var<*>>,
+        val entry: Map<top.mcfpp.analysis.StoredData, top.mcfpp.analysis.FlowFacts>
+    ) {
+        val backEdges = arrayListOf<Map<top.mcfpp.analysis.StoredData, top.mcfpp.analysis.FlowFacts>>()
+        val breakExits = arrayListOf<Map<top.mcfpp.analysis.StoredData, top.mcfpp.analysis.FlowFacts>>()
+    }
+    private val loops = java.util.ArrayDeque<LoopContext>()
+
+    private fun helper(name: String, parent: Function): NoStackFunction {
+        var identifier: String
+        do {
+            identifier = TempPool.getFunctionIdentify(name)
+        } while (listOf(GlobalScope.localNamespaces, GlobalScope.libNamespaces, GlobalScope.stdNamespaces)
+                .any { it[Project.currNamespace]?.scope?.functions?.containsKey(identifier) == true })
+        return NoStackFunction(identifier, parent).also {
+            it.scope = top.mcfpp.model.scope.FunctionScope(parent.scope)
+            parent.child.add(it)
+            GlobalScope.localNamespaces.getOrPut(it.namespace) { Namespace(it.namespace) }.scope.addFunction(it, false)
         }
+    }
+
+    private fun emitControlCall(function: Function): top.mcfpp.analysis.StorageLayout.Scoreboard {
+        val result = top.mcfpp.core.lang.MCInt(TempPool.getVarIdentify())
+        val score = top.mcfpp.analysis.StorageLayout.Scoreboard(result.name, result.sbObject.toString())
+        Function.addCommand(Command("execute store result score ${score.player} ${score.objective} run")
+            .build(Commands.function(function)))
+        StorageAccess.publishScore(result, score)
+        return score
+    }
+
+    private fun propagateLoopReturn(score: top.mcfpp.analysis.StorageLayout.Scoreboard) {
+        if (loops.isNotEmpty()) {
+            Function.addCommand("execute if score ${score.player} ${score.objective} matches 2 run return 2")
+        } else {
+            val exit = helper("loop_return", Function.currFunction)
+            exit.runInFunction {
+                Function.currFunction.registerFrameExit()
+                Function.addCommand("return 1")
+            }
+            Function.addCommand(Command("execute if score ${score.player} ${score.objective} matches 2 run")
+                .build(Commands.function(exit)))
+            Function.addCommand("execute if score ${score.player} ${score.objective} matches 2 run return 1")
+        }
+    }
+
+    private fun finishBranchPath() {
+        if (loops.isEmpty()) {
+            Function.currBaseFunction.recordFallthroughExit()
+            Function.currFunction.registerFrameExit()
+            Function.addCommand("return 1")
+        }
+        else {
+            loops.peekLast().backEdges.add(StorageAccess.flowSnapshot(loops.peekLast().visible))
+            Function.addCommand("return 1")
+        }
+    }
+
+    private fun emitContinuation(branch: Function, condition: Var<*>? = null) {
+        fun prefix(value: Var<*>): Command? = when (value) {
+            is BaseBool -> Command("execute if").build(value.toCommandPart())
+            else -> { LogProcessor.error("A branch condition must be boolean"); null }
+        }
+        if (top.mcfpp.command.TargetCapabilities.forVersion(Project.config.version)?.functionReturnRun == true) {
+            val command = if (condition == null) Command("return run")
+                else prefix(condition)?.build("run return run") ?: return
+            Function.addCommand(command.build(Commands.function(branch)))
+            return
+        }
+        // Zero denotes an unselected branch; selected break/continue/return are 1/2/3.
+        // The wrapper returns this tag after the nested call, so recursion cannot
+        // overwrite the selection while the branch is running.
+        val wrapper = helper("branch_exit", Function.currFunction)
+        wrapper.runInFunction {
+            val result = emitControlCall(branch)
+            for (code in 0..2) Function.addCommand(
+                "execute if score ${result.player} ${result.objective} matches $code run return ${code + 1}")
+            Function.addCommand("return 2")
+        }
+        val result = if (condition == null) emitControlCall(wrapper) else {
+            val value = StorageAccess.capture(condition)
+            if (value.isError) return
+            val result = top.mcfpp.core.lang.MCInt(TempPool.getVarIdentify())
+            val score = top.mcfpp.analysis.StorageLayout.Scoreboard(result.name, result.sbObject.toString())
+            Function.addCommand("scoreboard players set ${score.player} ${score.objective} 0")
+            Function.addCommand((prefix(value) ?: return)
+                .build("store result score ${score.player} ${score.objective} run").build(Commands.function(wrapper)))
+            StorageAccess.publishScore(result, score)
+            score
+        }
+        for (code in 1..3) Function.addCommand(
+            "execute if score ${result.player} ${result.objective} matches $code run return ${code - 1}")
+    }
+
+    private fun makeRuntime(value: Var<*>) {
+        if (top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(value))
+            top.mcfpp.analysis.StorageAccess.materialize(value)
     }
 
     private fun visitStatements(
@@ -69,7 +154,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         val previous = followingStatements
         try {
             statements.forEachIndexed { index, statement ->
-                if (Function.currFunction.hasReturnStatement || Function.currFunction.isEnded) return@forEachIndexed
+                if (Function.currFunction.hasReturnStatement || Function.currFunction.isReturned || Function.currFunction.isEnded) return@forEachIndexed
                 followingStatements = statements.drop(index + 1) + afterBlock
                 visitStatement(statement)
             }
@@ -164,6 +249,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
      */
     @InsertCommand
     override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext):Any? = withCompilationContext(ctx) {
+        val declarationErrors = Project.errorCount
         val fieldModifier = ctx.fieldModifier()?.text
         var type = ctx.type()?.let {
             MCFPPType.parseFromContextNotNull(it, Function.currFunction.scope)
@@ -176,12 +262,13 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 return null
             }
         }
+        if (Project.errorCount != declarationErrors) return null
         var init: Var<*>? = null
         if (ctx.expression() != null) {
             Function.addComment(ctx.text)
             init = MCFPPExprVisitor(
                 if(type is MCFPPEnumType) type else null
-            ).visitExpression(ctx.expression())
+            ).visitExpression(ctx.expression(), if (ctx.type() != null) type else null)
             if (init.isError) return null
         }
         //类型推断
@@ -191,20 +278,11 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         }else if(type == null){
             type = init!!.type
         }
-        TypeUsage.ordinaryDiagnostic(type, init?.let(ValueSnapshot::of))?.let {
+        TypeUsage.ordinaryDiagnostic(type, init?.let(StorageAccess::snapshot))?.let {
             LogProcessor.error(it)
             return null
         }
-        val `var` = if(fieldModifier == "import"){
-            val qwq = type.buildUnConcrete(ctx.Identifier().text, Function.currFunction)
-            qwq.hasAssigned = true
-            qwq
-        }else if (type is MCFPPDataTemplateType && init?.storageBinding != null &&
-            top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(init)) {
-            type.buildUnConcrete(ctx.Identifier().text, Function.currFunction)
-        }else{
-            type.build(ctx.Identifier().text, Function.currFunction)
-        }
+        val `var` = type.buildUnConcrete(ctx.Identifier().text, Function.currFunction)
         if(isInTopStatement){
             `var`.nbtPath = NBTPath.getFileScopePath(`var`)
         }else{
@@ -215,33 +293,18 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             LogProcessor.error("Duplicate defined variable:" + ctx.Identifier().text)
         }
         `var`.isConst = fieldModifier == "const"
-        `var`.isDynamic = fieldModifier == "dynamic"
-        `var`.bindDeclaration()
-        val stored = if (`var`.isDynamic && init != null && !top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(init)) {
+        `var`.bindDeclaration(forceRuntime = fieldModifier == "dynamic")
+        if (fieldModifier == "import") StorageAccess.bindIncomingParameter(`var`)
+        val stored = if (fieldModifier == "dynamic" && init != null && !top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(init)) {
             `var`.assignedBy(init)
         } else if (isViewInitializer(ctx.expression()) && init?.storageBinding?.view != null && init.type == type) {
             top.mcfpp.analysis.StorageAccess.adapter(type, `var`.identifier, init.storageBinding!!).apply {
                 symbol = `var`.symbol
                 isConst = `var`.isConst
-                isDynamic = `var`.isDynamic
-                hasAssigned = true
-                if (this is top.mcfpp.core.lang.MCAny) payloadType = (init as? top.mcfpp.core.lang.MCAny)?.inferredType ?: init.type
             }
         } else if (init != null) `var`.assignedBy(init) else `var`
         Function.currField.putVar(`var`.identifier, stored, true)
-        when(fieldModifier){
-            "const" -> {
-                if(!stored.hasAssigned){
-                    LogProcessor.error("The const field ${stored.identifier} must be initialized.")
-                }
-                stored.isConst = true
-            }
-            "dynamic" -> {
-                if(stored is MCFPPValue<*> && !stored.isError){
-                    stored.toDynamic(true)
-                }
-            }
-        }
+        if (fieldModifier == "dynamic" && !stored.isError) makeRuntime(stored)
         return null
     }
 
@@ -263,28 +326,11 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         if(ctx.varWithSelector() != null){
             val left: Var<*> = MCFPPExprVisitor().visitAssignableVarWithSelector(ctx.varWithSelector())
             if (left.isError || left is top.mcfpp.core.lang.UnknownVar) return null
-            val declarationTarget = if (left is PropertyVar) left.field else left
-            val initialized = declarationTarget.storageBinding?.let { binding ->
-                binding.data.facts.read(binding.place)?.state != top.mcfpp.analysis.ValueState.UNINITIALIZED
-            } ?: declarationTarget.hasAssigned
-            if ((left.isConst || declarationTarget.isConst) && initialized) {
-                LogProcessor.error("Cannot assign a constant repeatedly: " + left.identifier)
-                return null
-            }
             val type = left.type
             val assignment = ctx.assignmentOperator().text
             val current = if (assignment == "=") null else {
                 val value = top.mcfpp.analysis.StorageAccess.read(if (left is PropertyVar) left.get() else left)
-                when (value) {
-                    is MCFPPValue<*> -> value.clone()
-                    is MCNumber<*> -> value.type.buildUnConcrete(TempPool.getVarIdentify()).apply {
-                        isTemp = true
-                    }.assignedBy(value).apply {
-                        // Float operators load a non-temp operand into their shared work registers.
-                        if (this is MCFloat) isTemp = false
-                    }
-                    else -> value.getTempVar()
-                }
+                top.mcfpp.analysis.StorageAccess.capture(value)
             }
             val right: Var<*> = MCFPPExprVisitor(
                 if(type is MCFPPEnumType) type else null
@@ -292,16 +338,12 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             val operator = assignment.dropLast(1)
             val assigned = when (current) {
                 null -> right
-                is MCFloat -> computeFloatCompound(current, right, operator)
-                else -> current.binaryComputation(right, operator)
+                else -> top.mcfpp.analysis.StorageAccess.binary(current, right, operator)
             }
             if (assigned.isError) return null
-            TypeUsage.ordinaryDiagnostic(assigned.type, ValueSnapshot.of(assigned))?.let {
+            TypeUsage.ordinaryDiagnostic(assigned.type, StorageAccess.snapshot(assigned))?.let {
                 LogProcessor.error(it)
                 return null
-            }
-            if(assigned !is MCFPPValue<*> && left.parent is DataTemplateObjectConcrete){
-                left.parent = (left.parent as DataTemplateObjectConcrete).toDynamic(true)
             }
             left.replacedBy(left.assignedBy(assigned))
         }else{
@@ -348,14 +390,16 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addComment(ctx.text)
         if (ctx.expression() != null) {
             val ret: Var<*> = MCFPPExprVisitor().visitExpression(ctx.expression())
-            val diagnostic = TypeUsage.ordinaryDiagnostic(ret.type, ValueSnapshot.of(ret))
+            val diagnostic = TypeUsage.ordinaryDiagnostic(ret.type, StorageAccess.snapshot(ret))
             if (diagnostic != null) LogProcessor.error(diagnostic)
             else Function.currBaseFunction.assignReturnVar(ret)
         }
         // A return terminates this path, not the other branches of the declaration.
         Function.currFunction.hasReturnStatement = true
-        Function.currFunction.registerFrameExit()
-        Function.addCommand("return 1")
+        if (loops.isEmpty()) {
+            Function.currFunction.registerFrameExit()
+            Function.addCommand("return 1")
+        } else Function.addCommand("return 2")
         return null
     }
 
@@ -387,27 +431,18 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     private var breakIf = ConditionType.NORMAL
-    private fun compilerOnlyCallPlaces(): List<top.mcfpp.analysis.StorageBinding> {
-        val function = Function.currFunction
-        val receiver = listOfNotNull(function.scope.getVar("this")?.storageBinding)
-        val owner = function.owner as? DataTemplate
-        val fields = if (owner is ObjectCompoundData) owner.scope.allVars.mapNotNull { it.storageBinding } else emptyList()
-        return (receiver + fields).filter { it.data.layout == top.mcfpp.analysis.StorageLayout.CompilerOnly }
-            .distinctBy { it.data to it.place }
-    }
     override fun visitIfStatement(ctx: mcfppParser.IfStatementContext): Any? = withCompilationContext(ctx) {
         val enclosingCondition = breakIf
-        val receivers = compilerOnlyCallPlaces()
-        val receiverBefore = receivers.associateWith { it.data.facts.fork() }
-        val receiverPaths = receivers.associateWith { arrayListOf<top.mcfpp.analysis.FlowFacts>() }
-        fun restoreReceiver() {
-            for (receiver in receivers) {
-                receiver.data.facts.forgetDescendants(receiver.place)
-                receiver.data.facts.copyFrom(receiverBefore.getValue(receiver), receiver.place, receiver.place)
-                receiver.data.versions.invalidate(receiver.place)
-            }
+        var before = top.mcfpp.analysis.StorageAccess.flowSnapshot(flowValues())
+        val paths = arrayListOf<Map<top.mcfpp.analysis.StoredData, top.mcfpp.analysis.FlowFacts>>()
+        fun restoreBranch() {
+            top.mcfpp.analysis.StorageAccess.restoreFlow(before)
         }
-        fun recordReceiver() { receivers.forEach { receiverPaths.getValue(it).add(it.data.facts.fork()) } }
+        fun recordBranch() {
+            if (Function.currFunction.hasReturnStatement || Function.currFunction.isReturned) return
+            val state = top.mcfpp.analysis.StorageAccess.flowSnapshot(flowValues())
+            paths.add(state)
+        }
         try {
         //进入if函数
         breakIf = ConditionType.NORMAL
@@ -417,8 +452,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         do {
             //if分支
             val (c,f) = enterIfBranch(ctx)
+            before = top.mcfpp.analysis.StorageAccess.flowSnapshot(flowValues())
             if(c){
-                restoreReceiver()
+                restoreBranch()
                 //此分支会被编译，注册函数
                 if(breakIf != ConditionType.ALWAYS_TRUE) {
                     //并不是必然编译的，所以需要注册函数，让分支内的内容在if_branch函数中执行。如果是必然执行的，那么直接内联即可
@@ -433,8 +469,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     visitStatements(continuation)
                 }
                 returningPaths.add(Function.currFunction.hasReturnStatement)
-                recordReceiver()
-                if (!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded) Function.currFunction.registerFrameExit()
+                recordBranch()
+                if (!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded) finishBranchPath()
                 if(breakIf != ConditionType.ALWAYS_TRUE) {
                     Function.currFunction = Function.currFunction.parent[0]
                 }
@@ -444,8 +480,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             if(breakIf == ConditionType.ALWAYS_TRUE) break
             //else if分支
             ctx.elseIfStatement().forEach {
-                restoreReceiver()
+                restoreBranch()
                 val (c2, f2) = enterElseIfBranch(it)
+                before = top.mcfpp.analysis.StorageAccess.flowSnapshot(flowValues())
                 if(c2){
                     //这条else if分支会被编译
                     if(breakIf != ConditionType.ALWAYS_TRUE) {
@@ -462,8 +499,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                         visitStatements(continuation)
                     }
                     returningPaths.add(Function.currFunction.hasReturnStatement)
-                    recordReceiver()
-                    if (!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded) Function.currFunction.registerFrameExit()
+                    recordBranch()
+                    if (!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded) finishBranchPath()
                     if(breakIf != ConditionType.ALWAYS_TRUE) {  //这里同理
                         Function.currFunction = Function.currFunction.parent[0]
                     }
@@ -475,7 +512,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             //不需要继续编译else语句了
             if(breakIf == ConditionType.ALWAYS_TRUE) break
             //else语句
-            restoreReceiver()
+            restoreBranch()
             Function.addComment("else branch start")
             if(breakIf != ConditionType.ALWAYS_FALSE){
                 //注册函数
@@ -487,7 +524,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 Function.currFunction.scope.forEachVar {
                     makeRuntime(it)
                 }
-                Function.addCommand(Command("return run").build(Commands.function(f3)))
+                emitContinuation(f3)
                 Function.currFunction = f3
             }
             if(ctx.elseStatement() != null){
@@ -497,19 +534,15 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 visitStatements(continuation)
             }
             returningPaths.add(Function.currFunction.hasReturnStatement)
-            recordReceiver()
-            if (!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded) Function.currFunction.registerFrameExit()
+            recordBranch()
+            if (!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded) finishBranchPath()
             if(breakIf != ConditionType.ALWAYS_FALSE){
                 Function.currFunction = Function.currFunction.parent[0]
             }
             Function.addComment("else branch end")
         }while (false)
-        for (receiver in receivers) if (receiverPaths.getValue(receiver).isNotEmpty()) {
-            val joined = receiverPaths.getValue(receiver).reduce { left, right -> left.join(right) }
-            receiver.data.facts.forgetDescendants(receiver.place)
-            receiver.data.facts.copyFrom(joined, receiver.place, receiver.place)
-            receiver.data.versions.invalidate(receiver.place)
-        }
+        top.mcfpp.analysis.StorageAccess.restoreFlow(if (paths.isNotEmpty())
+            top.mcfpp.analysis.StorageAccess.joinFlow(paths) else top.mcfpp.analysis.StorageAccess.exitFlow(before))
         Function.addComment("if end")
         //if以后的语句已经被全部打包到if分支里面，所以if语句之后的statement没有意义
         Function.currFunction.isEnded = true
@@ -523,6 +556,17 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     /**
      * 检查条件，返回是否会编译这条if分支
      */
+    private fun flowValues(): List<Var<*>> {
+        val values = StorageAccess.visibleValues(Function.currFunction.scope)
+        val base = Function.currBaseFunction
+        return if (base.returnType == MCFPPPrivateType.Void) values else values + base.returnVar
+    }
+
+    private fun knownCondition(value: Var<*>): Boolean? {
+        if (value.symbol?.forceRuntime == true) return null
+        return ((StorageAccess.snapshot(value) as? top.mcfpp.analysis.CompilerValue.Typed)?.payload as? top.mcfpp.analysis.CompilerValue.Bool)?.value
+    }
+
     private fun enterIfBranch(ctx: mcfppParser.IfStatementContext): Pair<Boolean, NoStackFunction>{
         Function.addComment("if branch start")
         //匿名函数的定义
@@ -532,9 +576,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             LogProcessor.error("The condition of if statement is null.")
             return false to f
         }
-        when(val exp = MCFPPExprVisitor().visit(expr)){
-            is ScoreBoolConcrete -> {
-                if (exp.value) {
+        val exp = MCFPPExprVisitor().visit(expr)
+        knownCondition(exp)?.let { condition ->
+                if (condition) {
                     // visitIfStatement inlines a branch that is known to run.
                     //LogProcessor.warn("The condition is always true. ")
                     breakIf = ConditionType.ALWAYS_TRUE
@@ -543,21 +587,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     //LogProcessor.warn("The condition is always false. ")
                     breakIf = ConditionType.ALWAYS_FALSE
                 }
-                return exp.value to f
-            }
-
-            is ExecuteBool -> {
-                //注册函数
-                if(!GlobalScope.localNamespaces.containsKey(f.namespace))
-                    GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
-                GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
-                Function.currFunction.scope.forEachVar { makeRuntime(it) }
-                StorageAccess.flush(StorageAccess.visibleValues(Function.currFunction.scope))
-                Function.addCommand(
-                    Command("execute").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
-                )
-            }
-
+                return condition to f
+        }
+        when(exp){
             is BaseBool -> {
                 //注册函数
                 if(!GlobalScope.localNamespaces.containsKey(f.namespace))
@@ -565,9 +597,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
                 Function.currFunction.scope.forEachVar { makeRuntime(it) }
                 StorageAccess.flush(StorageAccess.visibleValues(Function.currFunction.scope))
-                Function.addCommand(
-                    Command("execute if").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
-                )
+                emitContinuation(f, exp)
             }
 
             else -> {
@@ -592,13 +622,13 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             LogProcessor.error("The condition of if statement is null.")
             return false to f
         }
-        when(val exp = MCFPPExprVisitor().visit(expr)){
-            is ScoreBoolConcrete -> {
-                if (exp.value) {
+        val exp = MCFPPExprVisitor().visit(expr)
+        knownCondition(exp)?.let { condition ->
+                if (condition) {
                     // A runtime chain registers this branch; a static chain inlines it.
                     if (breakIf == ConditionType.NORMAL) {
                         Function.currFunction.scope.forEachVar { makeRuntime(it) }
-                        Function.addCommand("function " + f.namespaceID)
+                        emitContinuation(f)
                     }
                     //LogProcessor.warn("The condition is always true. ")
                     breakIf = if(breakIf == ConditionType.NORMAL) ConditionType.NORMAL else ConditionType.ALWAYS_TRUE
@@ -607,30 +637,16 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     //LogProcessor.warn("The condition is always false. ")
                     breakIf = if(breakIf == ConditionType.NORMAL) ConditionType.NORMAL else ConditionType.ALWAYS_FALSE
                 }
-                return exp.value to f
-            }
-
-            is ExecuteBool -> {
-                //注册函数
-                if(!GlobalScope.localNamespaces.containsKey(f.namespace))
-                    GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
-                GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
-                Function.currFunction.scope.forEachVar { makeRuntime(it) }
-                Function.addCommand(
-                    Command("execute").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
-                )
-                breakIf = ConditionType.NORMAL
-            }
-
+                return condition to f
+        }
+        when(exp){
             is BaseBool -> {
                 //注册函数
                 if(!GlobalScope.localNamespaces.containsKey(f.namespace))
                     GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
                 GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
                 Function.currFunction.scope.forEachVar { makeRuntime(it) }
-                Function.addCommand(
-                    Command("execute if").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
-                )
+                emitContinuation(f, exp)
                 breakIf = ConditionType.NORMAL
             }
 
@@ -645,259 +661,89 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     override fun visitWhileStatement(ctx: mcfppParser.WhileStatementContext): Any? = withCompilationContext(ctx) {
-        val receivers = compilerOnlyCallPlaces()
-        val before = receivers.associateWith { it.data.facts.fork() }
-        enterWhileStatement()
-        visitWhileBlock(ctx.block())
-        exitWhileStatement()
-        for (receiver in receivers) {
-            val joined = before.getValue(receiver).join(receiver.data.facts)
-            receiver.data.facts.forgetDescendants(receiver.place)
-            receiver.data.facts.copyFrom(joined, receiver.place, receiver.place)
-            receiver.data.versions.invalidate(receiver.place)
-        }
+        compileLoop(ctx.block(), { MCFPPExprVisitor().visitExpression(ctx.bucketExpression().expression()) }, false)
         return null
     }
 
-    @InsertCommand
-    fun enterWhileStatement() {
-        //进入if函数
-        Function.addComment("while start")
-        //外while函数。这个函数中包含了while循环的逻辑
-        val whileFunction = InternalFunction("_while_", Function.currFunction)
-        top.mcfpp.analysis.StorageAccess.barrier(
-            top.mcfpp.analysis.StorageAccess.visibleValues(Function.currFunction.scope)
-        )
-        Function.addCommand(Commands.stackIn())
-        Function.addCommand(Commands.function(whileFunction))
-        Function.addCommand(Commands.stackOut())
-        //同时，外层定义域中的变量可能丢失跟踪，这里处理为强制全部丢失跟踪
-        Function.currFunction.scope.forEachVar {
-            makeRuntime(it)
-        }
-        Function.currFunction = whileFunction
-        if(!GlobalScope.localNamespaces.containsKey(whileFunction.namespace))
-            GlobalScope.localNamespaces[whileFunction.namespace] = Namespace(whileFunction.namespace)
-        GlobalScope.localNamespaces[whileFunction.namespace]!!.scope.addFunction(whileFunction,false)
+    private fun bindIterationVariable(name: String, element: Var<*>, body: Function) {
+        val variable = element.type.buildUnConcrete(name, body)
+        variable.bindDeclaration(name)
+        StorageAccess.ensure(variable)
+        StorageAccess.write(variable, element)
+        body.scope.putVar(name, variable)
     }
 
-    
-    @InsertCommand
-    fun exitWhileStatement() {
-        Function.currFunction = Function.currFunction.parent[0]
-        top.mcfpp.analysis.StorageAccess.barrier(
-            top.mcfpp.analysis.StorageAccess.visibleValues(Function.currFunction.scope)
-        )
-        //调用完毕，将子函数的栈销毁
-        Function.addComment("while end")
-    }
-
-
-    fun visitWhileBlock(ctx: mcfppParser.BlockContext): Any? = withCompilationContext(ctx) {
-        enterWhileBlock(ctx)
-        visitBlock(ctx)
-        exitWhileBlock()
-        return null
-    }
-
-    /**
-     * 进入while语句块
-     * @param ctx the parse tree
-     */
-    
-    @InsertCommand
-    fun enterWhileBlock(ctx: mcfppParser.BlockContext) {
-        Function.addComment("while start")
-        val parent: mcfppParser.WhileStatementContext = ctx.parent as mcfppParser.WhileStatementContext
-        //循环体共享外while函数已经建立的栈帧。
-        val outerWhile = Function.currFunction
-        val f: Function = NoStackFunction(TempPool.getFunctionIdentify("_while_block_"), outerWhile)
-        outerWhile.child.add(f)
-        if(!GlobalScope.localNamespaces.containsKey(f.namespace))
-            GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
-        GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
-        //循环条件判断，此时目标函数是外while函数。条件表达式在外while中计算。
-        val expr = parent.bucketExpression().expression()
-        if(expr == null){
-            LogProcessor.error("The condition of while statement is null.")
-            return
-        }
-        when(val exp = MCFPPExprVisitor().visit(expr)){
-            is ScoreBoolConcrete -> {
-                if(exp.value){
-                    //内while函数的返回值表示循环是否被阻断，使用execute if判断。若成立，则继续运行外while函数
-                    Function.addCommand("execute " +
-                            "if function " + f.namespaceID + " " +
-                            "run function " + Function.currFunction.namespaceID)
-                }else{
-                    Function.addComment("function " + f.namespaceID)
+    private fun compileLoop(block: BlockContext, condition: () -> Var<*>, bodyFirst: Boolean,
+                            captured: List<Var<*>> = emptyList(), iteration: Pair<String, () -> Var<*>>? = null,
+                            advance: (() -> Unit)? = null) {
+        val caller = Function.currFunction
+        val visible = flowValues() + captured
+        visible.forEach { StorageAccess.ensure(it) }
+        val entry = StorageAccess.flowSnapshot(visible)
+        val loop = LoopContext(visible, entry)
+        val header = helper("loop_header", caller)
+        val body = helper("loop_body", header)
+        val step = helper("loop_step", header)
+        StorageAccess.restoreFlow(StorageAccess.widenLoop(entry))
+        var known: Boolean? = null
+        var naturalExit: Map<top.mcfpp.analysis.StoredData, top.mcfpp.analysis.FlowFacts>? = null
+        fun compileHeader() = header.runInFunction {
+            val value = condition()
+            known = knownCondition(value)
+            if (known != true) naturalExit = StorageAccess.flowSnapshot(visible)
+            if (known != false) {
+                if (known == null) {
+                    val falseCondition = StorageAccess.unary(value, "!")
+                    val command = when (falseCondition) {
+                        is BaseBool -> Command("execute if").build(falseCondition.toCommandPart())
+                        else -> { LogProcessor.error("The loop condition must be boolean"); null }
+                    }
+                    if (command != null) Function.addCommand(command.build("run return 0"))
                 }
+                val result = emitControlCall(step)
+                Function.addCommand("execute if score ${result.player} ${result.objective} matches 2 run return 2")
             }
-
-            is ExecuteBool -> {
-                Function.addCommand(Command("execute")
-                    .build(exp.toCommandPart())
-                    .build("if function " + f.namespaceID)
-                    .build("run function " + Function.currFunction.namespaceID))
-            }
-
-            is BaseBool -> {
-                Function.addCommand(Command("execute")
-                    .build("if").build(exp.toCommandPart())
-                    .build("if function " + f.namespaceID)
-                    .build("run function " + Function.currFunction.namespaceID)
-                )
-            }
-
-            else -> {
-                LogProcessor.error("The condition must be a boolean expression.")
-                Function.addComment("[error/The condition must be a boolean expression]function " + f.namespaceID)
-            }
+            Function.addCommand("return 0")
         }
-        Function.currFunction = f //后续块中的命令解析到递归的函数中
-
-    }
-
-    @InsertCommand
-    fun exitWhileBlock() {
-        Function.addCommand("return 1")
-        Function.currFunction = Function.currFunction.parent[0]
-        Function.addComment("while loop end")
-        Function.currFunction.scope.forEachVar {
-            if(!it.trackLost){
-                it.trackLost = true
-                makeRuntime(it)
+        if (!bodyFirst) compileHeader()
+        if (known != false || bodyFirst) {
+            loops.addLast(loop)
+            try {
+                body.runInFunction {
+                    iteration?.let { bindIterationVariable(it.first, it.second(), body) }
+                    visitBlock(block)
+                    if (!Function.currFunction.isEnded && !Function.currFunction.hasReturnStatement) finishBranchPath()
+                }
+            } finally { loops.removeLast() }
+            if (bodyFirst) {
+                if (loop.backEdges.isNotEmpty()) {
+                    StorageAccess.restoreFlow(StorageAccess.joinFlow(loop.backEdges))
+                    compileHeader()
+                }
+                else header.runInFunction { Function.addCommand("return 0") }
             }
-        }
+            step.runInFunction {
+                val result = emitControlCall(body)
+                Function.addCommand("execute if score ${result.player} ${result.objective} matches 2 run return 2")
+                Function.addCommand("execute if score ${result.player} ${result.objective} matches 0 run return 0")
+                advance?.invoke()
+                val next = emitControlCall(header)
+                Function.addCommand("execute if score ${next.player} ${next.objective} matches 2 run return 2")
+                Function.addCommand("return 0")
+            }
+        } else step.runInFunction { Function.addCommand("return 0") }
+        StorageAccess.restoreFlow(StorageAccess.finishLoop(entry,
+            if (known == false) emptyList() else loop.backEdges,
+            loop.breakExits,
+            maySkip = !bodyFirst || known != true,
+            naturalExits = listOfNotNull(naturalExit)))
+        val result = emitControlCall(if (bodyFirst) step else header)
+        propagateLoopReturn(result)
     }
 
     override fun visitDoWhileStatement(ctx: mcfppParser.DoWhileStatementContext): Any? = withCompilationContext(ctx) {
-        enterDoWhileStatement()
-        visitDoWhileBlock(ctx.block())
-        exitDoWhileStatement()
+        compileLoop(ctx.block(), { MCFPPExprVisitor().visitExpression(ctx.bucketExpression().expression()) }, true)
         return null
-    }
-
-    private lateinit var doWhileFunction: InternalFunction
-    @InsertCommand
-    fun enterDoWhileStatement() {
-        //进入do-while函数
-        Function.addComment("do-while start")
-        doWhileFunction = InternalFunction("_dowhile_", Function.currFunction)
-        //这里不能急着调用循环函数，因为循环体必定会执行一次。参见enterDoWhileBlock的代码
-        //Function.addCommand(Commands.stackIn())
-        //Function.addCommand(Commands.function(doWhileFunction))
-        //Function.addCommand(Commands.stackOut())
-        //同时，外层定义域中的变量可能丢失跟踪，这里处理为强制全部丢失跟踪
-        Function.currFunction.scope.forEachVar {
-            makeRuntime(it)
-        }
-        Function.currFunction = doWhileFunction
-        if(!GlobalScope.localNamespaces.containsKey(doWhileFunction.namespace))
-            GlobalScope.localNamespaces[doWhileFunction.namespace] = Namespace(doWhileFunction.namespace)
-        GlobalScope.localNamespaces[doWhileFunction.namespace]!!.scope.addFunction(doWhileFunction,false)
-    }
-
-    @InsertCommand
-    fun exitDoWhileStatement() {
-        Function.currFunction = Function.currFunction.parent[0]
-        //调用完毕，将子函数的栈销毁
-        Function.addComment("do-while end")
-    }
-
-
-    fun visitDoWhileBlock(ctx: mcfppParser.BlockContext): Any? = withCompilationContext(ctx) {
-        enterDoWhileBlock(ctx)
-        visitBlock(ctx)
-        exitDoWhileBlock()
-        return null
-    }
-
-    /**
-     * 进入do-while语句块，开始匿名函数调用
-     * @param ctx the parse tree
-     */
-    
-    @InsertCommand
-    fun enterDoWhileBlock(ctx: mcfppParser.BlockContext) {
-        Function.addComment("do while start")
-        //匿名函数的定义
-        val f: Function = InternalFunction("_dowhile_", Function.currFunction)
-        f.child.add(f)
-        f.parent.add(f)
-        if(!GlobalScope.localNamespaces.containsKey(f.namespace)) {
-            GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
-        }
-        GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
-        //给子函数开栈
-        Function.currFunction.parent[0].commands.addAll(
-            arrayOf(
-                //必然调用一次循环体内的函数
-                Commands.stackIn(),
-                Commands.function(f),
-                Commands.stackOut(),
-                //然后才开始调用do-while外函数。此时就是先判断再执行，转换为了while语句
-                Commands.stackIn(),
-                Commands.function(doWhileFunction),
-                Commands.stackOut()
-            )
-        )
-        //递归调用
-        val parent = ctx.parent as mcfppParser.DoWhileStatementContext
-        val expr = parent.bucketExpression().expression()
-        if(expr == null){
-            LogProcessor.error("The condition of do-while statement is null.")
-            return
-        }
-        when(val exp = MCFPPExprVisitor().visit(expr)){
-            is ScoreBoolConcrete -> {
-                if(exp.value){
-                    Function.addCommand("execute " +
-                            "if function " + f.namespaceID + " " +
-                            "run function " + Function.currFunction.namespaceID)
-                    LogProcessor.warn("The condition is always true. ")
-                }else{
-                    Function.addComment("function " + f.namespaceID)
-                    LogProcessor.warn("The condition is always false. ")
-                }
-            }
-
-            is ExecuteBool -> {
-                Function.addCommand(Command("execute")
-                    .build(exp.toCommandPart())
-                    .build("if function " + f.namespaceID)
-                    .build("run function " + Function.currFunction.namespaceID))
-            }
-
-            is BaseBool -> {
-                Function.addCommand(Command("execute")
-                    .build("if").build(exp.toCommandPart())
-                    .build("if function " + f.namespaceID)
-                    .build("run function " + Function.currFunction.namespaceID)
-                )
-            }
-
-            else -> {
-                LogProcessor.error("The condition must be a boolean expression.")
-                Function.addComment("[error/The condition must be a boolean expression]function " + f.namespaceID)
-            }
-        }
-        Function.currFunction = f //后续块中的命令解析到递归的函数中
-    }
-
-    
-    @InsertCommand
-    fun exitDoWhileBlock() {
-        //返回1
-        Function.addCommand("return 1")
-        Function.currFunction = Function.currFunction.parent[0]
-        Function.addComment("do while end")
-        Function.currFunction.scope.forEachVar {
-            if(it.trackLost){
-                it.trackLost = false
-                makeRuntime(it)
-            }
-        }
     }
 
 //endregion
@@ -919,7 +765,15 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             }
         }
         Function.addCommands(command.buildMacroFunction())
-        top.mcfpp.analysis.StorageAccess.barrier(observed)
+        val literalCommand = ctx.orgCommandContent().takeIf { contents ->
+            contents.all { it.OrgCommandText() != null }
+        }?.joinToString("") { it.OrgCommandText().text }
+        val effect = literalCommand?.let(top.mcfpp.analysis.EffectAnalysis::rawCommandEffect)
+            ?: top.mcfpp.analysis.Effect.Unknown
+        top.mcfpp.analysis.EffectAnalysis.recordEffect(effect)
+        if (effect == top.mcfpp.analysis.Effect.Unknown) {
+            top.mcfpp.analysis.StorageAccess.barrier(observed)
+        }
         return null
     }
 
@@ -945,20 +799,25 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     
     @InsertCommand
     override fun visitControlStatement(ctx: mcfppParser.ControlStatementContext):Any? = withCompilationContext(ctx) {
-        if (!inLoopStatement(ctx)) {
+        if (loops.isEmpty()) {
             LogProcessor.error("'continue' or 'break' can only be used in loop statements.")
             return null
         }
         Function.addComment(ctx.text)
+        val loop = loops.peekLast()
+        val state = StorageAccess.flowSnapshot(loop.visible)
         //return语句
         if(ctx.BREAK() != null){
+            loop.breakExits.add(state)
             //break，完全跳出while
             Function.addCommand("return 0")
         }else{
+            loop.backEdges.add(state)
             //continue，跳过当次
             Function.addCommand("return 1")
         }
         Function.currFunction.isReturned = true
+        Function.currFunction.isEnded = true
         return null
     }
 
@@ -996,57 +855,75 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         val id = ctx.Identifier().text
         val iterable = MCFPPExprVisitor().visitExpression(ctx.expression())
         if (iterable is RangeVar) {
-            val range = StorageAccess.read(iterable) as? RangeVarConcrete
-            if (range == null) {
-                LogProcessor.error("Runtime range iteration requires typed IR with proven integer endpoints")
-                return null
-            }
-            val left = range.value.first
-            val right = range.value.second
-            if (left == null || right == null) {
-                LogProcessor.error("Both sides of the range must exist")
-                return null
-            }
-            if (left !is Int || right !is Int) {
-                LogProcessor.error("Both sides of the range must be 32-bit integers")
-                return null
-            }
-            visitConcreteForeach(id, ConcreteIterator.fromIntRange(left, right), ctx.block())
+            val bounds = StorageAccess.rangeIterationBounds(iterable) ?: return null
+            val first = StorageAccess.capture(bounds.first)
+            val last = StorageAccess.capture(bounds.second)
+            if (first.isError || last.isError) return null
+            val index = MCFPPBaseType.Int.buildUnConcrete(id, Function.currFunction)
+            StorageAccess.ensure(index)
+            StorageAccess.write(index, first)
+            compileLoop(ctx.block(), { StorageAccess.binary(index, last, "<=") }, false,
+                captured = listOf(index, last), iteration = id to { StorageAccess.capture(index) }, advance = {
+                    val atEnd = StorageAccess.binary(index, last, ">=")
+                    val command = when (atEnd) {
+                        is BaseBool -> Command("execute if").build(atEnd.toCommandPart())
+                        else -> null
+                    }
+                    if (command != null) Function.addCommand(command.build("run return 0"))
+                    StorageAccess.write(index, StorageAccess.binary(index,
+                        StorageAccess.literal(MCFPPBaseType.Int, CompilerValue.Integral(1)), "+"))
+                })
             return null
         }
-        var payload = ValueSnapshot.of(iterable)
-        while (payload is CompilerValue.Typed) payload = payload.payload
-        if (payload is CompilerValue.Sequence) {
-            val elements = payload.elements.mapIndexed { index, value ->
-                val typed = value as? CompilerValue.Typed
-                val type = typed?.type?.let(MCFPPType::resolveTypeId)
-                    ?: (iterable.type as? top.mcfpp.type.MCFPPTypeWithGeneric)?.generic?.singleOrNull()
-                if (type == null) {
-                    LogProcessor.error("Iterator element has no declared type")
-                    return null
-                }
-                StorageAccess.restore(type, value, "${id}_$index") ?: run {
-                    LogProcessor.error("Iterator element cannot be restored as '${type}'")
-                    return null
+        val captured = StorageAccess.capture(iterable)
+        if (captured.isError) return null
+        StorageAccess.closedIterationElements(captured)?.let { elements ->
+            val caller = Function.currFunction
+            val visible = flowValues() + captured
+            visible.forEach { StorageAccess.ensure(it) }
+            val entry = StorageAccess.flowSnapshot(visible)
+            val exits = arrayListOf<Map<top.mcfpp.analysis.StoredData, top.mcfpp.analysis.FlowFacts>>()
+            val sequence = helper("foreach_sequence", caller)
+            var incoming = listOf(entry)
+            for (element in elements) {
+                if (incoming.isEmpty()) break
+                StorageAccess.restoreFlow(StorageAccess.joinFlow(incoming))
+                val loop = LoopContext(visible, StorageAccess.flowSnapshot(visible))
+                val body = helper("foreach_element", sequence)
+                loops.addLast(loop)
+                try {
+                    body.runInFunction {
+                        bindIterationVariable(id, element, body)
+                        visitBlock(ctx.block())
+                        if (!Function.currFunction.isEnded && !Function.currFunction.hasReturnStatement) finishBranchPath()
+                    }
+                } finally { loops.removeLast() }
+                exits.addAll(loop.breakExits)
+                incoming = loop.backEdges
+                sequence.runInFunction {
+                    val result = emitControlCall(body)
+                    Function.addCommand("execute if score ${result.player} ${result.objective} matches 2 run return 2")
+                    Function.addCommand("execute if score ${result.player} ${result.objective} matches 0 run return 0")
                 }
             }
-            visitConcreteForeach(id, ConcreteIterator(id, elements.iterator()), ctx.block())
-        } else LogProcessor.error("Runtime iteration requires typed IR with a supported iterable layout")
-        return null
-    }
-
-    fun visitConcreteForeach(id: String, iterator: ConcreteIterator<*>, ctx: BlockContext){
-        for (v in iterator){
-            TypeUsage.ordinaryDiagnostic(v.type, ValueSnapshot.of(v))?.let {
-                LogProcessor.error(it)
-                return
-            }
-            val i = v.type.buildUnConcrete(id).assignedBy(v)
-            Function.addCommands(Commands.internalFunction(Function.currFunction){
-                Function.currFunction.scope.putVar(id, i)
-                visitBlock(ctx)
-            })
+            exits.addAll(incoming)
+            StorageAccess.restoreFlow(if (exits.isEmpty()) StorageAccess.exitFlow(entry) else StorageAccess.joinFlow(exits))
+            sequence.runInFunction { Function.addCommand("return 0") }
+            propagateLoopReturn(emitControlCall(sequence))
+            return null
         }
+        val length = StorageAccess.iterationLength(captured) ?: return null
+        val index = top.mcfpp.core.lang.MCInt(TempPool.getVarIdentify())
+        StorageAccess.ensure(index)
+        StorageAccess.write(index, StorageAccess.literal(MCFPPBaseType.Int, CompilerValue.Integral(0)))
+        compileLoop(ctx.block(), { StorageAccess.binary(index, length, "<") }, false,
+            captured = listOf(index, length, captured), iteration = id to {
+                StorageAccess.capture(StorageAccess.iterationElement(captured, index))
+            }, advance = {
+                StorageAccess.write(index, StorageAccess.binary(index,
+                    StorageAccess.literal(MCFPPBaseType.Int, CompilerValue.Integral(1)), "+"))
+            })
+        return null
     }
 
     //region template

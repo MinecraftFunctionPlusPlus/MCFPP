@@ -7,11 +7,8 @@ import top.mcfpp.ProjectConfig
 import top.mcfpp.CompileSettings
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.mni.annotation.WritesReceiver
-import top.mcfpp.analysis.ValueSnapshot
 import top.mcfpp.analysis.StorageAccess
-import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.core.lang.nbt.MCString
-import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.model.Member
@@ -38,11 +35,14 @@ class NativeSelectorContractTest {
     @Test
     fun completeSelectorSnapshotsFreezeOperandsAndPreserveDuplicateChecks() = withLibrary {
         MCFPPStringTest.readFromString("func main() {}", version = "26.3")
-        val operand = MCIntConcrete(4)
+        val operand = top.mcfpp.core.lang.MCInt("operand").apply {
+            bindDeclaration()
+            StorageAccess.write(this, top.mcfpp.core.lang.MCInt(4))
+        }
         val original = SelectorVar(EntitySelector('e').x(operand).tag("saved", false).limit(1))
-        val frozen = assertNotNull(ValueSnapshot.of(original))
+        val frozen = assertNotNull(top.mcfpp.analysis.StorageAccess.snapshot(original))
         val type = original.type
-        operand.value = 99
+        StorageAccess.write(operand, top.mcfpp.core.lang.MCInt(99))
         val restored = StorageAccess.restore(type, frozen, "restored") as SelectorVar
         assertEquals("@e[x=4,tag=saved,limit=1]", restored.toCommandPart().toString())
         val copy = restored.clone()
@@ -52,9 +52,9 @@ class NativeSelectorContractTest {
         assertEquals(errors + 1, Project.errorCount)
         assertEquals(3, copy.value.predicates.size)
         assertTrue(copy.value.selectingSingleEntity())
-        assertEquals(frozen, ValueSnapshot.of(restored))
+        assertEquals(frozen, top.mcfpp.analysis.StorageAccess.snapshot(restored))
         val named = SelectorVar(EntitySelector('e').name("quote \" slash \\", false))
-        val namedSnapshot = assertNotNull(ValueSnapshot.of(named))
+        val namedSnapshot = assertNotNull(top.mcfpp.analysis.StorageAccess.snapshot(named))
         val namedCopy = StorageAccess.restore(named.type, namedSnapshot, "namedCopy") as SelectorVar
         assertEquals("""@e[name="quote \" slash \\"]""", namedCopy.toCommandPart().toString())
         val nameReader = StringReader(namedCopy.toCommandPart().toString().substringAfter("name=").dropLast(1))
@@ -189,8 +189,8 @@ class NativeSelectorContractTest {
         assertTrue(observe.compiledFunctions.isEmpty())
         val target = StorageAccess.read(assertNotNull(observe.scope.getVar("target"))) as SelectorVar
         val copied = StorageAccess.read(assertNotNull(observe.scope.getVar("copied"))) as SelectorVar
-        assertNull(ValueSnapshot.of(target))
-        assertNull(ValueSnapshot.of(copied))
+        assertNull(top.mcfpp.analysis.StorageAccess.snapshot(target))
+        assertNull(top.mcfpp.analysis.StorageAccess.snapshot(copied))
         assertNotSame(target.value, copied.value)
         assertNotEquals(target.storageBinding?.place, copied.storageBinding?.place)
         assertEquals(28, target.value.predicates.size)
@@ -279,7 +279,7 @@ class NativeSelectorContractTest {
             Function.addCommand(Commands.stackIn())
             Function.addCommand(Commands.dataSetValue(input.nbtPath, StringTag("inner_word")))
             val caller = StorageAccess.callerValue(cached) as SelectorVar
-            val nested = tag.invoke(emptyList(), listOf(MCStringConcrete(StringTag("extra"))), caller) as SelectorVar
+            val nested = tag.invoke(emptyList(), listOf(MCString(StringTag("extra"))), caller) as SelectorVar
             assertSame(cached.storageBinding!!.data, nested.storageBinding!!.data)
             assertTrue(nested.value.predicates.first().v.nbtPath.pathToCommandPart().toString().startsWith("stack_frame[1]."))
             Function.addCommands(Command.buildAll("say", nested).buildMacroFunction())
@@ -392,7 +392,7 @@ class NativeSelectorContractTest {
             // The manual macro entrypoint validates the exact argument compound supplied by its caller.
             val sink=Function("manual_guard","fixture.guards",context=null)
             Function.currFunction=sink
-            val input=MCString("incoming").apply {hasAssigned=true}
+            val input=MCString("incoming")
             val binding=StorageAccess.bindIncomingParameter(input)
             val selector=SelectorVar(EntitySelector('e').name(input,false))
             val selected=StorageAccess.read(selector) as SelectorVar
@@ -414,7 +414,7 @@ class NativeSelectorContractTest {
             val sink=Function("line_break_rejection","fixture.guards",context=null)
             Function.currFunction=sink
             val target=SelectorVar(EntitySelector('e'))
-            val context=NativeCallContext(sink,target,listOf(MCStringConcrete(StringTag(value))),target.type)
+            val context=NativeCallContext(sink,target,listOf(MCString(StringTag(value))),target.type)
             val errors=Project.errorCount
             SelectorData.name(context)
             assertEquals(errors+1,Project.errorCount)

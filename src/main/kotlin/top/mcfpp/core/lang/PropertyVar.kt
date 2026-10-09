@@ -32,6 +32,8 @@ class PropertyVar(val property: Property, var field: Var<*>, val caller: Var<*>)
     }
 
     override fun doAssignedBy(b: Var<*>): PropertyVar {
+        if (b.isError) { isError = true; return this }
+        if (!top.mcfpp.analysis.StorageAccess.canWrite(field)) { isError = true; return this }
         val qwq = property.setter(caller, field, b)
         if (qwq.isError) {
             isError = true
@@ -60,6 +62,8 @@ class PropertyVar(val property: Property, var field: Var<*>, val caller: Var<*>)
     }
 
     fun set(b: Var<*>){
+        if (b.isError) { isError = true; return }
+        if (!top.mcfpp.analysis.StorageAccess.canWrite(field)) { isError = true; return }
         property.setter(caller, field, b)
     }
 

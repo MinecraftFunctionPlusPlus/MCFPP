@@ -7,6 +7,13 @@ import top.mcfpp.mni.annotation.WritesReceiver;
 
 /** One member signature for constant and runtime lists. */
 public class NBTListData {
+    @NoExternalWrites
+    @MNIFunction(caller = "list", genericType = "E", returnType = "int")
+    public static void size(NativeCallContext context) { ListOperations.INSTANCE.size(context); }
+
+    @NoExternalWrites
+    @MNIFunction(caller = "list", genericType = "E", returnType = "bool")
+    public static void isEmpty(NativeCallContext context) { ListOperations.INSTANCE.isEmpty(context); }
     @WritesReceiver
     @MNIFunction(normalParams = {"E"}, caller = "list", genericType = "E")
     public static void add(NativeCallContext context) { ListOperations.INSTANCE.add(context, false); }

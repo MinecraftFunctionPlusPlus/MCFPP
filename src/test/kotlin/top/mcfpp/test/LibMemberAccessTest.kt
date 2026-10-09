@@ -42,7 +42,7 @@ class LibMemberAccessTest {
         val add = restored.scope.functions.getValue("add").single()
         assertEquals(AccessModifier.PROTECTED, add.accessModifier)
         assertSame(restored, add.owner)
-        assertSame(restored, template("Child").scope.getFunction("add", listOf(top.mcfpp.core.lang.MCFPPTypeVar(MCFPPBaseType.Int)), listOf(top.mcfpp.core.lang.MCIntConcrete(2))).owner)
+        assertSame(restored, template("Child").scope.getFunction("add", listOf(top.mcfpp.core.lang.MCFPPTypeVar(MCFPPBaseType.Int)), listOf(top.mcfpp.core.lang.MCInt(2))).owner)
     }
 
     @Test fun restoredMethodsUseLexicalOwnerForPrivateAndProtectedCalls() = withLibrary { output ->

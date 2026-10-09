@@ -2,12 +2,9 @@ package top.mcfpp.lib
 
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.MCInt
-import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.nbt.MCString
-import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
-import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
@@ -28,7 +25,7 @@ class NBTPath(var source: NBTSource): Serializable {
 
     fun intIndex(index: Int): NBTPath{
         return this.clone().apply {
-            pathList.add(IntPath(MCIntConcrete(index)))
+            pathList.add(IntPath(MCInt(index)))
         }
     }
 
@@ -41,7 +38,7 @@ class NBTPath(var source: NBTSource): Serializable {
 
     fun nbtIndex(tag: CompoundTag): NBTPath {
         return this.clone().apply {
-            pathList.add(NBTPredicatePath(NBTBasedDataConcrete(tag)))
+            pathList.add(NBTPredicatePath(NBTBasedData(tag)))
         }
     }
 
@@ -54,7 +51,7 @@ class NBTPath(var source: NBTSource): Serializable {
     //qwq.index
     fun memberIndex(index: String): NBTPath{
         return this.clone().apply {
-            pathList.add(MemberPath(MCStringConcrete(StringTag(index))))
+            pathList.add(MemberPath(MCString(StringTag(index))))
         }
     }
 
@@ -107,14 +104,14 @@ class NBTPath(var source: NBTSource): Serializable {
                 is MemberPath -> {
                     val value = path.value as MemberPath
                     if(path.index == 0){
-                        if(value.value is MCStringConcrete){
-                            cmd.build((value.value as MCStringConcrete).value.value, false)
+                        if(value.value is MCString && top.mcfpp.analysis.StorageAccess.snapshot(value.value) != null){
+                            cmd.build((value.value as MCString).value.value, false)
                         }else{
                             cmd.buildMacro(value.value, false)
                         }
                     }else{
-                        if(value.value is MCStringConcrete){
-                            cmd.build(".${(value.value as MCStringConcrete).value.value}", false)
+                        if(value.value is MCString && top.mcfpp.analysis.StorageAccess.snapshot(value.value) != null){
+                            cmd.build(".${(value.value as MCString).value.value}", false)
                         }else{
                             cmd.build(".", false).buildMacro(value.value, false)
                         }
@@ -123,7 +120,7 @@ class NBTPath(var source: NBTSource): Serializable {
 
                 is IntPath -> {
                     val value = (path.value as IntPath).value
-                    if(value is MCIntConcrete){
+                    if(value is MCInt && top.mcfpp.analysis.StorageAccess.snapshot(value) != null){
                         cmd.build("[${value.value}]", false)
                     }else{
                         cmd.build("[", false).buildMacro(value, false).build("]", false)
@@ -132,7 +129,7 @@ class NBTPath(var source: NBTSource): Serializable {
 
                 is NBTPredicatePath -> {
                     val value = (path.value as NBTPredicatePath).value
-                    if(value is NBTBasedDataConcrete){
+                    if(value is NBTBasedData && top.mcfpp.analysis.StorageAccess.snapshot(value) != null){
                         cmd.build("[${Tag.toSNBT(value.value)}]", false)
                     }else{
                         cmd.build("[", false).buildMacro(value, false).build("]", false)

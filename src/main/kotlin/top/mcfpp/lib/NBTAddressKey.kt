@@ -1,8 +1,8 @@
 package top.mcfpp.lib
 
-import top.mcfpp.core.lang.MCIntConcrete
-import top.mcfpp.core.lang.nbt.MCStringConcrete
-import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
+import top.mcfpp.core.lang.MCInt
+import top.mcfpp.core.lang.nbt.MCString
+import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.nbt.tags.Tag
 import java.util.Collections
 
@@ -37,9 +37,13 @@ internal fun sourceKey(source: NBTSource): Any = when (source) {
 }
 
 internal fun segmentKey(segment: Path): Any = when (segment) {
-    is MemberPath -> SegmentKey("member", (segment.value as? MCStringConcrete)?.value?.value ?: AddressIdentity(segment.value))
-    is IntPath -> SegmentKey("index", (segment.value as? MCIntConcrete)?.value ?: AddressIdentity(segment.value))
-    is NBTPredicatePath -> SegmentKey("predicate", (segment.value as? NBTBasedDataConcrete)?.let { Tag.toSNBT(it.value) } ?: AddressIdentity(segment.value))
+    is MemberPath -> SegmentKey("member", (segment.value as? MCString)?.takeIf {
+        top.mcfpp.analysis.StorageAccess.snapshot(it) != null
+    }?.value?.value ?: AddressIdentity(segment.value))
+    is IntPath -> SegmentKey("index", (segment.value as? MCInt)?.takeIf {
+        top.mcfpp.analysis.StorageAccess.snapshot(it) != null
+    }?.value ?: AddressIdentity(segment.value))
+    is NBTPredicatePath -> SegmentKey("predicate", (segment.value as? NBTBasedData)?.takeIf { top.mcfpp.analysis.StorageAccess.snapshot(it) != null }?.let { Tag.toSNBT(it.value) } ?: AddressIdentity(segment.value))
     is IteratorPath -> SegmentKey("iterator", Unit)
     else -> AddressIdentity(segment)
 }

@@ -104,8 +104,8 @@ class IRCallTest {
             }
         """)
         assertEquals(73, execute(main).read(main.scope.getVar("result") as MCInt))
-        assertNotNull(ValueSnapshot.of(main.scope.getVar("untouched")))
-        assertNull(ValueSnapshot.of(main.scope.getVar("changed")))
+        assertNotNull(StorageAccess.snapshot(assertNotNull(main.scope.getVar("untouched"))))
+        assertNull(StorageAccess.snapshot(assertNotNull(main.scope.getVar("changed"))))
         val changed = main.scope.getVar("changed")!!.symbol!!.id
         val call = main.typedIR!!.blocks.flatMap { it.instructions }.filterIsInstance<Instruction.Call>().single()
         assertEquals(setOf(Place(changed)), assertIs<Effect.Writes>(call.effect).places)
@@ -156,7 +156,7 @@ class IRCallTest {
         """)
         assertEquals(9, execute(main).read(main.scope.getVar("result") as MCInt))
         assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), (main.scope.getVar("copied") as MCAny).typeKnowledge)
-        assertNull(ValueSnapshot.of(main.scope.getVar("copied")))
+        assertNull(StorageAccess.snapshot(assertNotNull(main.scope.getVar("copied"))))
     }
 
     @Test fun aLoopBackedgeDoesNotBindAConcreteOverloadFromTheFirstIteration() = modes {
@@ -185,7 +185,7 @@ class IRCallTest {
         assertEquals(0, Project.errorCount)
         assertEquals(Effect.Pure, function("wrapper").runtimeEffect)
         assertEquals(7, execute(function("main")).read(function("main").scope.getVar("number") as MCInt))
-        assertNotNull(ValueSnapshot.of(function("main").scope.getVar("values")))
+        assertNotNull(StorageAccess.snapshot(assertNotNull(function("main").scope.getVar("values"))))
     }
 
     @Test fun defaultsAndKnownErasedArgumentsUseTheSharedOverloadRules() {
@@ -298,7 +298,7 @@ class IRCallTest {
         assertEquals(5, machine.read(main.scope.getVar("typedNumber") as MCInt))
         assertEquals(1, machine.read(main.scope.getVar("accepted") as ScoreBool))
         assertIs<MCAny>(main.scope.getVar("copy"))
-        assertNull(ValueSnapshot.of(main.scope.getVar("result")))
+        assertNull(StorageAccess.snapshot(assertNotNull(main.scope.getVar("result"))))
         val calls = main.typedIR!!.blocks.flatMap { it.instructions }.filterIsInstance<Instruction.Call>()
         assertEquals(6, calls.size)
         assertTrue(calls.all { !it.provisional })

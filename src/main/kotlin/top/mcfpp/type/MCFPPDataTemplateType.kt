@@ -3,7 +3,6 @@ package top.mcfpp.type
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
-import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.mni.annotation.NoInstance
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
@@ -53,13 +52,22 @@ open class MCFPPDataTemplateType(
         return try {
             instanceFields.all { field ->
                 val fieldType = field.type
-                if (fieldType is MCFPPDataTemplateType && fieldType !is MCFPPTypeDataTemplateType)
-                    fieldType.runtimeFields(visiting)
-                else fieldType.hasRuntimeRepresentation
+                runtimeFieldType(fieldType, visiting)
             }
         } finally {
             visiting.remove(typeId)
         }
+    }
+
+    private fun runtimeFieldType(type: MCFPPType, visiting: MutableSet<TypeId>): Boolean = when (type) {
+        is MCFPPTypeDataTemplateType -> runtimeFieldType(type.typeAs, visiting)
+        is MCFPPDataTemplateType -> type.runtimeFields(visiting)
+        is MCFPPListType -> type.generic[0] === MCFPPPrivateType.Wildcard || type.generic.all { runtimeFieldType(it, visiting) }
+        is MCFPPImmutableListType -> type.generic.all { runtimeFieldType(it, visiting) }
+        is MCFPPDictType -> type.generic.all { runtimeFieldType(it, visiting) }
+        is MCFPPMapType -> type.generic.all { runtimeFieldType(it, visiting) }
+        is MCFPPUnionType -> type.types.all { runtimeFieldType(it, visiting) }
+        else -> type.hasRuntimeRepresentation
     }
 
     override val instanceData: DataTemplate
@@ -87,30 +95,9 @@ open class MCFPPDataTemplateType(
         if(template is UnsolvedTemplate){
             template = (template as UnsolvedTemplate).resolve()
         }
-        val id = typeId as? TypeId.Declaration ?: return
-        val canonical = when (id.kind) {
-            "template" -> GlobalScope.getCanonicalTemplate(id.namespace, id.name)
-            "interface" -> GlobalScope.getCanonicalTemplate(id.namespace, id.name, true)
-            else -> null
-        } ?: return
-        val canonicalType = canonical.getType()
-        if (canonicalType.typeId == id) {
-            template = canonical
-            parentType = canonicalType.parentType
-        }
     }
 
-    override fun defaultValue(): Any? {
-        val map = HashMap<String, Var<*>>()
-        template.scope.allVars.forEach {
-            if(!it.nullable && !it.isStatic){
-                val v = it.type.defaultValueVar()
-                v.identifier = it.identifier
-                map[it.identifier] = v
-            }
-        }
-        return map
-    }
+    override fun defaultValue(): Any? = null
 
     @Suppress("UNCHECKED_CAST")
     override fun build(identifier: String, value: Any?): Var<*> {
@@ -118,7 +105,7 @@ open class MCFPPDataTemplateType(
             LogProcessor.error("Template ${template.namespaceID} is not allowed to be instantiated.")
             return UnknownVar(identifier)
         }else{
-            return DataTemplateObjectConcrete(template, value as HashMap<String, Var<*>>, identifier)
+            return top.mcfpp.analysis.StorageAccess.literal(this, value as top.mcfpp.analysis.CompilerValue, identifier)
         }
     }
 

@@ -77,6 +77,7 @@ class ListQueryIRTest {
             val erase = function("erase")
             assertNotNull(erase.typedIR)
             assertEquals(setOf(Place(erase.typedIR!!.parameters.first())), assertIs<Effect.Writes>(erase.runtimeEffect).places)
+            assertEquals(setOf(Place(erase.typedIR!!.parameters.first())), assertIs<Effect.Writes>(erase.runtimeEffect).contents)
             if (version == "1.20") assertTrue(Project.macroFunction.isEmpty())
         }
     }

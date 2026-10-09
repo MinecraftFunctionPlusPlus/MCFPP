@@ -1,7 +1,6 @@
 package top.mcfpp.backend
 
 import top.mcfpp.core.lang.nbt.MCString
-import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.util.LogProcessor
 
@@ -17,6 +16,6 @@ object NativeDiagnosticOperations {
 
     private fun report(context: NativeCallContext, action: (String) -> Unit) = context.withArguments { arguments ->
         val message = arguments[0] as MCString
-        action(if (message is MCStringConcrete) message.value.value else message.toString())
+        action(if (message is MCString && top.mcfpp.analysis.StorageAccess.snapshot(message) != null) message.value.value else message.toString())
     }
 }

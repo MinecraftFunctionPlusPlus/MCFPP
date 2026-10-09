@@ -2,10 +2,10 @@ package top.mcfpp.test
 
 import top.mcfpp.Project
 import top.mcfpp.analysis.Instruction
+import top.mcfpp.analysis.CompilerValue
+import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.core.lang.MCInt
-import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.core.lang.bool.ScoreBool
-import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
@@ -113,8 +113,10 @@ class PrimitiveIRTest {
             var combined = bigger && !inverted;
             dynamic var result = combined;
         """.trimIndent())
-        assertEquals(42, (function.scope.getVar("value") as MCIntConcrete).value)
-        assertEquals(true, (function.scope.getVar("combined") as ScoreBoolConcrete).value)
+        assertEquals(CompilerValue.Typed(top.mcfpp.type.MCFPPBaseType.Int.typeId, CompilerValue.Integral(42)),
+            StorageAccess.snapshot(assertNotNull(function.scope.getVar("value"))))
+        assertEquals(CompilerValue.Typed(top.mcfpp.type.MCFPPBaseType.Bool.typeId, CompilerValue.Bool(true)),
+            StorageAccess.snapshot(assertNotNull(function.scope.getVar("combined"))))
         val commands = function.commands.analyzeAll().filter { it.startsWith("scoreboard ") || it.startsWith("execute ") }
         val result = function.scope.getVar("result") as ScoreBool
         assertEquals(listOf("scoreboard players set ${result.name} ${result.boolObject} 1"), commands)
@@ -138,7 +140,8 @@ class PrimitiveIRTest {
         """.trimIndent())
         val machine = execute(function)
         assertEquals(7, machine.read(function.scope.getVar("result") as MCInt))
-        assertEquals(99, (function.scope.getVar("unrelated") as MCIntConcrete).value)
+        assertEquals(CompilerValue.Typed(top.mcfpp.type.MCFPPBaseType.Int.typeId, CompilerValue.Integral(99)),
+            StorageAccess.snapshot(assertNotNull(function.scope.getVar("unrelated"))))
         val commands = GlobalScope.localNamespaces.values.flatMap { it.scope.functions.values.flatten() }.flatMap { it.commands.analyzeAll() }
         assertTrue(commands.none { it.contains("${function.prefix}unrelated") })
         assertTrue(commands.none { it.contains(" += ") }, "The value after the join should fold")
@@ -228,7 +231,8 @@ class PrimitiveIRTest {
 
     @Test fun integerOverflowFoldsWithTheSameSigned32BitResult() {
         val function = compile("var value = 2147483647 + 1; dynamic var result = value;")
-        assertEquals(Int.MIN_VALUE, (function.scope.getVar("value") as MCIntConcrete).value)
+        assertEquals(CompilerValue.Typed(top.mcfpp.type.MCFPPBaseType.Int.typeId, CompilerValue.Integral(Int.MIN_VALUE.toLong())),
+            StorageAccess.snapshot(assertNotNull(function.scope.getVar("value"))))
         assertEquals(Int.MIN_VALUE, ScoreCommandExecutor(function.commands.analyzeAll()).read(function.scope.getVar("result") as MCInt))
     }
 }

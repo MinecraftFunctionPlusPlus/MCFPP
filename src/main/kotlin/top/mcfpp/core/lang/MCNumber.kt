@@ -1,6 +1,5 @@
 package top.mcfpp.core.lang
 
-import top.mcfpp.core.lang.obj.EnumVar
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.util.TempPool
@@ -48,13 +47,6 @@ abstract class MCNumber<T> : Var<MCNumber<T>> {
      */
     @Suppress("LeakingThis")
     constructor(b: MCNumber<T>) : super(b) {
-        name = b.name
-        sbObject = b.sbObject
-        isDataOnly = b.isDataOnly
-    }
-
-    @Suppress("LeakingThis")
-    constructor(b: EnumVar) : super(b){
         name = b.name
         sbObject = b.sbObject
         isDataOnly = b.isDataOnly

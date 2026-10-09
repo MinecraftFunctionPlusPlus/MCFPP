@@ -4,30 +4,37 @@ import top.mcfpp.type.TypeId
 
 /** Basic blocks and explicit reads/writes, with no dependency on Var implementation classes. */
 data class TypedIR(val entry: Int, val blocks: List<BasicBlock>, val runtimeValues: Set<Int> = emptySet(),
-                   val parameters: List<SymbolId> = emptyList(), val externalRoots: Set<SymbolId> = emptySet())
+                   val parameters: List<SymbolId> = emptyList(), val externalRoots: Set<SymbolId> = emptySet(),
+                   val declarations: Map<SymbolId, Symbol> = emptyMap(),
+                   val boundTypes: Map<TypeId, top.mcfpp.type.MCFPPType> = emptyMap())
 data class BasicBlock(val id: Int, val instructions: List<Instruction>, val terminator: Terminator)
 
 sealed interface Instruction {
+    data class Declare(val symbol: Symbol) : Instruction
     data class Read(val result: Int, val place: Place, val type: TypeId, val location: Location = Location(place)) : Instruction
-    data class Write(val place: Place, val value: ValueRef, val containerType: TypeId? = null, val location: Location = Location(place)) : Instruction
+    data class Write(val place: Place, val value: ValueRef, val containerType: TypeId? = null, val location: Location = Location(place),
+                     val declaration: Symbol? = null, val rebindsDeclaration: Boolean = true) : Instruction
     data class CaptureIndex(val result: Int, val value: ValueRef, val container: Location) : Instruction
     data class CaptureKey(val result: Int, val value: ValueRef) : Instruction
     data class MapMember(val operation: MapOperation, val receiver: Location, val type: TypeId,
                          val key: ValueRef? = null, val argument: ValueRef? = null,
-                         val result: Int? = null, val resultPlace: Place? = null) : Instruction
+                         val result: Int? = null, val resultPlace: Place? = null, val declaration: Symbol? = null) : Instruction
     data class MapProjection(val result: Int, val place: Place, val receiver: Location,
                              val type: TypeId, val dictionary: Boolean) : Instruction
     data class ListMember(val operation: ListOperation, val receiver: Location, val type: TypeId,
                           val argument: ValueRef? = null, val argumentPlace: Place? = null,
                           val index: ValueRef? = null, val knownIndex: Int? = null,
-                          val result: Int? = null, val resultPlace: Place? = null) : Instruction
+                          val result: Int? = null, val resultPlace: Place? = null, val declaration: Symbol? = null) : Instruction
     data class DictionaryMember(val operation: DictionaryOperation, val receiver: Location, val type: TypeId,
                                 val argument: ValueRef? = null, val key: String? = null,
-                                val result: Int? = null, val resultPlace: Place? = null) : Instruction {
+                                val result: Int? = null, val resultPlace: Place? = null, val declaration: Symbol? = null) : Instruction {
         val effect: Effect get() = when (operation) {
             DictionaryOperation.CONTAINS_KEY -> Effect.Pure
-            DictionaryOperation.REMOVE -> Effect.Writes(setOf(key?.let(receiver.place::field) ?: receiver.place))
-            else -> Effect.Writes(setOf(receiver.place))
+            DictionaryOperation.REMOVE -> {
+                val target = key?.let(receiver.place::field) ?: receiver.place
+                Effect.Writes(setOf(target), setOf(target))
+            }
+            else -> Effect.Writes(setOf(receiver.place), setOf(receiver.place))
         }
     }
     data class Binary(val result: Int, val operation: String, val left: ValueRef, val right: ValueRef, val type: TypeId) : Instruction
@@ -39,7 +46,8 @@ sealed interface Instruction {
                     val returnType: TypeId? = null, val argumentPlaces: List<Place?> = emptyList(),
                     val parameterTypes: List<TypeId> = emptyList(), val staticParameters: Set<Int> = emptySet(),
                     val provisional: Boolean = false, val resultPlace: Place? = null,
-                    val argumentLocations: List<Location?> = emptyList()) : Instruction
+                    val argumentLocations: List<Location?> = emptyList(), val argumentDeclarations: List<Symbol?> = emptyList(),
+                    val argumentRebindings: List<Boolean> = emptyList()) : Instruction
     data class RawCommand(val command: String) : Instruction
 }
 sealed interface Terminator {
@@ -51,12 +59,23 @@ sealed interface Terminator {
 sealed interface Effect {
     object Pure : Effect
     object ReadsRuntime : Effect
-    data class Writes(val places: Set<Place>) : Effect
+    /** Contents writes invalidate the same physical place without rebinding its declaration. */
+    data class Writes(val places: Set<Place>, val contents: Set<Place> = emptySet()) : Effect
     object Unknown : Effect
 }
 
 /** Conservative forward fixed point, including backedges and unreachable predecessor filtering. */
 object FlowAnalysis {
+    fun allowsWrite(symbol: Symbol, place: Place, before: FlowFacts, contents: Boolean = false): Boolean =
+        !symbol.readonly && (contents || symbol.mutable || before.read(place)?.state == ValueState.UNINITIALIZED)
+
+    fun canWrite(symbol: Symbol, place: Place, before: FlowFacts, contents: Boolean = false): Boolean {
+        if (!allowsWrite(symbol, place, before, contents)) {
+            top.mcfpp.util.LogProcessor.error("Cannot reassign const variable '${symbol.name}'")
+            return false
+        }
+        return true
+    }
     data class Snapshot(val place: Place, val facts: FlowFacts)
     data class Result(val entries: Map<Int, FlowFacts>, val exits: Map<Int, FlowFacts>, val values: Map<Pair<Int, Int>, ValueFacts>,
                       val lengths: Map<Pair<Int, Int>, Int>, val beforeWrites: Map<Pair<Int, Int>, FlowFacts>,
@@ -64,7 +83,8 @@ object FlowAnalysis {
 
     fun analyze(ir: TypedIR, initial: FlowFacts = FlowFacts(), evaluator: (String, CompilerValue, CompilerValue) -> CompilerValue? = { _, _, _ -> null }, canFoldBranch: (ValueRef) -> Boolean = { it !is ValueRef.Result || it.instruction !in ir.runtimeValues },
                 callSummary: (Instruction.Call, List<Snapshot>) -> ReturnTypeAnalysis.Summary = { call, _ -> ReturnTypeAnalysis.unknown(call) },
-                foldIntrinsics: Boolean = true): Result {
+                foldIntrinsics: Boolean = true, declarations: Map<SymbolId, Symbol> = emptyMap(),
+                boundTypes: Map<TypeId, top.mcfpp.type.MCFPPType> = ir.boundTypes): Result {
         require(ir.blocks.map { it.id }.distinct().size == ir.blocks.size)
         val blocks = ir.blocks.associateBy { it.id }
         require(ir.entry in blocks)
@@ -75,6 +95,8 @@ object FlowAnalysis {
         val beforeWrites = mutableMapOf<Pair<Int, Int>, FlowFacts>()
         val returns = mutableMapOf<Int, Snapshot>()
         val pending = ArrayDeque<Int>().apply { add(ir.entry) }
+        val symbols = ir.declarations + declarations + ir.blocks.flatMap { it.instructions }.filterIsInstance<Instruction.Declare>()
+            .associate { it.symbol.id to it.symbol }
         while (pending.isNotEmpty()) {
             val id = pending.removeFirst()
             val block = blocks.getValue(id)
@@ -82,6 +104,9 @@ object FlowAnalysis {
             val values = mutableMapOf<Int, ValueFacts>()
             val origins = mutableMapOf<Int, Place>()
             val snapshots = mutableMapOf<Int, Snapshot>()
+            fun writable(place: Place, access: Symbol?, contents: Boolean, accessContents: Boolean = contents): Boolean =
+                (access == null || allowsWrite(access, place, state, accessContents)) &&
+                    (symbols[place.root]?.let { allowsWrite(it, place, state, contents || place.path.isNotEmpty()) } != false)
             fun origin(ref: ValueRef): Place? = when (ref) {
                 is ValueRef.Read -> ref.place
                 is ValueRef.Result -> origins[ref.instruction]
@@ -98,8 +123,8 @@ object FlowAnalysis {
             fun value(ref: ValueRef): ValueFacts = when (ref) {
                 is ValueRef.Constant -> ValueFacts(TypeKnowledge.Exact(ref.type), ValueKnowledge.Constant(ref.value))
                 is ValueRef.Read -> state.read(ref.place) ?: ValueFacts(TypeKnowledge.Exact(ref.type), ValueKnowledge.Unknown, ValueState.UNINITIALIZED)
-                is ValueRef.Result -> values[ref.instruction] ?: ValueFacts(TypeKnowledge.Exact(ref.type), ValueKnowledge.Unknown)
-                is ValueRef.TypedView -> ValueFacts(TypeKnowledge.Exact(ref.type), ValueKnowledge.Unknown)
+                is ValueRef.Result -> values[ref.instruction] ?: ValueFacts(TypeKnowledge.Exact(ref.type), ValueKnowledge.Unknown, ValueState.UNINITIALIZED)
+                is ValueRef.TypedView -> value(ref.source)
             }
             fun evidence(ref: ValueRef): Snapshot {
                 // A scalar literal has no storage identity. This root exists only inside its isolated snapshot.
@@ -109,26 +134,36 @@ object FlowAnalysis {
                 return Snapshot(source.place, facts)
             }
             for ((position, instruction) in block.instructions.withIndex()) when (instruction) {
+                is Instruction.Declare -> {
+                    val place = Place(instruction.symbol.id)
+                    state.forgetDescendants(place)
+                    state.refine(place, ValueFacts(TypeKnowledge.Exact(instruction.symbol.declaredType),
+                        ValueKnowledge.Unknown, ValueState.UNINITIALIZED))
+                }
                 is Instruction.Read -> {
                     if (instruction.location.keys.isNotEmpty()) beforeWrites[id to position] = state.fork()
                     val resolved = MapFacts.resolve(state, instruction.location)
-                    val existing = state.read(resolved)
-                    values[instruction.result] = existing ?: ValueFacts(
+                    val existing = state.readAccess(resolved, symbols.values.associateBy { Place(it.id) }, boundTypes)
+                    val read = existing ?: ValueFacts(
                         if (instruction.type in setOf(top.mcfpp.type.MCFPPBaseType.Any.typeId, top.mcfpp.type.MCFPPBaseType.Object.typeId)) TypeKnowledge.Unknown else TypeKnowledge.Exact(instruction.type),
                         ValueKnowledge.Unknown, state.read(Place(instruction.place.root))?.state ?: ValueState.UNINITIALIZED)
+                    values[instruction.result] = if (read.state == ValueState.INITIALIZED) read
+                        else read.copy(value = ValueKnowledge.Unknown, state = ValueState.ERROR, readableLayout = null)
                     origins[instruction.result] = resolved
                     snapshots[instruction.result] = capture(resolved)
                     state.length(resolved)?.let { resultLengths[id to instruction.result] = it }
                         ?: resultLengths.remove(id to instruction.result)
                 }
                 is Instruction.Write -> {
-                    if (instruction.place.path.isNotEmpty()) beforeWrites[id to position] = state.fork()
+                    beforeWrites[id to position] = state.fork()
+                    val resolved = MapFacts.resolve(state, instruction.location)
+                    if (!writable(resolved, instruction.declaration, resolved.path.isNotEmpty(), !instruction.rebindsDeclaration)) continue
                     val source = origin(instruction.value)
                     val frozen = snapshot(instruction.value) ?: source?.let { capture(it) }
-                    val written = value(instruction.value)
-                    val resolved = MapFacts.resolve(state, instruction.location)
+                    val incoming = value(instruction.value)
+                    if (incoming.state != ValueState.INITIALIZED) continue
                     state.forgetDescendants(resolved)
-                    state.write(resolved, written)
+                    state.write(resolved, incoming)
                     if (source != null) state.copyFrom(frozen!!.facts, frozen.place, resolved, includeRoot = false)
                 }
                 is Instruction.CaptureIndex -> values[instruction.result] = value(instruction.value)
@@ -143,6 +178,7 @@ object FlowAnalysis {
                 }
                 is Instruction.MapMember -> {
                     beforeWrites[id to position] = state.fork()
+                    if (!instruction.operation.query && !writable(MapFacts.resolve(state, instruction.receiver), instruction.declaration, true)) continue
                     val key = instruction.key?.let { (value(it).value as? ValueKnowledge.Constant)?.value }?.let(MapFacts::text)
                     val receiver = MapFacts.resolve(state, instruction.receiver)
                     if (instruction.operation.query) {
@@ -164,6 +200,7 @@ object FlowAnalysis {
                 }
                 is Instruction.ListMember -> {
                     beforeWrites[id to position] = state.fork()
+                    if (!instruction.operation.query && !writable(MapFacts.resolve(state, instruction.receiver), instruction.declaration, true)) continue
                     val source = instruction.argument?.let(::snapshot)
                     val argument = instruction.argument?.let(::value)
                     if (instruction.operation.search) {
@@ -184,6 +221,9 @@ object FlowAnalysis {
                     } else ListFacts.edit(state, instruction, source?.facts, source?.place, argument)
                 }
                 is Instruction.DictionaryMember -> {
+                    beforeWrites[id to position] = state.fork()
+                    if (instruction.operation != DictionaryOperation.CONTAINS_KEY &&
+                        !writable(MapFacts.resolve(state, instruction.receiver), instruction.declaration, true)) continue
                     val place = instruction.receiver.place
                     when (instruction.operation) {
                         DictionaryOperation.CLEAR -> {
@@ -239,6 +279,27 @@ object FlowAnalysis {
                     snapshots[instruction.result] = capture(instruction.place)
                 }
                 is Instruction.Call -> {
+                    beforeWrites[id to position] = state.fork()
+                    val denied = instruction.staticParameters.any { parameter ->
+                        val target = instruction.argumentPlaces.getOrNull(parameter) ?: return@any false
+                        val effect = instruction.effect
+                        val writes = (effect as? Effect.Writes)?.places?.filter { it.overlaps(target) }.orEmpty()
+                        if (effect != Effect.Unknown && writes.isEmpty()) return@any false
+                        val rootWrite = effect == Effect.Unknown || writes.any { written ->
+                            written.path.size <= target.path.size && (effect as Effect.Writes).contents.none { content ->
+                                content.root == written.root && content.path.size <= written.path.size &&
+                                    written.path.take(content.path.size) == content.path
+                            }
+                        }
+                        !writable(target, instruction.argumentDeclarations.getOrNull(parameter), !rootWrite,
+                            !rootWrite || instruction.argumentRebindings.getOrNull(parameter) == false)
+                    }
+                    if (denied) {
+                        val failed = ValueFacts(TypeKnowledge.Unknown, ValueKnowledge.Unknown, ValueState.ERROR)
+                        instruction.result?.let { values[it] = failed }
+                        instruction.resultPlace?.let { state.refine(it, failed) }
+                        continue
+                    }
                     val summary = callSummary(instruction, instruction.arguments.map(::evidence))
                     if (!summary.canReturn) {
                         state.reachable = false
@@ -248,9 +309,11 @@ object FlowAnalysis {
                     val written = summary.writes
                     when (val effect = instruction.effect) {
                         is Effect.Writes -> effect.places.forEach { place ->
+                            state.invalidate(place)
                             state.forgetDescendants(place)
                             state.write(place, (state.read(place) ?: ValueFacts(TypeKnowledge.Unknown, ValueKnowledge.Unknown))
-                                .copy(type = written[place] ?: TypeKnowledge.Unknown, value = ValueKnowledge.Unknown))
+                                .copy(type = written[place] ?: TypeKnowledge.Unknown, value = ValueKnowledge.Unknown,
+                                    readableLayout = null))
                             state.copyFrom(summary.outputs, place, place, includeRoot = false)
                         }
                         Effect.Unknown -> state.barrier()
@@ -261,7 +324,12 @@ object FlowAnalysis {
                         val affected = instruction.effect == Effect.Unknown || (instruction.effect as? Effect.Writes)?.places?.any {
                             it.path.size <= place.path.size && it.overlaps(place)
                         } == true
-                        if (affected) state.refine(place, (state.read(place) ?: ValueFacts(type, ValueKnowledge.Unknown)).copy(type = type))
+                        if (affected) {
+                            val fact = state.read(place) ?: ValueFacts(type, ValueKnowledge.Unknown)
+                            state.refine(place, fact.copy(type = type, readableLayout = fact.readableLayout?.takeIf {
+                                fact.state == ValueState.INITIALIZED && (type as? TypeKnowledge.Exact)?.type == it
+                            }))
+                        }
                     }
                     instruction.resultPlace?.let {
                         state.forgetDescendants(it)
@@ -278,7 +346,7 @@ object FlowAnalysis {
                             ?: resultLengths.remove(id to result)
                     }
                 }
-                is Instruction.RawCommand -> state.barrier()
+                is Instruction.RawCommand -> if (EffectAnalysis.rawCommandEffect(instruction.command) == Effect.Unknown) state.barrier()
                 is Instruction.View -> {
                     values[instruction.result] = value(instruction.value)
                     origins[instruction.result] = instruction.value.place
@@ -297,7 +365,8 @@ object FlowAnalysis {
                         top.mcfpp.type.TypeRelations.resolveOperator(instruction.operation, leftType, rightType) else null
                     val left = (leftFact.value as? ValueKnowledge.Constant)?.value
                     val right = (rightFact.value as? ValueKnowledge.Constant)?.value
-                    val folded = if (left != null && right != null) evaluator(instruction.operation, left, right) else null
+                    val folded = if (instruction.result !in ir.runtimeValues && left != null && right != null)
+                        evaluator(instruction.operation, left, right) else null
                     values[instruction.result] = ValueFacts(type?.let { TypeKnowledge.Exact(it) } ?: TypeKnowledge.Unknown,
                         if (type != null && folded != null) ValueKnowledge.Constant(folded) else ValueKnowledge.Unknown)
                 }

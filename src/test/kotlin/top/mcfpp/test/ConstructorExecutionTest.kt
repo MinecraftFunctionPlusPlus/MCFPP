@@ -2,7 +2,6 @@ package top.mcfpp.test
 
 import top.mcfpp.Project
 import top.mcfpp.analysis.TypeKnowledge
-import top.mcfpp.analysis.ValueSnapshot
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
@@ -118,8 +117,8 @@ class ConstructorExecutionTest {
             val constructor = template().constructors.single()
             assertTrue(constructor.compiledFunctions.isEmpty())
             assertEquals(listOf("kind", "value"), constructor.normalParams.map { it.identifier })
-            assertNull(ValueSnapshot.of(constructor.scope.getVar("kind")!!))
-            assertNull(ValueSnapshot.of(constructor.scope.getVar("value")!!))
+            assertNull(top.mcfpp.analysis.StorageAccess.snapshot(constructor.scope.getVar("kind")!!))
+            assertNull(top.mcfpp.analysis.StorageAccess.snapshot(constructor.scope.getVar("value")!!))
             assertTrue(Files.readString(exported(output, constructor)).contains("stack_frame[0].this.value"))
             assertEquals(235, execute(main).read(main.scope.getVar("result") as MCInt))
         } finally { output.toFile().deleteRecursively() }

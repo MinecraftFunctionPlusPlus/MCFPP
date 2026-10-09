@@ -18,7 +18,9 @@ data class Symbol(
     val name: String,
     val declaredType: TypeId,
     val mutable: Boolean,
-    val forceRuntime: Boolean = false
+    val forceRuntime: Boolean = false,
+    val isLiteral: Boolean = false,
+    val readonly: Boolean = false
 )
 
 sealed interface PathSegment {
@@ -42,15 +44,22 @@ class Place(val root: SymbolId, path: List<PathSegment> = emptyList()) {
 }
 
 /** A logical access range plus captured sequence indices and string-key predicates. */
-class Location(val place: Place, indices: Map<Int, Int> = emptyMap(), keys: Map<Int, ValueRef> = emptyMap()) {
+class Location(val place: Place, indices: Map<Int, Int> = emptyMap(), keys: Map<Int, ValueRef> = emptyMap(),
+               val frameOffset: Int = 0, captured: Map<Int, ValueRef> = emptyMap(), predicates: Set<Int> = emptySet(),
+               capturedLocations: Map<Int, Location> = emptyMap()) {
     val indices: Map<Int, Int> = Collections.unmodifiableMap(LinkedHashMap(indices))
     val keys: Map<Int, ValueRef> = Collections.unmodifiableMap(LinkedHashMap(keys))
+    val captured: Map<Int, ValueRef> = Collections.unmodifiableMap(LinkedHashMap(captured))
+    val predicates: Set<Int> = Collections.unmodifiableSet(LinkedHashSet(predicates))
+    val capturedLocations: Map<Int, Location> = Collections.unmodifiableMap(LinkedHashMap(capturedLocations))
     init { require(indices.keys.all { place.path.getOrNull(it) == PathSegment.UnknownIndex }) }
     fun child(segment: PathSegment, capturedIndex: Int? = null, key: ValueRef? = null) = Location(Place(place.root, place.path + segment),
         if (capturedIndex == null) indices else indices + (place.path.size to capturedIndex),
-        if (key == null) keys else keys + (place.path.size to key))
-    override fun equals(other: Any?) = other is Location && place == other.place && indices == other.indices && keys == other.keys
-    override fun hashCode() = 31 * (31 * place.hashCode() + indices.hashCode()) + keys.hashCode()
+        if (key == null) keys else keys + (place.path.size to key), frameOffset, captured, predicates, capturedLocations)
+    fun inFrame(offset: Int) = Location(place, indices, keys, frameOffset + offset, captured, predicates, capturedLocations)
+    override fun equals(other: Any?) = other is Location && place == other.place && indices == other.indices && keys == other.keys &&
+        frameOffset == other.frameOffset && captured == other.captured && predicates == other.predicates && capturedLocations == other.capturedLocations
+    override fun hashCode() = listOf(place, indices, keys, frameOffset, captured, predicates, capturedLocations).hashCode()
 }
 
 sealed interface TypeKnowledge {
@@ -73,6 +82,7 @@ sealed interface TypeKnowledge {
 
 sealed interface ValueKnowledge {
     data class Constant(val value: CompilerValue) : ValueKnowledge
+    data class Program(val expression: top.mcfpp.lib.SelectorExpression) : ValueKnowledge
     class Partial(parts: Map<PathSegment, ValueKnowledge>) : ValueKnowledge {
         val parts: Map<PathSegment, ValueKnowledge> = Collections.unmodifiableMap(LinkedHashMap(parts))
         override fun equals(other: Any?) = other is Partial && parts == other.parts
@@ -91,13 +101,21 @@ sealed interface ValueKnowledge {
     }
 }
 
-enum class ValueState { INITIALIZED, UNINITIALIZED, ERROR }
-data class ValueFacts(val type: TypeKnowledge, val value: ValueKnowledge, val state: ValueState = ValueState.INITIALIZED) {
-    fun join(other: ValueFacts) = ValueFacts(type.join(other.type), value.join(other.value), when {
-        state == ValueState.ERROR || other.state == ValueState.ERROR -> ValueState.ERROR
-        state == ValueState.UNINITIALIZED || other.state == ValueState.UNINITIALIZED -> ValueState.UNINITIALIZED
-        else -> ValueState.INITIALIZED
-    })
+enum class ValueState { INITIALIZED, UNINITIALIZED, MAYBE_INITIALIZED, ERROR }
+/** readableLayout proves access to an exact runtime DTO schema, not a complete value snapshot. */
+data class ValueFacts(val type: TypeKnowledge, val value: ValueKnowledge, val state: ValueState = ValueState.INITIALIZED,
+                      val readableLayout: TypeId? = null) {
+    fun join(other: ValueFacts): ValueFacts {
+        val joinedType = type.join(other.type)
+        val joinedState = when {
+            state == ValueState.ERROR || other.state == ValueState.ERROR -> ValueState.ERROR
+            state == other.state -> state
+            else -> ValueState.MAYBE_INITIALIZED
+        }
+        return ValueFacts(joinedType, value.join(other.value), joinedState,
+            readableLayout?.takeIf { it == other.readableLayout && state == ValueState.INITIALIZED &&
+                other.state == ValueState.INITIALIZED && (joinedType as? TypeKnowledge.Exact)?.type == it })
+    }
 }
 
 sealed interface ValueRef {
@@ -113,11 +131,21 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
                                     private val lengths: MutableMap<Place, Int>) {
     constructor() : this(linkedMapOf(), true, linkedMapOf())
     fun fork() = FlowFacts(LinkedHashMap(facts), reachable, LinkedHashMap(lengths))
+    fun entries(): Map<Place, ValueFacts> = Collections.unmodifiableMap(LinkedHashMap(facts))
+    fun replaceWith(source: FlowFacts) {
+        facts.clear()
+        facts.putAll(source.facts)
+        lengths.clear()
+        lengths.putAll(source.lengths)
+        reachable = source.reachable
+    }
     /** Calls may transfer type and shape evidence, but never specialize on ordinary argument values. */
     fun withoutValues(initializedOnly: Boolean = false) = FlowFacts(facts.filterValues {
         !initializedOnly || it.state == ValueState.INITIALIZED
     }.mapValuesTo(linkedMapOf()) { (_, fact) -> fact.copy(value = ValueKnowledge.Unknown,
-        type = if (fact.state == ValueState.INITIALIZED) fact.type else TypeKnowledge.Unknown) },
+        type = if (fact.state == ValueState.INITIALIZED) fact.type else TypeKnowledge.Unknown,
+        readableLayout = fact.readableLayout?.takeIf { fact.state == ValueState.INITIALIZED &&
+            (fact.type as? TypeKnowledge.Exact)?.type == it }) },
         reachable, LinkedHashMap(lengths))
     private fun alternatives(place: Place): List<Place>? {
         var locations = listOf(Place(place.root))
@@ -130,18 +158,85 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
         return locations
     }
     fun read(place: Place): ValueFacts? {
-        if (PathSegment.UnknownIndex !in place.path) return facts[place] ?: facts.entries.filter { (range, _) ->
-            range.root == place.root && range.path.size == place.path.size &&
-                range.path.zip(place.path).all { (left, right) -> left == right || left == PathSegment.UnknownIndex }
-        }.map { it.value }.reduceOrNull(ValueFacts::join)?.let {
-            it.copy(value = ValueKnowledge.Unknown, type = if (it.state == ValueState.INITIALIZED) it.type else TypeKnowledge.Unknown)
+        if (PathSegment.UnknownIndex !in place.path) {
+            val exact = facts[place]
+            val ranges = facts.entries.filter { (range, _) ->
+                range.root == place.root && range.path.size == place.path.size &&
+                    range.path.zip(place.path).all { (left, right) -> left == right || left == PathSegment.UnknownIndex }
+            }
+            return exact ?: ranges.map { it.value }.reduceOrNull(ValueFacts::join)?.let {
+                it.copy(value = ValueKnowledge.Unknown, type = if (it.state == ValueState.INITIALIZED) it.type else TypeKnowledge.Unknown,
+                    readableLayout = it.readableLayout?.takeIf { id -> it.state == ValueState.INITIALIZED &&
+                        (it.type as? TypeKnowledge.Exact)?.type == id })
+            }
         }
         val candidates = alternatives(place) ?: return facts[place]
         if (candidates.isEmpty()) return null
         val values = candidates.map { facts[it] ?: return null }
         val joined = values.reduce(ValueFacts::join)
         return joined.copy(value = ValueKnowledge.Unknown,
-            type = if (joined.state == ValueState.INITIALIZED) joined.type else TypeKnowledge.Unknown)
+            type = if (joined.state == ValueState.INITIALIZED) joined.type else TypeKnowledge.Unknown,
+            readableLayout = joined.readableLayout?.takeIf { joined.state == ValueState.INITIALIZED &&
+                (joined.type as? TypeKnowledge.Exact)?.type == it })
+    }
+    /** A runtime collection access can consume aggregate element typing without proving a slot exists. */
+    fun readAccess(place: Place, declarations: Map<Place, Symbol> = emptyMap(),
+                   types: Map<TypeId, top.mcfpp.type.MCFPPType> = emptyMap()): ValueFacts? {
+        val exact = read(place)
+        if (exact?.state == ValueState.ERROR) return exact
+        // Field access capabilities cannot override an explicitly unavailable key or DTO field.
+        if (place.path.lastOrNull() is PathSegment.Field && exact?.state != ValueState.INITIALIZED &&
+            facts[place] != null) return exact
+        fun descriptor(id: TypeId): top.mcfpp.type.MCFPPType? {
+            types[id]?.let { return it }
+            fun find(type: top.mcfpp.type.MCFPPType, seen: Set<TypeId>): top.mcfpp.type.MCFPPType? {
+                if (type.typeId == id) return type
+                if (type.typeId in seen) return null
+                val children = when (type) {
+                    is top.mcfpp.type.MCFPPCompoundType -> type.generic
+                    is top.mcfpp.type.MCFPPDataTemplateType -> type.instanceFields.map { it.type }
+                    else -> emptyList()
+                }
+                return children.firstNotNullOfOrNull { find(it, seen + type.typeId) }
+            }
+            return types.values.firstNotNullOfOrNull { find(it, emptySet()) }
+                ?: (id as? TypeId.Builtin)?.let { top.mcfpp.type.MCFPPType.resolveTypeId(it) }
+        }
+        if (place.path.lastOrNull() is PathSegment.Field && exact?.state != ValueState.ERROR && exact?.state != ValueState.INITIALIZED) {
+            val parentPlace = Place(place.root, place.path.dropLast(1))
+            val parent = readAccess(parentPlace, declarations, types)
+            val dictionary = ((parent?.type as? TypeKnowledge.Exact)?.type
+                ?: declarations[parentPlace]?.declaredType) as? TypeId.Applied
+            val element = dictionary?.takeIf { it.constructor == TypeId.Builtin("dict") }?.arguments?.singleOrNull()
+            if (parent?.state == ValueState.INITIALIZED && element != null &&
+                element != top.mcfpp.type.MCFPPBaseType.Any.typeId && element != top.mcfpp.type.MCFPPBaseType.Object.typeId &&
+                descriptor(element)?.hasRuntimeRepresentation == true) {
+                return ValueFacts(TypeKnowledge.Exact(element), ValueKnowledge.Unknown,
+                    readableLayout = element.takeIf { descriptor(it) is top.mcfpp.type.MCFPPDataTemplateType })
+            }
+            val parentType = (parent?.type as? TypeKnowledge.Exact)?.type
+            if (exact == null && parent?.state == ValueState.INITIALIZED &&
+                (read(parentPlace)?.state != ValueState.INITIALIZED ||
+                    parentType != null && parent.readableLayout == parentType)) {
+                val owner = (parent.type as? TypeKnowledge.Exact)?.type?.let(::descriptor)
+                    as? top.mcfpp.type.MCFPPDataTemplateType
+                val field = owner?.takeIf { it.hasRuntimeRepresentation }?.instanceFields
+                    ?.firstOrNull { it.identifier == (place.path.last() as PathSegment.Field).name }
+                val fieldType = field?.type?.let { descriptor(it.typeId) ?: it }
+                if (fieldType?.hasRuntimeRepresentation == true) {
+                    val id = fieldType.typeId
+                    return ValueFacts(if (id == top.mcfpp.type.MCFPPBaseType.Any.typeId ||
+                        id == top.mcfpp.type.MCFPPBaseType.Object.typeId) TypeKnowledge.Unknown
+                        else TypeKnowledge.Exact(id), ValueKnowledge.Unknown,
+                        readableLayout = id.takeIf { fieldType is top.mcfpp.type.MCFPPDataTemplateType })
+                }
+            }
+        }
+        if (exact?.state != ValueState.MAYBE_INITIALIZED || place.path.lastOrNull() !is PathSegment.Index) return exact
+        val parent = Place(place.root, place.path.dropLast(1))
+        if (readAccess(parent, declarations, types)?.state != ValueState.INITIALIZED) return exact
+        val aggregate = facts[parent.unknownIndex()]?.takeIf { it.state == ValueState.INITIALIZED } ?: return exact
+        return aggregate.copy(value = ValueKnowledge.Unknown)
     }
     fun length(place: Place): Int? {
         if (PathSegment.UnknownIndex !in place.path) return lengths[place]
@@ -154,7 +249,11 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
         if (fact.state == ValueState.INITIALIZED) fact.type else TypeKnowledge.Unknown
     }
     fun refineTypes(source: FlowFacts) {
-        source.facts.forEach { (place, fact) -> facts[place]?.let { facts[place] = it.copy(type = fact.type) } }
+        source.facts.forEach { (place, fact) -> facts[place]?.let { current ->
+            facts[place] = current.copy(type = fact.type, readableLayout = current.readableLayout?.takeIf {
+                current.state == ValueState.INITIALIZED && (fact.type as? TypeKnowledge.Exact)?.type == it
+            })
+        } }
     }
     /** Refine evidence after an effect or after seeding a constructed shape, without another logical write. */
     fun refine(place: Place, value: ValueFacts) { facts[place] = value }
@@ -164,8 +263,9 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
     }
     fun write(place: Place, value: ValueFacts) {
         val unknownRange = PathSegment.UnknownIndex in place.path
-        val previous = facts[place]
-        invalidate(place)
+        val previous = if (unknownRange) read(place) else facts[place]
+        invalidate(place, preserveAncestorLayout = !unknownRange && value.state == ValueState.INITIALIZED &&
+            value.type is TypeKnowledge.Exact && (previous == null || previous.type == value.type))
         facts.entries.forEach { (key, fact) ->
             if (!key.overlaps(place) || key == place) return@forEach
             val type = when {
@@ -173,10 +273,17 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
                 key.path.size == place.path.size && (unknownRange || PathSegment.UnknownIndex in key.path) -> fact.type.join(value.type)
                 else -> fact.type
             }
-            facts[key] = fact.copy(type = type)
+            facts[key] = fact.copy(type = type, readableLayout = fact.readableLayout?.takeIf {
+                fact.state == ValueState.INITIALIZED && (type as? TypeKnowledge.Exact)?.type == it
+            })
         }
-        facts[place] = if (unknownRange) value.copy(type = previous?.type?.join(value.type) ?: TypeKnowledge.Unknown,
-            value = ValueKnowledge.Unknown) else value
+        facts[place] = if (unknownRange) {
+            val joined = previous?.join(value)
+            value.copy(type = joined?.type ?: TypeKnowledge.Unknown, value = ValueKnowledge.Unknown,
+                readableLayout = joined?.readableLayout)
+        } else value.copy(readableLayout = value.readableLayout?.takeIf {
+            value.state == ValueState.INITIALIZED && (value.type as? TypeKnowledge.Exact)?.type == it
+        })
     }
 
     /** A static write updates complete ancestor snapshots while invalidating overlapping read caches. */
@@ -189,7 +296,7 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
             old.replacing(place.path.drop(key.path.size), constant)?.let { key to fact.copy(value = ValueKnowledge.Constant(it)) }
         }.toMap()
         write(place, value)
-        facts.putAll(ancestors)
+        ancestors.forEach { (key, fact) -> facts[key] = fact.copy(readableLayout = facts[key]?.readableLayout) }
     }
     fun children(place: Place): Map<Place, ValueFacts> = facts.filterKeys {
         it.root == place.root && it.path.size == place.path.size + 1 && it.path.take(place.path.size) == place.path
@@ -220,16 +327,26 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
             .mapKeys { (key, _) -> Place(to.root, to.path + key.path.drop(from.path.size)) }
         lengths.putAll(shapes)
     }
-    fun invalidate(place: Place) {
-        lengths.keys.removeAll { it.overlaps(place) && it.path.size >= place.path.size }
+    fun invalidate(place: Place, protected: Set<Place> = emptySet(), preserveAncestorLayout: Boolean = false) {
+        fun writable(key: Place) = protected.none { it.root == key.root && key.path.take(it.path.size) == it.path }
+        lengths.keys.removeAll { it.overlaps(place) && it.path.size >= place.path.size && writable(it) }
         facts.entries.forEach { (key, value) ->
-            if (key.overlaps(place)) facts[key] = value.copy(value = ValueKnowledge.Unknown)
+            if (key.overlaps(place) && writable(key)) facts[key] = value.copy(value = ValueKnowledge.Unknown,
+                state = if (value.state == ValueState.UNINITIALIZED) ValueState.MAYBE_INITIALIZED else value.state,
+                readableLayout = value.readableLayout?.takeIf { preserveAncestorLayout &&
+                    PathSegment.UnknownIndex !in place.path && key.path.size < place.path.size &&
+                    place.path.take(key.path.size) == key.path && value.state == ValueState.INITIALIZED &&
+                    (value.type as? TypeKnowledge.Exact)?.type == it })
         }
     }
-    fun barrier() {
-        lengths.clear()
-        facts.entries.forEach { (key, value) -> facts[key] = value.copy(value = ValueKnowledge.Unknown,
-            type = TypeKnowledge.Unknown) }
+    fun barrier(protected: Set<Place> = emptySet()) {
+        lengths.keys.removeAll { place -> protected.none { it.root == place.root && place.path.take(it.path.size) == it.path } }
+        facts.entries.forEach { (key, value) ->
+            if (protected.none { it.root == key.root && key.path.take(it.path.size) == it.path }) {
+                facts[key] = value.copy(value = ValueKnowledge.Unknown, type = TypeKnowledge.Unknown, readableLayout = null,
+                    state = if (value.state == ValueState.UNINITIALIZED) ValueState.MAYBE_INITIALIZED else value.state)
+            }
+        }
     }
     fun join(other: FlowFacts): FlowFacts {
         if (!reachable) return other.fork()
@@ -239,8 +356,10 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
             val a = facts[place]
             val b = other.facts[place]
             joined[place] = when {
-                a == null -> b!!.copy(value = ValueKnowledge.Unknown, state = ValueState.UNINITIALIZED)
-                b == null -> a.copy(value = ValueKnowledge.Unknown, state = ValueState.UNINITIALIZED)
+                a == null -> b!!.copy(value = ValueKnowledge.Unknown,
+                    state = ValueState.MAYBE_INITIALIZED, readableLayout = null)
+                b == null -> a.copy(value = ValueKnowledge.Unknown,
+                    state = ValueState.MAYBE_INITIALIZED, readableLayout = null)
                 else -> a.join(b)
             }
         }
@@ -276,14 +395,14 @@ sealed interface StorageLayout {
 class StorageVersions {
     private var nextWrite = 0L
     private val writes = mutableMapOf<Place, Long>()
-    private val materialized = mutableMapOf<Pair<Place, StorageLayout>, Long>()
-    private val ownedMaterialized = IdentityHashMap<Function, MutableMap<Pair<Place, StorageLayout>, Long>>()
+    private val materialized = mutableMapOf<Pair<Location, StorageLayout>, Long>()
+    private val ownedMaterialized = IdentityHashMap<Function, MutableMap<Pair<Location, StorageLayout>, Long>>()
     fun version(place: Place) = writes.filterKeys { it.overlaps(place) }.values.maxOrNull() ?: 0L
     fun invalidate(place: Place) { writes[place] = ++nextWrite }
-    fun isMaterialized(place: Place, layout: StorageLayout, owner: Function? = null) =
-        (if (owner == null) materialized else ownedMaterialized[owner])?.get(place to layout) == version(place)
-    fun materialize(place: Place, layout: StorageLayout, owner: Function? = null) {
+    fun isMaterialized(place: Place, layout: StorageLayout, owner: Function? = null, location: Location = Location(place)) =
+        (if (owner == null) materialized else ownedMaterialized[owner])?.get(location to layout) == version(place)
+    fun materialize(place: Place, layout: StorageLayout, owner: Function? = null, location: Location = Location(place)) {
         val cache = if (owner == null) materialized else ownedMaterialized.getOrPut(owner) { mutableMapOf() }
-        cache[place to layout] = version(place)
+        cache[location to layout] = version(place)
     }
 }

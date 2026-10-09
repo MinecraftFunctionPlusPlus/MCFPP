@@ -4,7 +4,6 @@ import com.alibaba.fastjson2.JSON
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.nbt.NBTBasedData
-import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.nbt.tags.collection.IntArrayTag
 import top.mcfpp.util.LogProcessor
 
@@ -254,7 +253,7 @@ class HoverEventShowEntityStyle(val name: ChatComponent?, val type: String, val 
             c.build("\"name\": \"$name\", ", false)
         }
         c.build("\"type\": \"${type}\"", false)
-        if(uuid is NBTBasedDataConcrete){
+        if(uuid is NBTBasedData && top.mcfpp.analysis.StorageAccess.snapshot(uuid) != null){
             if(uuid.value is IntArrayTag && (uuid.value as IntArrayTag).value.size == 4){
                 c.build("\"id\": \"${uuid.value}\"", false)
             }else{

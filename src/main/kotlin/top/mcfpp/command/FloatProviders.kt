@@ -4,7 +4,8 @@ import com.alibaba.fastjson2.JSON
 import top.mcfpp.Project
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBool
-import top.mcfpp.core.lang.bool.ScoreBoolConcrete
+import top.mcfpp.analysis.StorageAccess
+import top.mcfpp.analysis.StorageLayout
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.StorageSource
 import top.mcfpp.model.function.Function
@@ -17,16 +18,17 @@ object FloatProviders {
 
     private fun quoted(value: String) = JSON.toJSONString(value)
 
-    private fun temporary() = MCFloat().apply { isTemp = true }
+    private fun temporary() = MCFloat().also { StorageAccess.ensure(it) }
 
     /** A new stack frame has already been pushed when normal parameters are copied. */
     fun callerValue(value: MCFloat): MCFloat = top.mcfpp.analysis.StorageAccess.callerValue(value) as MCFloat
 
     fun snapshot(value: MCFloat): MCFloat {
         if (value.isError) return value
+        StorageAccess.materialize(value)
         val result = temporary()
         emit(Commands.dataSetFrom(result.nbtPath, value.nbtPath))
-        return result
+        return StorageAccess.publishNbt(result)
     }
 
     // Macro lowering captures live index values directly into its own argument compound.
@@ -36,8 +38,10 @@ object FloatProviders {
     private fun storage(path: NBTPath): String {
         var sourcePath = path
         if (path.source !is StorageSource || path.pathToCommandPart().isMacro) {
-            sourcePath = temporary().nbtPath
+            val captured = temporary()
+            sourcePath = captured.nbtPath
             emit(Commands.dataSetFrom(sourcePath, path))
+            StorageAccess.publishNbt(captured)
         }
         return storageProvider((sourcePath.source as StorageSource).storage, sourcePath.pathToCommandPart().toString())
     }
@@ -69,11 +73,15 @@ object FloatProviders {
         return "$clause predicate {type:\"minecraft:float_value_check\",value:$left,test:$test}"
     }
 
-    private fun provider(value: MCFloat): String =
-        if (value is MCFloatConcrete) value.value.toString() else storage(value.nbtPath)
+    private fun provider(value: MCFloat): String {
+        if (value.symbol?.forceRuntime != true && StorageAccess.snapshot(value) != null) return value.value.toString()
+        StorageAccess.materialize(value)
+        return storage(value.nbtPath)
+    }
 
     private fun valid(vararg values: MCFloat): Boolean {
-        if (values.any { it is MCFloatConcrete && !it.value.isFinite() }) {
+        if (values.any { it.isError }) return false
+        if (values.any { it is MCFloat && top.mcfpp.analysis.StorageAccess.snapshot(it) != null && !it.value.isFinite() }) {
             LogProcessor.error("Minecraft 26.3 float providers require finite float values")
             return false
         }
@@ -86,31 +94,25 @@ object FloatProviders {
         val result = temporary()
         emit(Command("data modify").build(result.nbtPath.toCommandPart())
             .build("set compute default float $provider"))
-        return result
+        return StorageAccess.publishNbt(result)
     }
 
     fun assign(target: MCFloat, value: MCFloat): MCFloat {
         if (!valid(value)) return MCFloat(target).apply { parent = target.parent; isError = true }
-        if (value is MCFloatConcrete && !target.isDataOnly) return MCFloatConcrete(target, value.value)
-        if (value is MCFloatConcrete) {
-            emit(Commands.dataSetValue(target.nbtPath, FloatTag(value.value)))
-        } else {
-            emit(Commands.dataSetFrom(target.nbtPath, value.nbtPath))
-        }
-        return if (target is MCFloatConcrete) MCFloat(target).apply { parent = target.parent } else target
+        StorageAccess.write(target, value)
+        return target
     }
 
-    fun materialize(value: MCFloatConcrete): MCFloat {
-        val result = MCFloat(value).apply { parent = value.parent }
-        if (!valid(value)) return result.apply { isError = true }
-        emit(Commands.dataSetValue(result.nbtPath, FloatTag(value.value)))
-        return result
+    fun materialize(value: MCFloat): MCFloat {
+        if (!valid(value)) return MCFloat(value).apply { isError = true }
+        StorageAccess.materialize(value)
+        return value
     }
 
     fun arithmetic(left: MCFloat, right: MCFloat, operation: String): Var<*> {
         if (!valid(left, right)) return invalidFloat()
-        if (left is MCFloatConcrete && right is MCFloatConcrete) {
-            return MCFloatConcrete(arithmeticValue(left.value, right.value, operation))
+        if (left.symbol?.forceRuntime != true && right.symbol?.forceRuntime != true && top.mcfpp.analysis.StorageAccess.snapshot(left) != null && top.mcfpp.analysis.StorageAccess.snapshot(right) != null) {
+            return MCFloat(arithmeticValue(left.value, right.value, operation))
         }
         return evaluate(arithmeticProvider(provider(left), provider(right), operation))
     }
@@ -130,14 +132,14 @@ object FloatProviders {
 
     fun negate(value: MCFloat): Var<*> {
         if (!valid(value)) return invalidFloat()
-        return if (value is MCFloatConcrete) MCFloatConcrete(-value.value)
+        return if (value.symbol?.forceRuntime != true && top.mcfpp.analysis.StorageAccess.snapshot(value) != null) MCFloat(-value.value)
         else evaluate("{type:\"minecraft:negate\",input:${provider(value)}}")
     }
 
     fun compare(left: MCFloat, right: MCFloat, operation: String): Var<*> {
         if (!valid(left, right)) return ScoreBool().apply { isError = true }
-        if (left is MCFloatConcrete && right is MCFloatConcrete) {
-            return ScoreBoolConcrete(when (operation) {
+        if (left.symbol?.forceRuntime != true && right.symbol?.forceRuntime != true && top.mcfpp.analysis.StorageAccess.snapshot(left) != null && top.mcfpp.analysis.StorageAccess.snapshot(right) != null) {
+            return ScoreBool(when (operation) {
                 ">" -> left.value > right.value
                 "<" -> left.value < right.value
                 ">=" -> left.value >= right.value
@@ -150,12 +152,13 @@ object FloatProviders {
         val result = ScoreBool()
         Function.addCommand("execute store success score ${result.name} ${result.boolObject} " +
                 comparisonClause(provider(left), provider(right), operation))
-        return result
+        return StorageAccess.publishBoolean(result, StorageLayout.Scoreboard(result.name, result.boolObject.toString()))
     }
 
     fun fromInt(value: MCInt): MCFloat {
-        if (value is MCIntConcrete) return MCFloatConcrete(value.value.toFloat())
-        val input = if (value.isDataOnly) storage(value.nbtPath) else scoreProvider(value.name, value.sbObject.toString())
+        if (value is MCInt && top.mcfpp.analysis.StorageAccess.snapshot(value) != null) return MCFloat(value.value.toFloat())
+        val source = StorageAccess.intRegister(value)
+        val input = scoreProvider(source.player, source.objective)
         return evaluate("{type:\"minecraft:from_int\",input:$input}")
     }
 
@@ -167,16 +170,16 @@ object FloatProviders {
 
     fun toInt(value: MCFloat): Var<*> {
         if (!valid(value)) return MCInt().apply { isError = true }
-        if (value is MCFloatConcrete) {
+        if (value is MCFloat && top.mcfpp.analysis.StorageAccess.snapshot(value) != null) {
             top.mcfpp.analysis.NumericConversion.floatToIntError(value.value)?.let {
                 LogProcessor.error(it)
                 return MCInt().apply { isError = true }
             }
-            return MCIntConcrete(value.value.toInt())
+            return MCInt(value.value.toInt())
         }
         val result = MCInt().apply { isTemp = true }
         Function.addCommand("execute store result score ${result.name} ${result.sbObject} run " +
                 "compute default integer {type:\"minecraft:from_float\",input:${provider(value)}}")
-        return result
+        return StorageAccess.publishScore(result, StorageLayout.Scoreboard(result.name, result.sbObject.toString()))
     }
 }

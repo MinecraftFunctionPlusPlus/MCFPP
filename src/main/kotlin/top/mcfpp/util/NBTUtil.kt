@@ -1,10 +1,9 @@
 package top.mcfpp.util
 
 import top.mcfpp.core.lang.*
-import top.mcfpp.core.lang.bool.ScoreBoolConcrete
+import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.nbt.*
-import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
-import top.mcfpp.core.lang.obj.EnumVarConcrete
+import top.mcfpp.core.lang.obj.EnumVar
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
@@ -17,97 +16,7 @@ import top.mcfpp.nbt.tags.primitive.*
 object NBTUtil {
 
     @JvmStatic
-    fun varToNBT(v : Var<*>): Tag<*>?{
-        if (v.storageBinding != null) return top.mcfpp.analysis.StorageAccess.constantEncoding(v)
-        if(v !is MCFPPValue<*>) return null
-        return when(v){
-            //is Entity -> TODO()
-            is JavaVar -> if(v.value is Var<*>) varToNBT(v.value as Var<*>) else valueToNBT(v.value)
-            //is JsonString -> TODO()
-            is MCAnyConcrete -> if (v.storageBinding != null) top.mcfpp.analysis.StorageAccess.constantEncoding(v) else valueToNBT(v.value)
-            is ScoreBoolConcrete -> ByteTag(v.value)
-            is MCByteConcrete -> ByteTag(v.value)
-            is MCShortConcrete -> ShortTag(v.value)
-            is MCIntConcrete -> IntTag(v.value)
-            is MCLongConcrete -> v.value
-            is MCFloatConcrete -> if (top.mcfpp.command.FloatProviders.enabled) FloatTag(v.value) else v.legacyNBTEncoding()
-            is MCDoubleConcrete -> v.value
-            is MCFPPTypeVar -> TODO()
-            is MCStringConcrete -> v.value
-            is NBTBasedDataConcrete -> v.value
-            is UnionTypeVarConcrete -> valueToNBT(v.value)
-            is JsonTextConcrete -> Tag.toNBT(v.toCommandPart().toString())
-            is EnumVarConcrete -> v.value.data
-            is DataTemplateObjectConcrete -> {
-                val result = CompoundTag()
-                for ((key, value) in v.value){
-                    if(!value.hasAssigned){
-                        continue
-                    }
-                    val encoded = varToNBT(value) ?: return null
-                    result.put(key, encoded)
-                }
-                result
-            }
-            is NBTListConcrete -> valueToNBT(v.value)
-            is NBTMapConcrete -> varToNBT(v.physicalValue())
-            is NBTDictionary -> valueToNBT(v.value)
-            is NBTIntArrayConcrete -> valueToNBT(v.value)
-            is NBTLongArrayConcrete -> valueToNBT(v.value)
-            is NBTByteArrayConcrete -> valueToNBT(v.value)
-            else -> {
-                LogProcessor.error("Cannot cast mcfpp var $v to nbt value")
-                IntTag(0)
-            }
-        }
-    }
-
-    @JvmStatic
-    fun valueToNBT(any: Any?): Tag<*>{
-        return when(any){
-            null -> IntTag(0)
-            is MCFPPValue<*> -> {
-                varToNBT(any as Var<*>)?: StringTag(any.toString())
-            }
-            is Tag<*> -> any
-            is Byte -> ByteTag(any)
-            is Short -> ShortTag(any)
-            is Int -> IntTag(any)
-            is Long -> LongTag(any)
-            is Float -> FloatTag(any)
-            is Double -> DoubleTag(any)
-            is String -> StringTag(any)
-            is List<*> -> {
-                if(any.isEmpty()) return ListTag()
-                val list = ListTag()
-                for(value in any){
-                    list.add(valueToNBT(value!!))
-                }
-                list
-            }
-            is ByteArray -> ByteArrayTag(any)
-            is IntArray -> IntArrayTag(any)
-            is LongArray -> LongArrayTag(any)
-            is HashMap<*, *> -> {
-                val map = CompoundTag()
-                for(key in any.keys){
-                    map.put(key.toString(), valueToNBT(any[key]!!))
-                }
-                map
-            }
-            is Set<*> -> {
-                if(any.isEmpty()) return ListTag()
-                val list = ListTag()
-                for (value in any){
-                    list.add(valueToNBT(value!!))
-                }
-                list
-            }
-            else -> {
-                throw IllegalArgumentException("Cannot cast $any to nbt value")
-            }
-        }
-    }
+    fun varToNBT(v: Var<*>): Tag<*>? = top.mcfpp.analysis.StorageAccess.constantEncoding(v)
 
     @JvmStatic
     fun ListTag.toArrayList(): ArrayList<*>{

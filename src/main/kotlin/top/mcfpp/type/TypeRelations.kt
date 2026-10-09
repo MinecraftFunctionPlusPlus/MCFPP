@@ -24,6 +24,8 @@ object TypeRelations {
         if (!visited.add(source.typeId to target.typeId)) return false
         if (!source.isValueType || !target.isValueType) return false
         if (target == MCFPPBaseType.Object) return true
+        if (source is MCFPPDataTemplateType && target is MCFPPDataTemplateType &&
+            target.typeId == top.mcfpp.model.compound.DataTemplate.baseDataTemplate.getType().typeId) return true
         if (source is MCFPPUnionType) return source.types.all { subtype(it, target, HashSet(visited)) }
         if (target is MCFPPUnionType) return target.types.any { subtype(source, it, HashSet(visited)) }
         val sourceTemplate = (source as? MCFPPDataTemplateType)?.template as? top.mcfpp.model.compound.CompiledGenericDataTemplate

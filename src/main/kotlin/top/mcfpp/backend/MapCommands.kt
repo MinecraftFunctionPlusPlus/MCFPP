@@ -10,7 +10,7 @@ import top.mcfpp.nbt.tags.collection.ListTag
 
 /** Runtime entry-list operations. Callers freeze inputs and commit the resulting list. */
 object MapCommands {
-    private fun score() = MCInt().apply { sbObject = SbObject.MCFPP_TEMP; hasAssigned = true; isTemp = true }
+    private fun score() = MCInt().apply { sbObject = SbObject.MCFPP_TEMP; isTemp = true }
     fun key(value: MCInt) = "${value.name} ${value.sbObject}"
 
     fun overlay(workspace: NBTPath, remove: Boolean, emit: (Command) -> Unit) {
@@ -64,7 +64,7 @@ object MapCommands {
                 .build(Command("execute if score ${key(result)} matches 0 run").build(Commands.function(function))))
         }
         emit(Command("execute if score ${key(remaining)} matches 1.. run").build(loop.first))
-        return result
+        return top.mcfpp.analysis.StorageAccess.publishScore(result, top.mcfpp.analysis.StorageLayout.Scoreboard(result.name, result.sbObject.toString()))
     }
 
     fun keys(workspace: NBTPath, emit: (Command) -> Unit) {

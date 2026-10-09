@@ -1,7 +1,6 @@
 package top.mcfpp.test
 
 import top.mcfpp.Project
-import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.ParameterMatcher
@@ -34,10 +33,10 @@ class TypeBindingTest {
 
     @Test fun ambiguousLocalDefaultsDoNotFallThroughToAParentOverload() {
         val first = function(MCFPPBaseType.Int).appendNormalParam(MCFPPBaseType.Any, "extra").also {
-            it.normalParams.last().hasDefault = true; it.normalParams.last().defaultVar = MCIntConcrete(0)
+            it.normalParams.last().hasDefault = true; it.normalParams.last().defaultVar = top.mcfpp.core.lang.MCInt(0)
         }
         val second = function(MCFPPBaseType.Int).appendNormalParam(MCFPPBaseType.Object, "extra").also {
-            it.normalParams.last().hasDefault = true; it.normalParams.last().defaultVar = MCIntConcrete(0)
+            it.normalParams.last().hasDefault = true; it.normalParams.last().defaultVar = top.mcfpp.core.lang.MCInt(0)
         }
         val parent = NamespaceScope("parent").apply { addFunction(function(MCFPPBaseType.Any), false) }
         val local = NamespaceScope("local").apply {

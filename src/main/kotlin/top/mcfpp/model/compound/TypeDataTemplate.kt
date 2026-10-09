@@ -19,9 +19,11 @@ class TypeDataTemplate(var typeAs: MCFPPType, identifier: String, namespace: Str
 
     companion object{
         fun defaultConstructor(value: Var<*>, caller: TypeDataTemplateObject){
-            caller.delegateVar = caller.delegateVar.assignedBy(value)
-            caller.hasAssigned = true
             top.mcfpp.analysis.StorageAccess.ensure(caller)
+            val delegated = top.mcfpp.analysis.StorageAccess.view(caller, caller.templateType.let {
+                (it as TypeDataTemplate).typeAs
+            })
+            if (!delegated.isError) top.mcfpp.analysis.StorageAccess.write(delegated, value)
         }
     }
 

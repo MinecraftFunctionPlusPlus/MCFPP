@@ -8,7 +8,6 @@ import top.mcfpp.core.lang.RangeVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.nbt.MCString
-import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.*
@@ -54,19 +53,20 @@ object NativeSelectorOperations {
         val operand = StorageAccess.capture(args.single())
         if (operand.isError || Project.errorCount != errors) return@withAdapters
         val filter = predicate(operand)
-        if (filter is NamePredicate && operand is MCStringConcrete &&
+        if (filter is NamePredicate && operand is MCString && top.mcfpp.analysis.StorageAccess.snapshot(operand) != null &&
             operand.value.value.any { it == '\n' || it == '\r' }) {
             LogProcessor.error("Selector names cannot contain line breaks")
             return@withAdapters
         }
-        if ((filter is TagPredicate || filter is TeamPredicate) && operand is MCStringConcrete &&
+        if ((filter is TagPredicate || filter is TeamPredicate) && operand is MCString && top.mcfpp.analysis.StorageAccess.snapshot(operand) != null &&
             operand.value.value.any { !StringReader.isAllowedInUnquotedString(it) }) {
             LogProcessor.error("Selector tag/team filters require an unquoted word")
             return@withAdapters
         }
-        selector.value.addPredicate(filter)
+        val program = selector.value
+        program.addPredicate(filter)
         if (Project.errorCount == errors) {
-            StorageAccess.updateSelector(selector)
+            StorageAccess.updateSelector(selector, program)
             if (Project.errorCount == errors) context.publishResult(selector)
         }
     }

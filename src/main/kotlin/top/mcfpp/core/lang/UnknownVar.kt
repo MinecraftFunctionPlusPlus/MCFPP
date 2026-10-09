@@ -1,28 +1,27 @@
 package top.mcfpp.core.lang
 
 import top.mcfpp.core.lang.nbt.NBTBasedData
-import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
-import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.TempPool
 
 class UnknownVar(identifier: String) : Var<UnknownVar>(identifier) {
 
+    init { isError = true }
+
     constructor(): this(TempPool.getVarIdentify())
 
     override fun doAssignedBy(b: Var<*>) : UnknownVar {
-        hasAssigned = true
         return this
     }
 
-    override fun explicitCast(type: MCFPPType): Var<*> = type.build(identifier, Function.currFunction)
+    override fun explicitCast(type: MCFPPType): Var<*> = UnknownVar(identifier).apply { this.type = type }
 
     override fun canExplicitCast(type: MCFPPType) = true
 
-    override fun implicitCast(type: MCFPPType): Var<*> = type.build(identifier, Function.currFunction)
+    override fun implicitCast(type: MCFPPType): Var<*> = explicitCast(type)
 
     override fun canImplicitCast(type: MCFPPType) = true
 
@@ -48,7 +47,7 @@ class UnknownVar(identifier: String) : Var<UnknownVar>(identifier) {
     }
 
     override fun toNBTVar(): NBTBasedData {
-        return NBTBasedDataConcrete(StringTag("unknown"),"unknown")
+        return NBTBasedData(identifier).apply { isError = true }
     }
 
 }

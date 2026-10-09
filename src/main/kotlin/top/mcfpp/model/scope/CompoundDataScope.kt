@@ -261,9 +261,6 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
             it.nbtPath.pathList.removeLast()
             it.nbtPath.memberIndex(selector.identifier)
             it.nbtPath.memberIndex(it.identifier)
-            if(it.nullable) {
-                it.hasAssigned = false
-            }
         }
         return re
     }

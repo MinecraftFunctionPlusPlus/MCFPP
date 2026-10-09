@@ -70,7 +70,12 @@ class NativeCallContext internal constructor(
 
     internal fun publishResult(value: Var<*>) {
         val adapter = normalize(value)
-        adapter.hasAssigned = true
+        if (adapter.isError) return
+        val binding = StorageAccess.ensure(adapter)
+        if (binding.data.facts.read(binding.place)?.state != top.mcfpp.analysis.ValueState.INITIALIZED) {
+            LogProcessor.error("Native operation did not produce an initialized result '${adapter.identifier}'")
+            return
+        }
         val reference = reference(adapter)
         result = StorageAccess.snapshot(adapter)?.let { ValueRef.Constant(adapter.type.typeId, it) } ?: reference
         publishedResult = adapter

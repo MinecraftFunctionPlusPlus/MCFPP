@@ -1,6 +1,5 @@
 package top.mcfpp.type
 
-import top.mcfpp.core.lang.JavaVar
 import top.mcfpp.core.lang.MCFPPTypeVar
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
@@ -17,17 +16,16 @@ open class MCFPPConcreteType(parentType: ArrayList<MCFPPType> = arrayListOf()): 
 
     override val instanceData: CompoundData = CompoundData("unknown", "mcfpp")
 
-    final override fun buildUnConcrete(identifier: String): Var<*> {
+    override fun buildUnConcrete(identifier: String): Var<*> {
         LogProcessor.error("Cannot build variable '$typeName' as the compiler cannot track its type.")
         return UnknownVar(identifier)
     }
 
-    final override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> {
-        LogProcessor.error("Cannot build variable '$typeName' as the compiler cannot track its type.")
-        return UnknownVar(identifier)
-    }
+    override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = buildUnConcrete(identifier)
 
     object Type: MCFPPConcreteType(arrayListOf()){
+
+        override fun buildUnConcrete(identifier: String): Var<*> = MCFPPTypeVar(identifier)
 
         override val typeId: TypeId = TypeId.Builtin("MCFPPConcreteType.Type")
 
@@ -53,7 +51,10 @@ open class MCFPPConcreteType(parentType: ArrayList<MCFPPType> = arrayListOf()): 
         override val typeName: String
             get() = "JavaVar"
 
-        override fun build(identifier: String, value: Any?): Var<*> = JavaVar(value, identifier)
+        override fun build(identifier: String, value: Any?): Var<*> {
+            top.mcfpp.util.LogProcessor.error("Java host values have no compiler value representation")
+            return top.mcfpp.core.lang.UnknownVar(identifier).apply { type = this@JavaVar; isError = true }
+        }
  }
 
 }

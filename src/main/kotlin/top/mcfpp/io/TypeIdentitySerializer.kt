@@ -57,7 +57,7 @@ class TypeIdentitySerializer : Serializer<TypeId>() {
         else -> error("Unknown type identity encoding: $kind")
     }
 
-    private fun writeValue(output: Output, value: CompilerValue) {
+    internal fun writeValue(output: Output, value: CompilerValue) {
         when (value) {
             CompilerValue.NullValue -> output.writeByte(0)
             is CompilerValue.Integral -> { output.writeByte(1); output.writeLong(value.value) }
@@ -78,7 +78,7 @@ class TypeIdentitySerializer : Serializer<TypeId>() {
         }
     }
 
-    private fun readValue(input: Input): CompilerValue = when (val kind = input.readByte().toInt()) {
+    internal fun readValue(input: Input): CompilerValue = when (val kind = input.readByte().toInt()) {
         0 -> CompilerValue.NullValue
         1 -> CompilerValue.Integral(input.readLong())
         2 -> CompilerValue.FloatBits(input.readInt())

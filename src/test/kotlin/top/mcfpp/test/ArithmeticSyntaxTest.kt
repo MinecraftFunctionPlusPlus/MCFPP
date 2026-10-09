@@ -5,9 +5,7 @@ import org.antlr.v4.runtime.CommonTokenStream
 import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.core.lang.MCInt
-import top.mcfpp.core.lang.MCFloatConcrete
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
@@ -17,6 +15,41 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class ArithmeticSyntaxTest {
+    private val mathData = java.nio.file.Path.of("src/main/resources/datapack/stdlib/data")
+    private val mathFunctions by lazy {
+        java.nio.file.Files.walk(mathData.resolve("math.float/function")).use { paths ->
+            paths.filter { it.toString().endsWith(".mcfunction") }.iterator().asSequence().associate { path ->
+                "math.float:" + mathData.resolve("math.float/function").relativize(path).toString()
+                    .replace('\\', '/').removeSuffix(".mcfunction") to java.nio.file.Files.readAllLines(path)
+            }
+        }
+    }
+    private fun execute(function: top.mcfpp.model.function.Function): ScoreCommandExecutor {
+        val functions = mathFunctions + mapOf("fixture:arithmetic" to function.commands.analyzeAll())
+        val constants = java.nio.file.Files.readAllLines(mathData.resolve("math/function/_init.mcfunction"))
+            .filter { it.startsWith("scoreboard players set ") }
+        return ScoreCommandExecutor(constants + "function fixture:arithmetic", functions).also {
+            assertEquals(0, it.stackDepth)
+        }
+    }
+    private fun floatRegisters(function: top.mcfpp.model.function.Function, name: String): List<top.mcfpp.analysis.StorageLayout.Scoreboard> {
+        val originalSize = function.commands.size
+        val registers = function.runInFunction {
+            assertNotNull(top.mcfpp.analysis.StorageAccess.legacyFloatRegisters(function.scope.getVar(name) as top.mcfpp.core.lang.MCFloat))
+        }
+        val loads = function.commands.subList(originalSize, function.commands.size).toList()
+        function.commands.subList(originalSize, function.commands.size).clear()
+        val exits = function.commands.indices.filter {
+            function.commands[it].analyze() == top.mcfpp.command.Commands.stackOut().analyze()
+        }
+        assertEquals(1, exits.size, "These void arithmetic entries have one actual frame exit")
+        function.commands.addAll(exits.single(), loads)
+        return registers
+    }
+    private fun assertFloat(machine: ScoreCommandExecutor, registers: List<top.mcfpp.analysis.StorageLayout.Scoreboard>, expected: Float) {
+        assertEquals(top.mcfpp.core.lang.MCFloat.floatToMCFloat(expected).toList(),
+            registers.map { machine.values.getValue("${it.player} ${it.objective}") })
+    }
     private fun arithmeticFunction() =
         GlobalScope.localNamespaces["default.test"]!!.scope.functions["arithmetic"]!!.first()
 
@@ -77,12 +110,14 @@ class ArithmeticSyntaxTest {
         """.trimIndent())
         assertEquals(0, Project.errorCount)
         val function = arithmeticFunction()
-        assertEquals(2, (function.scope.getVar("a") as MCIntConcrete).value)
-        assertEquals(-2, (function.scope.getVar("b") as MCIntConcrete).value)
-        assertEquals(-5, (function.scope.getVar("c") as MCIntConcrete).value)
-        fun floatValue(name: String) = (function.scope.getVar(name) as MCFloatConcrete).value
-        assertEquals(1.5f, floatValue("g"))
-        assertEquals(-1.5f, floatValue("h"))
+        assertEquals(2, (function.scope.getVar("a") as top.mcfpp.core.lang.MCInt).value)
+        assertEquals(-2, (function.scope.getVar("b") as top.mcfpp.core.lang.MCInt).value)
+        assertEquals(-5, (function.scope.getVar("c") as top.mcfpp.core.lang.MCInt).value)
+        val g = floatRegisters(function, "g")
+        val h = floatRegisters(function, "h")
+        val machine = execute(function)
+        assertFloat(machine, g, 1.5f)
+        assertFloat(machine, h, -1.5f)
     }
 
     @Test
@@ -101,13 +136,15 @@ class ArithmeticSyntaxTest {
         assertEquals(0, Project.errorCount)
         val function = arithmeticFunction()
         val commands = function.commands.analyzeAll().joinToString("\n")
-        assertTrue(commands.contains("scoreboard players set default.test_func_arithmetic_a mcfpp_default 4"), commands)
-        assertTrue(commands.contains("scoreboard players add "), commands)
-        assertTrue(commands.contains("scoreboard players remove "), commands)
-        for (operator in listOf("*=", "/=", "%=")) {
+        assertTrue(commands.contains("stack_frame[0].a set value 4"), commands)
+        for (operator in listOf("+=", "-=", "*=", "/=", "%=")) {
             assertTrue(commands.contains(" $operator "), commands)
         }
-        assertTrue(Regex("scoreboard players set temp_\\d+ mcfpp_default -1").containsMatchIn(commands), commands)
+        assertTrue(commands.contains("stack_frame[0].b set from "), commands)
+        val machine = execute(function)
+        assertEquals(1, machine.read(function.scope.getVar("a") as MCInt))
+        assertEquals(-1, machine.read(function.scope.getVar("b") as MCInt))
+        assertEquals(0, machine.stackDepth)
     }
 
     @Test
@@ -120,9 +157,14 @@ class ArithmeticSyntaxTest {
             }
         """.trimIndent())
         assertEquals(0, Project.errorCount)
-        val commands = arithmeticFunction().commands.analyzeAll().joinToString("\n")
+        val function = arithmeticFunction()
+        val f = floatRegisters(function, "f")
+        val negated = floatRegisters(function, "negated")
+        val commands = function.commands.analyzeAll().joinToString("\n")
         assertTrue(commands.contains("function math.float:hpo/float/_add"), commands)
-        assertEquals(1, Regex("scoreboard players operation temp_\\d+ mcs_float_sign \\*= temp_\\d+ mcfpp_default").findAll(commands).count(), commands)
+        val machine = execute(function)
+        assertFloat(machine, f, 2f)
+        assertFloat(machine, negated, -2f)
     }
 
     @Test
@@ -134,11 +176,14 @@ class ArithmeticSyntaxTest {
             }
         """.trimIndent())
         assertEquals(0, Project.errorCount)
-        val commands = arithmeticFunction().commands.analyzeAll().joinToString("\n")
+        val function = arithmeticFunction()
+        val f = floatRegisters(function, "f")
+        val negated = floatRegisters(function, "expressionNegated")
+        val commands = function.commands.analyzeAll().joinToString("\n")
         assertTrue(commands.contains("function math.float:hpo/float/_add"), commands)
-        assertEquals(4, commands.lines().count {
-            it.startsWith("execute store result storage") && it.contains(" int 1 run scoreboard players operation ")
-        }, commands)
+        val machine = execute(function)
+        assertFloat(machine, f, 1.5f)
+        assertFloat(machine, negated, -2f)
     }
 
     @Test
@@ -154,7 +199,7 @@ class ArithmeticSyntaxTest {
         assertTrue(Project.errorCount >= 2)
         val function = GlobalScope.localNamespaces["default.test"]!!.scope.functions["invalid"]!!.first()
         assertTrue(function.scope.getVar("count")!!.isConst)
-        assertEquals(1, (function.scope.getVar("count") as MCIntConcrete).value)
+        assertEquals(1, (function.scope.getVar("count") as top.mcfpp.core.lang.MCInt).value)
     }
 
     @Test

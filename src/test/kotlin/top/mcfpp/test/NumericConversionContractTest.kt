@@ -10,7 +10,6 @@ import top.mcfpp.mni.ConversionData
 import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.analysis.StorageAccess
-import top.mcfpp.analysis.ValueSnapshot
 import top.mcfpp.backend.NumericConversions
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.model.function.Function
@@ -383,10 +382,10 @@ class NumericConversionContractTest {
             Function.currFunction=entry
             val hidden=entry.scope.getVar("hidden") as DataTemplateObject
             assertNotNull(hidden.storageBinding)
-            assertNotNull(ValueSnapshot.of(hidden),"The constructor must actually build the complete compiler-only value")
-            val unknown=hidden.templateType.getType().buildUnConcrete("incomingHidden",entry).apply {hasAssigned=true}
+            assertNotNull(StorageAccess.snapshot(hidden),"The constructor must actually build the complete compiler-only value")
+            val unknown=hidden.templateType.getType().buildUnConcrete("incomingHidden",entry)
             StorageAccess.bindIncomingParameter(unknown)
-            assertNull(ValueSnapshot.of(unknown))
+            assertNull(StorageAccess.snapshot(unknown))
             val before=entry.commands.size
             assertTrue(NumericConversions.toNBT(hidden).isError)
             assertTrue(NumericConversions.toNBT(unknown).isError)
@@ -537,7 +536,8 @@ class NumericConversionContractTest {
         assertNotNull(main.typedIR)
         val a=main.scope.getVar("a") as top.mcfpp.core.lang.MCInt
         assertEquals("fixture.rawobserve_func_main_a",a.name)
-        assertFalse(assertNotNull(main.scope.getVar("unset")).hasAssigned)
+        val unset = StorageAccess.ensure(assertNotNull(main.scope.getVar("unset")))
+        assertEquals(top.mcfpp.analysis.ValueState.MAYBE_INITIALIZED, unset.data.facts.read(unset.place)?.state)
         assertTrue(main.commands.none {it.toString().contains("stack_frame[0].unset")})
         val machine=execute(output.resolve("raw-observe"),main.namespaceID.toString())
         assertEquals(IntTag(3),machine.readNbt("fixture:rawobserve","observed.first"))

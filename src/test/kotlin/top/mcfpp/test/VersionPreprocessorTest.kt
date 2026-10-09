@@ -8,7 +8,7 @@ import top.mcfpp.ProjectConfig
 import top.mcfpp.antlr.VersionPreprocessor
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.core.lang.MCIntConcrete
+import top.mcfpp.core.lang.MCInt
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.model.scope.GlobalScope
@@ -17,6 +17,7 @@ import top.mcfpp.util.Utils
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -191,7 +192,9 @@ class VersionPreprocessorTest {
         assertEquals(0, Project.errorCount)
         val namespace = assertNotNull(GlobalScope.localNamespaces["default.test"])
         assertNotNull(namespace.scope.functions["selected"])
-        assertEquals(3, (namespace.scope.functions["selected"]!!.first().scope.getVar("result") as MCIntConcrete).value)
+        assertEquals(top.mcfpp.analysis.CompilerValue.Typed(top.mcfpp.type.MCFPPBaseType.Int.typeId,
+            top.mcfpp.analysis.CompilerValue.Integral(3)), top.mcfpp.analysis.StorageAccess.snapshot(
+            assertIs<MCInt>(namespace.scope.functions["selected"]!!.first().scope.getVar("result"))))
     }
 
     @Test

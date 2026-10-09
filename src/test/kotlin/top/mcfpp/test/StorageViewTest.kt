@@ -44,7 +44,7 @@ class StorageViewTest {
         assertSame(originalBinding.data, assertNotNull(member.storageBinding).data)
         assertEquals(originalBinding.place.index(0), assertNotNull(member.storageBinding).place)
         assertEquals(originalBinding.place.index(0), assertNotNull(position.getMemberVar("x", top.mcfpp.model.Member.AccessModifier.PUBLIC).first?.storageBinding).place)
-        assertEquals(ValueSnapshot.of(position), ValueSnapshot.of(alias))
+        assertEquals(StorageAccess.snapshot(position), StorageAccess.snapshot(alias))
         assertEquals("9 2 3", assertIs<Pos3Var>(StorageAccess.read(position)).toCommandPart().toString())
         assertEquals("9 2 3", assertIs<Pos3Var>(StorageAccess.read(alias)).toCommandPart().toString())
         assertEquals("1 2 3", assertIs<Pos3Var>(StorageAccess.read(copy)).toCommandPart().toString())
@@ -58,13 +58,13 @@ class StorageViewTest {
         assertSame(pairAlias, z.parent)
         assertEquals("z", z.identifier)
         assertEquals(pairBinding.place.index(1), assertNotNull(z.storageBinding).place)
-        assertEquals(ValueSnapshot.of(pair), ValueSnapshot.of(pairAlias))
+        assertEquals(StorageAccess.snapshot(pair), StorageAccess.snapshot(pairAlias))
         assertEquals("4 8", assertIs<Pos2Var>(StorageAccess.read(pair)).toCommandPart().toString())
         val unset = assertIs<Pos3Var>(main.scope.getVar("unset"))
-        assertFalse(unset.hasAssigned)
-        assertNull(ValueSnapshot.of(unset))
+        assertEquals(ValueState.UNINITIALIZED, StorageAccess.ensure(unset).data.facts.read(StorageAccess.ensure(unset).place)!!.state)
+        assertNull(StorageAccess.snapshot(unset))
         val unknown = assertNotNull(unset.getMemberVar("x", top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
-        assertNull(ValueSnapshot.of(unknown))
+        assertNull(StorageAccess.snapshot(unknown))
         assertEquals(StorageLayout.CompilerOnly, assertNotNull(unknown.storageBinding).data.layout)
         assertEquals(assertNotNull(unset.storageBinding).place.index(0), assertNotNull(unknown.storageBinding).place)
         assertFalse(main.commands.any { it.toString().startsWith("data modify ") && (" set value " in it.toString() || " set from " in it.toString()) })
@@ -74,43 +74,48 @@ class StorageViewTest {
     @Test fun coordinateSnapshotsRestoreCompilerOnlyValuesAndMemberDimensions() {
         val main = compile("func main(){ var unset as pos3; }")
         val unset = assertNotNull(main.scope.getVar("unset"))
-        assertFalse(unset.hasAssigned)
-        assertNull(ValueSnapshot.of(unset))
+        assertEquals(ValueState.UNINITIALIZED, StorageAccess.ensure(unset).data.facts.read(StorageAccess.ensure(unset).place)!!.state)
+        assertNull(StorageAccess.snapshot(unset))
         assertEquals(StorageLayout.CompilerOnly, StorageAccess.ensure(unset).data.layout)
-        assertNull(ValueSnapshot.of(unset))
+        assertNull(StorageAccess.snapshot(unset))
         Function.currFunction = main
         val before = main.commands.size
-        val two = Pos2Var("two").apply {
-            x = PosDimension("", 0.0, "x"); z = PosDimension("~", Long.MAX_VALUE, "z")
-            value = arrayListOf(x, z)
-        }
-        val three = Pos3Var("three").apply {
-            x = PosDimension("^", -0.0f, "x"); y = PosDimension("", 1.234567890123, "y"); z = PosDimension("~", 9007199254740993L, "z")
-            value = arrayListOf(x, y, z)
-        }
+        fun dimension(prefix: String, number: CompilerValue) = CompilerValue.Typed(
+            MCFPPPrivateType.MCFPPCoordinateDimension.typeId,
+            CompilerValue.Sequence(listOf(CompilerValue.Text(prefix), number)))
+        val two = assertIs<Pos2Var>(StorageAccess.literal(MCFPPBaseType.Pos2, CompilerValue.Sequence(listOf(
+            dimension("", CompilerValue.DoubleBits(0.0.toRawBits())),
+            dimension("~", CompilerValue.Integral(Long.MAX_VALUE)))), "two"))
+        val three = assertIs<Pos3Var>(StorageAccess.literal(MCFPPBaseType.Pos3, CompilerValue.Sequence(listOf(
+            dimension("^", CompilerValue.FloatBits((-0.0f).toRawBits())),
+            dimension("", CompilerValue.DoubleBits(1.234567890123.toRawBits())),
+            dimension("~", CompilerValue.Integral(9007199254740993L)))), "three"))
+        val originalSnapshots = listOf(two, three).associate { it.type.typeId to assertNotNull(StorageAccess.snapshot(it)) }
+        two.bindDeclaration()
+        three.bindDeclaration()
         for (original in listOf(two, three)) {
-            val snapshot = assertIs<CompilerValue.Typed>(ValueSnapshot.of(original))
+            val snapshot = assertIs<CompilerValue.Typed>(StorageAccess.snapshot(original))
             assertEquals(StorageLayout.CompilerOnly, StorageAccess.ensure(original).data.layout)
             val restored = assertNotNull(StorageAccess.read(original))
-            assertEquals(snapshot, ValueSnapshot.of(restored))
+            assertEquals(snapshot, StorageAccess.snapshot(restored))
             assertEquals(original.toCommandPart().toString(), restored.toCommandPart().toString())
             val dimensions = if (restored is Pos2Var) {
-                assertSame(restored.x, restored.value[0]); assertSame(restored.z, restored.value[1])
                 listOf("x", "z")
             } else {
                 assertIs<Pos3Var>(restored)
-                assertSame(restored.x, restored.value[0]); assertSame(restored.y, restored.value[1]); assertSame(restored.z, restored.value[2])
                 listOf("x", "y", "z")
             }
-            for (name in dimensions) {
+            for ((index, name) in dimensions.withIndex()) {
                 val member = assertIs<PosDimension>(restored.getMemberVar(name, top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
-                val frozen = assertIs<CompilerValue.Typed>(ValueSnapshot.of(member))
+                assertSame(StorageAccess.ensure(restored).data, StorageAccess.ensure(member).data)
+                assertEquals(StorageAccess.ensure(restored).place.index(index), StorageAccess.ensure(member).place)
+                val frozen = assertIs<CompilerValue.Typed>(StorageAccess.snapshot(member))
                 assertEquals(StorageLayout.CompilerOnly, StorageAccess.ensure(member).data.layout)
                 val read = assertIs<PosDimension>(StorageAccess.read(member))
-                assertEquals(frozen, ValueSnapshot.of(read))
-                member.value = "~" to 99L
+                assertEquals(frozen, StorageAccess.snapshot(read))
+                StorageAccess.write(member, PosDimension("~", 99L))
                 val independent = assertIs<PosDimension>(StorageAccess.restore(member.type, frozen, "independent"))
-                assertEquals(frozen, ValueSnapshot.of(independent))
+                assertEquals(frozen, StorageAccess.snapshot(independent))
             }
             val sequence = assertIs<CompilerValue.Sequence>(snapshot.payload)
             assertNull(StorageAccess.restore(original.type, CompilerValue.Typed(original.type.typeId, CompilerValue.Sequence(sequence.elements.dropLast(1))), "short"))
@@ -119,11 +124,11 @@ class StorageViewTest {
             assertNull(StorageAccess.restore(original.type, CompilerValue.Typed(original.type.typeId, CompilerValue.Sequence(listOf(wrongMember) + sequence.elements.drop(1))), "wrongMember"))
             assertNull(StorageAccess.restore(original.type, CompilerValue.NullValue, "unknown"))
         }
-        val restoredTwo = assertIs<Pos2Var>(StorageAccess.restore(two.type, assertNotNull(ValueSnapshot.of(two)), "twoCopy"))
+        val restoredTwo = assertIs<Pos2Var>(StorageAccess.restore(two.type, originalSnapshots.getValue(two.type.typeId), "twoCopy"))
         assertEquals(0.0.toRawBits(), (restoredTwo.x.number as Double).toRawBits())
         assertEquals(Long.MAX_VALUE, restoredTwo.z.number)
         assertEquals("0.0", restoredTwo.x.toCommandPart().toString())
-        val restoredThree = assertIs<Pos3Var>(StorageAccess.restore(three.type, assertNotNull(ValueSnapshot.of(three)), "threeCopy"))
+        val restoredThree = assertIs<Pos3Var>(StorageAccess.restore(three.type, originalSnapshots.getValue(three.type.typeId), "threeCopy"))
         assertEquals((-0.0f).toRawBits(), (restoredThree.x.number as Float).toRawBits())
         assertEquals(1.234567890123.toRawBits(), (restoredThree.y.number as Double).toRawBits())
         assertEquals(9007199254740993L, restoredThree.z.number)
@@ -147,28 +152,25 @@ class StorageViewTest {
         val snapshots = mutableListOf<CompilerValue>()
         for ((ordinal, expected) in listOf("\"fixture:payload\"", "{\"label\":\"x\"}").withIndex()) {
             val member = assertNotNull(enum.getMember(ordinal))
-            val value = top.mcfpp.core.lang.obj.EnumVarConcrete(enum, member, "enum_$ordinal")
-            value.nbtPath = top.mcfpp.lib.NBTPath.temp.memberIndex(value.identifier)
-            val snapshot = assertIs<CompilerValue.Typed>(ValueSnapshot.of(value))
+            val value = top.mcfpp.core.lang.obj.EnumVar(enum, member, "enum_$ordinal")
+            val snapshot = assertIs<CompilerValue.Typed>(StorageAccess.snapshot(value))
             assertEquals(type.typeId, snapshot.type)
             snapshots.add(snapshot)
-            val restored = assertIs<top.mcfpp.core.lang.obj.EnumVarConcrete>(StorageAccess.restore(type, snapshot, "restored"))
+            val restored = assertIs<top.mcfpp.core.lang.obj.EnumVar>(StorageAccess.restore(type, snapshot, "restored"))
             assertSame(member, restored.value)
             assertEquals(type.typeId, restored.type.typeId)
-            StorageAccess.ensure(value)
+            val binding = StorageAccess.ensure(value)
             assertEquals(top.mcfpp.backend.NbtEncoding.snbt(member.data), top.mcfpp.backend.NbtEncoding.snbt(assertNotNull(StorageAccess.constantEncoding(value))))
             val destination = top.mcfpp.lib.NBTPath.temp.memberIndex("encoded_$ordinal")
             StorageAccess.encodeTo(destination, value)
-            val prefix = "data modify ${value.nbtPath.toCommandPart()} set value "
-            val initialized = main.commands.map { it.toString() }.single { it.startsWith(prefix) }.removePrefix(prefix)
-            assertEquals(expected, top.mcfpp.backend.NbtEncoding.snbt(top.mcfpp.nbt.tags.Tag.toNBT(initialized)))
-            assertTrue(main.commands.any { it.toString() == "data modify ${destination.toCommandPart()} set from ${value.nbtPath.toCommandPart()}" })
+            val machine = execute(main)
+            assertEquals(expected, top.mcfpp.backend.NbtEncoding.snbt(machine.readNbt("mcfpp:system", "temp.encoded_$ordinal")))
             val fields = assertIs<CompilerValue.Record>(snapshot.payload).fields
             assertNull(StorageAccess.restore(type, CompilerValue.Typed(type.typeId, CompilerValue.Record(fields + ("ordinal" to CompilerValue.Integral(Long.MAX_VALUE)))), "invalid"))
             assertNull(StorageAccess.restore(type, CompilerValue.Typed(type.typeId, CompilerValue.Record(fields + ("data" to CompilerValue.Nbt("0")))), "invalid"))
             assertNull(StorageAccess.restore(type, CompilerValue.Typed(TypeId.Declaration("enum", "other", "Choice"), snapshot.payload), "foreign"))
             member.data = IntTag(99)
-            assertEquals(snapshot, ValueSnapshot.of(value))
+            assertEquals(snapshot, StorageAccess.snapshot(value))
             assertEquals(expected, top.mcfpp.backend.NbtEncoding.snbt(assertNotNull(StorageAccess.constantEncoding(value))))
         }
         val nested = CompilerValue.Record(mapOf("string" to snapshots[0], "compound" to CompilerValue.Sequence(listOf(snapshots[1]))))
@@ -176,7 +178,7 @@ class StorageViewTest {
         assertEquals("fixture:payload", assertIs<top.mcfpp.nbt.tags.primitive.StringTag>(projected["string"]).value)
         val list = assertIs<top.mcfpp.nbt.tags.collection.ListTag>(projected["compound"])
         assertEquals("x", assertIs<top.mcfpp.nbt.tags.primitive.StringTag>(assertIs<top.mcfpp.nbt.tags.CompoundTag>(list[0])["label"]).value)
-        assertNull(ValueSnapshot.of(top.mcfpp.core.lang.obj.EnumVar(enum, "unknown")))
+        assertNull(StorageAccess.snapshot(top.mcfpp.core.lang.obj.EnumVar(enum, "unknown")))
     }
 
     private fun compile(source: String, version: String = "26.3"): Function {
@@ -202,7 +204,8 @@ class StorageViewTest {
         assertIs<ValueRef.TypedView>(view.valueRef())
         assertEquals(function.scope.getVar("value")!!.storageBinding!!.place, view.storageBinding!!.place)
         val commands = function.commands.analyzeAll().filterNot { it.startsWith("#") }
-        assertFalse(commands.any { it.contains("set value") || it.contains("from_int") || it.contains("_scoreto") }, commands.toString())
+        assertEquals(1, commands.count { it.contains("set value 7") }, commands.toString())
+        assertFalse(commands.any { it.contains("from_int") || it.contains("_scoreto") || it.contains("stack_frame[0].view") }, commands.toString())
         assertEquals(1, Project.warningCount)
     }
 
@@ -280,7 +283,7 @@ class StorageViewTest {
 
     @Test fun legacyFloatRejectsScalarLayoutAccessWithoutUsingNumericConversion() {
         reset("1.20.2")
-        val view = StorageAccess.view(MCIntConcrete(7), MCFPPBaseType.Float)
+        val view = StorageAccess.view(MCInt(7), MCFPPBaseType.Float)
         assertTrue(Function.currFunction.commands.isEmpty())
         assertTrue(StorageAccess.read(view).isError)
         assertEquals(1, Project.errorCount)
@@ -289,8 +292,12 @@ class StorageViewTest {
 
     @Test fun unknownAnyCanBeCopiedAndReinterpretedWithoutATagOrCheck() {
         reset()
-        val source = MCAny("source").apply { hasAssigned = true; nbtPath = top.mcfpp.lib.NBTPath.temp.memberIndex(identifier) }
-        val copied = MCAny("copied").apply { hasAssigned = true; nbtPath = top.mcfpp.lib.NBTPath.temp.memberIndex(identifier) }.assignedBy(source)
+        val source = MCAny("source").apply { nbtPath = top.mcfpp.lib.NBTPath.temp.memberIndex(identifier) }
+        StorageAccess.bindIncomingParameter(source)
+        val copied = MCAny("copied").apply { nbtPath = top.mcfpp.lib.NBTPath.temp.memberIndex(identifier) }.assignedBy(source)
+        assertNotEquals(StorageAccess.ensure(source).place, StorageAccess.ensure(copied).place)
+        assertEquals(ValueState.INITIALIZED, StorageAccess.ensure(copied).data.facts.read(StorageAccess.ensure(copied).place)!!.state)
+        assertNull(StorageAccess.snapshot(copied))
         assertNull(copied.inferredType)
         val view = StorageAccess.view(copied, MCFPPBaseType.Int)
         assertEquals(copied.storageBinding!!.place, view.storageBinding!!.place)
@@ -303,17 +310,18 @@ class StorageViewTest {
 
     @Test fun materializationKeepsConstantsAndRepeatedReadsReuseTheirVersion() {
         reset()
-        val source = MCIntConcrete(4)
-        val view = StorageAccess.view(source, MCFPPBaseType.Int).apply { isDynamic = true }
-        val before = ValueSnapshot.of(source)
+        val source = MCInt(4).apply { bindDeclaration() }
+        val view = StorageAccess.view(source, MCFPPBaseType.Int)
+        val before = StorageAccess.snapshot(source)
+        StorageAccess.materialize(view)
         StorageAccess.read(view)
         val size = Function.currFunction.commands.size
         StorageAccess.read(view)
         assertEquals(size, Function.currFunction.commands.size)
-        assertEquals(before, ValueSnapshot.of(source))
-        view.assignedBy(MCIntConcrete(8))
-        val read = StorageAccess.read(source).apply { isDynamic = true }
-        assertEquals(8, (ValueSnapshot.of(source) as CompilerValue.Typed).payload.let { (it as CompilerValue.Integral).value.toInt() })
+        assertEquals(before, StorageAccess.snapshot(source))
+        view.assignedBy(MCInt(8))
+        val read = StorageAccess.read(source)
+        assertEquals(8, (StorageAccess.snapshot(source) as CompilerValue.Typed).payload.let { (it as CompilerValue.Integral).value.toInt() })
         assertEquals(source.storageBinding!!.place, read.storageBinding!!.place)
     }
 
@@ -350,15 +358,15 @@ class StorageViewTest {
         """)
         assertEquals(13, execute(main).read(main.scope.getVar("result") as MCInt))
         assertEquals(MCFPPBaseType.Int, (main.scope.getVar("first") as MCAny).inferredType)
-        assertNull(ValueSnapshot.of(main.scope.getVar("first")))
+        assertNull(StorageAccess.snapshot(assertNotNull(main.scope.getVar("first"))))
         assertNotEquals((main.scope.getVar("first") as MCAny).nbtPath.toCommandPart().toString(),
             (main.scope.getVar("second") as MCAny).nbtPath.toCommandPart().toString())
     }
 
     @Test fun erasedEncodingRetainsBooleanByteAndIntegerTagIdentity() {
         reset()
-        val integer = MCAny("integer").assignedBy(MCIntConcrete(4))
-        val boolean = MCAny("boolean").assignedBy(top.mcfpp.core.lang.bool.ScoreBoolConcrete(true))
+        val integer = MCAny("integer").assignedBy(MCInt(4))
+        val boolean = MCAny("boolean").assignedBy(top.mcfpp.core.lang.bool.ScoreBool(true))
         assertIs<IntTag>(StorageAccess.constantEncoding(integer))
         assertIs<ByteTag>(StorageAccess.constantEncoding(boolean))
         assertEquals(MCFPPBaseType.Int, integer.inferredType)
@@ -375,7 +383,7 @@ class StorageViewTest {
         val value = main.scope.getVar("value") as MCAny
         assertEquals(setOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.Bool.typeId),
             (value.typeKnowledge as TypeKnowledge.Candidates).types)
-        assertNull(ValueSnapshot.of(value))
+        assertNull(StorageAccess.snapshot(value))
         assertEquals(6, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
@@ -397,7 +405,7 @@ class StorageViewTest {
         val functions = GlobalScope.localNamespaces.getValue("default.test").scope.functions
         assertEquals(Effect.Pure, functions.getValue("pure").single().runtimeEffect)
         assertEquals(Effect.Unknown, functions.getValue("change").single().runtimeEffect)
-        assertNull(ValueSnapshot.of(main.scope.getVar("value")))
+        assertNull(StorageAccess.snapshot(assertNotNull(main.scope.getVar("value"))))
         val machine = execute(main)
         assertEquals(4, machine.read(main.scope.getVar("before") as MCInt))
         assertEquals(9, machine.read(main.scope.getVar("result") as MCInt))
@@ -405,12 +413,12 @@ class StorageViewTest {
 
     @Test fun anUnannotatedNativeCallFlushesAndInvalidatesObservedData() {
         reset()
-        val source = MCIntConcrete(4, "value").apply { hasAssigned = true; bindDeclaration() }
+        val source = MCInt(4, "value").apply { bindDeclaration() }
         Function.currFunction.scope.putVar("value", source)
         val view = StorageAccess.view(source, MCFPPBaseType.Int)
         top.mcfpp.model.function.NativeFunction("opaque", javaMethod = StorageViewTest::class.java.getMethod("opaqueWrite", top.mcfpp.mni.NativeCallContext::class.java))
             .invoke(emptyList(), null)
-        assertNull(ValueSnapshot.of(source))
+        assertNull(StorageAccess.snapshot(source))
         val read = StorageAccess.read(view) as MCInt
         val commands = listOf("data modify storage mcfpp:system stack_frame prepend value {}") +
             Function.currFunction.commands.analyzeAll() + "data remove storage mcfpp:system stack_frame[0]"
@@ -503,7 +511,7 @@ class StorageViewTest {
                 /data modify storage mcfpp:system temp.observed set from storage mcfpp:system stack_frame[0].values
             }
         """)
-        assertNull(ValueSnapshot.of(main.scope.getVar("values")))
+        assertNull(StorageAccess.snapshot(assertNotNull(main.scope.getVar("values"))))
         val payload = execute(main).readNbt("mcfpp:system", "temp.observed") as top.mcfpp.nbt.tags.collection.ListTag
         assertEquals(listOf(1, 2, 3), payload.map { (it as IntTag).value })
     }

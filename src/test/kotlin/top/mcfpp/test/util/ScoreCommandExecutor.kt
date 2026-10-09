@@ -31,6 +31,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
     var stackDepth = 0
         private set
     private val frames = mutableListOf<MutableMap<String, Tag<*>>>()
+    private var completedRootFrame: Map<String, Tag<*>>? = null
     private val storage = mutableMapOf<String, MutableMap<String, Tag<*>>>()
     val failedComputations = mutableListOf<String>()
     private data class Segment(val name: String?, val index: Int?, val end: Int, val predicate: CompoundTag? = null)
@@ -130,6 +131,9 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             }
         }
         val (root, key) = address(source, path)
+        return getNbt(root, key, "$source $path")
+    }
+    private fun getNbt(root: Map<String, Tag<*>>, key: String, description: String = key): Tag<*> {
         root[key]?.let { return it }
         val parts = segments(key)
         for (size in parts.size - 1 downTo 1) {
@@ -137,7 +141,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             for (part in parts.drop(size)) value = element(value, part)
             return value
         }
-        error("Missing NBT $source $path")
+        error("Missing NBT $description")
     }
     private fun writeNbt(source: String, path: String, value: Tag<*>) {
         val (root, key) = address(source, path)
@@ -220,6 +224,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val storedScoreConditions = Regex("execute store success score (\\S+ \\S+) ((?:if|unless) score .*)")
         val scoreCondition = Regex("(if|unless) score (\\S+ \\S+) (?:(=|<|>|<=|>=) (\\S+ \\S+)|matches (-?\\d+|(?:-?\\d+)?\\.\\.(?:-?\\d+)?))(?: ((?:if|unless) score .*))?")
         val storedFunctionResult = Regex("execute store result score (\\S+ \\S+) run function (\\S+)")
+        val conditionalStoredFunctionResult = Regex("execute ((?:if|unless) score .*) store result score (\\S+ \\S+) run function (\\S+)")
         val insertNbt = Regex("data modify storage (\\S+) ($nbtPath) (append|prepend|insert -?\\d+) from storage (\\S+) ($nbtPath)")
         val appendNbtValue = Regex("data modify storage (\\S+) ($nbtPath) append value (.*)")
         val compareNbt = Regex("execute store success score (\\S+ \\S+) run data modify storage (\\S+) ($nbtPath) set from storage (\\S+) ($nbtPath)")
@@ -308,7 +313,12 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 try { return@command execute(it.groupValues[2]) } finally { identity = previous }
             }
             if (command == "data modify storage mcfpp:system stack_frame prepend value {}") { stackDepth++; frames.add(0, mutableMapOf()); return@command false }
-            if (command == "data remove storage mcfpp:system stack_frame[0]") { stackDepth--; check(stackDepth >= 0); frames.removeAt(0); return@command false }
+            if (command == "data remove storage mcfpp:system stack_frame[0]") {
+                stackDepth--; check(stackDepth >= 0)
+                val removed = frames.removeAt(0)
+                if (frames.isEmpty()) completedRootFrame = removed.mapValues { it.value.copy() }
+                return@command false
+            }
             if (command == "execute unless data storage mcfpp:system ir_branch_stack run data modify storage mcfpp:system ir_branch_stack set value []") {
                 if (!branchStackInitialized) { branchGuards.clear(); branchStackInitialized = true }
                 return@command false
@@ -506,6 +516,12 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 values[scoreKey(it.groupValues[1])] = run(functions.getValue(it.groupValues[2]))
                 return@command false
             }
+            conditionalStoredFunctionResult.matchEntire(command)?.let {
+                if (testScoreConditions(it.groupValues[1])) {
+                    values[scoreKey(it.groupValues[2])] = run(functions.getValue(it.groupValues[3]))
+                }
+                return@command false
+            }
             operation.matchEntire(command)?.let {
                 val target = scoreKey(it.groupValues[1])
                 val right = values.getValue(scoreKey(it.groupValues[3]))
@@ -577,6 +593,28 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         }
         run(commands)
     }
-    fun read(value: MCInt) = values.getValue("${value.name} ${value.sbObject}")
-    fun read(value: ScoreBool) = values.getValue("${value.name} ${value.boolObject}")
+    private fun readProduced(value: top.mcfpp.core.lang.Var<*>, register: String): Int {
+        val binding = requireNotNull(value.storageBinding) { "No producer location for '$register'" }
+        val layout = binding.data.layoutAt(binding.place)
+        if (layout is top.mcfpp.analysis.StorageLayout.Scoreboard)
+            return values.getValue("${layout.player} ${layout.objective}")
+        val address = binding.path.toCommandPart().analyze()
+        val match = Regex("storage (\\S+) (.+)").matchEntire(address)
+            ?: error("Unsupported produced address: $address")
+        val source = match.groupValues[1]
+        val path = match.groupValues[2]
+        val completedPath = Regex("stack_frame\\[0]\\.(.+)").matchEntire(path)
+        val tag = if (source == "mcfpp:system" && frames.isEmpty() && completedPath != null) {
+            val completed = requireNotNull(completedRootFrame) { "No completed root frame for $address" }
+            getNbt(completed, completedPath.groupValues[1])
+        } else readNbt(source, path)
+        return when (tag) {
+            is IntTag -> tag.value
+            is ByteTag -> tag.value.toInt()
+            is ShortTag -> tag.value.toInt()
+            else -> error("Expected an int/byte producer at $address, got $tag")
+        }
+    }
+    fun read(value: MCInt) = readProduced(value, "${value.name} ${value.sbObject}")
+    fun read(value: ScoreBool) = readProduced(value, "${value.name} ${value.boolObject}")
 }

@@ -9,13 +9,26 @@ import kotlin.test.*
 import kotlin.test.Test
 import top.mcfpp.Project
 import top.mcfpp.core.lang.MCFloat
-import top.mcfpp.core.lang.MCFloatConcrete
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
 
 class LegacyFloatArithmeticTest {
+    private fun runtime(value: top.mcfpp.core.lang.Var<*>): top.mcfpp.core.lang.Var<*> {
+        val result = value.type.buildUnConcrete("runtime_" + value.identifier).apply {
+            nbtPath = top.mcfpp.lib.NBTPath(top.mcfpp.lib.StorageSource("fixture:numeric"))
+                .memberIndex(identifier)
+        }
+        top.mcfpp.analysis.StorageAccess.declare(result, top.mcfpp.analysis.Symbol(
+            top.mcfpp.analysis.SymbolId.fresh(), result.identifier, result.type.typeId, mutable = true))
+        top.mcfpp.analysis.StorageAccess.write(result, value)
+        top.mcfpp.analysis.StorageAccess.materialize(result)
+        val binding = top.mcfpp.analysis.StorageAccess.ensure(result)
+        binding.data.facts.refine(binding.place, top.mcfpp.analysis.ValueFacts(
+            top.mcfpp.analysis.TypeKnowledge.Exact(result.type.typeId), top.mcfpp.analysis.ValueKnowledge.Unknown))
+        return top.mcfpp.analysis.StorageAccess.read(result)
+    }
     private data class Decimal(val sign: Int, val mantissa: Int, val exponent: Int) {
         fun value(): BigDecimal = if (sign == 0) BigDecimal.ZERO else
             BigDecimal(mantissa).scaleByPowerOfTen(exponent - 8).multiply(BigDecimal(sign))
@@ -139,8 +152,8 @@ class LegacyFloatArithmeticTest {
         val work = frozenLeft.getTempVar()
         return work.binaryComputation(preparedRight, operation) as MCFloat
     }
-    private fun components(machine: ScoreCommandExecutor, value: MCFloat) =
-        listOf(value.sign, value.int0, value.int1, value.exp).map(machine::read)
+    private fun components(machine: ScoreCommandExecutor, registers: List<top.mcfpp.analysis.StorageLayout.Scoreboard>) =
+        registers.map { machine.values.getValue("${it.player} ${it.objective}") }
 
     @Test fun binaryComputationExecutesLibraryAndPreservesCapturedConsecutiveResults() {
         MCFPPStringTest.readFromString("func main(){}", version = "1.20.1")
@@ -148,21 +161,22 @@ class LegacyFloatArithmeticTest {
         Function.currFunction.commands.clear()
         Function.addCommand(top.mcfpp.command.Commands.stackIn())
         val inputs = listOf(1f, 0.10000001f, -1.25f, 0.125f)
-        val values = inputs.map { MCFloatConcrete(it).toDynamic(false) as MCFloat }
+        val values = inputs.map { runtime(MCFloat(it)) as MCFloat }
         val left = captured(calculate(values[0], values[1], "-"))
         val right = captured(calculate(values[2], values[3], "+"))
         val result = captured(calculate(left, right, "-"))
+        val outputs = (listOf(left, right, result) + values).map { assertNotNull(top.mcfpp.analysis.StorageAccess.legacyFloatRegisters(it)) }
         val commands = Function.currFunction.commands.analyzeAll()
         assertEquals(0, Project.errorCount)
         assertEquals(3, commands.count { "run function math.float:hpo/float/_" in it })
         val machine = ScoreCommandExecutor(constants + commands, functions)
         val leftExpected = oracle(encoded(inputs[0]), encoded(inputs[1]), "-")
         val rightExpected = oracle(encoded(inputs[2]), encoded(inputs[3]), "+")
-        assertEquals(leftExpected.components(), components(machine, left))
-        assertEquals(rightExpected.components(), components(machine, right))
-        assertEquals(oracle(leftExpected, rightExpected, "-").components(), components(machine, result))
-        values.forEachIndexed { index, value ->
-            assertEquals(encoded(inputs[index]).components(), components(machine, value))
+        assertEquals(leftExpected.components(), components(machine, outputs[0]))
+        assertEquals(rightExpected.components(), components(machine, outputs[1]))
+        assertEquals(oracle(leftExpected, rightExpected, "-").components(), components(machine, outputs[2]))
+        values.forEachIndexed { index, _ ->
+            assertEquals(encoded(inputs[index]).components(), components(machine, outputs[index + 3]))
         }
     }
 }

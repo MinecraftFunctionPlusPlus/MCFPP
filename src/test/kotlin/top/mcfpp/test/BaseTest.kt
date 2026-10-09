@@ -2,7 +2,6 @@ package top.mcfpp.test
 
 import top.mcfpp.Project
 import top.mcfpp.core.lang.MCInt
-import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.test.util.MCFPPStringTest
 import kotlin.test.Test
@@ -101,7 +100,8 @@ class BaseTest {
         MCFPPStringTest.readFromString(test)
         assertEquals(0, Project.errorCount)
         val scope = MCFPPFile.currFile!!.topFunction.scope
-        assertEquals(0, assertIs<MCIntConcrete>(scope.getVar("i")).value)
+        assertEquals(top.mcfpp.analysis.CompilerValue.Typed(top.mcfpp.type.MCFPPBaseType.Int.typeId,
+            top.mcfpp.analysis.CompilerValue.Integral(0)), top.mcfpp.analysis.StorageAccess.snapshot(assertIs<MCInt>(scope.getVar("i"))))
         assertIs<MCInt>(scope.getVar("qwq"))
     }
 

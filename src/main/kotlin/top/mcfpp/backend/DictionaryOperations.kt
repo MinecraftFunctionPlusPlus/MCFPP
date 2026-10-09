@@ -7,10 +7,8 @@ import top.mcfpp.command.Commands
 import top.mcfpp.command.TargetCapabilities
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.bool.ScoreBool
-import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.NBTDictionary
-import top.mcfpp.core.lang.nbt.NBTDictionaryConcrete
 import top.mcfpp.model.function.Function
 import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.nbt.tags.Tag
@@ -24,6 +22,27 @@ import top.mcfpp.util.TempPool
 
 /** Shared dictionary implementations. Constant knowledge and storage effects are independent of Var subclasses. */
 object DictionaryOperations {
+    private fun size(value: NBTDictionary): top.mcfpp.core.lang.MCInt? {
+        record(value)?.fields?.size?.let { return top.mcfpp.core.lang.MCInt(it) }
+        if (!StorageAccess.hasRuntimeRepresentation(value)) {
+            LogProcessor.error("Dictionary size requires a complete value or a runtime producer")
+            return null
+        }
+        val errors = Project.errorCount
+        StorageAccess.materialize(value)
+        if (Project.errorCount != errors) return null
+        val result = top.mcfpp.core.lang.MCInt()
+        val score = StorageLayout.Scoreboard(result.name, result.sbObject.toString())
+        Function.addCommands(Command("execute store result score ${score.player} ${score.objective} run data get")
+            .build(StorageAccess.ensure(value).path.toCommandPart()).buildMacroFunction())
+        return StorageAccess.publishScore(result, score)
+    }
+    fun size(context: NativeCallContext) = context.withAdapters { caller, _ ->
+        size(caller as NBTDictionary)?.let(context::publishResult)
+    }
+    fun isEmpty(context: NativeCallContext) = context.withAdapters { caller, _ ->
+        size(caller as NBTDictionary)?.let { context.publishResult(StorageAccess.binary(it, top.mcfpp.core.lang.MCInt(0), "==")) }
+    }
     fun clear(context: NativeCallContext) = context.withAdapters { caller, _ ->
         clear(caller as NBTDictionary)
     }
@@ -41,10 +60,10 @@ object DictionaryOperations {
     }
 
     private fun payload(value: CompilerValue?): CompilerValue? = if (value is CompilerValue.Typed) payload(value.payload) else value
-    private fun record(value: Var<*>) = payload(ValueSnapshot.of(value)) as? CompilerValue.Record
+    private fun record(value: Var<*>) = payload(top.mcfpp.analysis.StorageAccess.snapshot(value)) as? CompilerValue.Record
 
     private fun key(caller: NBTDictionary, value: MCString): String? {
-        val snapshot = payload(ValueSnapshot.of(value))
+        val snapshot = payload(top.mcfpp.analysis.StorageAccess.snapshot(value))
         val text = when (snapshot) {
             is CompilerValue.Text -> snapshot.value
             is CompilerValue.Nbt -> (Tag.toNBT(snapshot.snbt) as? StringTag)?.value
@@ -71,12 +90,12 @@ object DictionaryOperations {
 
     fun clear(caller: NBTDictionary) {
         StorageAccess.ensure(caller)
-        StorageAccess.write(caller, NBTDictionaryConcrete(hashMapOf()).apply { type = caller.type })
+        StorageAccess.writeReceiver(caller, StorageAccess.dictionaryLiteral(caller.type, emptyMap()))
     }
 
     fun containsKey(caller: NBTDictionary, key: MCString): ScoreBool {
         val name = key(caller, key) ?: return ScoreBool().apply { isError = true }
-        record(caller)?.let { return ScoreBoolConcrete(it.fields.containsKey(name)) }
+        record(caller)?.let { return ScoreBool(it.fields.containsKey(name)) }
         val binding = StorageAccess.ensure(caller)
         if (binding.data.layout == StorageLayout.CompilerOnly) {
             LogProcessor.error("Compiler-only dictionary lookup requires a complete compile-time value")
@@ -84,10 +103,9 @@ object DictionaryOperations {
         }
         binding.data.materialize()
         return ScoreBool().apply {
-            hasAssigned = true
-            isDynamic = true
             Function.addCommand(Command("execute store success score ${this.name} ${boolObject} if data")
                 .build(binding.path.memberIndex(StorageAccess.quotedKey(name)).toCommandPart()))
+            StorageAccess.publishBoolean(this, StorageLayout.Scoreboard(this.name, boolObject.toString()))
         }
     }
 

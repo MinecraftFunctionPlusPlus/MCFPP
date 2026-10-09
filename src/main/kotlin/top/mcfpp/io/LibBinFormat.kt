@@ -1,7 +1,7 @@
 package top.mcfpp.io
 
-/** Bump the format when serialized signatures, type metadata, or host default-value field layouts change. */
+/** Bump the format when serialized declarations, type descriptors, or compiler value encodings change. */
 object LibBinFormat {
     const val MAGIC: Int = 0x4D43464C // MCFL
-    const val VERSION: Int = 76
+    const val VERSION: Int = 77
 }

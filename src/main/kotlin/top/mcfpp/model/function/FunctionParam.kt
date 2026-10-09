@@ -50,27 +50,29 @@ class FunctionParam(
 
     var typeName: String = type.toString()
 
-    var defaultVar: Var<*>? = null
+    var defaultValue: top.mcfpp.analysis.CompilerValue? = null
+    var defaultTypes: Map<top.mcfpp.type.TypeId, MCFPPType> = emptyMap()
+    var defaultVar: Var<*>?
+        get() = defaultValue?.let { value ->
+            val types = defaultTypes.toMutableMap().apply { putIfAbsent(type.typeId, type) }
+            MCFPPType.registerSnapshotTypes(value, types)
+            val sourceId = (value as? top.mcfpp.analysis.CompilerValue.Typed)?.type
+            val sourceType = sourceId?.let { types[it] ?: MCFPPType.resolveTypeId(it) } ?: type
+            top.mcfpp.analysis.StorageAccess.restore(sourceType, value, identifier, types)
+        }
+        set(value) {
+            defaultValue = value?.let(top.mcfpp.analysis.StorageAccess::snapshot)
+            defaultTypes = value?.let {
+                top.mcfpp.analysis.StorageAccess.boundTypes(it) + (it.type.typeId to it.type)
+            }.orEmpty()
+        }
     var defaultContext: mcfppParser.ValueContext? = null
 
     fun buildVar(): Var<*>{
         if (type is top.mcfpp.type.UnresolvedType || type is MCFPPGenericParamType)
             return top.mcfpp.core.lang.UnknownVar(identifier).apply { type = this@FunctionParam.type }
-        val qwq = if(( isReadOnly || type is MCFPPConcreteType ) && type != MCFPPBaseType.Any){
-            type.build(identifier, function)
-        }else{
-            type.buildUnConcrete(identifier, function)
-        }
-        if(qwq is DataTemplateObject){
-            qwq.toFunctionParam()
-        }
+        val qwq = type.buildUnConcrete(identifier, function)
         qwq.nbtPath = NBTPath.getNormalStackPath(qwq)
-        if (qwq is DataTemplateObject && !isReadOnly && type.hasRuntimeRepresentation) {
-            qwq.hasAssigned = true
-            qwq.isDynamic = true
-            qwq.bindDeclaration()
-            top.mcfpp.analysis.StorageAccess.ensure(qwq)
-        }
         return qwq
     }
 

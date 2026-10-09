@@ -258,6 +258,10 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
             LogProcessor.error("Tag not match in method ${method.name} in class ${method.declaringClass.name}")
             return
         }
+        if(!method.parameterTypes.contentEquals(arrayOf(top.mcfpp.mni.NativeCallContext::class.java))){
+            LogProcessor.error("Method ${method.name} in class ${method.declaringClass.name} must use NativeCallContext")
+            return
+        }
         if(this is ObjectCompoundData){
             LogProcessor.error("Operator definition ${method.name} in class ${method.declaringClass.name} is not allowed in ObjectCompoundData")
         }
@@ -279,12 +283,6 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         }
         if(nf.returnType == MCFPPPrivateType.Void){
             LogProcessor.error("Operator definition ${method.name} in class ${method.declaringClass.name} must return a value")
-            return
-        }
-        //检查method的参数
-        val contextAbi = method.parameterTypes.contentEquals(arrayOf(top.mcfpp.mni.NativeCallContext::class.java))
-        if(method.parameterCount != if (contextAbi) 1 else if (paramType != null) 3 else 2){
-            LogProcessor.error("Method ${method.name} in class ${method.declaringClass.name} has wrong parameter count")
             return
         }
         nf.caller = getType()
@@ -329,6 +327,10 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
             LogProcessor.error("Tag not match in method ${method.name} in class ${method.declaringClass.name}")
             return
         }
+        if(!method.parameterTypes.contentEquals(arrayOf(top.mcfpp.mni.NativeCallContext::class.java))){
+            LogProcessor.error("Method ${method.name} in class ${method.declaringClass.name} must use NativeCallContext")
+            return
+        }
         val nf = NativeFunction(mniRegister.identifier.ifEmpty { method.name }, javaMethod = method)
         nf.owner = this
         //解析MNIMethod注解成员
@@ -361,19 +363,6 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
             MCFPPBaseType.Any
         }
         nf.returnType = returnType
-        var exceptedParamCount = readOnlyType.size + normalType.size
-        if(returnType != MCFPPPrivateType.Void){
-            exceptedParamCount++
-        }
-        if(mniRegister.caller != "void"){
-            exceptedParamCount++
-        }
-        val contextAbi = method.parameterTypes.contentEquals(arrayOf(top.mcfpp.mni.NativeCallContext::class.java))
-        //检查method的参数
-        if(method.parameterCount != if (contextAbi) 1 else exceptedParamCount){
-            LogProcessor.error("Method ${method.name} in class ${method.declaringClass.name} has wrong parameter count")
-            return
-        }
         for(rt in readOnlyType){
             nf.appendReadOnlyParam(rt.first, "p${nf.paramCount()}", rt.second)
         }

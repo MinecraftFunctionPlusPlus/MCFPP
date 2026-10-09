@@ -7,9 +7,7 @@ import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.nbt.NBTDictionary
-import top.mcfpp.core.lang.nbt.NBTDictionaryConcrete
-import top.mcfpp.core.lang.nbt.NBTMapConcrete
-import top.mcfpp.core.lang.nbt.MCStringConcrete
+import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.lib.NBTPath
@@ -37,9 +35,30 @@ class DictionaryMemberTest {
         assertEquals(0, it.stackDepth)
     }
 
+    private fun dictionary(fields: Map<String, Var<*>>, name: String,
+                           type: MCFPPDictType = MCFPPDictType(MCFPPBaseType.Any)): NBTDictionary {
+        val initial = StorageAccess.dictionaryLiteral(type, fields, "$name-literal")
+        val result = type.buildUnConcrete(name).apply { nbtPath = NBTPath.temp.memberIndex(name) }
+        StorageAccess.declare(result, Symbol(SymbolId.fresh(), name, type.typeId, mutable = true))
+        StorageAccess.write(result, initial)
+        return assertIs<NBTDictionary>(result)
+    }
+
     @Test fun constantAndRuntimeDictionariesExposeTheSameMemberSignatures() {
         compile("func main(){}")
-        assertSame(NBTDictionary.data, NBTDictionaryConcrete.data)
+        val type = MCFPPDictType(MCFPPBaseType.Int)
+        val known = StorageAccess.dictionaryLiteral(type, mapOf("value" to MCInt(4)))
+        val runtime = type.buildUnConcrete("runtime")
+        assertSame(NBTDictionary.data, known.type.instanceData)
+        assertSame(known.type.instanceData, runtime.type.instanceData)
+        for (name in listOf("size", "isEmpty", "toText")) {
+            val candidates = known.type.instanceData.scope.getFunctionCandidates(name).joinToString { "${it.identifier}<${(it as? top.mcfpp.model.function.NativeFunction)?.readOnlyParams.orEmpty()}>(${it.normalParams})" }
+            val member = assertIs<top.mcfpp.model.function.NativeFunction>(known.getMemberFunction(name, emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first, "Known $name; declarations: $candidates")
+            val runtimeMember = assertIs<top.mcfpp.model.function.NativeFunction>(runtime.getMemberFunction(name, emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first, "Runtime $name; declarations: $candidates")
+            assertTrue(top.mcfpp.model.function.ParameterMatcher.sameSignature(member, runtimeMember))
+            assertEquals(member.returnType.typeId, runtimeMember.returnType.typeId)
+            assertEquals(member.javaMethod, runtimeMember.javaMethod)
+        }
     }
 
     @Test fun mergeRejectsCompilerOnlyFieldsBeforeWritingARuntimeReceiver() {
@@ -102,7 +121,7 @@ class DictionaryMemberTest {
         compile("func main(){}")
         val type = MCFPPDictType(MCFPPBaseType.Int)
         assertEquals(type.typeId, type.buildUnConcrete("unknown").type.typeId)
-        val value = type.build("known", hashMapOf<String, Var<*>>("value" to MCIntConcrete(4)))
+        val value = StorageAccess.dictionaryLiteral(type, mapOf("value" to MCInt(4)), "known")
         assertEquals(type.typeId, value.type.typeId)
         assertEquals(type.typeId, value.getTempVar().type.typeId)
     }
@@ -153,15 +172,14 @@ class DictionaryMemberTest {
         Function.currFunction = main
         val receiver = NBTDictionary("partial").apply {
             nbtPath = NBTPath.temp.memberIndex(identifier)
-            hasAssigned = true; isDynamic = true
         }
-        val binding = StorageAccess.ensure(receiver)
+        val binding = StorageAccess.bindIncomingParameter(receiver)
         binding.data.facts.initialize(binding.place.field("kept"), ValueFacts(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId),
             ValueKnowledge.Constant(CompilerValue.Typed(MCFPPBaseType.Int.typeId, CompilerValue.Integral(2)))))
         Function.addCommand(Commands.dataSetValue(receiver.nbtPath, CompoundTag().apply { put("kept", IntTag(2)) }))
         val before = binding.data.facts.fork()
         val commands = main.commands.analyzeAll().filterNot { it.startsWith("#") }
-        val incoming = NBTDictionaryConcrete(hashMapOf("" to MCIntConcrete(7), "added" to MCIntConcrete(8)), "incoming")
+        val incoming = StorageAccess.dictionaryLiteral(MCFPPDictType(MCFPPBaseType.Int), mapOf("" to MCInt(7), "added" to MCInt(8)), "incoming") as NBTDictionary
         DictionaryOperations.merge(receiver, incoming)
         assertTrue(Project.errorCount > 0)
         assertEquals(before, binding.data.facts)
@@ -207,12 +225,14 @@ class DictionaryMemberTest {
     @Test fun bulkMergeFreezesIncomingFactsBeforeAnOverlappingSourceIsInvalidated() {
         val main = compile("func main(){}")
         Function.currFunction = main
-        val nested = NBTDictionaryConcrete(hashMapOf("added" to MCIntConcrete(8)), "nested")
-        val patch = NBTDictionaryConcrete(hashMapOf("patch" to nested, "scalar" to MCIntConcrete(7)), "patch")
-        val values = NBTDictionaryConcrete(hashMapOf("patch" to patch, "runtime" to MCIntConcrete(0)), "values").apply {
-            nbtPath = NBTPath.temp.memberIndex(identifier)
-        }
+        val exit = main.commands.last()
+        assertEquals(top.mcfpp.command.Commands.stackOut().analyze(), exit.toString())
+        main.commands.removeAt(main.commands.lastIndex)
+        val nested = dictionary(mapOf("added" to MCInt(8)), "nested")
+        val patch = dictionary(mapOf("patch" to nested, "scalar" to MCInt(7)), "patch")
+        val values = dictionary(mapOf("patch" to patch, "runtime" to MCInt(0)), "values")
         val binding = StorageAccess.ensure(values)
+        StorageAccess.materialize(values)
         binding.data.write(binding.place.field("runtime"), ValueFacts(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), ValueKnowledge.Unknown))
         val incoming = StorageAccess.adapter(patch.type, "incoming", binding.copy(place = binding.place.field("patch"),
             path = binding.path.memberIndex("patch"))) as NBTDictionary
@@ -221,22 +241,31 @@ class DictionaryMemberTest {
         val scalar = binding.data.facts.read(binding.place.field("scalar"))!!
         assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), scalar.type)
         assertEquals(CompilerValue.Typed(MCFPPBaseType.Int.typeId, CompilerValue.Integral(7)), assertIs<ValueKnowledge.Constant>(scalar.value).value)
-        val result = assertIs<CompoundTag>(execute(main).readNbt("mcfpp:system", "temp.values"))
+        StorageAccess.materialize(values)
+        Function.addCommand(top.mcfpp.command.Command.buildAll(
+            "data modify storage fixture:observation merged set from", binding.path))
+        main.commands.add(exit)
+        val machine = execute(main)
+        val result = assertIs<CompoundTag>(machine.readNbt("fixture:observation", "merged"))
         assertEquals(7, assertIs<IntTag>(result["scalar"]).value)
         assertEquals(8, assertIs<IntTag>(assertIs<CompoundTag>(result["patch"])["added"]).value)
+        assertEquals(0, machine.stackDepth)
     }
 
     @Test fun compilerOnlyDictionariesCanStillMergeKnownEmptyKeysWithoutRuntimeEncoding() {
         val main = compile("func main(){}")
         Function.currFunction = main
-        val values = NBTDictionaryConcrete(hashMapOf("kind" to MCFPPTypeVar(MCFPPBaseType.Int)), "values")
-        val incoming = NBTDictionaryConcrete(hashMapOf("" to MCFPPTypeVar(MCFPPBaseType.Float)), "incoming")
+        val type = MCFPPDictType(top.mcfpp.type.MCFPPConcreteType.Type)
+        val values = dictionary(mapOf("kind" to MCFPPTypeVar(MCFPPBaseType.Int)), "values", type)
+        val incoming = dictionary(mapOf("" to MCFPPTypeVar(MCFPPBaseType.Float)), "incoming", type)
         DictionaryOperations.merge(values, incoming)
         assertEquals(0, Project.errorCount)
-        assertTrue(DictionaryOperations.containsKey(values, MCStringConcrete(StringTag(""))).let {
-            assertIs<top.mcfpp.core.lang.bool.ScoreBoolConcrete>(it).value
-        })
-        assertNotNull(ValueSnapshot.of(values))
+        val contains = DictionaryOperations.containsKey(values, MCString(StringTag("")))
+        assertEquals(CompilerValue.Typed(MCFPPBaseType.Bool.typeId, CompilerValue.Bool(true)), StorageAccess.snapshot(contains))
+        assertEquals(CompilerValue.Typed(type.typeId, CompilerValue.Record(mapOf(
+            "kind" to CompilerValue.Typed(top.mcfpp.type.MCFPPConcreteType.Type.typeId, CompilerValue.TypeValue(MCFPPBaseType.Int.typeId)),
+            "" to CompilerValue.Typed(top.mcfpp.type.MCFPPConcreteType.Type.typeId, CompilerValue.TypeValue(MCFPPBaseType.Float.typeId))
+        ))), StorageAccess.snapshot(values))
         assertEquals(StorageLayout.CompilerOnly, values.storageBinding!!.data.layout)
         assertFalse(main.commands.analyzeAll().any { "set value" in it || "merge value" in it })
     }

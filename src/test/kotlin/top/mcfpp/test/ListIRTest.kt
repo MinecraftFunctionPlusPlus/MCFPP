@@ -106,6 +106,7 @@ class ListIRTest {
         val append = function("append")
         assertNotNull(append.typedIR)
         assertEquals(setOf(Place(append.typedIR!!.parameters.first())), assertIs<Effect.Writes>(append.runtimeEffect).places)
+        assertEquals(setOf(Place(append.typedIR!!.parameters.first())), assertIs<Effect.Writes>(append.runtimeEffect).contents)
     }
 
     @Test fun invalidWritesAreDiagnosedBeforeBackendCommands() {

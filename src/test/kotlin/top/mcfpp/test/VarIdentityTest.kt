@@ -2,6 +2,8 @@ package top.mcfpp.test
 
 import top.mcfpp.Project
 import top.mcfpp.analysis.StorageAccess
+import top.mcfpp.analysis.StorageLayout
+import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.core.lang.*
 import top.mcfpp.lib.SbObject
@@ -27,32 +29,41 @@ class VarIdentityTest {
 
     @Test fun independentAdaptersAndCoordinateClonesHaveDistinctIdentity() {
         assertNotEquals(MCInt("first"), MCInt("second"))
-        assertNotEquals(MCIntConcrete(1), MCIntConcrete(1).apply { type = MCFPPNBTType.Long })
+        val integer = MCInt(1)
+        val long = StorageAccess.literal(MCFPPNBTType.Long, CompilerValue.Integral(1))
+        assertNotEquals(integer, long)
+        assertNotEquals(StorageAccess.ensure(integer).place, StorageAccess.ensure(long).place)
+        assertEquals(CompilerValue.Typed(top.mcfpp.type.MCFPPBaseType.Int.typeId, CompilerValue.Integral(1)), StorageAccess.snapshot(integer))
+        assertEquals(CompilerValue.Typed(MCFPPNBTType.Long.typeId, CompilerValue.Integral(1)), StorageAccess.snapshot(long))
         val position = Pos3Var()
         assertEquals(position, position)
         assertNotEquals(position, position.clone())
         assertFalse(position.equals(Pos2Var()))
-        assertFalse(position.equals(MCIntConcrete(0)))
+        assertFalse(position.equals(MCInt(0)))
         val dimension = PosDimension("~", 1, "dimension")
         assertNotEquals(dimension, dimension.clone())
         assertNotEquals(Pos2Var(), Pos2Var())
     }
 
     @Test fun hashSetMembershipSurvivesMutableAdapterState() {
-        val value = MCIntConcrete(1)
-        val position = Pos3Var()
+        val value = MCInt(1).apply { bindDeclaration() }
+        val position = StorageAccess.literal(top.mcfpp.type.MCFPPBaseType.Pos3, CompilerValue.Sequence(List(3) {
+            CompilerValue.Typed(top.mcfpp.type.MCFPPPrivateType.MCFPPCoordinateDimension.typeId,
+                CompilerValue.Sequence(listOf(CompilerValue.Text(""), CompilerValue.Integral(0))))
+        })) as Pos3Var
+        position.bindDeclaration()
         val dimension = PosDimension("", 0, "dimension")
         val values = hashSetOf<Var<*>>(value, position, dimension)
         val hash = value.hashCode()
         value.identifier = "renamed"
         value.name = "new_score"
-        value.type = MCFPPNBTType.Long
+        StorageAccess.write(value, MCInt(2))
+        assertEquals(top.mcfpp.type.MCFPPBaseType.Int.typeId, value.type.typeId)
         value.parent = position
-        value.value = 2
         value.stackIndex = 3
-        value.hasAssigned = true
-        position.x.value = "~" to 5
-        dimension.value = "^" to 2.5
+        StorageAccess.write(position.x, PosDimension("~", 5))
+        dimension.bindDeclaration()
+        StorageAccess.write(dimension, PosDimension("^", 2.5))
         assertEquals(hash, value.hashCode())
         assertTrue(values.containsAll(listOf(value, position, dimension)))
         assertTrue(values.remove(value))
@@ -77,6 +88,8 @@ class VarIdentityTest {
         main.commands.clear()
         val first = MCInt("same").apply { isTemp = true; sbObject = SbObject("first_temp") }
         val second = MCInt("same").apply { isTemp = true; sbObject = SbObject("second_temp") }
+        StorageAccess.publishScore(first, StorageLayout.Scoreboard(first.name, first.sbObject.toString()))
+        StorageAccess.publishScore(second, StorageLayout.Scoreboard(second.name, second.sbObject.toString()))
         val spills = StorageAccess.spill(listOf(first, second, first))
         assertEquals(2, spills.size)
         assertSame(first, spills[0].value)

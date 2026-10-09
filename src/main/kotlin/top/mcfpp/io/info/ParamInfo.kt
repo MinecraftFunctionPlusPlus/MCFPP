@@ -1,6 +1,5 @@
 package top.mcfpp.io.info
 
-import top.mcfpp.core.lang.Var
 import top.mcfpp.model.compound.DataTemplateParam
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.type.MCFPPType
@@ -11,13 +10,15 @@ data class FunctionParamInfo(
     var isStatic: Boolean = false,
     var hasDefault: Boolean = false,
     var isReadOnly: Boolean = false,
-    var defaultVar: Var<*>? = null,
-    var defaultContext: top.mcfpp.antlr.mcfppParser.ValueContext? = null
+    var defaultValue: top.mcfpp.analysis.CompilerValue? = null,
+    var defaultContext: top.mcfpp.antlr.mcfppParser.ValueContext? = null,
+    var defaultTypes: Map<top.mcfpp.type.TypeId, MCFPPType> = emptyMap()
 ): ModelInfo<FunctionParam>{
     override fun get(): FunctionParam {
         return FunctionParam(type, identifier, AbstractFunctionInfo.currFunction!!, isStatic, hasDefault, isReadOnly).apply {
-            this.defaultVar = this@FunctionParamInfo.defaultVar
+            this.defaultValue = this@FunctionParamInfo.defaultValue
             this.defaultContext = this@FunctionParamInfo.defaultContext
+            this.defaultTypes = this@FunctionParamInfo.defaultTypes
         }
     }
 
@@ -29,8 +30,9 @@ data class FunctionParamInfo(
                 param.isStatic,
                 param.hasDefault,
                 param.isReadOnly,
-                param.defaultVar,
-                param.defaultContext
+                param.defaultValue,
+                param.defaultContext,
+                param.defaultTypes
             )
         }
     }

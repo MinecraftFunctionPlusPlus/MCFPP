@@ -12,7 +12,6 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.EnumVar
-import top.mcfpp.core.lang.obj.EnumVarConcrete
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
@@ -68,7 +67,7 @@ internal object TemplateCommandFormat {
 
     private fun slot(value: DataTemplateObject): Command {
         val type = field(value, "type") as EnumVar
-        val known = StorageAccess.snapshot(type)?.let { StorageAccess.restore(type.type, it, type.identifier) } as? EnumVarConcrete
+        val known = StorageAccess.snapshot(type)?.let { StorageAccess.restore(type.type, it, type.identifier) } as? EnumVar
         val record = (StorageAccess.snapshot(value) as? CompilerValue.Typed)?.payload as? CompilerValue.Record
         if (known != null) {
             val token = slotTokens.getValue(known.value.identifier)
@@ -95,6 +94,7 @@ internal object TemplateCommandFormat {
                     .build(Commands.dataSetValue(token.nbtPath, StringTag(slotTokens.getValue(member.identifier)))))
             }
         }
+        StorageAccess.publishNbt(token)
         val result = temporaryString()
         Function.addCommand(Commands.dataSetFrom(result.nbtPath, token.nbtPath))
         // Read the optional index only when it exists. Macro preparation must not load a
@@ -109,14 +109,13 @@ internal object TemplateCommandFormat {
             .buildMacro(MCString("token"), false).build(".", false).buildMacro(MCInt("index"), false)
             .build("\"", false).buildMacroFunction(arguments)
         Function.addCommand(Command("execute if data").build(indexPath.toCommandPart()).build("run").build(indexed))
+        StorageAccess.publishNbt(result)
         return result.toCommandPart()
     }
 
     private fun temporaryString(): MCString = MCString(TempPool.getVarIdentify()).apply {
         nbtPath = NBTPath.stack.intIndex(0).memberIndex(identifier)
         isTemp = true
-        isDynamic = true
-        hasAssigned = true
-        StorageAccess.bindIncomingParameter(this)
+        StorageAccess.ensure(this)
     }
 }

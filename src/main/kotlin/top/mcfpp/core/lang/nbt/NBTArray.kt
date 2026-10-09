@@ -1,10 +1,8 @@
 package top.mcfpp.core.lang.nbt
 
 import top.mcfpp.core.lang.MCInt
-import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.core.lang.MCAny
 import top.mcfpp.core.lang.MCObject
-import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.PropertyVar
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
@@ -33,11 +31,8 @@ abstract class NBTArray: NBTBasedData {
             LogProcessor.error("Cannot assign '${b.type}' to '$type'")
             return this
         }
-        val target = type.buildUnConcrete(identifier).setAs(this) as NBTArray
-        if (b.storageBinding != null) return StorageAccess.copyCollection(target, b) as NBTArray
-        if (b is MCFPPValue<*>) return type.build(identifier, (b.value as Tag<*>).copy()).setAs(this) as NBTArray
-        Function.addCommand(Commands.dataSetFrom(target.nbtPath, b.nbtPath))
-        return target
+        StorageAccess.write(this, b)
+        return this
     }
 
     protected fun dynamicArray(replace: Boolean): NBTArray {
@@ -51,15 +46,15 @@ abstract class NBTArray: NBTBasedData {
     }
 
     /** A precise array element has the language type of its NBT format, independent of host subclasses. */
-    internal fun constantElements(): List<Var<*>>? = when (this) {
-        is NBTByteArrayConcrete -> value.value.map { MCByteConcrete(it) }
-        is NBTIntArrayConcrete -> value.value.map { MCIntConcrete(it) }
-        is NBTLongArrayConcrete -> value.value.map { MCLongConcrete(LongTag(it)) }
+    internal fun constantElements(): List<Var<*>>? = when (val encoded = StorageAccess.constantEncoding(this)) {
+        is top.mcfpp.nbt.tags.collection.ByteArrayTag -> encoded.value.map { MCByte(it) }
+        is top.mcfpp.nbt.tags.collection.IntArrayTag -> encoded.value.map { MCInt(it) }
+        is top.mcfpp.nbt.tags.collection.LongArrayTag -> encoded.value.map { MCLong(LongTag(it)) }
         else -> null
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar{
-        val actual = if (index is MCAny && index !is MCObject) index.semanticValue() else index
+        val actual = if (index is MCAny && index !is MCObject) top.mcfpp.analysis.StorageAccess.actualView(index) else index
         if(actual is MCInt && actual.type.typeId == MCFPPBaseType.Int.typeId){
             val v = StorageAccess.element(this, actual, arrayType)
             return PropertyVar(Property.buildSimpleProperty(v), v,this)

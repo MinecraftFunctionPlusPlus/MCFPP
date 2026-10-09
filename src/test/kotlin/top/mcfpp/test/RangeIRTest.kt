@@ -3,10 +3,9 @@ package top.mcfpp.test
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.analysis.StorageAccess
-import top.mcfpp.analysis.ValueSnapshot
+import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.RangeVar
-import top.mcfpp.core.lang.RangeVarConcrete
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.CompoundTag
@@ -198,19 +197,21 @@ class RangeIRTest {
         assertEquals(0, Project.errorCount)
         val main = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
         val range = assertIs<RangeVar>(main.scope.getVar("bounds"))
-        val encoded = assertIs<CompoundTag>(StorageAccess.snapshotTag(ValueSnapshot.of(range)!!))
+        val encoded = assertIs<CompoundTag>(StorageAccess.snapshotTag(StorageAccess.snapshot(range)!!))
         assertEquals(16777217, assertIs<IntTag>(encoded.get("left")).value)
         assertEquals(16777218, assertIs<IntTag>(encoded.get("right")).value)
-        val copy = RangeVarConcrete(16777217 to 16777218).clone()
+        val copy = RangeVar("copy").assignedBy(range)
+        assertEquals(StorageAccess.snapshot(range), StorageAccess.snapshot(copy))
+        assertNotEquals(StorageAccess.ensure(range).place, StorageAccess.ensure(copy).place)
         assertEquals("16777217..16777218", copy.toCommandPart().toString())
         assertEquals(3.toByte(), copy.point)
         assertTrue(copy.isIntRange())
-        val float = assertIs<CompoundTag>(StorageAccess.snapshotTag(ValueSnapshot.of(RangeVarConcrete(1.5f to 2.5f))!!))
+        val float = assertIs<CompoundTag>(StorageAccess.snapshotTag(StorageAccess.snapshot(RangeVar(1.5f to 2.5f))!!))
         assertEquals(1.5f, assertIs<FloatTag>(float.get("left")).value)
-        val open = RangeVarConcrete(null to 3)
+        val open = RangeVar(null to 3)
         assertEquals("..3", open.toCommandPart().toString())
         assertEquals(1.toByte(), open.point)
-        assertEquals("distance=1.5..2.5", top.mcfpp.lib.DistancePredicate(RangeVarConcrete(1.5f to 2.5f)).toCommandPart().toString())
+        assertEquals("distance=1.5..2.5", top.mcfpp.lib.DistancePredicate(RangeVar(1.5f to 2.5f)).toCommandPart().toString())
         assertEquals("level=16777217..16777218", top.mcfpp.lib.LevelPredicate(copy).toCommandPart().toString())
     }
 }

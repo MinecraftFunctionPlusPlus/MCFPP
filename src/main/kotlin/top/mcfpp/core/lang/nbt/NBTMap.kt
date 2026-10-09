@@ -33,16 +33,13 @@ open class NBTMap : NBTBasedData {
     constructor(source: NBTMap) : super(source) { type = source.type }
 
     override fun doAssignedBy(b: Var<*>): NBTMap {
-        if (b is NBTMap) return assignCommand(b) as NBTMap
-        LogProcessor.error("Cannot assign '${b.type}' to '$type'")
+        StorageAccess.write(this, b)
         return this
     }
 
     override fun assignCommand(a: NBTBasedData): NBTBasedData {
-        if (a.storageBinding != null) return StorageAccess.copyCollection(NBTMap(this), a) as NBTMap
-        if (a is NBTMapConcrete) return NBTMapConcrete(this, a.value)
-        Function.addCommand(Commands.dataSetFrom(nbtPath, a.nbtPath))
-        return NBTMap(this)
+        StorageAccess.write(this, a)
+        return this
     }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
@@ -56,19 +53,22 @@ open class NBTMap : NBTBasedData {
 
     override fun getMemberFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>,
                                    accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
-        var result: Function = UnknownFunction(key)
+        val candidates = arrayListOf<Function>()
         data.scope.forEachFunction {
-            val native = (it as NativeFunction).replaceGenericParams(mapOf("E" to genericType))
-            if (native.isSelf(key, normalArgs)) result = native
+            candidates.add(if (it is NativeFunction) it.replaceGenericParams(mapOf("E" to genericType)) else it)
         }
+        var result = top.mcfpp.model.function.ParameterMatcher.select(candidates, key, readOnlyArgs, normalArgs)
         val parents = data.parent.iterator()
-        while (result is UnknownFunction && parents.hasNext())
-            result = parents.next().getFunction(key, readOnlyArgs, normalArgs, isStatic)
-        return result to true
+        while (result == null && parents.hasNext()) {
+            val inherited = parents.next().getFunction(key, readOnlyArgs, normalArgs, isStatic)
+            if (inherited !is UnknownFunction) result = inherited
+        }
+        val selected = result ?: UnknownFunction(key)
+        return selected to (accessModifier.ordinal >= selected.accessModifier.ordinal)
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {
-        val key = if (index is MCAny && index !is MCObject) index.semanticValue() else index
+        val key = if (index is MCAny && index !is MCObject) top.mcfpp.analysis.StorageAccess.actualView(index) else index
         if (key !is MCString || key.type.typeId != MCFPPBaseType.String.typeId) {
             LogProcessor.error("Map index must be a string")
             val error = UnknownVar(TempPool.getVarIdentify()).apply { isError = true }
@@ -99,47 +99,4 @@ open class NBTMap : NBTBasedData {
         internal val entryType get() = MCFPPDictType(MCFPPBaseType.Any)
         internal val entriesType get() = MCFPPListType(entryType)
     }
-}
-
-class NBTMapConcrete : NBTMap, MCFPPValue<HashMap<String, Var<*>>> {
-    override var value: HashMap<String, Var<*>>
-    internal var extraFields: HashMap<String, Var<*>> = hashMapOf()
-
-    constructor(value: HashMap<String, Var<*>>, identifier: String = TempPool.getVarIdentify(),
-                genericType: MCFPPType) : super(identifier, genericType) { this.value = LinkedHashMap(value) }
-
-    constructor(source: NBTMap, value: HashMap<String, Var<*>>) : super(source) {
-        this.value = LinkedHashMap(value.mapValues { NBTList.copyCompilerPart(it.value) })
-        if (source is NBTMapConcrete) extraFields = HashMap(source.extraFields.mapValues { NBTList.copyCompilerPart(it.value) })
-    }
-
-    constructor(source: NBTMapConcrete) : super(source) {
-        value = source.value
-        extraFields = source.extraFields
-    }
-
-    /** The compiler payload mirrors physical paths, so a child write replaces immutable ancestors. */
-    internal fun physicalValue(): NBTDictionaryConcrete {
-        val rows = value.map { (key, part) ->
-            NBTDictionaryConcrete(hashMapOf("key" to MCStringConcrete(StringTag(key), "key"), "value" to part), "entry")
-        }
-        return NBTDictionaryConcrete(HashMap(extraFields).apply {
-            put("entries", NBTListConcrete(ArrayList(rows), "entries", entryType))
-        }, "map_layout")
-    }
-
-    fun isAllConcrete() = top.mcfpp.analysis.ValueSnapshot.of(this) != null
-    override fun clone() = NBTMapConcrete(this)
-
-    override fun toDynamic(replace: Boolean): Var<*> {
-        StorageAccess.materialize(this)
-        val result = NBTMap(this)
-        if (replace) {
-            if (parentTemplate() != null) (parent as DataTemplateObject).instanceField.putVar(identifier, result, true)
-            else Function.currFunction.scope.putVar(identifier, result, true)
-        }
-        return result
-    }
-
-    companion object { val data get() = NBTMap.data }
 }

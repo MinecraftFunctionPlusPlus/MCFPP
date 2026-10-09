@@ -3,11 +3,9 @@ package top.mcfpp.test
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
-import top.mcfpp.analysis.ValueSnapshot
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.MCInt
-import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.Pos3Var
 import top.mcfpp.io.DatapackCreator
@@ -74,7 +72,7 @@ class DeclarationInitializationContractTest {
             val identity = GlobalScope.getFunctionCandidates("fixture.declarations", "identity", null).single()
             assertEquals(MCFPPBaseType.Any, identity.normalParams.single().type)
             assertTrue(identity.compiledFunctions.isEmpty())
-            assertNull(ValueSnapshot.of(identity.scope.getVar("value")))
+            assertNull(top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(identity.scope.getVar("value"))))
         }
     }
 
@@ -118,7 +116,7 @@ class DeclarationInitializationContractTest {
             val template = (function.scope.getVar("first") as DataTemplateObject).templateType
             assertFalse(template.scope.functions.getValue("unused").single().bodyCompiled)
             assertTrue(template.scope.functions.getValue("read").single().compiledFunctions.isEmpty())
-            assertNotEquals(ValueSnapshot.of(function.scope.getVar("first")), ValueSnapshot.of(function.scope.getVar("second")))
+            assertNotEquals(top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(function.scope.getVar("first"))), top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(function.scope.getVar("second"))))
         }
     }
 
@@ -291,7 +289,7 @@ class DeclarationInitializationContractTest {
                 top.mcfpp.analysis.CompilerValue.Record(mapOf(
                     "left" to top.mcfpp.analysis.CompilerValue.Typed(MCFPPBaseType.Int.typeId,top.mcfpp.analysis.CompilerValue.Integral(1)),
                     "right" to top.mcfpp.analysis.CompilerValue.Typed(MCFPPBaseType.Int.typeId,top.mcfpp.analysis.CompilerValue.Integral(3))))),
-                top.mcfpp.analysis.ValueSnapshot.of(rangeFactory.scope.getVar("R")!!))
+                top.mcfpp.analysis.StorageAccess.snapshot(rangeFactory.scope.getVar("R")!!))
         }
     }
 
@@ -367,14 +365,14 @@ class DeclarationInitializationContractTest {
         @JvmStatic @MNIFunction(normalParams=["list<int>"], returnType="int")
         fun sink(context: NativeCallContext) = context.withArguments { arguments ->
             val list=arguments.single() as top.mcfpp.core.lang.nbt.NBTList
-            val first=top.mcfpp.analysis.StorageAccess.element(list,MCIntConcrete(0),MCFPPBaseType.Int)
+            val first=top.mcfpp.analysis.StorageAccess.element(list,top.mcfpp.core.lang.MCInt(0),MCFPPBaseType.Int)
             context.publishResult(top.mcfpp.analysis.StorageAccess.read(first))
         }
         @JvmStatic @MNIFunction(normalParams=["pos3"], returnType="int")
         fun observe(context: NativeCallContext) = context.withArguments { arguments ->
             val position=arguments.single() as Pos3Var
             Function.addCommand(Command("say").build(position.toCommandPart()))
-            context.publishResult(MCIntConcrete(position.x.number.toInt()))
+            context.publishResult(top.mcfpp.core.lang.MCInt(position.x.number.toInt()))
         }
     }
 

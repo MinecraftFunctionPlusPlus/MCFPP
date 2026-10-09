@@ -1,406 +1,83 @@
 package top.mcfpp.core.lang.bool
 
-import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.analysis.*
 import top.mcfpp.command.Command
-import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
-import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.Function
-import top.mcfpp.nbt.tags.primitive.ByteTag
-import top.mcfpp.type.MCFPPBaseType
-import top.mcfpp.type.MCFPPType
-import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
-import top.mcfpp.util.TextTranslator
-import top.mcfpp.util.TextTranslator.translate
-import java.util.*
 
-/**
- * 布尔型变量是mcfpp的基本类型之一，它表示一个只有0，1两种取值可能性的值。
- *
- * 在实际实现过程中，它仍然是由记分板实现的，也就是说它本质仍然是一个记分板的int型变量。如果直接对mcfunction操作，你也可以对布尔型进行加减法。
- * 但是在mcfpp中你是不允许这么做的。
- *
- * bool型变量实现了多种计算方法，比如与，或，非等基本的逻辑运算。
- */
 open class ScoreBool : BaseBool, OnScoreboard {
-
-    final override var isDataOnly: Boolean = false
-
-    final override var name: String
-
-    /**
-     * 此bool变量依托的记分板
-     */
+    override var isDataOnly = false
+    override var name: String
     var boolObject: SbObject = SbObject.MCFPP_boolean
-
-    override var type: MCFPPType = MCFPPBaseType.Bool
-
-    /**
-     * 创建一个bool类型的变量。它的mc名和变量所在的域容器有关。
-     *
-     * @param identifier 标识符。默认为
-     */
-    constructor(curr: FieldContainer, identifier: String = TempPool.getVarIdentify()) : super(identifier){
-        this.name = curr.prefix + identifier
+    constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier) { name = identifier }
+    constructor(container: FieldContainer, identifier: String = TempPool.getVarIdentify()) : this(identifier) { name = container.prefix + identifier }
+    constructor(source: ScoreBool) : super(source) { name = source.name; boolObject = source.boolObject; isDataOnly = source.isDataOnly }
+    constructor(value: Boolean, identifier: String = TempPool.getVarIdentify()) : this(identifier) {
+        StorageAccess.initializeLiteral(this, CompilerValue.Bool(value))
     }
-
-
-    /**
-     * 创建一个bool值。它的标识符和mc名相同。
-     * @param identifier identifier
-     */
-    constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier){
-        this.name = identifier
+    constructor(container: FieldContainer, value: Boolean, identifier: String = TempPool.getVarIdentify()) : this(container, identifier) {
+        StorageAccess.initializeLiteral(this, CompilerValue.Bool(value))
     }
-
-    /**
-     * 复制一个bool
-     * @param b 被复制的int值
-     */
-    constructor(b: ScoreBool) : super(b){
-        this.name = b.name
-        this.isDataOnly = b.isDataOnly
-    }
-
-    @Override
-    override fun doAssignedBy(b: Var<*>) : ScoreBool {
-        when(b){
-            is ScoreBool -> return assignCommand(b)
-
-            is ExecuteBool -> {
-                Function.addCommand(
-                    Command.build("execute store result score $name $boolObject").build(b.toCommandPart())
-                )
-                return ScoreBool(this)
-            }
-
-            is BaseBool -> {
-                Function.addCommand(
-                    Command.build("execute store result score $name $boolObject if").build(b.toCommandPart())
-                )
-                return ScoreBool(this)
-            }
-
-            else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
-                return this
-            }
-        }
-    }
-
-    override fun isEqual(a: Var<*>): Var<*> {
-        //re = t == a
-        val re = ScoreBool()
-        when(a){
-            is ScoreBoolConcrete -> {
-                //execute store success score qwq qwq if score qwq qwq = owo owo
-                Function.addCommand(
-                    "execute store success score " + re.name + " " + re.boolObject
-                            + " if score " + name + " " + boolObject + " matches " + if (a.value) 1 else 0
-                )
-            }
-
-            is ScoreBool -> {
-                Function.addCommand(
-                    "execute store success score " + re.name + " " + re.boolObject
-                            + " if score " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
-                )
-            }
-
-            is BaseBool -> {
-                return isEqual(a.toScoreBool(false))
-            }
-
-            else -> errorOp()
-        }
-        return re
-    }
-
-    @InsertCommand
-    override fun isNotEqual(a: Var<*>): Var<*> {
-        //re = t != a
-        val re = ScoreBool()
-        when(a){
-            is ScoreBoolConcrete -> {
-                //execute store success score qwq qwq if score qwq qwq = owo owo
-                Function.addCommand(
-                    "execute store success score " + re.name + " " + re.boolObject
-                            + " unless score " + name + " " + boolObject + " matches " + if (a.value) 1 else 0
-                )
-            }
-
-            is ScoreBool -> {
-                Function.addCommand(
-                    "execute store success score " + re.name + " " + re.boolObject
-                            + " unless score " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
-                )
-            }
-
-            is BaseBool -> {
-                return isNotEqual(a.toScoreBool(false))
-            }
-
-            else -> errorOp()
-        }
-        return re
-    }
-
-    @InsertCommand
-    override fun negation(): Var<*> {
-        return ExecuteBool(this, true)
-    }
-
-    @InsertCommand
-    override fun or(a: Var<*>): Var<*> {
-        if(a is ScoreBoolConcrete){
-            return if(a.value){
-                ScoreBoolConcrete(this, true)
-            }else{
-                this
-            }
-        }
-        return ExecuteBool(this).or(a)
-    }
-
-    @InsertCommand
-    override fun and(a: Var<*>): Var<*> {
-        if(a is ScoreBoolConcrete ){
-            return if(!a.value){
-                ScoreBoolConcrete(this, false)
-            }else{
-                this
-            }
-        }
-        return ExecuteBool(this).and(a)
-    }
-
-    @InsertCommand
-    private fun assignCommand(a: ScoreBool) : ScoreBool {
-        return if(a is MCFPPValue<*>){
-            if(isDataOnly){
-                Function.addCommand(Commands.dataSetValue(nbtPath, ByteTag((a as ScoreBoolConcrete).value)))
-                this
-            }else{
-                ScoreBoolConcrete(this, (a as ScoreBoolConcrete).value)
-            }
-        }else {
-            //变量进栈
-            if(isDataOnly){
-                Function.addCommand(
-                    Command("execute store result").build(nbtPath.toCommandPart()).build("byte 1").build("run")
-                        .build("scoreboard players get ${a.name} ${a.boolObject}")
-                )
-            }else{
-                Function.addCommand(Commands.sbPlayerOperation(this, "=", a))
-            }
-            ScoreBool(this)
-        }
-    }
-
-    override fun clone(): ScoreBool {
-        return ScoreBool(this)
-    }
-
-    override fun setObj(sbObject: SbObject): ScoreBool {
-        boolObject = sbObject
-        return this
-    }
-
-    @InsertCommand
-    override fun getTempVar(): ScoreBool {
-        if (isTemp) return this
-        val re = ScoreBool()
-        re.assignedBy(this)
-        return re
-    }
-
-    override fun storeToStack() {
-        storageBinding?.let { it.data.materialize(); return }
-        if(hasStoredInStack) return
-        Function.addCommand(Command("execute store result")
-            .build(nbtPath.toCommandPart())
-            .build("byte 1 run scoreboard players get $name $boolObject"))
-        hasStoredInStack = true
-    }
-
-    override fun getFromStack() {
-        if (top.mcfpp.analysis.StorageAccess.restoreScore(this, name, boolObject.toString())) return
-        if(parent != null) return
-        Function.addCommand(Command("execute " +
-                "store result score $name $boolObject " +
-                "run data get").build(nbtPath.toCommandPart()))
-    }
-
+    constructor(source: ScoreBool, value: Boolean) : this(value, source.identifier)
+    val value: Boolean get() = ((StorageAccess.snapshot(this) as? CompilerValue.Typed)?.payload as? CompilerValue.Bool)
+        ?.value ?: error("Boolean has no complete immutable value")
+    override fun setObj(sbObject: SbObject): ScoreBool { boolObject = sbObject; return this }
+    override fun doAssignedBy(source: Var<*>): ScoreBool = StorageAccess.write(this, source) as ScoreBool
+    fun assignCommand(source: ScoreBool): ScoreBool = doAssignedBy(source)
+    override fun clone() = ScoreBool(this)
+    override fun getTempVar(): ScoreBool = StorageAccess.capture(this) as ScoreBool
+    override fun storeToStack() = StorageAccess.materialize(this)
+    override fun getFromStack() { StorageAccess.booleanRegister(this) }
     override fun toCommandPart(): Command {
-        return Command("score $name $boolObject matches 1")
+        val score = StorageAccess.booleanRegister(this)
+        return Command("score ${score.player} ${score.objective} matches 1")
     }
-
-    override fun toScoreBool(replace: Boolean): ScoreBool = this
-
-    override fun toNBTVar(): NBTBasedData {
-        val n = NBTBasedData()
-        n.identifier = identifier
-        n.isStatic = isStatic
-        n.accessModifier = accessModifier
-        n.isTemp = isTemp
-        n.stackIndex = stackIndex
-        n.isConst = isConst
-        n.nbtPath = nbtPath.clone()
-        return n
+    override fun toScoreBool(replace: Boolean): ScoreBool = StorageAccess.read(this) as ScoreBool
+    override fun toNBTVar(): top.mcfpp.core.lang.nbt.NBTBasedData =
+        StorageAccess.view(this, top.mcfpp.type.MCFPPNBTType.NBT, diagnose = false) as top.mcfpp.core.lang.nbt.NBTBasedData
+    fun asIntVar(): MCInt {
+        val closed = (StorageAccess.snapshot(this) as? CompilerValue.Typed)?.payload as? CompilerValue.Bool
+        if (closed != null && symbol?.forceRuntime != true) return MCInt(if (closed.value) 1 else 0)
+        val source = StorageAccess.booleanRegister(this)
+        val result = MCInt().apply { setObj(SbObject.MCFPP_TEMP) }
+        val score = StorageLayout.Scoreboard(result.name, result.sbObject.toString())
+        Function.addCommand("scoreboard players operation ${score.player} ${score.objective} = ${source.player} ${source.objective}")
+        return StorageAccess.publishScore(result, score)
     }
-
-    open fun asIntVar(): MCInt{
-        val n = MCInt()
-        n.name = name
-        n.identifier = identifier
-        n.isStatic = isStatic
-        n.accessModifier = accessModifier
-        n.isTemp = isTemp
-        n.stackIndex = stackIndex
-        n.isConst = isConst
-        n.nbtPath = nbtPath.clone()
-        n.setObj(boolObject)
-        return n
+    private fun produce(condition: Command): ScoreBool {
+        val result = ScoreBool().apply { boolObject = SbObject.MCFPP_TEMP }
+        val score = StorageLayout.Scoreboard(result.name, result.boolObject.toString())
+        Function.addCommand("scoreboard players set ${score.player} ${score.objective} 0")
+        Function.addCommand(Command("execute").build(condition).build("run scoreboard players set ${score.player} ${score.objective} 1"))
+        return StorageAccess.publishBoolean(result, score)
     }
-}
-
-class ScoreBoolConcrete : ScoreBool, MCFPPValue<Boolean> {
-
-    override var value: Boolean
-
-    /**
-     * 创建一个固定的bool
-     *
-     * @param identifier 标识符
-     * @param curr 域容器
-     * @param value 值
-     */
-    constructor(curr: FieldContainer, value: Boolean, identifier: String = TempPool.getVarIdentify()) : super(curr, identifier) {
-        this.value = value
-    }
-
-    /**
-     * 创建一个固定的bool。它的标识符和mc名一致/
-     * @param identifier 标识符。如不指定，则为随机uuid
-     * @param value 值
-     */
-    constructor(value: Boolean, identifier: String = TempPool.getVarIdentify()) : super(identifier) {
-        this.value = value
-    }
-
-    constructor(bool: ScoreBool, value: Boolean) : super(bool){
-        this.value = value
-    }
-
-    constructor(v: ScoreBoolConcrete) : super(v){
-        this.value = v.value
-    }
-
-    override fun clone(): ScoreBoolConcrete {
-        return ScoreBoolConcrete(this)
-    }
-
-    @InsertCommand
-    override fun isEqual(a: Var<*>): Var<*> {
-        when(a){
-            is ScoreBoolConcrete -> {
-                return ScoreBoolConcrete(value == a.value)
-            }
-
-            is BaseBool -> {
-                return a.isEqual(this)
-            }
-
-            else -> errorOp()
-        }
-    }
-
-    @InsertCommand
-    override fun isNotEqual(a: Var<*>): Var<*> {
-        when(a){
-            is ScoreBoolConcrete -> {
-                return ScoreBoolConcrete(value != a.value)
-            }
-
-            is BaseBool -> {
-                return a.isNotEqual(this)
-            }
-
-            else -> {
-                LogProcessor.error("Unsupported operation between ${type.typeName} and ${a.type.typeName}")
-                return UnknownVar("${type.typeName}_isNotEqual_${a.type.typeName}" + UUID.randomUUID())
-            }
-        }
-    }
-
-    //取反
-    @InsertCommand
     override fun negation(): Var<*> {
-        return ScoreBoolConcrete(!value)
+        val closed = (StorageAccess.snapshot(this) as? CompilerValue.Typed)?.payload as? CompilerValue.Bool
+        return if (closed != null && symbol?.forceRuntime != true) ScoreBool(!closed.value) else produce(Command("unless").build(toCommandPart()))
     }
-
-    @InsertCommand
-    override fun or(a: Var<*>): Var<*> {
-        when(a){
-            is ScoreBoolConcrete -> {
-                return ScoreBoolConcrete(value || a.value)
-            }
-
-            is BaseBool -> {
-                if(value) return ScoreBoolConcrete(this,true)
-                return a.or(this)
-            }
-
-            else -> {
-                LogProcessor.error("Unsupported operation between ${type.typeName} and ${a.type.typeName}")
-                return UnknownVar("${type.typeName}_or_${a.type.typeName}" + UUID.randomUUID())
-            }
-        }
+    override fun isEqual(a: Var<*>): Var<*> {
+        val other = StorageAccess.read(a)
+        if (other.isError) return other
+        if (other !is ScoreBool) return super.isEqual(a)
+        val leftScore = StorageAccess.booleanRegister(this)
+        val rightScore = StorageAccess.booleanRegister(other)
+        return produce(Command("if score ${leftScore.player} ${leftScore.objective} = ${rightScore.player} ${rightScore.objective}"))
     }
-
-
-    @InsertCommand
+    override fun isNotEqual(a: Var<*>): Var<*> {
+        val equal = isEqual(a)
+        return if (equal.isError) equal else (equal as ScoreBool).negation()
+    }
     override fun and(a: Var<*>): Var<*> {
-        when(a){
-            is ScoreBoolConcrete -> {
-                return ScoreBoolConcrete(value && a.value)
-            }
-
-            is BaseBool -> {
-                if(!value) return ScoreBoolConcrete(this,false)
-                return a.and(this)
-            }
-
-            else -> errorOp()
-        }
+        val other = (StorageAccess.read(a) as? BaseBool)?.toScoreBool(false) ?: return UnknownVar(identifier)
+        return produce(Command("if").build(toCommandPart()).build("if").build(other.toCommandPart()))
     }
-
-    @InsertCommand
-    override fun getTempVar(): ScoreBoolConcrete {
-        if (isTemp) return this
-        return ScoreBoolConcrete(value)
-    }
-
-    override fun toDynamic(replace: Boolean): Var<*> {
-        if (storageBinding != null) {
-            val re = top.mcfpp.analysis.StorageAccess.read(ScoreBool(this).apply { isDynamic = true })
-            if (replace) replacedBy(re)
-            return re
-        }
-        if(isDataOnly) return this
-        Function.addCommand("scoreboard players set $name $boolObject ${if(value) 1 else 0}")
-        val re = ScoreBool(this)
-        if(replace){
-            replacedBy(re)
-        }
-        return re
-    }
-
-    override fun asIntVar(): MCInt {
-        val n = MCIntConcrete(super.asIntVar() , if(value) 1 else 0)
-        return n
+    override fun or(a: Var<*>): Var<*> {
+        val other = (StorageAccess.read(a) as? BaseBool)?.toScoreBool(false) ?: return UnknownVar(identifier)
+        val leftFalse = negation() as ScoreBool
+        val rightFalse = other.negation() as ScoreBool
+        return (leftFalse.and(rightFalse) as ScoreBool).negation()
     }
 }

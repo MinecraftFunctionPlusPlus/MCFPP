@@ -4,7 +4,6 @@ import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.analysis.*
 import top.mcfpp.core.lang.MCInt
-import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.core.lang.nbt.NBTList
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
@@ -161,7 +160,7 @@ class CollectionIRTest {
         assertEquals(11, execute(main).read(main.scope.getVar("result") as MCInt))
         for (name in listOf("values", "copied")) {
             val binding = main.scope.getVar(name)!!.storageBinding!!
-            assertEquals(2, binding.data.listSizes[binding.place])
+            assertEquals(2, binding.data.facts.length(binding.place))
         }
         MCFPPStringTest.readFromString("""
             func main(){ var values = [2,9]; values[0] = 7; var result = values[2]; }
@@ -181,10 +180,10 @@ class CollectionIRTest {
         val source = main.scope.getVar("values")!!.storageBinding!!
         val view = main.scope.getVar("view") as NBTList
         assertSame(source.data, view.storageBinding!!.data)
-        assertEquals(2, source.data.listSizes[source.place])
+        assertEquals(2, source.data.facts.length(source.place))
         assertEquals(11, execute(main).read(main.scope.getVar("result") as MCInt))
         Function.currFunction = main
-        view.getByIndex(MCIntConcrete(0)).assignedBy(MCIntConcrete(6))
+        view.getByIndex(MCInt(0)).assignedBy(MCInt(6))
         val changed = source.data.facts.read(source.place.index(0))!!
         assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), changed.type)
         assertEquals(6, (StorageAccess.snapshotTag(assertIs<ValueKnowledge.Constant>(changed.value).value) as top.mcfpp.nbt.tags.primitive.IntTag).value)
@@ -243,7 +242,7 @@ class CollectionIRTest {
         """)
         assertEquals(9, execute(main).read(main.scope.getVar("result") as MCInt))
         val binding = main.scope.getVar("nested")!!.storageBinding!!
-        assertEquals(1, binding.data.listSizes[binding.place.index(0)])
+        assertEquals(1, binding.data.facts.length(binding.place.index(0)))
         assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), binding.data.facts.read(binding.place.index(0).index(0))!!.type)
     }
 
@@ -286,14 +285,14 @@ class CollectionIRTest {
         """)
         assertEquals(5, execute(main).read(main.scope.getVar("result") as MCInt))
         val binding = main.scope.getVar("values")!!.storageBinding!!
-        assertNull(binding.data.listSizes[binding.place])
+        assertNull(binding.data.facts.length(binding.place))
         assertNotEquals(ValueState.INITIALIZED, binding.data.facts.read(binding.place.index(1))?.state)
     }
 
     @Test fun unknownCallsWithdrawCollectionElementTypesAndLengths() = modes {
         MCFPPStringTest.readFromString("""
             func unknown(){
-                /say test
+                /data remove storage fixture:external value
             }
             func main(){ var values = [2] as list<any>; unknown(); var result = values[0] + 1; }
         """.trimIndent(), version = "26.3")
@@ -301,7 +300,7 @@ class CollectionIRTest {
         assertTrue(Project.errorCount > 0)
         val binding = function("main").scope.getVar("values")!!.storageBinding!!
         assertEquals(TypeKnowledge.Unknown, binding.data.facts.read(binding.place.index(0))!!.type)
-        assertNull(binding.data.listSizes[binding.place])
+        assertNull(binding.data.facts.length(binding.place))
     }
 
     @Test fun contextualLiteralsDoNotMakeOrdinaryMutableCollectionAssignmentsCovariant() {

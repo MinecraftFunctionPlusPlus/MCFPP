@@ -261,7 +261,7 @@ class TemplateInitializationTest {
         assertNotSame(original, box)
         val setter = box.scope.functions.getValue("setValue").single()
         assertSame(box, setter.owner)
-        assertSame(box, child.scope.getFunction("setValue", emptyList(), listOf(top.mcfpp.core.lang.MCIntConcrete(7))).owner)
+        assertSame(box, child.scope.getFunction("setValue", emptyList(), listOf(top.mcfpp.core.lang.MCInt(7))).owner)
         val generic = box.scope.functions.getValue("add").single()
         assertSame(box, generic.owner)
         val machine = execute(main, output)

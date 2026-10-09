@@ -15,7 +15,7 @@ class NBTTypeTest {
                     var l = [] as list<int>;
                     l.add(1);
                     l.add(2);
-                    print(l::jvm);
+                    print(l);
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test, arrayOf("-debug"))
@@ -32,12 +32,12 @@ class NBTTypeTest {
                 l.addAll(l1);
                 l.insert(0,114514);
                 l.removeAt(1);
-                print(l::jvm);
+                print(l);
                 print(l.indexOf(2));
                 print(l.contains(8));
                 print(l.contains(2));
                 l.clear();
-                print(l::jvm);
+                print(l);
             }
         """.trimIndent()
         MCFPPStringTest.readFromString(test, arrayOf("-debug","-printAll"))
@@ -54,12 +54,12 @@ class NBTTypeTest {
                 l.addAll(l1);
                 l.insert(0,114514);
                 l.removeAt(1);
-                print(l::jvm);
+                print(l);
                 print(l.indexOf(2));
                 print(l.contains(8));
                 print(l.contains(2));
                 l.clear();
-                print(l::jvm);
+                print(l);
             }
         """.trimIndent()
         MCFPPStringTest.readFromString(test, arrayOf("-debug","-printAll"))

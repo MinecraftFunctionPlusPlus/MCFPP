@@ -10,7 +10,6 @@ import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.antlr.mcfppParser.CurlBlockContext
 import top.mcfpp.command.*
-import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.MCFPPTypeVar
 import top.mcfpp.core.lang.MCFloat
 import top.mcfpp.core.lang.MCInt
@@ -245,6 +244,14 @@ open class Function : Member, FieldContainer, WithDocument {
     @Transient
     val frameExits: MutableList<FrameExit> = ArrayList()
 
+    @Transient
+    private val returnExits = arrayListOf<Map<top.mcfpp.analysis.StoredData, top.mcfpp.analysis.FlowFacts>>()
+
+    fun recordFallthroughExit() {
+        if (returnType != MCFPPPrivateType.Void) returnExits.add(top.mcfpp.analysis.StorageAccess.flowSnapshot(
+            top.mcfpp.analysis.StorageAccess.visibleValues(currFunction.scope) + returnVar))
+    }
+
     data class FrameExit(val function: Function, val commandIndex: Int)
 
     fun registerFrameExit() {
@@ -290,11 +297,18 @@ open class Function : Member, FieldContainer, WithDocument {
 
     val identifierWithParamType : String
         get() {
-            val re = StringBuilder(identifier)
+            val re = StringBuilder()
             for (p in normalParams) {
                 re.append("_").append(p.typeName)
             }
-            return re.toString()
+            val full = identifier + re
+            if ((NamespaceID(namespace, full).identifier + ".mcfunction").length <= 255) return full
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+                .digest(re.toString().toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it.toInt() and 255) }
+            val compact = identifier + "_signature_" + digest
+            if ((NamespaceID(namespace, compact).identifier + ".mcfunction").length > 255)
+                LogProcessor.error("Function declaration name '$identifier' exceeds the generated filename limit")
+            return compact
         }
 
     /**
@@ -303,21 +317,15 @@ open class Function : Member, FieldContainer, WithDocument {
      */
     open val namespaceID: NamespaceID
         get() {
-            val re = StringBuilder()
-            for (p in normalParams) {
-                re.append("_").append(p.typeName)
-            }
-            val n = if(ownerType == OwnerType.NONE){
-                NamespaceID(namespace, identifier + re)
+            val emittedIdentifier = identifierWithParamType
+            return if(ownerType == OwnerType.NONE){
+                NamespaceID(namespace, emittedIdentifier)
             }else if(owner is ObjectCompoundData){
-                NamespaceID(namespace, owner!!.identifier)
-                    .appendIdentifier("static")
-                    .appendIdentifier(identifier + re)
+                NamespaceID(namespace, owner!!.identifier).appendIdentifier("static")
+                    .appendIdentifier(emittedIdentifier)
             }else{
-                NamespaceID(namespace, owner!!.identifier)
-                    .appendIdentifier(identifier + re)
+                NamespaceID(namespace, owner!!.identifier).appendIdentifier(emittedIdentifier)
             }
-            return n
         }
 
     /**
@@ -490,7 +498,14 @@ open class Function : Member, FieldContainer, WithDocument {
 
     fun bindIncomingParameters() {
         for (param in normalParams) if (!param.isReadOnly && param.type.hasRuntimeRepresentation) {
-            scope.getVar(param.identifier)?.let(top.mcfpp.analysis.StorageAccess::bindIncomingParameter)
+            scope.getVar(param.identifier)?.let { value ->
+                val binding = value.storageBinding
+                val capturedPayload = actualCallBody && binding != null &&
+                    binding.data.facts.read(binding.place)?.state == top.mcfpp.analysis.ValueState.INITIALIZED &&
+                    !top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(value) &&
+                    top.mcfpp.analysis.StorageAccess.hasActualPayload(value)
+                if (!capturedPayload) top.mcfpp.analysis.StorageAccess.bindIncomingParameter(value)
+            }
         }
     }
 
@@ -514,7 +529,8 @@ open class Function : Member, FieldContainer, WithDocument {
         }
         val receiver = target.boundReceiver ?: incomingReceiver(target, template)
         target.scope.putVar("this", receiver, true)
-        if (!top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(receiver)) target.constructedReceiver = receiver
+        if (this is DataTemplateConstructor || !top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(receiver))
+            target.constructedReceiver = receiver
         target.accessorField?.let { name ->
             receiver.getMemberVar(name, Member.AccessModifier.PRIVATE).first?.let { selected ->
                 val field = if (selected is top.mcfpp.core.lang.PropertyVar) selected.field else selected
@@ -527,18 +543,32 @@ open class Function : Member, FieldContainer, WithDocument {
         (FunctionParam(template.getType(), "this", target).buildVar() as DataTemplateObject).apply {
             nbtPath = NBTPath.stack.intIndex(0).memberIndex("this")
             storageBinding = null
-            top.mcfpp.analysis.StorageAccess.bindIncomingParameter(this)
+            if (this@Function is DataTemplateConstructor)
+                top.mcfpp.analysis.StorageAccess.initializeTemplateReceiver(this)
+            else top.mcfpp.analysis.StorageAccess.bindIncomingParameter(this)
         }
 
     internal open fun compileBody(target: Function = this, context: CurlBlockContext? = ast) {
+        if (target.bodyCompiled || target.bodyBeingCompiled) return
         if (target === this && this is Generic<*>) return
+        if (target.needsActualBinding() || !target.actualCallBody && SpecializationPolicy.needsStaticErasedBindings(target)) return
         val compile = {
             target.runInFunction {
-                if (target.returnType != MCFPPPrivateType.Void && target.hasRuntimePayload(target.returnVar)) {
+                if (target.returnType != MCFPPPrivateType.Void) {
                     target.returnVar.nbtPath = NBTPath.stack.intIndex(0).memberIndex("return")
-                    top.mcfpp.analysis.StorageAccess.bindIncomingParameter(target.returnVar)
+                    top.mcfpp.analysis.StorageAccess.declareReturnSlot(target.returnVar)
                 }
-                MCFPPImVisitor().compileFunctionBody(context) { prepareBody(target) }
+                top.mcfpp.analysis.EffectAnalysis.withActualEffects(target, this@Function is DataTemplateConstructor) {
+                    MCFPPImVisitor().compileFunctionBody(context) { prepareBody(target) }
+                    if (target.returnType != MCFPPPrivateType.Void && target.typedIR == null) {
+                        if (!target.hasReturnStatement && !target.isEnded) target.returnExits.add(
+                            top.mcfpp.analysis.StorageAccess.flowSnapshot(
+                                top.mcfpp.analysis.StorageAccess.visibleValues(target.scope) + target.returnVar))
+                        if (!top.mcfpp.analysis.StorageAccess.finishReturns(target.returnVar, target.returnExits))
+                            LogProcessor.error("Function '$identifier' does not produce a value on every reachable exit")
+                        else target.hasReturnStatement = true
+                    }
+                }
             }
         }
         val file = restoreDeclarationEnvironment()
@@ -612,18 +642,18 @@ open class Function : Member, FieldContainer, WithDocument {
             if(param.value() != null){
                 hasDefaultValue = true
                 param1.defaultContext = param.value()
-                if (isReadOnly) try {
-                    val bound = top.mcfpp.analysis.DeclarationBinding(this, emptyMap()).value(param.value())
+                try {
+                    val bound = top.mcfpp.analysis.DeclarationBinding(this, emptyMap(), literalDefaultsOnly = !isReadOnly).value(param.value())
                     val error = if (isReadOnly) null else top.mcfpp.analysis.TypeUsage.ordinaryDiagnostic(bound.type, bound.constant)
                     if (error != null) LogProcessor.error(error)
                     else if (isReadOnly && bound.constant == null) LogProcessor.error("Readonly default requires a complete immutable value")
-                    else if (isReadOnly) {
-                        val types = mutableMapOf(bound.type.typeId to bound.type)
+                    else if (bound.constant != null) {
+                        val types = bound.descriptors.toMutableMap().apply { put(bound.type.typeId, bound.type) }
                         MCFPPType.registerSnapshotTypes(bound.constant!!, types)
                         param1.defaultVar = top.mcfpp.analysis.StorageAccess.restore(bound.type, bound.constant!!, param1.identifier, types)
                     }
                 } catch (failure: top.mcfpp.analysis.DeclarationBinding.Failure) {
-                    LogProcessor.error(failure.message ?: "Cannot bind default declaration")
+                    if (isReadOnly) LogProcessor.error(failure.message ?: "Cannot bind default declaration")
                 }
             }
         }
@@ -640,21 +670,13 @@ open class Function : Member, FieldContainer, WithDocument {
             return top.mcfpp.core.lang.UnknownVar("return").apply { type = returnType }
         val result = if(returnType is MCFPPPrivateType){
             returnType.buildReturnVar()
-        }else if(returnType is MCFPPConcreteType) {
-            returnType.build("return", this)
         }else{
             returnType.buildUnConcrete("return", this)
         }
-        if (FloatProviders.enabled && result is MCFloat) {
-            result.nbtPath = NBTPath.temp.memberIndex(result.name)
-        }
-        if (result is top.mcfpp.core.lang.MCAny || result is top.mcfpp.core.lang.RangeVar || result is top.mcfpp.core.lang.nbt.NBTBasedData || result is DataTemplateObject) {
-            result.nbtPath = NBTPath.temp.memberIndex(prefix + "return")
-        }
         if (returnType !is MCFPPPrivateType) {
+            result.nbtPath = NBTPath.stack.intIndex(0).memberIndex("return")
             // Normal function calls are runtime operations; observing one constant
             // return statement cannot prove the value of all reachable returns.
-            result.isDynamic = returnType.hasRuntimeRepresentation
             result.bindDeclaration("return")
         }
         return result
@@ -691,8 +713,16 @@ open class Function : Member, FieldContainer, WithDocument {
         // specializing ordinary constant arguments. Recursive calls reuse that body.
         if (ast != null && !bodyCompiled && !bodyBeingCompiled)
             compileBody(this)
+        for ((index, parameter) in normalParams.withIndex()) {
+            if (parameter.isStatic && staticTransfer(index) == StaticTransfer.ROOT) {
+                val target = completed[parameter.identifier] ?: continue
+                if (!top.mcfpp.analysis.StorageAccess.canWrite(target))
+                    return UnknownVar("return").apply { type = returnType; isError = true }
+            }
+        }
         val returnedKnowledge = top.mcfpp.analysis.PrimitiveCompiler.returnKnowledge(this, completed)
-        val observed = if (runtimeEffect != top.mcfpp.analysis.Effect.Pure && runtimeEffect != top.mcfpp.analysis.Effect.ReadsRuntime)
+        val callEffect = top.mcfpp.analysis.EffectAnalysis.recordCall(this, completed.values.toList(), caller as? DataTemplateObject)
+        val observed = if (callEffect != top.mcfpp.analysis.Effect.Pure && callEffect != top.mcfpp.analysis.Effect.ReadsRuntime)
             top.mcfpp.analysis.StorageAccess.visibleValues(currFunction.scope) else emptyList()
         top.mcfpp.analysis.StorageAccess.flush(observed)
         val result = when(caller){
@@ -701,8 +731,8 @@ open class Function : Member, FieldContainer, WithDocument {
             is Var<*> -> invoke(completed.values.toList(), caller)
             else -> returnVar
         }
-        top.mcfpp.analysis.StorageAccess.barrier(observed)
-        if (result is top.mcfpp.core.lang.MCAny && result.compilerPayload == null) {
+        top.mcfpp.analysis.StorageAccess.applyEffect(observed, callEffect)
+        if (result is top.mcfpp.core.lang.MCAny && top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(result)) {
             val value = result
             val binding = top.mcfpp.analysis.StorageAccess.ensure(value)
             val place = binding.place
@@ -805,6 +835,28 @@ open class Function : Member, FieldContainer, WithDocument {
         }
     }
 
+    internal fun <T> withFieldInitializerOwner(template: DataTemplate, block: () -> T): T {
+        val previousScope = scope
+        val previousOwner = declarationAccessOwner
+        val previousActive = declarationAccessActive
+        scope = top.mcfpp.model.scope.FunctionScope(template.scope).apply {
+            for (parameter in normalParams) previousScope.getVar(parameter.identifier)?.let {
+                putVar(parameter.identifier, it, true)
+            }
+            previousScope.getVar("this")?.let { putVar("this", it, true) }
+        }
+        declarationAccessOwner = template
+        declarationAccessActive = true
+        try {
+            val file = template.restoreDeclarationEnvironment()
+            return if (file == null) block() else file.withDeclarationContext(block)
+        } finally {
+            scope = previousScope
+            declarationAccessOwner = previousOwner
+            declarationAccessActive = previousActive
+        }
+    }
+
     internal fun prepareInitializerBody(): Function? =
         if (needsActualBinding()) bindActualCall(completeDefaultValue(linkedMapOf()), null) else apply { compileBody() }
 
@@ -824,21 +876,12 @@ open class Function : Member, FieldContainer, WithDocument {
                 body.scope.putVar(value.identifier, value.clone(), true)
         }
         fun bind(type: MCFPPType, name: String, value: Var<*>): Var<*>? {
-            val snapshot = top.mcfpp.analysis.ValueSnapshot.of(value)
-            if (snapshot == null) {
-                LogProcessor.error("Compiler-only argument '$name' requires a complete value")
+            if (!top.mcfpp.analysis.StorageAccess.hasActualPayload(value)) {
+                LogProcessor.error("Compiler-only argument '$name' requires a complete actual payload")
                 return null
             }
-            val types = value.storageBinding?.data?.types.orEmpty().toMutableMap()
-            types[value.type.typeId] = value.type
-            MCFPPType.registerSnapshotTypes(snapshot, types)
-            return top.mcfpp.analysis.StorageAccess.restore(type, snapshot, name, types)?.apply {
-                nbtPath = NBTPath.stack.intIndex(0).memberIndex(name)
-                hasAssigned = true
-                isConst = false
-                storageBinding = null
-                symbol = null
-                top.mcfpp.analysis.StorageAccess.ensure(this)
+            return body.runInFunction {
+                top.mcfpp.analysis.StorageAccess.capturePayload(type, value, name, sourceFrameOffset = 1, targetFrame = 0)
             } ?: run { LogProcessor.error("Cannot bind compiler-only argument '$name'"); null }
         }
         body.normalParams = ArrayList(normalParams.map { original ->
@@ -850,8 +893,7 @@ open class Function : Member, FieldContainer, WithDocument {
         })
         for (parameter in body.normalParams) {
             val incoming = arguments.getValue(parameter.identifier)
-            val complete = top.mcfpp.analysis.ValueSnapshot.of(incoming)
-            val value = if (parameter.type.hasRuntimeRepresentation && top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(incoming) && complete == null) parameter.buildVar()
+            val value = if (parameter.type.hasRuntimeRepresentation && top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(incoming)) parameter.buildVar()
                 else bind(parameter.type, parameter.identifier, incoming) ?: return null
             body.scope.putVar(parameter.identifier, value, true)
         }
@@ -892,14 +934,12 @@ open class Function : Member, FieldContainer, WithDocument {
         val returned = captureRuntimeReturn()
         //static关键字，将值传回
         staticArgRef(normalArgs)
-        val incoming = if (compilerOnly) constructedReceiver
-            else incomingReceiver(this, data.templateType)
-        if (incoming == null || compilerOnly && top.mcfpp.analysis.StorageAccess.snapshot(incoming) == null) {
+        val incoming = constructedReceiver ?: scope.getVar("this") as? DataTemplateObject
+        if (incoming == null || compilerOnly && !top.mcfpp.analysis.StorageAccess.hasActualPayload(incoming)) {
             LogProcessor.error("Compiler-only receiver requires a complete constructed value")
             data.isError = true
         } else {
         top.mcfpp.analysis.StorageAccess.writeReceiver(top.mcfpp.analysis.StorageAccess.callerValue(data), incoming)
-        if (compilerOnly) data.hasAssigned = true
         }
         //调用完毕，将子函数的栈销毁
         addCommand(Commands.stackOut())
@@ -910,25 +950,35 @@ open class Function : Member, FieldContainer, WithDocument {
 
     private fun captureRuntimeReturn(): Var<*> {
         if (returnType == top.mcfpp.type.MCFPPPrivateType.Void) return returnVar.clone()
-        if (!hasRuntimePayload(returnVar)) return top.mcfpp.analysis.StorageAccess.capture(returnVar)
+        val producer = top.mcfpp.analysis.StorageAccess.ensure(returnVar)
+        val initialized = producer.data.facts.read(producer.place)?.state == top.mcfpp.analysis.ValueState.INITIALIZED
+        // A recursive runtime call reads its return only after that invocation completes.
+        // Its body-wide exit proof is established when the enclosing compilation finishes.
+        val pendingRuntimeReturn = !initialized && bodyBeingCompiled && returnType.hasRuntimeRepresentation &&
+            top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(returnVar)
+        if (!initialized && !pendingRuntimeReturn) {
+            LogProcessor.error("Function '$namespaceID' has no initialized return producer")
+            return UnknownVar("return").apply { type = returnType; isError = true }
+        }
+        if (!pendingRuntimeReturn && !hasRuntimePayload(returnVar)) return top.mcfpp.analysis.StorageAccess.capturePayload(
+            returnType, returnVar, TempPool.getVarIdentify(), sourceFrameOffset = 0, targetFrame = 1)
+            ?.let { top.mcfpp.analysis.StorageAccess.rebasePayload(it, -1) }
+            ?: UnknownVar("return").apply { type = returnType; isError = true }
         val result = returnType.buildUnConcrete(TempPool.getVarIdentify(), currFunction).apply { isTemp = true }
         result.nbtPath = NBTPath.stack.intIndex(0).memberIndex(result.identifier)
-        val binding = top.mcfpp.analysis.StorageAccess.bindIncomingParameter(result)
-        returnVar.storageBinding?.let {
+        result.bindDeclaration()
+        val binding = top.mcfpp.analysis.StorageAccess.ensure(result)
+        addCommand(Commands.dataSetFrom(top.mcfpp.analysis.StorageAccess.inFrame(binding, 1).path,
+            NBTPath.stack.intIndex(0).memberIndex("return")))
+        top.mcfpp.analysis.StorageAccess.publishNbt(result)
+        returnVar.storageBinding?.takeIf { initialized }?.let {
             binding.data.types.putAll(it.data.types)
             binding.data.facts.copyFrom(it.data.facts.withoutValues(initializedOnly = true), it.place, binding.place)
         }
-        addCommand(Commands.dataSetFrom(top.mcfpp.analysis.StorageAccess.inFrame(binding, 1).path,
-            NBTPath.stack.intIndex(0).memberIndex("return")))
         return result
     }
 
-    private fun captureArguments(arguments: List<Var<*>>) = arguments.map {
-        if (!FloatProviders.enabled && it is MCFloat) top.mcfpp.analysis.StorageAccess.capture(it)
-        else if (it is top.mcfpp.core.lang.MCAny && it.compilerPayload == null ||
-            it is top.mcfpp.core.lang.nbt.NBTBasedData && top.mcfpp.analysis.ValueSnapshot.of(it) == null ||
-            it is DataTemplateObject && it.storageBinding != null || it is top.mcfpp.core.lang.RangeVar) it.getTempVar() else it
-    }
+    private fun captureArguments(arguments: List<Var<*>>) = arguments.map(top.mcfpp.analysis.StorageAccess::capture)
 
     /**
      * 补全缺省参数
@@ -950,7 +1000,14 @@ open class Function : Member, FieldContainer, WithDocument {
         for (p in normalParams){
             if (p.identifier !in completedArgs) {
                 val default = p.defaultContext
-                completedArgs[p.identifier] = if (default == null) p.defaultVar!! else {
+                val expected = boundTypes?.get(normalParams.indexOf(p)) ?: p.type
+                completedArgs[p.identifier] = if (default == null) {
+                    val value = p.defaultVar
+                    if (value == null) {
+                        LogProcessor.error("Default value for '${p.identifier}' has no complete declaration payload")
+                        UnknownVar(p.identifier).apply { type = expected; isError = true }
+                    } else if (expected is UnresolvedType) value else value.implicitCast(expected)
+                } else {
                     val caller = currFunction
                     val previous = caller.scope
                     val previousAccess = caller.declarationAccessOwner
@@ -959,7 +1016,7 @@ open class Function : Member, FieldContainer, WithDocument {
                         caller.scope = top.mcfpp.model.scope.FunctionScope(scope).apply {
                             readonlyScopeBindings.forEach { (name,value) ->
                                 putVar(name,value,true)
-                                if(value is MCFPPTypeVar) putType(name,value.value,true)
+                                top.mcfpp.analysis.StorageAccess.resolveTypeValue(value)?.let { putType(name,it,true) }
                             }
                             for ((name,value) in completedArgs) {
                                 val index=normalParams.indexOfFirst { it.identifier==name }
@@ -972,7 +1029,6 @@ open class Function : Member, FieldContainer, WithDocument {
                         caller.declarationAccessActive = true
                         try {
                             val value = MCFPPExprVisitor().visit(default)
-                            val expected = boundTypes?.get(normalParams.indexOf(p)) ?: p.type
                             value.implicitCast(expected)
                         }
                         finally { caller.scope = previous;caller.declarationAccessOwner = previousAccess;caller.declarationAccessActive = previousActive }
@@ -987,10 +1043,10 @@ open class Function : Member, FieldContainer, WithDocument {
     internal fun readonlyDefault(parameter: FunctionParam, bindings: Map<String, Var<*>>): Var<*>? {
         val context=parameter.defaultContext ?: return parameter.defaultVar?.clone()
         val values=bindings.mapValues { (_,value) ->
-            top.mcfpp.analysis.DeclarationBinding.Bound(value.type,top.mcfpp.analysis.ValueSnapshot.of(value))
+            top.mcfpp.analysis.DeclarationBinding.Bound(value.type,top.mcfpp.analysis.StorageAccess.snapshot(value))
         }
         return try {
-            val typeBindings=bindings.mapNotNull { (name,value) -> (value as? MCFPPTypeVar)?.let { name to it.value } }.toMap()
+            val typeBindings=bindings.mapNotNull { (name,value) -> top.mcfpp.analysis.StorageAccess.resolveTypeValue(value)?.let { name to it } }.toMap()
             val bound=top.mcfpp.analysis.DeclarationBinding(this,emptyMap(),values,typeBindings).value(context)
             val snapshot=bound.constant ?: run { LogProcessor.error("Readonly default requires a complete immutable value");return null }
             val types=mutableMapOf(bound.type.typeId to bound.type)
@@ -1034,17 +1090,12 @@ open class Function : Member, FieldContainer, WithDocument {
                     .build(destination.toCommandPart()).build("1"))
                 continue
             }
-            if (p.storageBinding != null && this.normalParams[i].type.hasRuntimeRepresentation) {
-                top.mcfpp.analysis.StorageAccess.encodeTo(p.storageBinding!!.path, incoming)
+            if (this.normalParams[i].type.hasRuntimeRepresentation) {
+                val destination = NBTPath.stack.intIndex(0).memberIndex(this.normalParams[i].identifier)
+                top.mcfpp.analysis.StorageAccess.encodeTo(destination, incoming)
                 continue
             }
-            p.isConst = false
-            // The body was checked with a runtime parameter. Copying a constant argument
-            // must therefore write that parameter's storage, without changing its facts.
-            p.isDynamic = this.normalParams[i].type.hasRuntimeRepresentation
-            val pp = p.assignedBy(if (!FloatProviders.enabled && incoming is MCFloat) incoming else incoming.getTempVar())
-            if(!this.normalParams[i].isStatic) pp.isConst = true
-            scope.putVar(p.identifier, pp, true)
+            LogProcessor.error("Compiler-only argument '${this.normalParams[i].identifier}' requires an actual call binding")
         }
     }
 
@@ -1053,31 +1104,47 @@ open class Function : Member, FieldContainer, WithDocument {
      *
      * @param args
      */
-    @InsertCommand
+    private enum class StaticTransfer { NONE, CONTENTS, ROOT }
+
+    private fun staticTransfer(index: Int): StaticTransfer {
+        val effect = runtimeEffect
+        if (effect == top.mcfpp.analysis.Effect.Pure || effect == top.mcfpp.analysis.Effect.ReadsRuntime)
+            return StaticTransfer.NONE
+        if (effect !is top.mcfpp.analysis.Effect.Writes) return StaticTransfer.ROOT
+        val parameter = scope.getVar(normalParams[index].identifier) ?: return StaticTransfer.ROOT
+        val place = top.mcfpp.analysis.StorageAccess.ensure(parameter).place
+        val writes = effect.places.filter {
+            place.overlaps(it)
+        }
+        if (writes.isEmpty()) return StaticTransfer.NONE
+        return if (writes.any { it !in effect.contents && it.path.size <= place.path.size })
+            StaticTransfer.ROOT else StaticTransfer.CONTENTS
+    }
+
     open fun staticArgRef(args: List<Var<*>>){
         var hasAddComment = false
         for (i in 0 until normalParams.size) {
             if (normalParams[i].isStatic) {
+                val transfer = staticTransfer(i)
+                if (transfer == StaticTransfer.NONE) continue
                 if(!hasAddComment){
                     addComment("[Function ${this.namespaceID}] Static arguments")
                     hasAddComment = true
                 }
                 //如果是static参数
                 val target = args[i]
-                val destination = if (target.storageBinding != null || target is top.mcfpp.core.lang.nbt.NBTBasedData ||
-                    target is DataTemplateObject || FloatProviders.enabled && target is MCFloat && target !is MCFPPValue<*>) {
-                    top.mcfpp.analysis.StorageAccess.callerValue(target)
-                } else target
-                destination.assignedBy(scope.getVar(normalParams[i].identifier)!!)
+                val destination = top.mcfpp.analysis.StorageAccess.callerValue(target)
+                val produced = scope.getVar(normalParams[i].identifier) ?: continue
+                if (transfer == StaticTransfer.CONTENTS)
+                    top.mcfpp.analysis.StorageAccess.writeReceiver(destination, produced)
+                else destination.assignedBy(produced)
             }
         }
     }
 
     fun fieldStore(){
         addComment("[Function ${this.namespaceID}] Store vars into the Stack")
-        currField.forEachVar { v ->
-            if (!v.isStatic && v.hasAssigned && hasRuntimePayload(v)) v.storeToStack()
-        }
+        top.mcfpp.analysis.StorageAccess.flush(top.mcfpp.analysis.StorageAccess.visibleValues(currField))
     }
 
 
@@ -1088,11 +1155,7 @@ open class Function : Member, FieldContainer, WithDocument {
     @InsertCommand
     open fun fieldRestore(){
         addComment("[Function ${this.namespaceID}] Take vars out of the Stack")
-        currField.forEachVar { v ->
-            run {
-                if (!v.isStatic && v.hasAssigned && hasRuntimePayload(v)) v.getFromStack()
-            }
-        }
+        top.mcfpp.analysis.StorageAccess.invalidateReads(top.mcfpp.analysis.StorageAccess.visibleValues(currField))
     }
 
     private fun hasRuntimePayload(value: Var<*>): Boolean =
@@ -1109,16 +1172,11 @@ open class Function : Member, FieldContainer, WithDocument {
             LogProcessor.error("Function $identifier has no return value but tried to return a ${v.type}")
             return
         }
-        val runtimeReturn = if (returnVar.isDynamic && hasRuntimePayload(returnVar))
-            top.mcfpp.analysis.StorageAccess.bindIncomingParameter(returnVar) else null
-        returnVar = returnVar.assignedBy(v)
-        runtimeReturn?.let {
-            it.data.facts.invalidate(it.place)
-            returnVar = top.mcfpp.analysis.StorageAccess.read(returnVar)
-        }
-        //if(returnVar is MCFPPValue<*> && returnVar.type !is MCFPPConcreteType){
-        //    returnVar = (returnVar as MCFPPValue<*>).toDynamic(false)
-        //}
+        val value = if (v.type == returnType) v else v.implicitCast(returnType)
+        if (value.isError) return
+        val assigned = top.mcfpp.analysis.StorageAccess.write(returnVar, value)
+        if (!assigned.isError) returnExits.add(top.mcfpp.analysis.StorageAccess.flowSnapshot(
+            top.mcfpp.analysis.StorageAccess.visibleValues(currFunction.scope) + returnVar))
     }
 
     fun mapNormalArgs(normalArgs: List<Var<*>>): LinkedHashMap<String, Var<*>>{
@@ -1202,11 +1260,11 @@ open class Function : Member, FieldContainer, WithDocument {
     fun isSelfWithDefaultValue(key: String, normalArgs: List<Var<*>>): Boolean =
         ParameterMatcher.accepts(this, key, emptyList(), normalArgs, true)
 
-    fun <T> runInFunction(block: () -> T){
+    fun <T> runInFunction(block: () -> T): T {
         val old = currFunction
         currFunction = this
         try{
-            block()
+            return block()
         }finally {
             currFunction = old
         }
@@ -1348,10 +1406,6 @@ open class Function : Member, FieldContainer, WithDocument {
         fun getFieldWithVar(v: Var<*>): Function?{
             var ret = currFunction
             do{
-                if(ret is NoStackFunction){
-                    ret = ret.parent[0]
-                    continue
-                }
                 val f = ret.scope.getVar(v.identifier)
                 if(f != null){
                     return ret

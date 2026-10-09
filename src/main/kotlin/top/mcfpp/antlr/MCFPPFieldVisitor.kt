@@ -9,7 +9,6 @@ import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.antlr.mcfppParser.TemplateDeclarationContext
 import top.mcfpp.compiletime.CompileTimeFunction
 import top.mcfpp.core.lang.UnionTypeVar
-import top.mcfpp.core.lang.UnionTypeVarConcrete
 import top.mcfpp.core.lang.Var
 import top.mcfpp.exception.UndefinedException
 import top.mcfpp.io.MCFPPFile
@@ -254,6 +253,11 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                         declared.generic.singleOrNull() === MCFPPPrivateType.Wildcard
                 if(nf.readOnlyParams.map { it.type } == readOnlyType && nf.normalParams.size == normalType.size &&
                     nf.normalParams.zip(normalType).all { (param, registered) -> matchesNativeType(param.type, registered) }){
+                    if (!java.lang.reflect.Modifier.isStatic(method.modifiers) ||
+                        !method.parameterTypes.contentEquals(arrayOf(top.mcfpp.mni.NativeCallContext::class.java))) {
+                        LogProcessor.error("Method ${method.name} in class ${method.declaringClass.name} must use NativeCallContext")
+                        return null
+                    }
                     hasFind = true
                     nf.javaMethod = method
                     nf.normalParams.zip(normalType).forEach { (param, registered) ->
@@ -574,17 +578,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                     LogProcessor.error(diagnostic)
                     return null to null
                 }
-                if(!isInObject){
-                    (if (type is MCFPPDataTemplateType) type.buildUnConcrete(ctx.Identifier().text)
-                        else type.build(ctx.Identifier().text)).apply {
-                        nullable = it.singleTemplateFieldType().QUEST() != null
-                    }
-                }else{
-                    //object中的字段作为全局字段，是长久保存并且不可追踪的，其中的字段应当是不确定的。
-                    (if (isConst && !type.hasRuntimeRepresentation) type.build(ctx.Identifier().text)
-                        else type.buildUnConcrete(ctx.Identifier().text)).apply {
-                        nullable = it.singleTemplateFieldType().QUEST() != null
-                    }
+                type.buildUnConcrete(ctx.Identifier().text).apply {
+                    nullable = it.singleTemplateFieldType().QUEST() != null
                 }
             } else {
                 val unionTypes = ArrayList<MCFPPType>()
@@ -596,21 +591,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                     }
                     unionTypes.add(alternative)
                 }
-                if(!isInObject){
-                    UnionTypeVarConcrete(
-                        ctx.Identifier().text,
-                        unionTypes[0].defaultValue(),
-                        *unionTypes.toTypedArray()
-                    ).apply {
-                        nullable = it.unionTemplateFieldType().QUEST() != null
-                    }
-                }else{
-                    UnionTypeVar(
-                        ctx.Identifier().text,
-                        *unionTypes.toTypedArray()
-                    ).apply {
-                        nullable = it.unionTemplateFieldType().QUEST() != null
-                    }
+                UnionTypeVar(ctx.Identifier().text, *unionTypes.toTypedArray()).apply {
+                    nullable = it.unionTemplateFieldType().QUEST() != null
                 }
             }
         }
@@ -635,7 +617,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val isConst = ctx.CONST() != null
         `var`.isStatic = isInObject
         `var`.isConst = isConst
-        if (isConst && ctx.expression() == null) `var`.hasAssigned = false
         // Object lifetime does not impose an explicit dynamic-value contract on each field.
         `var`.bindDeclaration()
         //属性访问器
@@ -728,8 +709,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         try {
             val context = declaration.context
             val inferredType = type
-            val fieldValue = if (inferredType.hasRuntimeRepresentation) inferredType.buildUnConcrete(context.Identifier().text)
-                else inferredType.build(context.Identifier().text)
+            val fieldValue = inferredType.buildUnConcrete(context.Identifier().text)
             val (field, property) = buildTemplateField(context, fieldValue)
             field.accessModifier = declaration.access
             property.accessModifier = declaration.access

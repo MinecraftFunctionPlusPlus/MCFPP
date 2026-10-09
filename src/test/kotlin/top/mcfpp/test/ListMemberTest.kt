@@ -5,9 +5,7 @@ import top.mcfpp.analysis.*
 import top.mcfpp.backend.ListOperations
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBool
-import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.NBTList
-import top.mcfpp.core.lang.nbt.NBTListConcrete
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
@@ -32,7 +30,18 @@ class ListMemberTest {
 
     @Test fun constantAndRuntimeListsExposeTheSameMemberSignatures() {
         compile("func main(){}")
-        assertSame(NBTList.data, NBTListConcrete.data)
+        val type = top.mcfpp.type.MCFPPListType(MCFPPBaseType.Int)
+        val known = StorageAccess.listLiteral(type, listOf(MCInt(4)))
+        val runtime = type.buildUnConcrete("runtime")
+        assertSame(NBTList.data, known.type.instanceData)
+        assertSame(known.type.instanceData, runtime.type.instanceData)
+        for (name in listOf("size", "isEmpty", "toText")) {
+            val member = assertIs<top.mcfpp.model.function.NativeFunction>(known.getMemberFunction(name, emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
+            val runtimeMember = assertIs<top.mcfpp.model.function.NativeFunction>(runtime.getMemberFunction(name, emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
+            assertTrue(top.mcfpp.model.function.ParameterMatcher.sameSignature(member, runtimeMember))
+            assertEquals(member.returnType.typeId, runtimeMember.returnType.typeId)
+            assertEquals(member.javaMethod, runtimeMember.javaMethod)
+        }
     }
 
     @Test fun prependAllKeepsSourceOrderAndInsertAndRemoveAcceptNegativeIndices() {
@@ -98,7 +107,7 @@ class ListMemberTest {
             }
         """)
         assertEquals(24, execute(main).read(main.scope.getVar("result") as MCInt))
-        assertEquals(CompilerValue.Bool(true), assertIs<CompilerValue.Typed>(ValueSnapshot.of(main.scope.getVar("found"))).payload)
+        assertEquals(CompilerValue.Bool(true), assertIs<CompilerValue.Typed>(StorageAccess.snapshot(assertNotNull(main.scope.getVar("found")))).payload)
     }
 
     @Test fun runtimeQueriesHaveIndependentResultsAndLeaveTheSourceIntact() {
@@ -150,7 +159,7 @@ class ListMemberTest {
         val before = StorageAccess.ensure(values).data.facts.fork()
         val commands = main.commands.analyzeAll().filterNot { it.startsWith("#") }
         Function.currFunction = main
-        ListOperations.add(values, ScoreBoolConcrete(true), false)
+        ListOperations.add(values, ScoreBool(true), false)
         assertTrue(Project.errorCount > 0)
         assertEquals(before, values.storageBinding!!.data.facts)
         assertEquals(commands, main.commands.analyzeAll().filterNot { it.startsWith("#") })

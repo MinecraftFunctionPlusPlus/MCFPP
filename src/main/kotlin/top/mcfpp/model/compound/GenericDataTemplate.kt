@@ -5,14 +5,12 @@ import top.mcfpp.analysis.SpecializationKey
 import top.mcfpp.analysis.SpecializationKeys
 import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.analysis.SymbolId
-import top.mcfpp.analysis.ValueSnapshot
 import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.analysis.SpecializationArgument
 import top.mcfpp.antlr.MCFPPGenericDataTemplateFieldVisitor
 import top.mcfpp.antlr.MCFPPFieldVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.MCFPPTypeVar
-import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.property.Property
 import top.mcfpp.model.function.Function
@@ -118,7 +116,7 @@ open class GenericDataTemplate : DataTemplate {
             }
             val cast = argument.implicitCast(type)
             if (cast.isError) return null
-            val snapshot = ValueSnapshot.of(cast)
+            val snapshot = StorageAccess.snapshot(cast)
             if (snapshot == null) {
                 LogProcessor.error("Readonly template argument '${param.identifier}' requires a complete compile-time value")
                 return null
@@ -133,7 +131,7 @@ open class GenericDataTemplate : DataTemplate {
         return args
     }
 
-    protected open fun createCompiledTemplate(identifier: String, args: List<MCFPPValue<*>>,
+    protected open fun createCompiledTemplate(identifier: String, args: List<Var<*>>,
                                               argumentValues: List<CompilerValue>): CompiledGenericDataTemplate =
         CompiledGenericDataTemplate(identifier, namespace, this, args, argumentValues)
 
@@ -145,7 +143,7 @@ open class GenericDataTemplate : DataTemplate {
 
         val template = createCompiledTemplate(
             "${identifier}_${readOnlyParams.joinToString("_") { it.typeIdentifier }}-$index",
-            args.map { it as MCFPPValue<*> },
+            args,
             key.arguments.map { (it as SpecializationArgument.Constant).value }
         )
         template.declarationFile = declarationFile
@@ -157,8 +155,8 @@ open class GenericDataTemplate : DataTemplate {
         template.restoreDeclarationEnvironment()
         //只读属性
         for (i in readOnlyParams.indices) {
-            if(args[i] is MCFPPTypeVar){
-                template.scope.putType(readOnlyParams[i].identifier, (args[i] as MCFPPTypeVar).value)
+            StorageAccess.resolveTypeValue(args[i])?.let { type ->
+                template.scope.putType(readOnlyParams[i].identifier, type)
             }
             template.scope.putVar(readOnlyParams[i].identifier, args[i], false)
             template.scope.putProperty(readOnlyParams[i].identifier, Property.buildSimpleProperty(args[i]))
@@ -227,9 +225,13 @@ open class CompiledGenericDataTemplate(
     identifier: String,
     namespace: String = Project.currNamespace,
     var originTemplate: GenericDataTemplate,
-    val args: List<MCFPPValue<*>>,
+    args: List<Var<*>>,
     argumentValues: List<CompilerValue>
 ) : DataTemplate(identifier, namespace) {
+    val args: List<Var<*>>
+        get() = originTemplate.readOnlyParams.map { parameter ->
+            requireNotNull(scope.getVar(parameter.identifier)) { "Missing readonly binding '${parameter.identifier}'" }
+        }
     protected val identity = TypeId.Specialized(
         TypeId.Declaration(when {
             originTemplate is ObjectCompoundData -> "object"
@@ -241,6 +243,6 @@ open class CompiledGenericDataTemplate(
 
     override fun getType(): MCFPPDataTemplateType {
         val t = super.getType()
-        return MCFPPGenericDataTemplateType(t.template, ArrayList(args), t.parentType, identity)
+        return MCFPPGenericDataTemplateType(t.template, t.parentType, identity)
     }
 }

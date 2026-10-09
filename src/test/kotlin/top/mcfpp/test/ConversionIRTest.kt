@@ -5,7 +5,7 @@ import top.mcfpp.Project
 import top.mcfpp.analysis.Instruction
 import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.core.lang.MCInt
-import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
+import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.primitive.*
@@ -115,9 +115,9 @@ class ConversionIRTest {
                 var precise = toDouble(2147483647);
             }
         """)
-        assertEquals(ShortTag(-1), (StorageAccess.read(main.scope.getVar("payload")!!) as NBTBasedDataConcrete).value)
-        val restored = StorageAccess.read(main.scope.getVar("precise")!!) as top.mcfpp.core.lang.nbt.MCDoubleConcrete
-        assertEquals(DoubleTag(2147483647.0), restored.value)
+        assertEquals(ShortTag(-1), StorageAccess.constantEncoding(main.scope.getVar("payload")!!))
+        val restored = StorageAccess.read(main.scope.getVar("precise")!!) as top.mcfpp.core.lang.nbt.MCDouble
+        assertEquals(DoubleTag(2147483647.0), StorageAccess.constantEncoding(restored))
     }
 
     @Test fun userFunctionsNamedLikeConversionsKeepTheirOwnBehavior() = modes {

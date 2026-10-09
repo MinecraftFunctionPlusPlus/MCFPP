@@ -49,7 +49,7 @@ class CallShapeIRTest {
         assertEquals(11, execute(main).read(main.scope.getVar("result") as MCInt))
         val binding = main.scope.getVar("values")!!.storageBinding!!
         val row = binding.place.field("row")
-        assertEquals(2, binding.data.listSizes[row])
+        assertEquals(2, binding.data.facts.length(row))
         assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), binding.data.facts.read(row.index(0))!!.type)
         assertEquals(ValueKnowledge.Unknown, binding.data.facts.read(row.index(0))!!.value)
     }
@@ -83,7 +83,7 @@ class CallShapeIRTest {
         """)
         assertEquals(15, execute(main).read(main.scope.getVar("result") as MCInt))
         val binding = main.scope.getVar("values")!!.storageBinding!!
-        assertEquals(2, binding.data.listSizes[binding.place.field("row")])
+        assertEquals(2, binding.data.facts.length(binding.place.field("row")))
         assertNull(binding.data.facts.read(binding.place.field("row").index(2)))
     }
 
@@ -97,7 +97,7 @@ class CallShapeIRTest {
         """)
         assertEquals(3, execute(main).read(main.scope.getVar("result") as MCInt))
         val binding = main.scope.getVar("values")!!.storageBinding!!
-        assertNull(binding.data.listSizes[binding.place])
+        assertNull(binding.data.facts.length(binding.place))
         assertEquals(ValueKnowledge.Unknown, binding.data.facts.read(binding.place.index(0))!!.value)
     }
 

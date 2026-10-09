@@ -4,7 +4,6 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.obj.DataTemplateObject
-import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.mni.NBTDictionaryData
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.CompoundData
@@ -41,32 +40,18 @@ open class NBTDictionary : NBTBasedData {
      * @param b 变量的对象
      */
     override fun doAssignedBy(b: Var<*>): NBTDictionary {
-        when (b) {
-            is NBTDictionary -> {
-                return assignCommand(b) as NBTDictionary
-            }
-
-            else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
-                return this
-            }
-        }
+        top.mcfpp.analysis.StorageAccess.write(this, b)
+        return this
     }
 
     @InsertCommand
     override fun assignCommand(a: NBTBasedData): NBTBasedData {
-        nbtType = a.nbtType
-        if (a.storageBinding != null) return top.mcfpp.analysis.StorageAccess.copyCollection(NBTDictionary(this), a) as NBTDictionary
-        return if(a is NBTDictionaryConcrete){
-            NBTDictionaryConcrete(this, a.value)
-        }else {
-            Function.addCommand(Commands.dataSetFrom(nbtPath, a.nbtPath))
-            NBTDictionary(this)
-        }
+        top.mcfpp.analysis.StorageAccess.write(this, a)
+        return this
     }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        TODO("Not yet implemented")
+        return null to true
     }
 
     override fun getMemberFunction(
@@ -75,24 +60,22 @@ open class NBTDictionary : NBTBasedData {
         normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        var re: Function = UnknownFunction(key)
+        val candidates = arrayListOf<Function>()
         data.scope.forEachFunction {
-            //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
-            assert(it is NativeFunction)
-            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to (type as MCFPPDictType).generic[0]))
-            if(nf.isSelf(key, normalArgs)){
-                re = nf
-            }
+            candidates.add(if (it is NativeFunction) it.replaceGenericParams(mapOf("E" to (type as MCFPPDictType).generic[0])) else it)
         }
+        var re = top.mcfpp.model.function.ParameterMatcher.select(candidates, key, readOnlyArgs, normalArgs)
         val iterator = data.parent.iterator()
-        while (re is UnknownFunction && iterator.hasNext()){
-            re = iterator.next().getFunction(key, readOnlyArgs, normalArgs,isStatic)
+        while (re == null && iterator.hasNext()){
+            val inherited = iterator.next().getFunction(key, readOnlyArgs, normalArgs,isStatic)
+            if (inherited !is UnknownFunction) re = inherited
         }
-        return re to true
+        val selected = re ?: UnknownFunction(key)
+        return selected to (accessModifier.ordinal >= selected.accessModifier.ordinal)
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {
-        val actual = if (index is MCAny && index !is MCObject) index.semanticValue() else index
+        val actual = if (index is MCAny && index !is MCObject) top.mcfpp.analysis.StorageAccess.actualView(index) else index
         return if(actual.type.typeId == MCFPPBaseType.String.typeId && actual is MCString){
             val element = top.mcfpp.analysis.StorageAccess.element(this, actual, (type as MCFPPDictType).generic[0])
             PropertyVar(Property.buildSimpleProperty(element), element, this)
@@ -103,29 +86,10 @@ open class NBTDictionary : NBTBasedData {
         }
     }
 
-    override fun implicitCast(type: MCFPPType): Var<*> {
-        val re = super.implicitCast(type)
-        if(!re.isError) return re
-        return when(type){
-            is MCFPPDictType -> this
-            is MCFPPDataTemplateType -> {
-                if(this is NBTDictionaryConcrete){
-                    val qwq = type.build() as DataTemplateObject
-                    val value = NBTUtil.valueToNBT(this.value.filter { it.value !is ConcreteVar<*, *> }) as CompoundTag
-                    if (type.template.checkCompoundStruct(value)) {
-                        qwq.assignMembers(this.value)
-                        return this
-                    } else {
-                        LogProcessor.error("Error compound struct: $value")
-                        return this
-                    }
-                }else {
-                    buildCastErrorVar(type)
-                }
-            }
-            else -> re
-        }
-    }
+    override fun clone() = NBTDictionary(this)
+
+    override fun implicitCast(type: MCFPPType): Var<*> =
+        if (type == this.type) this else super.implicitCast(type)
 
     override fun canImplicitCast(type: MCFPPType): Boolean {
         return super.canImplicitCast(type)
@@ -135,163 +99,9 @@ open class NBTDictionary : NBTBasedData {
         val data by lazy {
             CompoundData("dict", "mcfpp.lang").apply {
                 initialize()
+                extends(MCFPPNBTType.NBT.instanceData)
                 injectedBy(NBTDictionaryData::class.java)
             }
         }
     }
-}
-
-/**
- * 被编译器跟踪的字典。本质是一个HashMap。和[DataTemplateObjectConcrete]不同的是，[DataTemplateObjectConcrete]的本质就是一个NBT复合标签。被编译器跟踪的字典其实是被跟踪了它的键部分。编译器应当知道这个字典全部的键，即使不知道这些键对应什么值。
- */
-class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, HashMap<String, Var<*>>> {
-
-    override var value: HashMap<String, Var<*>>
-
-    /**
-     * 创建一个固定的dict。它的标识符和mc名一致
-     * @param identifier 标识符。如不指定，则为随机uuid
-     * @param value 值
-     */
-    constructor(value: HashMap<String, Var<*>>, identifier: String = TempPool.getVarIdentify()) : super(identifier){
-        this.value = value
-    }
-
-    constructor(dict: NBTDictionary, value: HashMap<String, Var<*>>): super(dict){
-        this.value = HashMap(value.mapValues { NBTList.copyCompilerPart(it.value) })
-    }
-
-    constructor(v: NBTDictionaryConcrete) : super(v){
-        this.value = v.value
-    }
-
-    override fun clone(): NBTDictionaryConcrete {
-        return NBTDictionaryConcrete(this)
-    }
-
-    override fun toDynamic(replace: Boolean): Var<*> {
-        val parent = parent
-        top.mcfpp.analysis.StorageAccess.materialize(this)
-        val re = NBTDictionary(this)
-        if(replace){
-            if(parentTemplate() != null) {
-                (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
-            }else{
-                Function.currFunction.scope.putVar(identifier, re, true)
-            }
-        }
-        return re
-    }
-
-    override fun implicitCast(type: MCFPPType): Var<*> {
-        return when(type) {
-            is MCFPPDictType -> {
-                if (type.generic == (this.type as MCFPPDictType).generic) {
-                    this
-                }else {
-                    buildCastErrorVar(type)
-                }
-            }
-
-            MCFPPNBTType.NBT -> {
-                if (isAllConcrete()) {
-                    NBTBasedDataConcrete(this, NBTUtil.valueToNBT(value))
-                } else {
-                    NBTBasedData(this)
-                }
-            }
-
-            MCFPPBaseType.Any -> (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { bindPayload(this@NBTDictionaryConcrete) }
-            else -> buildCastErrorVar(type)
-        }
-    }
-
-    override fun canImplicitCast(type: MCFPPType): Boolean {
-        return when(type){
-            is MCFPPDictType -> type.generic == (this.type as MCFPPDictType).generic
-            MCFPPNBTType.NBT -> true
-            MCFPPBaseType.Any -> true
-            else -> false
-        }
-    }
-
-    /**
-     * 将这个变量强制转换为一个类型
-     * @param type 要转换到的目标类型
-     */
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        return when(type){
-            is MCFPPDictType -> {
-                if(type.generic == (this.type as MCFPPDictType).generic){
-                    this
-                }else{
-                    buildCastErrorVar(type)
-                }
-            }
-            is MCFPPDataTemplateType -> {
-                if(type.template.checkDictionaryStruct(value)){
-                    if(isAllConcrete()){
-                        DataTemplateObjectConcrete(type.template, value, identifier)
-                    }else {
-                        DataTemplateObject(type.template, identifier)
-                    }
-                }else{
-                    buildCastErrorVar(type)
-                }
-            }
-            MCFPPNBTType.NBT -> {
-                if(isAllConcrete()){
-                    NBTBasedDataConcrete(this, NBTUtil.valueToNBT(value))
-                }else{
-                    NBTBasedData(this)
-                }
-            }
-            MCFPPBaseType.Any -> this
-            else -> {
-                LogProcessor.error(TextTranslator.CAST_ERROR.translate(this.type.typeName, type.typeName))
-                buildCastErrorVar(type)
-            }
-        }
-    }
-
-    override fun canExplicitCast(type: MCFPPType): Boolean {
-        return when(type){
-            is MCFPPDictType -> type.generic == (this.type as MCFPPDictType).generic
-            is MCFPPDataTemplateType -> type.template.checkDictionaryStruct(value)
-            MCFPPNBTType.NBT -> true
-            MCFPPBaseType.Any -> true
-            else -> false
-        }
-    }
-
-    override fun getByIndex(index: Var<*>): PropertyVar {
-        return super.getByIndex(index)
-    }
-
-    override fun replaceMemberVar(v: Var<*>) {
-        value[v.identifier] = v
-    }
-
-    override fun isAllConcrete(): Boolean {
-        return value.values.all { it is MCFPPValue<*> }
-    }
-
-    override fun getNotConcretePart(): HashMap<String, Var<*>> {
-        return HashMap(value.filter { it.value !is MCFPPValue<*> || it.value is NBTListConcrete && !(it.value as NBTListConcrete).isAllConcrete() })
-    }
-
-    override fun getConcretePart(): CompoundTag {
-        val compound = CompoundTag()
-        for (v in value){
-            if(v.value is MCFPPValue<*>){
-                compound.put(v.key, NBTUtil.valueToNBT((v.value as MCFPPValue<*>).value))
-            }
-        }
-        return compound
-    }
-
-    companion object {
-        val data get() = NBTDictionary.data
-    }
-
 }

@@ -69,7 +69,13 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
     open val nbtType: Class<out Tag<*>>
         get() = CompoundTag::class.java
 
-    open fun tryResolve(){}
+    /**
+     * 解析本类型自身，以及容器实参中嵌套的声明类型。
+     * 从库恢复的容器实参可能仍是占位声明，只有解析后才有真实的实例字段。
+     */
+    open fun tryResolve(){
+        (this as? MCFPPTypeWithGeneric)?.generic?.forEach { it.tryResolve() }
+    }
 
     /**
      * 是否是指定类型的子类型
@@ -119,7 +125,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
 
     open fun defaultValue(): Any? = null
 
-    open fun defaultValueVar(): Var<*> = build("default", defaultValue())
+    open fun defaultValueVar(): Var<*> = buildUnConcrete("default")
 
     open fun build(identifier: String, value: Any? = defaultValue()): Var<*>{
         LogProcessor.error("Unknown type: $typeName")
@@ -546,7 +552,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 if(template != null) {
                     if (template is top.mcfpp.model.compound.GenericDataTemplate) {
                         val arguments = ArrayList<Var<*>>()
-                        val visitor = top.mcfpp.antlr.MCFPPConcreteExprVisitor(lookupTypeScope = typeScope, lexicalCaller = caller)
+                        val visitor = top.mcfpp.antlr.MCFPPReadonlyExprVisitor(lookupTypeScope = typeScope, lexicalCaller = caller)
                         for (expression in ctx.readOnlyArgs()?.expressionList()?.expression().orEmpty()) {
                             val value = visitor.visit(expression) ?: return null
                             if (value.isError || value is UnknownVar) return null

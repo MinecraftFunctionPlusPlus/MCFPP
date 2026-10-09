@@ -25,6 +25,12 @@ object KryoManager {
         isRegistrationRequired = false
         references = true
         addDefaultSerializer(top.mcfpp.type.TypeId::class.java, TypeIdentitySerializer())
+        addDefaultSerializer(MCFPPType::class.java, TypeDescriptorSerializer())
+        addDefaultSerializer(top.mcfpp.analysis.CompilerValue::class.java, object : Serializer<top.mcfpp.analysis.CompilerValue>() {
+            private val identities = TypeIdentitySerializer()
+            override fun write(kryo: Kryo, output: Output, value: top.mcfpp.analysis.CompilerValue) = identities.writeValue(output, value)
+            override fun read(kryo: Kryo, input: Input, type: Class<out top.mcfpp.analysis.CompilerValue>) = identities.readValue(input)
+        })
         instantiatorStrategy = StdInstantiatorStrategy()
 
         register(DataTemplate::class.java, object : Serializer<DataTemplate>() {
@@ -107,8 +113,47 @@ object KryoManager {
                 val identity = kryo.readObject(input, TypeId.Specialized::class.java, identitySerializer)
                 val declaration = identity.constructor as TypeId.Declaration
                 return MCFPPGenericDataTemplateType(
-                    DataTemplate(declaration.name, declaration.namespace), arrayListOf(), arrayListOf(), identity
+                    DataTemplate(declaration.name, declaration.namespace), arrayListOf(), identity
                 )
+            }
+        })
+
+        register(top.mcfpp.type.MCFPPGenericObjectDataTemplateType::class.java, object : Serializer<top.mcfpp.type.MCFPPGenericObjectDataTemplateType>() {
+            private val identities = TypeIdentitySerializer()
+            override fun write(kryo: Kryo, output: Output, value: top.mcfpp.type.MCFPPGenericObjectDataTemplateType) = identities.write(kryo, output, value.typeId)
+            override fun read(kryo: Kryo, input: Input, type: Class<out top.mcfpp.type.MCFPPGenericObjectDataTemplateType>): top.mcfpp.type.MCFPPGenericObjectDataTemplateType {
+                val id = identities.read(kryo, input, TypeId::class.java) as TypeId.Specialized
+                val declaration = id.constructor as TypeId.Declaration
+                return top.mcfpp.type.MCFPPGenericObjectDataTemplateType(
+                    top.mcfpp.model.compound.ObjectDataTemplate(declaration.name, declaration.namespace), arrayListOf(), id)
+            }
+        })
+
+        register(top.mcfpp.type.MCFPPGenericInterfaceType::class.java, object : Serializer<top.mcfpp.type.MCFPPGenericInterfaceType>() {
+            private val identities = TypeIdentitySerializer()
+            override fun write(kryo: Kryo, output: Output, value: top.mcfpp.type.MCFPPGenericInterfaceType) = identities.write(kryo, output, value.typeId)
+            override fun read(kryo: Kryo, input: Input, type: Class<out top.mcfpp.type.MCFPPGenericInterfaceType>): top.mcfpp.type.MCFPPGenericInterfaceType {
+                val id = identities.read(kryo, input, TypeId::class.java) as TypeId.Specialized
+                val declaration = id.constructor as TypeId.Declaration
+                return top.mcfpp.type.MCFPPGenericInterfaceType(DataTemplate(declaration.name, declaration.namespace).apply { isInterface = true }, arrayListOf(), id)
+            }
+        })
+
+        register(top.mcfpp.type.MCFPPInterfaceType::class.java, object : Serializer<top.mcfpp.type.MCFPPInterfaceType>() {
+            override fun write(kryo: Kryo, output: Output, value: top.mcfpp.type.MCFPPInterfaceType) {
+                writeIdentity(output, value.i)
+                kryo.writeObject(output, DataTemplateInfo.from(value.i))
+                kryo.writeObject(output, value.parentType)
+            }
+            @Suppress("UNCHECKED_CAST")
+            override fun read(kryo: Kryo, input: Input, type: Class<out top.mcfpp.type.MCFPPInterfaceType>): top.mcfpp.type.MCFPPInterfaceType {
+                val id = readIdentity(input)
+                val template = UnsolvedTemplate(id.name, id.namespace, true, id.isAbstract, id.isFinal)
+                val result = top.mcfpp.type.MCFPPInterfaceType(template, arrayListOf())
+                kryo.reference(result)
+                template.info = kryo.readObject(input, DataTemplateInfo::class.java)
+                result.parentType = kryo.readObject(input, ArrayList::class.java) as ArrayList<MCFPPType>
+                return result
             }
         })
 

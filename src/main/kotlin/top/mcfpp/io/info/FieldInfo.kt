@@ -1,12 +1,11 @@
 package top.mcfpp.io.info
 
-import top.mcfpp.core.lang.Var
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.scope.CompoundDataScope
 import top.mcfpp.type.MCFPPType
 
 data class FieldInfo(
-    var vars: ArrayList<Var<*>>,
+    var vars: ArrayList<VarInfo>,
     var functions: ArrayList<AbstractFunctionInfo<*>>,
     var properties: ArrayList<PropertyInfo>,
     var operators: Map<String, Map<MCFPPType?, AbstractFunctionInfo<*>>>
@@ -19,8 +18,7 @@ data class FieldInfo(
         val field = CompoundDataScope(ArrayList())
         if (owner != null) owner.scope = field
         vars.forEach {
-            if (owner != null) it.declaredParentTemplate = owner
-            field.putVar(it.identifier, it, true)
+            field.putVar(it.identifier, it.get(owner), true)
         }
         functions.forEach {
             val function = it.get()
@@ -82,7 +80,7 @@ data class FieldInfo(
             return FieldInfo(
                 ArrayList(field.allVars.filter {
                     it.declaredParentTemplate == owner
-                }),
+                }.map(VarInfo::from)),
                 ArrayList(functions),
                 ArrayList(field.allProperties.filter {
                     it.declaredParentTemplate == owner

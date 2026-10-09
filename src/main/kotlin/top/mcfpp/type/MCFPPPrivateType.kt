@@ -14,7 +14,7 @@ abstract class MCFPPPrivateType(parentType: ArrayList<MCFPPType> = arrayListOf()
         return UnknownVar(identifier)
     }
 
-    final override fun buildUnConcrete(identifier: String): Var<*> {
+    override fun buildUnConcrete(identifier: String): Var<*> {
         LogProcessor.error("Cannot build var for type: $typeName")
         return UnknownVar(identifier)
     }
@@ -32,6 +32,8 @@ abstract class MCFPPPrivateType(parentType: ArrayList<MCFPPType> = arrayListOf()
     }
 
     object MCFPPCoordinateDimension: MCFPPPrivateType(){
+
+        override fun buildUnConcrete(identifier: String): Var<*> = top.mcfpp.core.lang.PosDimension(identifier)
 
         override val hasRuntimeRepresentation: Boolean get() = false
 

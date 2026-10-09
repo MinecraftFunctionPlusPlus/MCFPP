@@ -56,7 +56,7 @@ object SpecializationPolicy {
                 val binder = DeclarationBinding(function, emptyMap(), values, types)
                 val target = binder.declaredType(parameter.type)
                 val argument = supplied.getOrNull(index) ?: parameter.defaultContext?.let(binder::value) ?: parameter.defaultVar?.let {
-                    ValueSnapshot.of(it)?.let { snapshot -> DeclarationBinding.Bound(it.type, snapshot) }
+                    StorageAccess.snapshot(it)?.let { snapshot -> DeclarationBinding.Bound(it.type, snapshot, descriptors = StorageAccess.boundTypes(it)) }
                 } ?: return@resolve null
                 if (TypeRelations.resolveImplicitConversion(argument.type, target) == null || argument.constant == null) return@resolve null
                 val payload = (argument.constant as? CompilerValue.Typed)?.payload ?: argument.constant
@@ -106,8 +106,9 @@ object SpecializationPolicy {
                 }
                 scope.putVar(param.identifier, frozen)
                 if (frozen is MCFPPTypeVar) {
-                    bindings[param.identifier] = frozen.value
-                    scope.putType(param.identifier, frozen.value)
+                    val type = StorageAccess.resolveTypeValue(frozen) ?: return@resolve null
+                    bindings[param.identifier] = type
+                    scope.putType(param.identifier, type)
                 }
                 values.add(frozen)
                 types.add(type)
@@ -152,7 +153,7 @@ object SpecializationPolicy {
         for ((param, value) in readonly.zip(readonlyArgs)) {
             compiled.scope.removeVar(param.identifier)
             compiled.scope.putVar(param.identifier, value, true)
-            if (value is MCFPPTypeVar) compiled.scope.putType(param.identifier, value.value, true)
+            StorageAccess.resolveTypeValue(value)?.let { compiled.scope.putType(param.identifier, it, true) }
         }
         val runtimeParams = ArrayList<FunctionParam>()
         for (i in function.normalParams.indices) {

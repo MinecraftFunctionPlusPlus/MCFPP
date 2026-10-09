@@ -118,11 +118,28 @@ class NbtArrayTest {
     @Test fun emptyArraysHaveDistinctSnapshotsAndSharedMemberTables() {
         val main = compile("func main(){ var bytes = [B;]; var ints = [I;]; var longs = [L;]; }")
         val values = listOf("bytes", "ints", "longs").map { main.scope.getVar(it)!! }
-        assertEquals(3, values.map { ValueSnapshot.of(it) }.toSet().size)
+        val snapshots = values.map { assertIs<CompilerValue.Typed>(StorageAccess.snapshot(it)) }
+        assertEquals(3, snapshots.toSet().size)
+        assertEquals(values.map { it.type.typeId }, snapshots.map { it.type })
+        for ((value, snapshot) in values.zip(snapshots)) {
+            assertEquals(CompilerValue.Sequence(emptyList()), snapshot.payload)
+            val tag = assertNotNull(StorageAccess.constantEncoding(value))
+            when (snapshot.type) {
+                top.mcfpp.type.MCFPPNBTType.ByteArray.typeId -> assertTrue(assertIs<ByteArrayTag>(tag).value.isEmpty())
+                top.mcfpp.type.MCFPPNBTType.IntArray.typeId -> assertTrue(assertIs<IntArrayTag>(tag).value.isEmpty())
+                top.mcfpp.type.MCFPPNBTType.LongArray.typeId -> assertTrue(assertIs<LongArrayTag>(tag).value.isEmpty())
+                else -> fail("Unexpected array identity ${snapshot.type}")
+            }
+        }
         for (value in values) {
             val member = value.getMemberFunction("toText", emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first
             assertIs<top.mcfpp.model.function.NativeFunction>(member)
-            assertSame(member, value.type.buildUnConcrete("runtime").getMemberFunction("toText", emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
+            val runtime = value.type.buildUnConcrete("runtime")
+            assertSame(value.type.instanceData, runtime.type.instanceData)
+            val resolved = assertIs<top.mcfpp.model.function.NativeFunction>(runtime.getMemberFunction("toText", emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
+            assertTrue(top.mcfpp.model.function.ParameterMatcher.sameSignature(member, resolved))
+            assertEquals(member.returnType.typeId, resolved.returnType.typeId)
+            assertEquals(member.javaMethod, resolved.javaMethod)
         }
     }
 

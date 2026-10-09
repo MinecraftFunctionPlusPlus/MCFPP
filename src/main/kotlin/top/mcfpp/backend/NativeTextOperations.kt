@@ -1,15 +1,12 @@
 package top.mcfpp.backend
 
-import top.mcfpp.core.lang.JsonTextConcrete
+import top.mcfpp.analysis.StorageAccess
+
 import top.mcfpp.core.lang.JsonText
 import top.mcfpp.core.lang.MCInt
-import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.core.lang.nbt.MCString
-import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
-import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.core.lang.obj.DataTemplateObject
-import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.lib.ChatComponent
 import top.mcfpp.lib.ListChatComponent
 import top.mcfpp.lib.NBTChatComponent
@@ -31,25 +28,25 @@ object NativeTextOperations {
 
     fun integer(context: NativeCallContext) = context.withAdapters { receiver, _ ->
         val value = receiver as MCInt
-        publish(context, if (value is MCIntConcrete) PlainChatComponent(value.value.toString())
+        publish(context, if (value is MCInt && top.mcfpp.analysis.StorageAccess.snapshot(value) != null) PlainChatComponent(value.value.toString())
             else ScoreChatComponent(value))
     }
 
     fun nbt(context: NativeCallContext) = context.withAdapters { receiver, _ ->
         val value = receiver as NBTBasedData
-        publish(context, if (value is NBTBasedDataConcrete) PlainChatComponent(Tag.toSNBT(value.value))
+        publish(context, if (StorageAccess.snapshot(value) != null) PlainChatComponent(Tag.toSNBT(value.value))
             else NBTChatComponent(value, false, null))
     }
 
     fun string(context: NativeCallContext) = context.withAdapters { receiver, _ ->
         val value = receiver as MCString
-        publish(context, if (value is MCStringConcrete) PlainChatComponent(value.value.value)
+        publish(context, if (value is MCString && top.mcfpp.analysis.StorageAccess.snapshot(value) != null) PlainChatComponent(value.value.value)
             else NBTChatComponent(value, false, null))
     }
 
     fun template(context: NativeCallContext) = context.withAdapters { receiver, _ ->
         val value = receiver as DataTemplateObject
-        publish(context, if (value is DataTemplateObjectConcrete) PlainChatComponent(Tag.toSNBT(NBTUtil.varToNBT(value)!!))
+        publish(context, if (top.mcfpp.analysis.StorageAccess.snapshot(value) != null) PlainChatComponent(Tag.toSNBT(NBTUtil.varToNBT(value)!!))
             else NBTChatComponent(value.toNBTVar(), false, null))
     }
 
@@ -59,6 +56,6 @@ object NativeTextOperations {
 
     private fun publish(context: NativeCallContext, component: ChatComponent) {
         val text = ListChatComponent().apply { append(component) }
-        context.publishResult(JsonTextConcrete(text, "re"))
+        context.publishResult(JsonText(text, "re"))
     }
 }

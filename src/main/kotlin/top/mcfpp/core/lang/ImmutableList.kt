@@ -1,7 +1,6 @@
 package top.mcfpp.core.lang
 
 import top.mcfpp.core.lang.nbt.NBTList
-import top.mcfpp.core.lang.nbt.NBTListConcrete
 import top.mcfpp.mni.ImmutableListData
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.type.*
@@ -23,22 +22,5 @@ open class ImmutableList : NBTList {
                 injectedBy(ImmutableListData::class.java)
             }
         }
-    }
-}
-
-/** Shares the list value codec without a second set of constant-only members. */
-class ImmutableListConcrete : NBTListConcrete {
-    constructor(value: ArrayList<Var<*>>, identifier: String, genericType: MCFPPType) : super(value, identifier, genericType) {
-        type = MCFPPImmutableListType(genericType)
-    }
-    constructor(source: NBTList, value: ArrayList<Var<*>>) : super(source, value) {
-        type = MCFPPImmutableListType(source.genericType)
-    }
-    constructor(source: ImmutableListConcrete) : super(source) { type = source.type }
-    override fun clone() = ImmutableListConcrete(this)
-
-    companion object {
-        val data get() = ImmutableList.data
-        val empty get() = ImmutableListConcrete(arrayListOf(), "empty", MCFPPBaseType.Any)
     }
 }

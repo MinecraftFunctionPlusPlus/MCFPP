@@ -1,7 +1,6 @@
 package top.mcfpp.type
 
 import top.mcfpp.core.lang.ImmutableList
-import top.mcfpp.core.lang.ImmutableListConcrete
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.mni.*
@@ -38,7 +37,7 @@ class MCFPPNBTType {
 
         override fun defaultValue() = IntTag(0)
 
-        override fun build(identifier: String, value: Any?): Var<*> = NBTBasedDataConcrete(value as Tag<*>, identifier)
+        override fun build(identifier: String, value: Any?): Var<*> = NBTBasedData(value as Tag<*>, identifier)
         override fun buildUnConcrete(identifier: String): Var<*> = NBTBasedData(identifier)
 
     }
@@ -59,7 +58,7 @@ class MCFPPNBTType {
 
         override fun defaultValue() = 0.toByte()
 
-        override fun build(identifier: String, value: Any?): Var<*> = MCByteConcrete(value as kotlin.Byte, identifier)
+        override fun build(identifier: String, value: Any?): Var<*> = MCByte(value as kotlin.Byte, identifier)
         override fun buildUnConcrete(identifier: String): Var<*> = MCByte(identifier)
     }
 
@@ -79,7 +78,7 @@ class MCFPPNBTType {
 
         override fun defaultValue() = 0.toShort()
 
-        override fun build(identifier: String, value: Any?): Var<*> = MCShortConcrete(value as kotlin.Short, identifier)
+        override fun build(identifier: String, value: Any?): Var<*> = MCShort(value as kotlin.Short, identifier)
 
         override fun buildUnConcrete(identifier: String): Var<*> = MCShort(identifier)
     }
@@ -101,7 +100,7 @@ class MCFPPNBTType {
 
         override fun defaultValue() = LongTag(0)
 
-        override fun build(identifier: String, value: Any?): Var<*> = MCLongConcrete(value as LongTag, identifier)
+        override fun build(identifier: String, value: Any?): Var<*> = MCLong(value as LongTag, identifier)
         override fun buildUnConcrete(identifier: String): Var<*> = MCLong(identifier)
     }
 
@@ -121,7 +120,7 @@ class MCFPPNBTType {
 
         override fun defaultValue() = DoubleTag(0.0)
 
-        override fun build(identifier: String, value: Any?): Var<*> = MCDoubleConcrete(value as DoubleTag, identifier)
+        override fun build(identifier: String, value: Any?): Var<*> = MCDouble(value as DoubleTag, identifier)
 
         override fun buildUnConcrete(identifier: String): Var<*> = MCDouble(identifier)
     }
@@ -143,7 +142,7 @@ class MCFPPNBTType {
 
         override fun defaultValue() = ByteArrayTag()
 
-        override fun build(identifier: String, value: Any?): Var<*> = NBTByteArrayConcrete(value as ByteArrayTag, identifier)
+        override fun build(identifier: String, value: Any?): Var<*> = NBTByteArray(value as ByteArrayTag, identifier)
 
         override fun buildUnConcrete(identifier: String): Var<*> = NBTByteArray(identifier)
     }
@@ -165,7 +164,7 @@ class MCFPPNBTType {
 
         override fun defaultValue() = IntArrayTag()
 
-        override fun build(identifier: String, value: Any?): Var<*> = NBTIntArrayConcrete(value as IntArrayTag, identifier)
+        override fun build(identifier: String, value: Any?): Var<*> = NBTIntArray(value as IntArrayTag, identifier)
         override fun buildUnConcrete(identifier: String): Var<*> = NBTIntArray(identifier)
 
     }
@@ -186,7 +185,7 @@ class MCFPPNBTType {
             get() = "LongArray"
 
         override fun defaultValue() = LongArrayTag()
-        override fun build(identifier: String, value: Any?): Var<*> = NBTLongArrayConcrete(value as LongArrayTag, identifier)
+        override fun build(identifier: String, value: Any?): Var<*> = NBTLongArray(value as LongArrayTag, identifier)
 
         override fun buildUnConcrete(identifier: String): Var<*> = NBTLongArray(identifier)
     }
@@ -203,7 +202,7 @@ class MCFPPListType(
     override val typeId: TypeId
         get() = TypeId.Applied(TypeId.Builtin(typeName), generic.map { it.typeId })
 
-    override val generic: List<MCFPPType> = listOf(g)
+    override val generic: ArrayList<MCFPPType> = arrayListOf(g)
 
     override val objectData: CompoundData
         get() = NBTList.data
@@ -216,9 +215,9 @@ class MCFPPListType(
     override val nbtType: Class<out Tag<*>>
         get() = ListTag::class.java
 
-    override fun defaultValue() = ArrayList<Var<*>>()
-    @Suppress("UNCHECKED_CAST")
-    override fun build(identifier: String, value: Any?): Var<*> = NBTListConcrete(value as ArrayList<Var<*>>, identifier, generic[0])
+    override fun defaultValue() = top.mcfpp.analysis.CompilerValue.Sequence(emptyList())
+    override fun build(identifier: String, value: Any?): Var<*> = top.mcfpp.analysis.StorageAccess.literal(this,
+        value as top.mcfpp.analysis.CompilerValue, identifier)
     override fun buildUnConcrete(identifier: String): Var<*> = NBTList(identifier, generic[0])
 
     override fun toString(): String {
@@ -253,7 +252,7 @@ class MCFPPImmutableListType(
     override val typeId: TypeId
         get() = TypeId.Applied(TypeId.Builtin(typeName), generic.map { it.typeId })
 
-    override val generic: List<MCFPPType> = listOf(g)
+    override val generic: ArrayList<MCFPPType> = arrayListOf(g)
 
     override val instanceData get() = ImmutableList.data
 
@@ -263,9 +262,9 @@ class MCFPPImmutableListType(
     override val nbtType: Class<out Tag<*>>
         get() = ListTag::class.java
 
-    override fun defaultValue() = ArrayList<Var<*>>()
-    @Suppress("UNCHECKED_CAST")
-    override fun build(identifier: String, value: Any?): Var<*> = ImmutableListConcrete(value as ArrayList<Var<*>>, identifier, generic[0])
+    override fun defaultValue() = top.mcfpp.analysis.CompilerValue.Sequence(emptyList())
+    override fun build(identifier: String, value: Any?): Var<*> = top.mcfpp.analysis.StorageAccess.literal(this,
+        value as top.mcfpp.analysis.CompilerValue, identifier)
     override fun buildUnConcrete(identifier: String): Var<*> = ImmutableList(identifier, generic[0])
 
     override fun toString(): String {
@@ -299,7 +298,7 @@ open class MCFPPCompoundType(
     override val typeId: TypeId
         get() = TypeId.Applied(TypeId.Builtin(typeName), generic.map { it.typeId })
 
-    override val generic: List<MCFPPType> = listOf(g)
+    override val generic: ArrayList<MCFPPType> = arrayListOf(g)
 
     override val typeName: String
         get() = "compound"
@@ -341,9 +340,9 @@ class MCFPPDictType(generic: MCFPPType): MCFPPCompoundType(generic){
     override val nbtType: Class<out Tag<*>>
         get() = CompoundTag::class.java
 
-    override fun defaultValue() = HashMap<String, Var<*>>()
-    @Suppress("UNCHECKED_CAST")
-    override fun build(identifier: String, value: Any?): Var<*> = NBTDictionaryConcrete(value as HashMap<String, Var<*>>, identifier).apply { type = this@MCFPPDictType }
+    override fun defaultValue() = top.mcfpp.analysis.CompilerValue.Record(emptyMap())
+    override fun build(identifier: String, value: Any?): Var<*> = top.mcfpp.analysis.StorageAccess.literal(this,
+        value as top.mcfpp.analysis.CompilerValue, identifier)
     override fun buildUnConcrete(identifier: String): Var<*> = NBTDictionary(identifier).apply { type = this@MCFPPDictType }
 
     override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPDictType {
@@ -379,9 +378,10 @@ class MCFPPMapType(generic: MCFPPType): MCFPPCompoundType(generic){
     override val nbtType: Class<out Tag<*>>
         get() = CompoundTag::class.java
 
-    override fun defaultValue() = HashMap<String, Var<*>>()
-    @Suppress("UNCHECKED_CAST")
-    override fun build(identifier: String, value: Any?): Var<*> = NBTMapConcrete(value as HashMap<String, Var<*>>, identifier, generic[0])
+    override fun defaultValue() = top.mcfpp.analysis.CompilerValue.Record(mapOf("entries" to
+        top.mcfpp.analysis.CompilerValue.Typed(NBTMap.entriesType.typeId, top.mcfpp.analysis.CompilerValue.Sequence(emptyList()))))
+    override fun build(identifier: String, value: Any?): Var<*> = top.mcfpp.analysis.StorageAccess.literal(this,
+        value as top.mcfpp.analysis.CompilerValue, identifier)
     override fun buildUnConcrete(identifier: String): Var<*> = NBTMap(identifier, generic[0])
 
     override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPMapType {

@@ -1,263 +1,118 @@
 package top.mcfpp.core.lang
 
-import top.mcfpp.command.Command
+import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.analysis.StorageAccess
+import top.mcfpp.analysis.ValueFacts
+import top.mcfpp.analysis.TypeKnowledge
+import top.mcfpp.analysis.ValueKnowledge
+import top.mcfpp.command.Command
 import top.mcfpp.model.Member
-import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
-import top.mcfpp.util.TextTranslator
-import top.mcfpp.util.TextTranslator.translate
 
-class Pos3Var: ConcreteVar<Pos3Var, ArrayList<PosDimension>> {
-
-    var x: PosDimension
-    var y: PosDimension
-    var z: PosDimension
-
+/** A coordinate access never owns a second mutable copy of its dimensions. */
+class Pos3Var : Var<Pos3Var> {
     override var type: MCFPPType = MCFPPBaseType.Pos3
-
-    constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier, arrayListOf()){
-        this.x = PosDimension("", 0, identifier)
-        this.y = PosDimension("", 0, identifier)
-        this.z = PosDimension("", 0, identifier)
-        value = arrayListOf(x, y, z)
-    }
-
-    constructor(b: Pos3Var) : super(b){
-        x = PosDimension(b.x)
-        y = PosDimension(b.y)
-        z = PosDimension(b.z)
-        value = arrayListOf(x, y, z)
-    }
-
-    override fun clone(): Pos3Var {
-        return Pos3Var(this)
-    }
-
-    override fun doAssignedBy(b: Var<*>): Pos3Var {
-        return when (b) {
-            is Pos3Var -> {
-                x = x.assignedBy(b.x)
-                y = y.assignedBy(b.y)
-                z = z.assignedBy(b.z)
-                this
-            }
-
-            else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
-                this
-            }
+    constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier)
+    constructor(other: Pos3Var) : super(other)
+    override fun clone() = Pos3Var(this)
+    var x: PosDimension get() = dimension("x", 0); set(v) { writeDimension(0, v) }
+    var y: PosDimension get() = dimension("y", 1); set(v) { writeDimension(1, v) }
+    var z: PosDimension get() = dimension("z", 2); set(v) { writeDimension(2, v) }
+    var value: ArrayList<PosDimension>
+        get() = arrayListOf(x, y, z)
+        set(v) {
+            require(v.size == 3)
+            StorageAccess.initializeLiteral(this, CompilerValue.Sequence(v.map { StorageAccess.snapshot(it)
+                ?: error("Coordinate dimension has no complete value") }))
         }
-    }
-
-    override fun getTempVar(): Pos3Var {
-        return Pos3Var().assignedBy(this)
-    }
-
-    override fun storeToStack() {
-        x.storeToStack()
-        y.storeToStack()
-        z.storeToStack()
-    }
-
-    override fun getFromStack() {
-        x.getFromStack()
-        y.getFromStack()
-        z.getFromStack()
-    }
-
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        val index = when (key) { "x" -> 0; "y" -> 1; "z" -> 2; else -> return null to true }
+    private fun dimension(name: String, index: Int): PosDimension {
         val root = StorageAccess.ensure(this)
-        return StorageAccess.adapter(MCFPPPrivateType.MCFPPCoordinateDimension, key,
-            root.copy(place = root.place.index(index), path = root.path.intIndex(index))).apply { parent = this@Pos3Var } to true
+        return (StorageAccess.adapter(MCFPPPrivateType.MCFPPCoordinateDimension, name,
+            root.copy(place = root.place.index(index), path = root.path.intIndex(index))) as PosDimension)
+            .apply { parent = this@Pos3Var }
     }
-
-    override fun getMemberFunction(
-        key: String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: List<Var<*>>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        return UnknownFunction(key) to true
+    private fun writeDimension(index: Int, v: PosDimension) {
+        val root = StorageAccess.ensure(this)
+        val snapshot = StorageAccess.snapshot(v) ?: error("Coordinate dimension has no complete value")
+        root.data.write(root.place.index(index), ValueFacts(TypeKnowledge.Exact(v.type.typeId), ValueKnowledge.Constant(snapshot)))
     }
-    override fun toCommandPart(): Command{
-        return Command.buildAll(x,y,z)
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> = when (key) {
+        "x" -> x to true; "y" -> y to true; "z" -> z to true; else -> null to true
     }
-
-    override fun replaceMemberVar(v: Var<*>) {
-        v as PosDimension
-        when(v.identifier){
-            "x" -> {
-                x = v
-                value[0] = v
-            }
-            "y" -> {
-                y = v
-                value[1] = v
-            }
-            "z" -> {
-                z = v
-                value[2] = v
-            }
-        }
-    }
-
+    override fun replaceMemberVar(v: Var<*>) { when (v.identifier) {
+        "x" -> x = v as PosDimension; "y" -> y = v as PosDimension; "z" -> z = v as PosDimension
+    } }
+    override fun doAssignedBy(b: Var<*>): Pos3Var { StorageAccess.write(this, b); return this }
+    override fun getTempVar(): Pos3Var = StorageAccess.capture(this) as Pos3Var
+    override fun toCommandPart(): Command = Command.buildAll(x, y, z)
 }
 
-class Pos2Var: ConcreteVar<Pos2Var, ArrayList<PosDimension>> {
-
+class Pos2Var : Var<Pos2Var> {
     override var type: MCFPPType = MCFPPBaseType.Pos2
-
-    var x: PosDimension
-    var z: PosDimension
-
-    constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier, arrayListOf()){
-        x = PosDimension("",0, identifier)
-        z = PosDimension("",0, identifier)
-        value = arrayListOf(x, z)
-    }
-
-    constructor(b: Pos2Var) : super(b){
-        x = PosDimension(b.x)
-        z = PosDimension(b.z)
-        value = arrayListOf(x, z)
-    }
-
-    override fun clone(): Pos2Var {
-        return Pos2Var(this)
-    }
-
-    override fun doAssignedBy(b: Var<*>): Pos2Var {
-        return when (b) {
-            is Pos2Var -> {
-                x = x.assignedBy(b.x)
-                z = z.assignedBy(b.z)
-                this
-            }
-
-            else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
-                this
-            }
+    constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier)
+    constructor(other: Pos2Var) : super(other)
+    override fun clone() = Pos2Var(this)
+    var x: PosDimension get() = dimension("x", 0); set(v) { writeDimension(0, v) }
+    var z: PosDimension get() = dimension("z", 1); set(v) { writeDimension(1, v) }
+    var value: ArrayList<PosDimension>
+        get() = arrayListOf(x, z)
+        set(v) {
+            require(v.size == 2)
+            StorageAccess.initializeLiteral(this, CompilerValue.Sequence(v.map { StorageAccess.snapshot(it)
+                ?: error("Coordinate dimension has no complete value") }))
         }
-    }
-
-    override fun getTempVar(): Pos2Var {
-        return Pos2Var().assignedBy(this)
-    }
-
-    override fun storeToStack() {
-        x.storeToStack()
-        z.storeToStack()
-    }
-
-    override fun getFromStack() {
-        x.getFromStack()
-        z.getFromStack()
-    }
-
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        val index = when (key) { "x" -> 0; "z" -> 1; else -> return null to true }
+    private fun dimension(name: String, index: Int): PosDimension {
         val root = StorageAccess.ensure(this)
-        return StorageAccess.adapter(MCFPPPrivateType.MCFPPCoordinateDimension, key,
-            root.copy(place = root.place.index(index), path = root.path.intIndex(index))).apply { parent = this@Pos2Var } to true
+        return (StorageAccess.adapter(MCFPPPrivateType.MCFPPCoordinateDimension, name,
+            root.copy(place = root.place.index(index), path = root.path.intIndex(index))) as PosDimension)
+            .apply { parent = this@Pos2Var }
     }
-
-    override fun getMemberFunction(
-        key: String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: List<Var<*>>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        return UnknownFunction(key) to true
+    private fun writeDimension(index: Int, v: PosDimension) {
+        val root = StorageAccess.ensure(this)
+        val snapshot = StorageAccess.snapshot(v) ?: error("Coordinate dimension has no complete value")
+        root.data.write(root.place.index(index), ValueFacts(TypeKnowledge.Exact(v.type.typeId), ValueKnowledge.Constant(snapshot)))
     }
-
-    override fun toCommandPart(): Command{
-        return Command.buildAll(x, z)
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> = when (key) {
+        "x" -> x to true; "z" -> z to true; else -> null to true
     }
-
-    override fun replaceMemberVar(v: Var<*>) {
-        v as PosDimension
-        when(v.identifier){
-            "x" -> {
-                x = v
-                value[0] = v
-            }
-            "z" -> {
-                z = v
-                value[1] = v
-            }
-        }
-    }
-
+    override fun replaceMemberVar(v: Var<*>) { when (v.identifier) { "x" -> x = v as PosDimension; "z" -> z = v as PosDimension } }
+    override fun doAssignedBy(b: Var<*>): Pos2Var { StorageAccess.write(this, b); return this }
+    override fun getTempVar(): Pos2Var = StorageAccess.capture(this) as Pos2Var
+    override fun toCommandPart(): Command = Command.buildAll(x, z)
 }
 
-open class PosDimension: ConcreteVar<PosDimension, Pair<String, Number>> {
-
-    val prefix get() = value.first
-
-    val number get() = value.second
-
+class PosDimension : Var<PosDimension> {
     override var type: MCFPPType = MCFPPPrivateType.MCFPPCoordinateDimension
-
-    /**
-     * 创建一个int类型的变量。它的mc名和变量所在的域容器有关。
-     *
-     * @param identifier 标识符。默认为
-     */
-    constructor(
-        prefix: String,
-        number: Number,
-        identifier: String = TempPool.getVarIdentify()
-    ) : super(identifier, prefix to number) {
-        this.identifier = identifier
-    }
-
-    /**
-     * 复制一个int
-     * @param b 被复制的int值
-     */
-    constructor(b: PosDimension) : super(b){
-        value = b.value
-    }
-
-    override fun doAssignedBy(b: Var<*>): PosDimension {
-        return when (b) {
-            is PosDimension -> {
-                value = b.value
-                return this
-            }
-
-            else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
-                this
-            }
+    constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier)
+    constructor(prefix: String, number: Number, identifier: String = TempPool.getVarIdentify()) : this(identifier) {
+        require(prefix in setOf("", "~", "^"))
+        val numeric = when (number) {
+            is Float -> CompilerValue.FloatBits(number.toRawBits())
+            is Double -> CompilerValue.DoubleBits(number.toRawBits())
+            else -> CompilerValue.Integral(number.toLong())
         }
+        StorageAccess.initializeLiteral(this, CompilerValue.Sequence(listOf(CompilerValue.Text(prefix), numeric)))
     }
-
-    override fun clone(): PosDimension {
-        return PosDimension(this)
+    constructor(other: PosDimension) : super(other)
+    override fun clone() = PosDimension(this)
+    private fun parts(): List<CompilerValue>? = ((StorageAccess.snapshot(this) as? CompilerValue.Typed)
+        ?.payload as? CompilerValue.Sequence)?.elements
+    val prefix: String get() = (parts()?.getOrNull(0) as? CompilerValue.Text)?.value ?: error("Uninitialized coordinate dimension")
+    val number: Number get() = when (val v = parts()?.getOrNull(1)) {
+        is CompilerValue.Integral -> v.value
+        is CompilerValue.FloatBits -> Float.fromBits(v.bits)
+        is CompilerValue.DoubleBits -> Double.fromBits(v.bits)
+        else -> error("Uninitialized coordinate dimension")
     }
-
-    override fun getTempVar(): PosDimension {
-        return PosDimension(value.first, value.second, TempPool.getVarIdentify())
+    val value: Pair<String, Number> get() = prefix to number
+    override fun doAssignedBy(b: Var<*>): PosDimension { StorageAccess.write(this, b); return this }
+    override fun getTempVar(): PosDimension = StorageAccess.capture(this) as PosDimension
+    override fun toCommandPart(): Command {
+        if (parts() == null) { LogProcessor.error("Coordinate dimension requires a complete value"); return Command() }
+        return Command(prefix).apply { if (prefix.isEmpty() || number.toDouble() != 0.0) build(number.toString(), false) }
     }
-
-    /**
-     * 返回此坐标维度作为命令部分的表示。可能为宏函数，需要[Command.buildMacroFunction]转换
-     */
-    override fun toCommandPart(): Command{
-        val c = Command(prefix)
-        if(prefix.isEmpty() || number.toDouble() != 0.0){
-            c.build(number.toString(), false)
-        }
-        return c
-    }
-
 }

@@ -1,641 +1,98 @@
 package top.mcfpp.core.lang
 
-import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.analysis.*
 import top.mcfpp.command.Command
-import top.mcfpp.command.Commands
-import top.mcfpp.command.FloatProviders
-import top.mcfpp.core.lang.bool.CommandBoolPart
-import top.mcfpp.core.lang.bool.ExecuteBool
-import top.mcfpp.core.lang.bool.ScoreBoolConcrete
-import top.mcfpp.core.lang.nbt.MCLong
-import top.mcfpp.core.lang.nbt.MCLongConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
-import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
-import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.EnumVar
-import top.mcfpp.core.lang.obj.EnumVarConcrete
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.Function
-import top.mcfpp.nbt.tags.primitive.IntTag
-import top.mcfpp.nbt.tags.primitive.LongTag
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
-import top.mcfpp.util.TextTranslator
-import top.mcfpp.util.TextTranslator.translate
-import kotlin.math.nextDown
-import kotlin.math.nextUp
 
-/**
- * 代表了mc中的一个整数。实质上是记分板中的一个记分项。你可以对它进行加减乘除等基本运算操作，以及大小比较等逻辑运算。
- */
+/** Int is a typed access. Constants and live score locations share the same Place protocol. */
 open class MCInt : MCNumber<Int>, OnScoreboard {
-
-    override fun setObj(sbObject: SbObject): MCInt {
-        this.sbObject = sbObject
+    override var type: MCFPPType = MCFPPBaseType.Int
+    constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier)
+    constructor(curr: FieldContainer, identifier: String = TempPool.getVarIdentify()) : super(curr, identifier)
+    constructor(other: MCInt) : super(other)
+    constructor(value: Int, identifier: String = TempPool.getVarIdentify()) : this(identifier) {
+        StorageAccess.initializeLiteral(this, CompilerValue.Integral(value.toLong()))
+    }
+    constructor(curr: FieldContainer, value: Int, identifier: String = TempPool.getVarIdentify()) : this(curr, identifier) {
+        StorageAccess.initializeLiteral(this, CompilerValue.Integral(value.toLong()))
+    }
+    constructor(other: MCInt, value: Int) : this(value, other.identifier)
+    constructor(other: EnumVar) : this(other.identifier) {
+        val ordinal = ((StorageAccess.snapshot(other) as? CompilerValue.Typed)?.payload as? CompilerValue.Record)
+            ?.fields?.get("ordinal") as? CompilerValue.Integral
+        if (ordinal == null) { LogProcessor.error("Enum ordinal requires a complete enum value"); isError = true }
+        else StorageAccess.initializeLiteral(this, ordinal)
+    }
+    val value: Int get() = ((StorageAccess.snapshot(this) as? CompilerValue.Typed)?.payload as? CompilerValue.Integral)
+        ?.value?.toInt() ?: error("Int Place has no complete value")
+    override fun setObj(sbObject: SbObject): MCInt { this.sbObject = sbObject; return this }
+    override fun clone() = MCInt(this)
+    override fun doAssignedBy(b: Var<*>): MCInt {
+        if (b.type != type) { LogProcessor.error("Cannot assign ${b.type} to int"); isError = true; return this }
+        StorageAccess.write(this, b)
         return this
     }
-
-    constructor(curr: FieldContainer, identifier: String = TempPool.getVarIdentify()) : super(curr, identifier)
-
-    constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier)
-
-    constructor(b: MCInt) : super(b)
-
-    constructor(b: EnumVar): super(b)
-
-    override var type: MCFPPType = MCFPPBaseType.Int
-
-    override fun doAssignedBy(b: Var<*>) : MCInt {
-        return when (b) {
-            is MCInt -> {
-                assignCommand(b)
-            }
-
-            else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
-                this
-            }
-        }
+    override fun assignCommand(a: MCNumber<*>): MCInt = doAssignedBy(a)
+    override fun explicitCast(type: MCFPPType): Var<*> = StorageAccess.view(this, type)
+    override fun canExplicitCast(type: MCFPPType): Boolean = true
+    override fun implicitCast(type: MCFPPType): Var<*> = if (this.type == MCFPPBaseType.Int && type == MCFPPBaseType.Float)
+        top.mcfpp.backend.NumericConversions.promoteToFloat(this) else super.implicitCast(type)
+    private fun arithmetic(other: Var<*>, operation: String): Var<*> {
+        if (other !is MCInt || other.type != MCFPPBaseType.Int) { LogProcessor.error("Int arithmetic requires int operands"); return UnknownVar(identifier).apply { isError = true } }
+        val a = (StorageAccess.snapshot(this) as? CompilerValue.Typed)?.payload
+        val b = (StorageAccess.snapshot(other) as? CompilerValue.Typed)?.payload
+        if (symbol?.forceRuntime != true && other.symbol?.forceRuntime != true && a != null && b != null) PrimitiveEvaluation.binary(operation, a, b)?.let { return StorageAccess.literal(type, it) }
+        val left = StorageAccess.intRegister(this)
+        val right = StorageAccess.intRegister(other)
+        val result = MCInt().apply { isTemp = true; setObj(SbObject.MCFPP_TEMP) }
+        val destination = StorageLayout.Scoreboard(result.name, result.sbObject.toString())
+        Function.addCommand(Command("scoreboard players operation ${destination.player} ${destination.objective} = ${left.player} ${left.objective}"))
+        Function.addCommand(Command("scoreboard players operation ${destination.player} ${destination.objective} $operation= ${right.player} ${right.objective}"))
+        return StorageAccess.publishScore(result, destination)
     }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        val re = super.explicitCast(type)
-        if(!re.isError) return re
-        //TODO 类支持
-        return when (type) {
-            MCFPPBaseType.Float -> {
-                return top.mcfpp.backend.NumericConversions.convert(this, type)
-            }
-            MCFPPNBTType.Long -> {
-                top.mcfpp.backend.NumericConversions.convert(this, type)
-            }
-            else -> re
-        }
+    override fun plus(a: Var<*>) = arithmetic(a, "+")
+    override fun minus(a: Var<*>) = arithmetic(a, "-")
+    override fun times(a: Var<*>) = arithmetic(a, "*")
+    override fun div(a: Var<*>) = arithmetic(a, "/")
+    override fun rem(a: Var<*>) = arithmetic(a, "%")
+    private fun comparison(other: Var<*>, operation: String): Var<*> {
+        if (other !is MCInt || other.type != MCFPPBaseType.Int) { LogProcessor.error("Int comparison requires int operands"); return UnknownVar(identifier).apply { isError = true } }
+        val a = (StorageAccess.snapshot(this) as? CompilerValue.Typed)?.payload
+        val b = (StorageAccess.snapshot(other) as? CompilerValue.Typed)?.payload
+        if (symbol?.forceRuntime != true && other.symbol?.forceRuntime != true && a != null && b != null) PrimitiveEvaluation.binary(operation, a, b)?.let { return StorageAccess.literal(MCFPPBaseType.Bool, it) }
+        val left = StorageAccess.intRegister(this)
+        val right = StorageAccess.intRegister(other)
+        val result = top.mcfpp.core.lang.bool.ScoreBool()
+        Function.addCommand("execute store success score ${result.name} ${result.boolObject} ${if (operation == "!=") "unless" else "if"} score ${left.player} ${left.objective} ${if (operation == "==" || operation == "!=") "=" else operation} ${right.player} ${right.objective}")
+        return StorageAccess.publishBoolean(result, StorageLayout.Scoreboard(result.name, result.boolObject.toString()))
     }
-
-    override fun canExplicitCast(type: MCFPPType): Boolean {
-        return super.canExplicitCast(type) || type == MCFPPNBTType.Long || type == MCFPPBaseType.Float
-    }
-
-    override fun implicitCast(type: MCFPPType): Var<*> {
-        val re = super.implicitCast(type)
-        if(!re.isError) return re
-        if (this.type != MCFPPBaseType.Int) return re
-        //TODO 类支持
-        return when (type) {
-            MCFPPBaseType.Float -> {
-                return top.mcfpp.backend.NumericConversions.promoteToFloat(this)
-            }
-            else -> re
-        }
-    }
-
-    override fun canImplicitCast(type: MCFPPType): Boolean {
-        return super.canImplicitCast(type)
-    }
-
-    //this = a
-    @InsertCommand
-    override fun assignCommand(a: MCNumber<*>) : MCInt {
-        return if(a is MCIntConcrete){
-            if(isDataOnly){
-                Function.addCommand(Commands.dataSetValue(nbtPath, IntTag(a.value)))
-                this
-            }else{
-                MCIntConcrete(this, a.value)
-            }
-        }else {
-            if(isDataOnly){
-                Function.addCommand(
-                    Command("execute store result").build(nbtPath.toCommandPart()).build("int 1").build("run")
-                        .build("scoreboard players get ${(a as MCInt).name} ${a.sbObject}")
-                )
-            }else{
-                Function.addCommand(Commands.sbPlayerOperation(this, "=", a as MCInt))
-            }
-            MCInt(this)
-        }
-    }
-
-    @InsertCommand
-    override fun plus(a: Var<*>): Var<*> {
-        if(!isTemp && a.isTemp && a !is MCIntConcrete){
-            return a.plus(this)
-        }else if(!isTemp){
-            return getTempVar().plus(a)
-        }
-        when(a){
-            is MCIntConcrete -> {
-                Function.addCommand(Commands.sbPlayerAdd(this, a.value))
-                return this
-            }
-            is MCInt -> {
-                Function.addCommand(Commands.sbPlayerOperation(this, "+=", a))
-                return this
-            }
-            else -> errorOp()
-        }
-    }
-
-    @InsertCommand
-    override fun minus(a: Var<*>): Var<*> {
-        if(!isTemp && a.isTemp && a !is MCIntConcrete){
-            return a.minus(this)
-        }else if(!isTemp){
-            return getTempVar().minus(a)
-        }
-        when(a){
-            is MCIntConcrete -> {
-                Function.addCommand(Commands.sbPlayerRemove(this, a.value))
-                return this
-            }
-            is MCInt -> {
-                Function.addCommand(Commands.sbPlayerOperation(this, "-=", a))
-                return this
-            }
-            else -> errorOp()
-        }
-    }
-
-    @InsertCommand
-    override fun times(a: Var<*>): Var<*> {
-        //t *= a
-        if(!isTemp && a.isTemp && a !is MCIntConcrete){
-            return a.times(this)
-        }else if(!isTemp){
-            return getTempVar().times(a)
-        }
-        when(a){
-            is MCIntConcrete -> {
-                Function.addCommand(Commands.sbPlayerSet(a, a.value))
-                Function.addCommand(Commands.sbPlayerOperation(this, "*=", a))
-                return this
-            }
-            is MCInt -> {
-                Function.addCommand(Commands.sbPlayerOperation(this, "*=", a))
-                return this
-            }
-            else -> errorOp()
-        }
-    }
-
-    @InsertCommand
-    override fun div(a: Var<*>): Var<*> {
-        //t /= a
-        if(!isTemp && a.isTemp && a !is MCIntConcrete){
-            return a.div(this)
-        }else if(!isTemp){
-            return getTempVar().div(a)
-        }
-        when(a){
-            is MCIntConcrete -> {
-                Function.addCommand(Commands.sbPlayerSet(a, a.value))
-                Function.addCommand(Commands.sbPlayerOperation(this, "/=", a))
-                return this
-            }
-            is MCInt -> {
-                Function.addCommand(Commands.sbPlayerOperation(this, "/=", a))
-                return this
-            }
-            else -> errorOp()
-        }
-    }
-
-    @InsertCommand
-    override fun rem(a: Var<*>): Var<*> {
-        //t %= a
-        if(!isTemp && a.isTemp && a !is MCIntConcrete){
-            return a.rem(this)
-        }else if(!isTemp){
-            return getTempVar().rem(a)
-        }
-        when(a){
-            is MCIntConcrete -> {
-                Function.addCommand(Commands.sbPlayerSet(a, a.value))
-                Function.addCommand(Commands.sbPlayerOperation(this, "%=", a))
-                return this
-            }
-            is MCInt -> {
-                Function.addCommand(Commands.sbPlayerOperation(this, "%=", a))
-                return this
-            }
-            else -> errorOp()
-        }
-    }
-
-    @InsertCommand
-    override fun isBigger(a: Var<*>): Var<*> {
-        //re = t > a
-        if (a !is MCInt) errorOp()
-        if(isDataOnly) getFromStack()
-        val re = ExecuteBool()
-        if (a is MCIntConcrete) {
-            //execute store success score qwq qwq if score qwq qwq matches a+1..
-            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject matches ${a.value + 1}..")))
-        } else {
-            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject > ${a.name} ${a.sbObject}")))
-        }
-        re.isTemp = true
-        return re
-    }
-
-    @InsertCommand
-    override fun isSmaller(a: Var<*>): Var<*> {
-        //re = t < a
-        if (a !is MCInt) errorOp()
-        if(isDataOnly) getFromStack()
-        val re = ExecuteBool()
-        if (a is MCIntConcrete) {
-            //execute store success score qwq qwq if score qwq qwq matches a+1..
-            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject matches ..${a.value - 1}")))
-        } else {
-            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject < ${a.name} ${a.sbObject}")))
-        }
-        re.isTemp = true
-        return re
-    }
-
-    @InsertCommand
-    override fun isSmallerOrEqual(a: Var<*>): Var<*> {
-        //re = t <= a
-        if (a !is MCInt) errorOp()
-        if(isDataOnly) getFromStack()
-        val re = ExecuteBool()
-        if (a is MCIntConcrete) {
-            //execute store success score qwq qwq if score qwq qwq matches a+1..
-            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject matches ..${a.value}")))
-        } else {
-            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject <= ${a.name} ${a.sbObject}")))
-        }
-        re.isTemp = true
-        return re
-    }
-
-    @InsertCommand
-    override fun isBiggerOrEqual(a: Var<*>): Var<*> {
-        //re = t <= a
-        if (a !is MCInt) errorOp()
-        if(isDataOnly) getFromStack()
-        val re = ExecuteBool()
-        if (a is MCIntConcrete) {
-            //execute store success score qwq qwq if score qwq qwq matches a+1..
-            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject matches ${a.value}..")))
-        } else {
-            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject >= ${a.name} ${a.sbObject}")))
-        }
-        re.isTemp = true
-        return re
-    }
-
-    @InsertCommand
-    override fun isEqual(a: Var<*>): Var<*> {
-        //re = t == a
-        if (a !is MCInt) errorOp()
-        if(isDataOnly) getFromStack()
-        val re = ExecuteBool()
-        if (a is MCIntConcrete) {
-            //execute store success score qwq qwq if score qwq qwq = owo owo
-            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject matches ${a.value}")))
-        } else {
-            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject = ${a.name} ${a.sbObject}")))
-        }
-        re.isTemp = true
-        return re
-    }
-
-    @InsertCommand
-    override fun isNotEqual(a: Var<*>): Var<*> {
-        //re = t != a
-        if (a !is MCInt) errorOp()
-        if(isDataOnly) getFromStack()
-        val re = ExecuteBool()
-        if(a is MCIntConcrete){
-            //execute store success score qwq qwq if score qwq qwq matches owo owo
-            re.value.add(CommandBoolPart(false, Command("unless score $name $sbObject matches ${a.value}")))
-        }else{
-            re.value.add(CommandBoolPart(false, Command("unless score $name $sbObject = ${a.name} ${a.sbObject}")))
-        }
-        re.isTemp = true
-        return re
-    }
-
+    override fun isBigger(a: Var<*>) = comparison(a, ">")
+    override fun isSmaller(a: Var<*>) = comparison(a, "<")
+    override fun isSmallerOrEqual(a: Var<*>) = comparison(a, "<=")
+    override fun isBiggerOrEqual(a: Var<*>) = comparison(a, ">=")
+    override fun isEqual(a: Var<*>) = comparison(a, "==")
+    override fun isNotEqual(a: Var<*>) = comparison(a, "!=")
     override fun inRange(a: Var<*>): Var<*> {
-        if(a !is RangeVar) errorOp()
-        if(a is RangeVarConcrete){
-            val left = a.value.first
-            val right = a.value.second
-            val range = if(a.isIntRange()) a else RangeVarConcrete(left?.toFloat()?.nextUp() to right?.toFloat()?.nextDown())
-            val re = ExecuteBool()
-            re.value.add(
-                CommandBoolPart(
-                    false,
-                    Command("if score $name $sbObject matches").build(range.toCommandPart())
-                )
-            )
-        }
-        if(a.isIntRange()){
-            return a.left.isSmallerOrEqual(this).and(a.right.isBiggerOrEqual(this))
-        }
-        TODO()
+        if (a !is RangeVar || !a.isIntRange()) { LogProcessor.error("Int membership requires an int range"); return UnknownVar(identifier).apply { isError = true } }
+        val register = StorageAccess.intRegister(this)
+        val result = top.mcfpp.core.lang.bool.ScoreBool()
+        Function.addCommands(Command("execute store success score ${result.name} ${result.boolObject} if score ${register.player} ${register.objective} matches").build(a.toCommandPart()).buildMacroFunction())
+        return StorageAccess.publishBoolean(result, StorageLayout.Scoreboard(result.name, result.boolObject.toString()))
     }
-
-    override fun clone(): MCInt {
-        return MCInt(this)
-    }
-
-    /**
-     * 获取临时变量
-     *
-     * @return 返回临时变量
-     */
-    @InsertCommand
-    override fun getTempVar(): MCInt {
-        if (isTemp) return this
-        val re = MCInt()
-        re.isTemp = true
-        if(isDataOnly) getFromStack()
-        return re.assignedBy(this) as MCInt
-    }
-
-    override fun storeToStack() {
-        storageBinding?.let { it.data.materialize(); return }
-        if(hasStoredInStack) return
-        Function.addCommand(Command("execute store result")
-            .build(nbtPath.toCommandPart())
-            .build("int 1 run scoreboard players get $name $sbObject"))
-        hasStoredInStack = true
-    }
-
+    override fun getTempVar(): MCInt = StorageAccess.capture(this) as MCInt
+    override fun storeToStack() { StorageAccess.materialize(this) }
     override fun getFromStack() {
-        if (top.mcfpp.analysis.StorageAccess.restoreScore(this, name, sbObject.toString())) return
-        if(parent != null) return
-        Function.addCommand(
-            Command("execute store result score $name $sbObject run data get")
-                .build(nbtPath.toCommandPart())
-        )
+        val score = StorageAccess.intRegister(this)
+        name = score.player
     }
-}
-
-class MCIntConcrete : MCInt, MCFPPValue<Int> {
-
-    override var value: Int = 0
-
-    /**
-     * 创建一个固定的int
-     *
-     * @param identifier 标识符
-     * @param curr 域容器
-     * @param value 值
-     */
-    constructor(
-        curr: FieldContainer,
-        value: Int,
-        identifier: String = TempPool.getVarIdentify()
-    ) : super(curr, identifier) {
-        this.value = value
-    }
-
-    /**
-     * 创建一个固定的int。它的标识符和mc名一致/
-     * @param identifier 标识符。如不指定，则为随机uuid
-     * @param value 值
-     */
-    constructor(value: Int, identifier: String = TempPool.getVarIdentify()) : super(identifier) {
-        this.value = value
-    }
-
-    constructor(int: MCInt, value: Int) : super(int){
-        this.value = value
-    }
-
-    constructor(int: MCIntConcrete) : super(int){
-        this.value = int.value
-    }
-
-    constructor(enum: EnumVarConcrete) : super(enum){
-        this.value = enum.value.value
-    }
-
-    override fun clone(): MCIntConcrete {
-        return MCIntConcrete(this)
-    }
-
-    override fun storeToStack() {}
-
-    override fun getFromStack() {}
-
-    /**
-     * 动态化
-     *
-     */
-    override fun toDynamic(replace: Boolean): Var<*> {
-        if (storageBinding != null) {
-            val re = top.mcfpp.analysis.StorageAccess.read(MCInt(this).apply { isDynamic = true })
-            if (replace) replacedBy(re)
-            return re
-        }
-        Function.addCommand("scoreboard players set $name $sbObject $value")
-        val re = MCInt(this)
-        if(replace){
-            if(parentTemplate() != null){
-                (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
-            }else{
-                Function.currFunction.scope.putVar(identifier, re, true)
-            }
-        }
-        return re
-    }
-
-    @InsertCommand
-    override fun plus(a: Var<*>): Var<*> {
-        //t = t + a
-        if(!isTemp) return getTempVar().plus(a)
-        when(a){
-            is MCIntConcrete -> {
-                value += a.value
-                return this
-            }
-            is MCInt -> {
-                return a.plus(this)
-            }
-            else -> errorOp()
-        }
-    }
-
-    @InsertCommand
-    override fun minus(a: Var<*>): Var<*> {
-        //t = t + a
-        if(!isTemp) return getTempVar().minus(a)
-        when(a){
-            is MCIntConcrete -> {
-                value -= a.value
-                return this
-            }
-            is MCInt -> {
-                return a.minus(this)
-            }
-            else -> errorOp()
-        }
-    }
-
-
-    @Override
-    @InsertCommand
-    override fun times(a: Var<*>): Var<*> {
-        //t = t * a
-        if(!isTemp) return getTempVar().times(a)
-        when(a){
-            is MCIntConcrete -> {
-                value *= a.value
-                return this
-            }
-            is MCInt -> {
-                return a.times(this)
-            }
-            else -> errorOp()
-        }
-    }
-
-    @Override
-    @InsertCommand
-    override fun div(a: Var<*>): Var<*> {
-        //t = t / a
-        if(!isTemp) return getTempVar().div(a)
-        when(a){
-            is MCIntConcrete -> {
-                value /= a.value
-                return this
-            }
-            is MCInt -> {
-                return a.div(this)
-            }
-            else -> errorOp()
-        }
-    }
-
-    @Override
-    @InsertCommand
-    override fun rem(a: Var<*>): Var<*> {
-        //t = t % a
-        if(!isTemp) return getTempVar().rem(a)
-        when(a){
-            is MCIntConcrete -> {
-                value %= a.value
-                return this
-            }
-            is MCInt -> {
-                return a.rem(this)
-            }
-            else -> errorOp()
-        }
-    }
-
-    @Override
-    @InsertCommand
-    override fun isBigger(a: Var<*>): Var<*> {
-        //re = t > a
-        if (a !is MCInt) errorOp()
-        return if (a is MCIntConcrete) {
-            ScoreBoolConcrete(value > a.value)
-        } else {
-            //注意大小于换符号！
-            a.isSmaller(this)
-        }
-    }
-
-    @Override
-    @InsertCommand
-    override fun isSmaller(a: Var<*>): Var<*> {
-        //re = t < a
-        if (a !is MCInt) errorOp()
-        return if (a is MCIntConcrete) {
-            ScoreBoolConcrete(value < a.value)
-        } else {
-            a.isBigger(this)
-        }
-    }
-
-    @Override
-    @InsertCommand
-    override fun isSmallerOrEqual(a: Var<*>): Var<*> {
-        //re = t <= a
-        if (a !is MCInt) errorOp()
-        return if (a is MCIntConcrete) {
-            ScoreBoolConcrete(value <= a.value)
-        } else {
-            a.isBiggerOrEqual(this)
-        }
-    }
-
-    @Override
-    @InsertCommand
-    override fun isBiggerOrEqual(a: Var<*>): Var<*> {
-        //re = t <= a
-        if (a !is MCInt) errorOp()
-        return if (a is MCIntConcrete) {
-            ScoreBoolConcrete(value >= a.value)
-        } else {
-            a.isSmallerOrEqual(this)
-        }
-    }
-
-    @Override
-    @InsertCommand
-    override fun isEqual(a: Var<*>): Var<*> {
-        //re = t == a
-        if (a !is MCInt) errorOp()
-        return if (a is MCIntConcrete) {
-            ScoreBoolConcrete(value == a.value)
-        } else {
-            a.isEqual(this)
-        }
-    }
-
-    @Override
-    @InsertCommand
-    override fun isNotEqual(a: Var<*>): Var<*> {
-        //re = t != a
-        if (a !is MCInt) errorOp()
-        return if (a is MCIntConcrete) {
-            ScoreBoolConcrete(value != a.value)
-        } else {
-            a.isNotEqual(this)
-        }
-    }
-
-    override fun inRange(a: Var<*>): Var<*> {
-        if(a !is RangeVar) errorOp()
-        if(a is RangeVarConcrete){
-            val left = a.value.first
-            val right = a.value.second
-            if(left != null && value.toDouble() < left.toDouble()) return ScoreBoolConcrete(false)
-            if(right!= null && value.toDouble() > right.toDouble()) return ScoreBoolConcrete(false)
-            return ScoreBoolConcrete(true)
-        }
-        if(!a.isIntRange()){
-            return toDynamic(false).inRange(a)
-        }else{
-            TODO()
-        }
-    }
-
-    /**
-     * 获取临时变量
-     *
-     * @return 返回临时变量
-     */
-    @Override
-    @InsertCommand
-    override fun getTempVar(): MCIntConcrete {
-        if (isTemp) return this
-        return MCIntConcrete(value).apply { isTemp = true }
-    }
-
-    override fun toNBTVar(): NBTBasedData {
-        return NBTBasedDataConcrete(super.toNBTVar(), IntTag(value))
-    }
+    override fun toNBTVar(): NBTBasedData = StorageAccess.view(this, MCFPPNBTType.NBT, diagnose = false) as NBTBasedData
 }

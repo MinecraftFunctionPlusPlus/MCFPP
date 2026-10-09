@@ -4,8 +4,6 @@ import top.mcfpp.Project
 import top.mcfpp.analysis.*
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBool
-import top.mcfpp.core.lang.bool.ScoreBoolConcrete
-import top.mcfpp.core.lang.nbt.NBTListConcrete
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
@@ -86,11 +84,14 @@ class CollectionStorageTest {
     @Test fun anUnknownIndexWriteInvalidatesValuesAndWidensEachPossibleElementType() {
         val main = compile("func main() {}")
         Function.currFunction = main
-        val values = NBTListConcrete(arrayListOf(MCIntConcrete(2), MCIntConcrete(9)), "values", MCFPPBaseType.Any)
-            .apply { hasAssigned = true }
+        val type = top.mcfpp.type.MCFPPListType(MCFPPBaseType.Any)
+        val values = type.buildUnConcrete("values") as top.mcfpp.core.lang.nbt.NBTList
+        StorageAccess.declare(values, Symbol(SymbolId.fresh(), "values", type.typeId, mutable = true))
+        StorageAccess.write(values, StorageAccess.listLiteral(type, listOf(MCInt(2), MCInt(9))))
         val binding = StorageAccess.ensure(values)
-        val index = MCInt("index").apply { hasAssigned = true; isDynamic = true }
-        values.getByIndex(index).assignedBy(ScoreBoolConcrete(false))
+        val index = MCInt("index")
+        StorageAccess.bindIncomingParameter(index)
+        values.getByIndex(index).assignedBy(ScoreBool(false))
         for (element in 0..1) {
             val fact = binding.data.facts.read(binding.place.index(element))!!
             assertEquals(ValueKnowledge.Unknown, fact.value)
@@ -126,7 +127,7 @@ class CollectionStorageTest {
                 dynamic var result = values[0] + values[1];
             }
         """)
-        assertNull(ValueSnapshot.of(main.scope.getVar("values")))
+        assertNull(StorageAccess.snapshot(assertNotNull(main.scope.getVar("values"))))
         assertEquals(7, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
@@ -349,7 +350,8 @@ class CollectionStorageTest {
         val main = compile("func main(){}")
         Function.currFunction = main
         val before = main.commands.analyzeAll()
-        val source = top.mcfpp.core.lang.nbt.NBTDictionaryConcrete(hashMapOf("kind" to MCFPPTypeVar(MCFPPBaseType.Int)), "source")
+        val source = StorageAccess.dictionaryLiteral(top.mcfpp.type.MCFPPDictType(top.mcfpp.type.MCFPPConcreteType.Type),
+            mapOf("kind" to MCFPPTypeVar(MCFPPBaseType.Int)), "source")
         StorageAccess.materialize(source)
         assertTrue(Project.errorCount > 0)
         assertEquals(before, main.commands.analyzeAll())
@@ -357,9 +359,18 @@ class CollectionStorageTest {
 
     @Test fun anEmptyLiteralStillHasARuntimeRepresentation() {
         val main = compile("func main(){ dynamic var values = []; }")
-        assertTrue(main.scope.getVar("values")!!.type.hasRuntimeRepresentation)
-        assertNotNull(ValueSnapshot.of(main.scope.getVar("values")))
-        execute(main)
+        val values = assertNotNull(main.scope.getVar("values"))
+        assertTrue(values.type.hasRuntimeRepresentation)
+        assertEquals(CompilerValue.Typed(values.type.typeId, CompilerValue.Sequence(emptyList())), StorageAccess.snapshot(values))
+        val binding = assertNotNull(values.storageBinding)
+        assertEquals(0, binding.data.facts.length(binding.place))
+        val exit = main.commands.last()
+        assertEquals(top.mcfpp.command.Commands.stackOut().analyze(), exit.toString())
+        main.commands.add(main.commands.lastIndex, top.mcfpp.command.Command.buildAll(
+            "data modify storage fixture:observation values set from", binding.path))
+        val machine = execute(main)
+        assertEquals(0, assertIs<top.mcfpp.nbt.tags.collection.ListTag>(machine.readNbt("fixture:observation", "values")).size)
+        assertEquals(0, machine.stackDepth)
     }
 
     @Test fun aKnownAnyIndexBindsItsActualIntegerType() {

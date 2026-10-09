@@ -31,7 +31,8 @@ import top.mcfpp.util.TextTranslator.translate
  */
 open class NBTBasedData : Var<NBTBasedData>, Indexable {
 
-    open var nbtType: NBTTypeWithTag = NBTTypeWithTag.ANY
+    open val nbtType: NBTTypeWithTag get() = top.mcfpp.analysis.StorageAccess.constantEncoding(this)
+        ?.let(NBTTypeWithTag::getTagType) ?: NBTTypeWithTag.ANY
 
     override var type: MCFPPType = MCFPPNBTType.NBT
 
@@ -49,33 +50,35 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
 
     constructor(b: EnumVar): super(b)
 
+    constructor(value: Tag<*>, identifier: String = TempPool.getVarIdentify()) : this(identifier) {
+        top.mcfpp.analysis.StorageAccess.initializeLiteral(this,
+            top.mcfpp.analysis.CompilerValue.Nbt(top.mcfpp.backend.NbtEncoding.snbt(value)))
+    }
+
+    constructor(curr: FieldContainer, value: Tag<*>, identifier: String = TempPool.getVarIdentify()) :
+        this(value, curr.prefix + identifier)
+
+    constructor(data: NBTBasedData, value: Tag<*>) : this(data) {
+        top.mcfpp.analysis.StorageAccess.initializeLiteral(this,
+            top.mcfpp.analysis.CompilerValue.Nbt(top.mcfpp.backend.NbtEncoding.snbt(value)))
+    }
+
+    open val value: Tag<*> get() = top.mcfpp.analysis.StorageAccess.constantEncoding(this)
+        ?: error("NBT value has no complete compile-time payload")
+
     /**
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
     override fun doAssignedBy(b: Var<*>) : NBTBasedData {
-        return when (b) {
-            is NBTBasedData -> assignCommand(b)
-            else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
-                this
-            }
-        }
+        top.mcfpp.analysis.StorageAccess.write(this, b)
+        return this
     }
 
     @InsertCommand
     protected open fun assignCommand(a: NBTBasedData) : NBTBasedData {
-        nbtType = a.nbtType
-        if (a.storageBinding != null) {
-            top.mcfpp.analysis.StorageAccess.encodeTo(nbtPath, a)
-            return NBTBasedData(this)
-        }
-        return if(a is NBTBasedDataConcrete){
-            NBTBasedDataConcrete(this, a.value)
-        } else {
-            Function.addCommand(Commands.dataSetFrom(nbtPath, a.nbtPath))
-            NBTBasedData(this)
-        }
+        top.mcfpp.analysis.StorageAccess.write(this, a)
+        return this
     }
 
     /**
@@ -83,12 +86,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
      * @param type 要转换到的目标类型
      */
     override fun explicitCast(type: MCFPPType): Var<*> {
-        val re = super.explicitCast(type)
-        if(!re.isError) return re
-        return when(type){
-            MCFPPNBTType.NBT -> this
-            else -> re
-        }
+        return top.mcfpp.analysis.StorageAccess.view(this, type)
     }
 
     /**
@@ -114,7 +112,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
      * @return
      */
     override fun getTempVar(): NBTBasedData {
-        return top.mcfpp.analysis.StorageAccess.capture(this) as NBTBasedData
+        return top.mcfpp.analysis.StorageAccess.capture(this) as? NBTBasedData ?: NBTBasedData().apply { isError = true }
     }
 
     override fun storeToStack() {
@@ -138,46 +136,43 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
     protected fun getByNBTIndex(index: NBTBasedData): NBTBasedData {
         if(nbtType != NBTTypeWithTag.LIST && nbtType != NBTTypeWithTag.ANY){
             LogProcessor.error("Invalid nbt type")
+            return NBTBasedData().apply { isError = true }
         }
         if(index.nbtType != NBTTypeWithTag.COMPOUND && index.nbtType != NBTTypeWithTag.ANY){
             LogProcessor.error("Invalid nbt type")
+            return NBTBasedData().apply { isError = true }
         }
-        val re = NBTBasedData(this)
-        re.parent = this
-        re.nbtPath = re.nbtPath.nbtIndex(index)
-        re.isDynamic = this !is MCFPPValue<*>
-        return re
+        val captured = top.mcfpp.analysis.StorageAccess.capture(index)
+        if (captured.isError || captured !is NBTBasedData) return NBTBasedData().apply { isError = true }
+        val root = top.mcfpp.analysis.StorageAccess.ensure(this)
+        if (root.data.facts.read(root.place)?.state != top.mcfpp.analysis.ValueState.INITIALIZED) {
+            LogProcessor.error("Cannot access an uninitialized NBT value")
+            return NBTBasedData().apply { isError = true }
+        }
+        val binding = root.copy(place = root.place.unknownIndex(), path = root.path.nbtIndex(captured))
+        root.data.facts.refine(binding.place, top.mcfpp.analysis.ValueFacts(
+            top.mcfpp.analysis.TypeKnowledge.Exact(MCFPPNBTType.NBT.typeId), top.mcfpp.analysis.ValueKnowledge.Unknown))
+        return (top.mcfpp.analysis.StorageAccess.adapter(MCFPPNBTType.NBT, TempPool.getVarIdentify(), binding) as NBTBasedData)
+            .apply { parent = this@NBTBasedData }
     }
 
     protected fun getByStringIndex(index: MCString): NBTBasedData {
         if(nbtType != NBTTypeWithTag.COMPOUND && nbtType != NBTTypeWithTag.ANY){
             LogProcessor.error("Invalid nbt type")
         }
-        val re = NBTBasedData(this)
-        re.parent = this
-        re.nbtPath = re.nbtPath.memberIndex(index)
-        re.isDynamic = this !is MCFPPValue<*>
-        return re
+        return top.mcfpp.analysis.StorageAccess.element(this, index, MCFPPNBTType.NBT) as? NBTBasedData ?: NBTBasedData().apply { isError = true }
     }
 
     protected open fun getByIntIndex(index: MCInt): NBTBasedData {
         if(nbtType != NBTTypeWithTag.LIST && nbtType != NBTTypeWithTag.ANY){
             LogProcessor.error("Invalid nbt type")
         }
-        val re = NBTBasedData(this)
-        re.parent = this
-        re.nbtPath = nbtPath.intIndex(index)
-        re.isDynamic = this !is MCFPPValue<*>
-        return re
+        return top.mcfpp.analysis.StorageAccess.element(this, index, MCFPPNBTType.NBT) as? NBTBasedData ?: NBTBasedData().apply { isError = true }
     }
 
     fun toJson(): NBTBasedData {
-        when(nbtType){
-            NBTTypeWithTag.INT_ARRAY -> {
-                TODO()
-            }
-            else -> TODO()
-        }
+        LogProcessor.error("NBT to JSON conversion has no supported backend encoding")
+        return NBTBasedData().apply { isError = true }
     }
 
 
@@ -186,10 +181,8 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
     }
 
     fun simpleIndex(index: String): NBTBasedData{
-        val re = NBTBasedData(this)
-        re.parent = this
-        re.nbtPath = re.nbtPath.memberIndex(index)
-        return re
+        return top.mcfpp.analysis.StorageAccess.element(this,
+            MCString(StringTag(index)), MCFPPNBTType.NBT) as? NBTBasedData ?: NBTBasedData().apply { isError = true }
     }
 
     //TODO 逻辑待优化。这里的处理不是很优雅
@@ -290,21 +283,19 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
 
             fun getMCFPPType(): MCFPPType {
                 return when(this){
-                    BYTE -> MCFPPBaseType.Int
+                    BYTE -> MCFPPNBTType.Byte
                     BOOL -> MCFPPBaseType.Bool
-                    SHORT -> MCFPPBaseType.Int
+                    SHORT -> MCFPPNBTType.Short
                     INT -> MCFPPBaseType.Int
-                    LONG -> MCFPPBaseType.Int
+                    LONG -> MCFPPNBTType.Long
                     FLOAT -> MCFPPBaseType.Float
-                    DOUBLE -> MCFPPBaseType.Float
+                    DOUBLE -> MCFPPNBTType.Double
                     STRING -> MCFPPBaseType.String
-                    BYTE_ARRAY -> MCFPPBaseType.Any
-                    INT_ARRAY -> MCFPPBaseType.Any
-                    LONG_ARRAY -> MCFPPBaseType.Any
+                    BYTE_ARRAY -> MCFPPNBTType.ByteArray
+                    INT_ARRAY -> MCFPPNBTType.IntArray
+                    LONG_ARRAY -> MCFPPNBTType.LongArray
                     COMPOUND -> MCFPPNBTType.NBT
-                    LIST -> {
-                        TODO()
-                    }
+                    LIST -> MCFPPListType(MCFPPNBTType.NBT)
                     ANY -> MCFPPBaseType.Any
                 }
             }
@@ -324,7 +315,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
                     LONG_ARRAY -> LongArrayTag::class.java
                     COMPOUND -> CompoundTag::class.java
                     LIST -> ListTag::class.java
-                    ANY -> TODO()
+                    ANY -> Tag::class.java
                 }
             }
 
@@ -352,107 +343,5 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
         enum class NBTType {
             COMPOUND, LIST, VALUE, ANY, ARRAY
         }
-    }
-}
-
-class NBTBasedDataConcrete : NBTBasedData, MCFPPValue<Tag<*>> {
-
-    override var value : Tag<*>
-
-    constructor(
-        curr: FieldContainer,
-        value: Tag<*>,
-        identifier: String = TempPool.getVarIdentify()
-    ) : super(curr.prefix + identifier) {
-        this.value = value
-        //记录nbt字面量类型
-        nbtType = NBTBasedData.Companion.NBTTypeWithTag.getTagType(value)
-    }
-
-    constructor(value: Tag<*>, identifier: String = TempPool.getVarIdentify()) : super(identifier) {
-        this.value = value
-        //记录nbt字面量类型
-        nbtType = NBTBasedData.Companion.NBTTypeWithTag.getTagType(value)
-    }
-
-    constructor(data: NBTBasedData, value: Tag<*>) : super(data) {
-        this.value = value
-    }
-
-    constructor(v: NBTBasedDataConcrete) : super(v){
-        this.value = v.value
-    }
-
-    override fun implicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            is MCFPPVectorType -> {
-                if((value is ListTag) && (type.dimension == (value as ListTag).size)){
-                    //转换为向量
-                    val first = (value as ListTag)[0]
-                    if(first !is IntTag){
-                        return buildCastErrorVar(type)
-                    }
-                    return VectorVarConcrete((value as ListTag).map { (it as IntTag).asInt() }.toTypedArray())
-                }else{
-                    return buildCastErrorVar(type)
-                }
-            }
-            MCFPPBaseType.Any -> {
-                return MCAnyConcrete(value)
-            }
-            is MCFPPDataTemplateType -> {
-                if (value !is CompoundTag) {
-                    LogProcessor.error("Not a compound tag: $value")
-                    return buildCastErrorVar(type)
-                }
-                if (type.template.checkCompoundStruct(value as CompoundTag)) {
-                    val re = type.build() as DataTemplateObject
-                    re.assignMembers(value as CompoundTag)
-                    return re
-                } else {
-                    LogProcessor.error("Error compound struct: $value")
-                    return buildCastErrorVar(type)
-                }
-            }
-            else -> {
-                val t = JavaVar.javaToMC(value.toJava())
-                if(t.type == type) return t
-                return buildCastErrorVar(type)
-            }
-        }
-    }
-
-    override fun canImplicitCast(type: MCFPPType): Boolean{
-        return true
-    }
-
-    override fun clone(): NBTBasedDataConcrete {
-        return NBTBasedDataConcrete(this)
-    }
-
-    override fun getTempVar(): NBTBasedDataConcrete {
-        return NBTBasedDataConcrete(this.value)
-    }
-
-    override fun toDynamic(replace: Boolean): Var<*> {
-        val parent = parent
-        Function.addCommand(
-            Command("data modify")
-                .build(nbtPath.toCommandPart())
-                .build("set value ${Tag.toSNBT(value)}")
-        )
-        val re = NBTBasedData(this)
-        if(replace){
-            if(parentTemplate() != null){
-                (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
-            }else {
-                Function.currFunction.scope.putVar(identifier, re, true)
-            }
-        }
-        return re
-    }
-
-    override fun toString(): String {
-        return "[$type,value=${Tag.toSNBT(value)}]"
     }
 }

@@ -7,6 +7,13 @@ import top.mcfpp.mni.annotation.WritesReceiver;
 
 /** One signature per member, with value/layout selection at the storage boundary. */
 public class NBTDictionaryData {
+    @NoExternalWrites
+    @MNIFunction(caller = "dict", genericType = "E", returnType = "int")
+    public static void size(NativeCallContext context) { DictionaryOperations.INSTANCE.size(context); }
+
+    @NoExternalWrites
+    @MNIFunction(caller = "dict", genericType = "E", returnType = "bool")
+    public static void isEmpty(NativeCallContext context) { DictionaryOperations.INSTANCE.isEmpty(context); }
     @WritesReceiver
     @MNIFunction(caller = "dict", genericType = "E")
     public static void clear(NativeCallContext context) {

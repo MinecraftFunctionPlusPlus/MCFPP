@@ -8,7 +8,6 @@ import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.command.FloatProviders
 import top.mcfpp.core.lang.MCFloat
-import top.mcfpp.core.lang.MCFloatConcrete
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.lib.EntitySelector
@@ -24,6 +23,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.test.assertNotNull
+import kotlin.test.assertIs
 
 class FloatProviderTest {
     @Test
@@ -38,10 +39,10 @@ class FloatProviderTest {
             entry.runInFunction {
                 val declaration = MCFPPBaseType.Float.buildUnConcrete("declaration") as MCFloat
                 MCFloat(declaration)
-                MCFloatConcrete(2f)
+                MCFloat(2f)
                 MCFPPBaseType.Float.instanceData.getFunction("toInt", emptyList(), emptyList())
                 assertFalse(module.packages.getValue(floatPackage))
-                val result = top.mcfpp.backend.NumericConversions.promoteToFloat(top.mcfpp.core.lang.MCIntConcrete(2))
+                val result = top.mcfpp.backend.NumericConversions.promoteToFloat(top.mcfpp.core.lang.MCInt(2))
                 assertFalse(result.isError)
                 assertEquals(version != "26.3", module.packages.getValue(floatPackage))
             }
@@ -264,15 +265,23 @@ class FloatProviderTest {
             val entityValue = MCFloat("entity_float").apply {
                 nbtPath = NBTPath(EntitySource(SelectorVar(EntitySelector('s')))).memberIndex("data").memberIndex("value")
             }
-            FloatProviders.arithmetic(entityValue, MCFloatConcrete(1f), "+")
+            StorageAccess.bindIncomingParameter(entityValue)
+            FloatProviders.arithmetic(entityValue, MCFloat(1f), "+")
             val index = MCInt("index").apply { nbtPath = NBTPath.getNormalStackPath(this) }
+            Function.addCommand("scoreboard players set index mcfpp_default 1")
+            StorageAccess.publishScore(index, top.mcfpp.analysis.StorageLayout.Scoreboard("index", "mcfpp_default"))
             val indexed = MCFloat("indexed_float").apply {
                 nbtPath = NBTPath(StorageSource("example:values")).memberIndex("values").intIndex(index)
             }
-            Function.addCommand("scoreboard players set index mcfpp_default 1")
-            FloatProviders.arithmetic(indexed, MCFloatConcrete(2f), "*")
+            StorageAccess.bindIncomingParameter(indexed)
+            FloatProviders.arithmetic(indexed, MCFloat(2f), "*")
             Function.addCommand("scoreboard players set index mcfpp_default 2")
-            FloatProviders.arithmetic(indexed, MCFloatConcrete(3f), "+")
+            StorageAccess.invalidateReads(listOf(index))
+            val laterIndexed = MCFloat("later_indexed_float").apply {
+                nbtPath = NBTPath(StorageSource("example:values")).memberIndex("values").intIndex(index)
+            }
+            StorageAccess.bindIncomingParameter(laterIndexed)
+            FloatProviders.arithmetic(laterIndexed, MCFloat(3f), "+")
         }
         val commands = function.commands.analyzeAll()
         assertTrue(commands.any { it.contains("set from entity @s data.value") })
@@ -350,12 +359,17 @@ class FloatProviderTest {
         val (function, _) = compile("")
         function.runInFunction {
             val field = MCFloat("field").apply { isDataOnly = true }
-            assertFalse(field.assignedBy(MCFloatConcrete(-0.25f)) is MCFloatConcrete)
+            val assigned = field.assignedBy(MCFloat(-0.25f))
+            assertEquals(MCFPPBaseType.Float.typeId, assigned.type.typeId)
+            assertEquals(CompilerValue.Typed(MCFPPBaseType.Float.typeId, CompilerValue.FloatBits((-0.25f).toRawBits())),
+                StorageAccess.snapshot(assigned))
+            StorageAccess.materialize(assigned)
             val errors = Project.errorCount
-            val division = FloatProviders.arithmetic(MCFloatConcrete(1f), MCFloatConcrete(0f), "/") as MCFloatConcrete
-            assertEquals(0f.toRawBits(), division.value.toRawBits())
-            assertTrue(MCFloatConcrete(Float.POSITIVE_INFINITY).toDynamic(false).isError)
-            assertTrue(MCFloatConcrete(Float.MAX_VALUE).explicitCast(MCFPPBaseType.Int).isError)
+            val division = FloatProviders.arithmetic(MCFloat(1f), MCFloat(0f), "/") as MCFloat
+            assertEquals(0f.toRawBits(), assertIs<CompilerValue.FloatBits>(
+                assertIs<CompilerValue.Typed>(assertNotNull(StorageAccess.snapshot(division))).payload).bits)
+            assertTrue(MCFloat(Float.POSITIVE_INFINITY).isError)
+            assertTrue(top.mcfpp.backend.NumericConversions.convert(MCFloat(Float.MAX_VALUE), MCFPPBaseType.Int).isError)
             assertEquals(errors + 2, Project.errorCount)
         }
         assertTrue(function.commands.analyzeAll().any { it.endsWith("stack_frame[0].field set value -0.25f") })

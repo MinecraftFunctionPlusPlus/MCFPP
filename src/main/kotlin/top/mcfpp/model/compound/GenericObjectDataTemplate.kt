@@ -3,7 +3,7 @@ package top.mcfpp.model.compound
 import top.mcfpp.Project
 import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.core.lang.Var
 import top.mcfpp.type.MCFPPGenericObjectDataTemplateType
 import top.mcfpp.type.MCFPPObjectDataTemplateType
 import top.mcfpp.type.MCFPPType
@@ -21,7 +21,7 @@ open class GenericObjectDataTemplate(
     override val prefix: String
         get() = "${namespace}_object_template_${identifier}_${readOnlyParams.joinToString("_") { it.typeIdentifier }}_"
 
-    override fun createCompiledTemplate(identifier: String, args: List<MCFPPValue<*>>,
+    override fun createCompiledTemplate(identifier: String, args: List<Var<*>>,
                                         argumentValues: List<CompilerValue>): CompiledGenericDataTemplate =
         CompiledGenericObjectDataTemplate(identifier, namespace, this, args, argumentValues)
 
@@ -44,12 +44,12 @@ class CompiledGenericObjectDataTemplate(
     identifier: String,
     namespace: String = Project.currNamespace,
     originClass: GenericObjectDataTemplate,
-    args: List<MCFPPValue<*>>,
+    args: List<Var<*>>,
     argumentValues: List<CompilerValue>
 ) : CompiledGenericDataTemplate(identifier, namespace, originClass, args, argumentValues), ObjectCompoundData {
     init { companionObject = this }
 
     override fun getType(): MCFPPGenericObjectDataTemplateType =
-        MCFPPGenericObjectDataTemplateType(this, ArrayList(args),
+        MCFPPGenericObjectDataTemplateType(this,
             ArrayList(parent.filterIsInstance<DataTemplate>().map { it.getType() }), identity)
 }

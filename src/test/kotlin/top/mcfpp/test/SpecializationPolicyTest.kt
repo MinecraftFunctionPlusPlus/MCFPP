@@ -2,7 +2,6 @@ package top.mcfpp.test
 
 import top.mcfpp.Project
 import top.mcfpp.core.lang.MCFPPTypeVar
-import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.GenericFunction
 import top.mcfpp.model.function.SpecializationPolicy
@@ -64,7 +63,7 @@ class SpecializationPolicyTest {
         assertEquals(3, commands.count { it == "function ${increment.namespaceID}" })
         val main = function("main")
         assertEquals(3, main.typedIR!!.blocks.flatMap { it.instructions }.filterIsInstance<top.mcfpp.analysis.Instruction.Call>().size)
-        assertNull(top.mcfpp.analysis.ValueSnapshot.of(main.scope.getVar("first")))
+        assertNull(top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(main.scope.getVar("first"))))
         val machine = executeMain()
         for ((name, value) in listOf("first" to 2, "second" to 3, "third" to 4))
             assertEquals(value, machine.read(function("main").scope.getVar(name) as top.mcfpp.core.lang.MCInt))
@@ -84,7 +83,7 @@ class SpecializationPolicyTest {
         assertEquals(2, generic.compiledFunctions.size)
         generic.compiledFunctions.values.forEach { compiled ->
             assertEquals(listOf(MCFPPBaseType.Int), compiled.normalParams.map { it.type })
-            assertFalse(compiled.scope.getVar("value") is top.mcfpp.core.lang.MCFPPValue<*>)
+            assertNull(top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(compiled.scope.getVar("value"))))
         }
         val machine = executeMain()
         for ((name, value) in listOf("first" to 11, "second" to 12, "third" to 21))
@@ -110,12 +109,12 @@ class SpecializationPolicyTest {
 
     @Test fun requiredValuesRemainInKeysWhileOrdinaryValuesDoNot() {
         val declaration = Function("specialize", context = null)
-        val first = SpecializationPolicy.key(declaration, listOf(MCIntConcrete(10), MCIntConcrete(1)), listOf(true, false))
-        val second = SpecializationPolicy.key(declaration, listOf(MCIntConcrete(10), MCIntConcrete(2)), listOf(true, false))
-        val third = SpecializationPolicy.key(declaration, listOf(MCIntConcrete(20), MCIntConcrete(1)), listOf(true, false))
+        val first = SpecializationPolicy.key(declaration, listOf(top.mcfpp.core.lang.MCInt(10), top.mcfpp.core.lang.MCInt(1)), listOf(true, false))
+        val second = SpecializationPolicy.key(declaration, listOf(top.mcfpp.core.lang.MCInt(10), top.mcfpp.core.lang.MCInt(2)), listOf(true, false))
+        val third = SpecializationPolicy.key(declaration, listOf(top.mcfpp.core.lang.MCInt(20), top.mcfpp.core.lang.MCInt(1)), listOf(true, false))
         assertEquals(first, second)
         assertNotEquals(first, third)
-        assertFalse(SpecializationPolicy.requiresParameter(MCFPPBaseType.Int, MCIntConcrete(1)))
+        assertFalse(SpecializationPolicy.requiresParameter(MCFPPBaseType.Int, top.mcfpp.core.lang.MCInt(1)))
         assertTrue(SpecializationPolicy.requiresParameter(top.mcfpp.type.MCFPPConcreteType.Type, MCFPPTypeVar(MCFPPBaseType.Int)))
     }
 
@@ -155,8 +154,8 @@ class SpecializationPolicyTest {
             func main(){ var first = choose(true); var second = choose(false); }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
-        assertFalse(function("choose").returnVar is top.mcfpp.core.lang.MCFPPValue<*>)
-        assertFalse(function("main").scope.getVar("first") is top.mcfpp.core.lang.MCFPPValue<*>)
+        assertNull(top.mcfpp.analysis.StorageAccess.snapshot(function("choose").returnVar))
+        assertNull(top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(function("main").scope.getVar("first"))))
         val machine = executeMain()
         assertEquals(1, machine.read(function("main").scope.getVar("first") as top.mcfpp.core.lang.MCInt))
         assertEquals(2, machine.read(function("main").scope.getVar("second") as top.mcfpp.core.lang.MCInt))

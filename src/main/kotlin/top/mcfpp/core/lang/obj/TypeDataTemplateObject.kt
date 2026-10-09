@@ -17,6 +17,13 @@ class TypeDataTemplateObject: Var<TypeDataTemplateObject> {
     val templateType: TypeDataTemplate
 
     var delegateVar: Var<*>
+        get() {
+            val binding = StorageAccess.ensure(this)
+            return StorageAccess.adapter(templateType.typeAs, identifier, binding.copy(
+                view = top.mcfpp.analysis.ValueRef.TypedView(templateType.typeAs.typeId,
+                    top.mcfpp.analysis.ValueRef.Read(type.typeId, binding.place), binding.place))).also { it.parent = this }
+        }
+        set(value) { StorageAccess.write(delegateVar, value) }
 
     /**
      * 创建一个模板对象
@@ -27,8 +34,6 @@ class TypeDataTemplateObject: Var<TypeDataTemplateObject> {
         this.templateType = template
         this.identifier = identifier
         type = template.getType()
-        delegateVar = templateType.typeAs.buildUnConcrete(identifier)
-        delegateVar.parent = this
     }
 
     /**
@@ -37,25 +42,22 @@ class TypeDataTemplateObject: Var<TypeDataTemplateObject> {
      */
     constructor(templateObject: TypeDataTemplateObject) : super(templateObject) {
         templateType = templateObject.templateType
-        delegateVar = templateObject.delegateVar.clone()
-        delegateVar.parent = this
     }
 
     constructor(template: TypeDataTemplate, value: Any): super(){
         templateType = template
         type = template.getType()
-        delegateVar = templateType.typeAs.build(identifier, value)
-        delegateVar.parent = this
+        val source = templateType.typeAs.build(identifier, value)
+        val snapshot = StorageAccess.snapshot(source)
+        if (snapshot == null) isError = true else StorageAccess.initializeLiteral(this,
+            top.mcfpp.analysis.CompilerValue.Typed(type.typeId,
+                if (snapshot is top.mcfpp.analysis.CompilerValue.Typed) snapshot.payload else snapshot), StorageAccess.boundTypes(source))
 
     }
 
     override fun doAssignedBy(b: Var<*>): TypeDataTemplateObject {
         if(b is TypeDataTemplateObject && b.templateType == templateType){
-            StorageAccess.copyCollection(this, b)
-            val binding = storageBinding!!
-            delegateVar = StorageAccess.adapter(templateType.typeAs, identifier, binding.copy(
-                view = top.mcfpp.analysis.ValueRef.TypedView(templateType.typeAs.typeId,
-                    top.mcfpp.analysis.ValueRef.Read(type.typeId, binding.place), binding.place))).also { it.parent = this }
+            StorageAccess.write(this, b)
         }else{
             LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
         }
@@ -74,12 +76,7 @@ class TypeDataTemplateObject: Var<TypeDataTemplateObject> {
         return TypeDataTemplateObject(this)
     }
 
-    override fun getTempVar(): TypeDataTemplateObject {
-        if(isTemp) return this
-        return TypeDataTemplateObject(templateType).assignedBy(this).apply {
-            isTemp = true
-        }
-    }
+    override fun getTempVar(): Var<*> = StorageAccess.capture(this)
 
     override fun getMemberFunction(
         key: String,
@@ -103,12 +100,7 @@ class TypeDataTemplateObject: Var<TypeDataTemplateObject> {
     }
 
     override fun explicitCast(type: MCFPPType): Var<*> {
-        if (type == templateType.typeAs) return StorageAccess.view(this, type)
-        val qwq = super.explicitCast(type)
-        if(!qwq.isError) return qwq
-        val pwp = delegateVar.explicitCast(type)
-        if(!pwp.isError) return pwp
-        return qwq
+        return StorageAccess.view(this, type)
     }
 
     override fun canExplicitCast(type: MCFPPType): Boolean {
@@ -116,6 +108,6 @@ class TypeDataTemplateObject: Var<TypeDataTemplateObject> {
     }
 
     override fun replaceMemberVar(v: Var<*>) {
-        delegateVar = v
+        StorageAccess.write(delegateVar, v)
     }
 }

@@ -33,42 +33,41 @@ import top.mcfpp.util.TempPool
  *
  * @see top.mcfpp.core.lang.nbt.EntityUUIDVar
  */
-open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
+open class SelectorVar : Var<SelectorVar> {
 
     @Suppress("SuspiciousVarProperty")
     override var type: MCFPPType = MCFPPEntityType()
-        get() {
-            if(value.getLimit() == Int.MAX_VALUE && value.getType().isEmpty()){
-                return MCFPPEntityType()
-            }
-            if(value.getLimit() != Int.MAX_VALUE && value.getType().isEmpty()){
-                return MCFPPEntityType(value.getLimit())
-            }
-            if(value.getLimit() == Int.MAX_VALUE){
-                return MCFPPEntityType(null, value.getType().map { if(it.value) "!${it.key}" else it.key.toString() })
-            }
-            return MCFPPEntityType(value.getLimit(), value.getType().map { if(it.value) "!${it.key}" else it.key.toString() })
-        }
 
     /**
      * 创建一个目标选择器。它的标识符和mc名相同。
      * @param identifier identifier
      */
-    constructor(selector: EntitySelector, identifier: String = TempPool.getVarIdentify()) : super(identifier, selector)
+    constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier)
+    constructor(selector: EntitySelector, identifier: String = TempPool.getVarIdentify()) : this(identifier) {
+        type = MCFPPEntityType(selector.getLimit().takeUnless { it == Int.MAX_VALUE },
+            selector.getType().takeUnless { it.isEmpty() }?.map { if (it.value) "!${it.key}" else it.key.toString() })
+        StorageAccess.updateSelector(this, selector)
+    }
+
+    val value: EntitySelector get() {
+        val binding = storageBinding ?: error("Selector has no initialized program")
+        return StorageAccess.selectorProgram(binding)?.selector(binding.data.types, binding)
+            ?: error("Selector has no complete accessible program")
+    }
 
     /**
      * 复制一个目标选择器
      * @param b 被复制的目标选择器值
      */
-    constructor(b: SelectorVar) : super(b) { value = b.value.clone() }
+    constructor(b: SelectorVar) : super(b)
 
     override fun doAssignedBy(b: Var<*>): SelectorVar {
         if (b is SelectorVar) {
-            value = b.value.clone()
             StorageAccess.ensure(this)
             return StorageAccess.write(this, b) as SelectorVar
         }
-        return super.doAssignedBy(b)
+        LogProcessor.error("Cannot assign ${b.type} to entity")
+        return this
     }
 
     fun isPlayer(): Boolean {
@@ -164,7 +163,7 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
     }
 
     override fun getTempVar(): SelectorVar {
-        return SelectorVar(value.clone())
+        return StorageAccess.capturePayload(type, this, TempPool.getVarIdentify()) as SelectorVar
     }
 
     override fun toCommandPart(): Command {

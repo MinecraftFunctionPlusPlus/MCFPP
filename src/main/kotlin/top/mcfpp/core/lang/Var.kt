@@ -2,10 +2,9 @@ package top.mcfpp.core.lang
 
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.bool.BaseBool
-import top.mcfpp.core.lang.bool.ScoreBoolConcrete
-import top.mcfpp.core.lang.nbt.MCStringConcrete
+import top.mcfpp.core.lang.bool.ScoreBool
+import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.NBTBasedData
-import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.core.lang.nbt.NBTList
 import top.mcfpp.core.lang.nbt.NBTDictionary
 import top.mcfpp.core.lang.obj.DataTemplateObject
@@ -59,16 +58,25 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     @Transient
     var storageReadVersion: Pair<Function, Long>? = null
 
-    fun bindDeclaration(name: String = identifier, previous: Var<*>? = null) {
-        symbol = previous?.symbol ?: symbol ?: top.mcfpp.analysis.Symbol(
+    fun bindDeclaration(name: String = identifier, previous: Var<*>? = null, forceRuntime: Boolean = symbol?.forceRuntime ?: false) {
+        if (previous == null && symbol?.isLiteral == true) {
+            top.mcfpp.analysis.StorageAccess.declare(this, top.mcfpp.analysis.Symbol(
+                top.mcfpp.analysis.SymbolId.fresh(), name, type.typeId, !isConst, forceRuntime))
+            return
+        }
+        val existingDeclaration = symbol?.takeUnless { it.isLiteral }
+        symbol = existingDeclaration?.copy(forceRuntime = forceRuntime) ?: previous?.symbol ?: symbol ?: top.mcfpp.analysis.Symbol(
             top.mcfpp.analysis.SymbolId.fresh(), name, type.typeId, !isConst,
-            isDynamic
+            forceRuntime
         )
+        storageBinding?.let { binding ->
+            if (symbol?.id == binding.place.root) binding.data.declarations[binding.place] = symbol!!
+        }
     }
 
     fun valueRef(): top.mcfpp.analysis.ValueRef {
         storageBinding?.view?.let { return it }
-        top.mcfpp.analysis.ValueSnapshot.of(this)?.let { return top.mcfpp.analysis.ValueRef.Constant(type.typeId, it) }
+        top.mcfpp.analysis.StorageAccess.snapshot(this)?.let { return top.mcfpp.analysis.ValueRef.Constant(type.typeId, it) }
         bindDeclaration()
         return top.mcfpp.analysis.ValueRef.Read(type.typeId, top.mcfpp.analysis.Place(symbol!!.id))
     }
@@ -82,8 +90,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         set(value) {
             field = value
             for (p in nbtPath.pathList){
-                if(p is MemberPath && p.value is MCStringConcrete && stackFrameRegex.matches((p.value as MCStringConcrete).value.value)){
-                    p.value = MCStringConcrete(StringTag("stack_frame[$stackIndex]"))
+                if(p is MemberPath && p.value is MCString && top.mcfpp.analysis.StorageAccess.snapshot(p.value) != null && stackFrameRegex.matches((p.value as MCString).value.value)){
+                    p.value = MCString(StringTag("stack_frame[$stackIndex]"))
                 }
             }
         }
@@ -97,7 +105,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
      * 这个变量是否是常量。对应const关键字
      */
     open var isConst = false
-    var hasAssigned = false
 
     /**
      * 是否是临时变量
@@ -125,29 +132,14 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     var isError = false
 
     /**
-     * 这个变量是否是运行时动态的
-     */
-    var isDynamic = false
-
-    /**
      * 在mc中的路径
      */
     open lateinit var nbtPath: NBTPath
 
     /**
-     * 在离开作用域后是否会丢失跟踪
-     */
-    var trackLost = false
-
-    /**
      * 此变量是否可以为空值。仅用于数据模板的成员变量
      */
     var nullable = false
-
-    /**
-     * 目前这个变量是否在栈里面。用于表示编译器内部临时缓存的变量值和实际变量的值是否保持一致
-     */
-    var hasStoredInStack = false
 
     override var isFinal: Boolean = false
 
@@ -182,8 +174,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         this.nbtPath = v.nbtPath.clone()
         this.stackIndex = v.stackIndex
         this.isConst = v.isConst
-        this.hasAssigned = v.hasAssigned
-        this.isDynamic = v.isDynamic
         this.isError = v.isError
         this.nullable = v.nullable
         this.isFinal = v.isFinal
@@ -214,21 +204,17 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
      */
     @Suppress("UNCHECKED_CAST")
     fun assignedBy(b: Var<*>): Self {
-        //null特判
-        if(b is Null){
-            if(this.nullable){
-                hasAssigned = false
-            }else{
-                LogProcessor.error("Cannot assign null value to a non-nullable variable.")
-            }
+        if (b is Null && !nullable) {
+            LogProcessor.error("Cannot assign null value to a non-nullable variable.")
+            isError = true
             return this as Self
         }
-        if (!b.isError && !top.mcfpp.model.function.ParameterMatcher.accepts(b, type)) {
+        if (b !== Null && !b.isError && !top.mcfpp.model.function.ParameterMatcher.accepts(b, type)) {
             LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
             return this as Self
         }
-        val actualType = if (b is MCAny) b.inferredType ?: b.type else b.type
-        if (isDynamic && !top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(b)) {
+        val actualType = top.mcfpp.analysis.StorageAccess.actualType(b)
+        if (symbol?.forceRuntime == true && !top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(b)) {
             LogProcessor.error("Compiler-only value '$actualType' cannot be materialized by a dynamic declaration")
             isError = true
             return this as Self
@@ -237,17 +223,12 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         if(v.isError){
             v = b
         }
-        val re = if (storageBinding != null && this !is PropertyVar)
-            top.mcfpp.analysis.StorageAccess.write(this, v) as Self else doAssignedBy(v)
-        re.isDynamic = isDynamic
-        re.hasAssigned = true
-        if(stackIndex != 0) trackLost = true
-        return if(re is MCFPPValue<*> && re.isDynamic){
-            top.mcfpp.analysis.StorageAccess.ensure(re)
-            (re.toDynamic(false) as Self).apply { isDynamic = true }
-        }else {
-            re
-        }
+        if (this is PropertyVar) return doAssignedBy(v)
+        val written = top.mcfpp.analysis.StorageAccess.write(this, v)
+        if (written.isError && storageBinding?.let {
+                it.data.facts.read(it.place)?.state == top.mcfpp.analysis.ValueState.INITIALIZED
+            } != true) isError = true
+        return this as Self
     }
 
     /**
@@ -261,43 +242,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
      * @param type 要转换到的目标类型
      */
     open fun explicitCast(type: MCFPPType): Var<*> {
-        if(type == this.type){
-            LogProcessor.warn(TextTranslator.REDUNDANT_CAST_WARN.translate(this.type.typeName, type.typeName))
-            return this
-        }
-        if(this.type.isSubOf(type)){
-            return this.clone().apply { this.type = type }
-        }
-        return when(type){
-            MCFPPBaseType.Object -> MCObject().setAs(this).apply { (this as MCObject).bindPayload(this@Var) }
-            MCFPPBaseType.Any -> {
-                if(this is MCFPPValue<*> && top.mcfpp.analysis.ValueSnapshot.of(this) != null){
-                    (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { bindPayload(this@Var) }
-                }else{
-                    (MCAny().setAs(this) as MCAny).apply { bindPayload(this@Var) }
-                }
-            }
-            MCFPPNBTType.NBT -> {
-                if(this is MCFPPValue<*> && (this is ScoreBoolConcrete || this !is BaseBool)){
-                    NBTBasedDataConcrete(this.toNBTVar(), NBTUtil.varToNBT(this)!!)
-                } else {
-                    this.toNBTVar()
-                }
-            }
-            is MCFPPUnionType -> {
-                if(type.types.contains(this.type)){
-                    this.clone().apply { this.type = type }
-                }else{
-                    buildCastErrorVar(type)
-                }
-            }
-            is MCFPPTypeWithGeneric -> {
-                genericCast(type)
-            }
-            else -> {
-                buildCastErrorVar(type)
-            }
-        }
+        return top.mcfpp.analysis.StorageAccess.view(this, type)
     }
 
     open fun canExplicitCast(type: MCFPPType): Boolean{
@@ -316,17 +261,13 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             return this
         }
         return when(type){
-            MCFPPBaseType.Object -> MCObject().setAs(this).apply { (this as MCObject).bindPayload(this@Var) }
+            MCFPPBaseType.Object -> top.mcfpp.analysis.StorageAccess.view(this, type, diagnose = false)
             MCFPPBaseType.Any -> {
-                if(this is MCFPPValue<*> && top.mcfpp.analysis.ValueSnapshot.of(this) != null){
-                    (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { bindPayload(this@Var) }
-                }else{
-                    (MCAny().setAs(this) as MCAny).apply { bindPayload(this@Var) }
-                }
+                top.mcfpp.analysis.StorageAccess.view(this, type, diagnose = false)
             }
             is MCFPPUnionType -> {
                 if(type.types.contains(this.type)){
-                    this
+                    top.mcfpp.analysis.StorageAccess.view(this, type)
                 }else{
                     buildCastErrorVar(type)
                 }
@@ -343,7 +284,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     open fun canImplicitCast(type: MCFPPType): Boolean = TypeRelations.resolveImplicitConversion(this.type, type) != null
 
     open fun genericCast(type: MCFPPType): Var<*> =
-        if (TypeRelations.isSubtype(this.type, type)) clone().apply { this.type = type } else buildCastErrorVar(type)
+        if (TypeRelations.isSubtype(this.type, type)) top.mcfpp.analysis.StorageAccess.view(this, type) else buildCastErrorVar(type)
 
     open fun canGenericCast(type: MCFPPTypeWithGeneric): Boolean =
         type is MCFPPType && TypeRelations.isSubtype(this.type, type)
@@ -360,49 +301,17 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         return `var`
     }
 
-    fun constBinaryComputation(a: Var<*>, operation: String): Var<*>?{
-        if (rejectNbtArithmetic(a, operation)) return null
-        if(this !is MCFPPValue<*>){
-            LogProcessor.error("$identifier is not a concrete value")
-            return null
-        }
-        if(a !is MCFPPValue<*>){
-            LogProcessor.error("${a.identifier} is not a concrete value")
-            return null
-        }
-        var qwq = a.implicitCast(this.type)
-        if(qwq.isError){
-            val pwp = this.implicitCast(a.type)
-            if(!pwp.isError){
-                return pwp.constBinaryComputation(a, operation)
-            }else{
-                qwq = a
-            }
-        }
-        val operator = type.instanceData.getOperator(operation, qwq.type)
-        val re = if(operator != null && operator is NativeFunction && operator.returnsConstWhenArgsConst) {
-            operator.invoke(arrayListOf(qwq), this)
-        } else if(operator == null) {
-            LogProcessor.error("Unsupported operation '$operation' between ${type.typeName} and ${a.type.typeName}")
-            return null
-        } else {
-            LogProcessor.error("Only const natives is premise here")
-            return null
-        }
-        return re
-    }
-
     fun binaryComputation(a: Var<*>, operation: String): Var<*>{
         val loaded = top.mcfpp.analysis.StorageAccess.read(this)
         if (loaded !== this) return loaded.binaryComputation(a, operation)
         val operand = top.mcfpp.analysis.StorageAccess.read(a)
         if (operand !== a) return binaryComputation(operand, operation)
         if (this is MCAny && this !is MCObject) {
-            val receiver = semanticValue()
+            val receiver = top.mcfpp.analysis.StorageAccess.actualView(this)
             return if (receiver.isError) receiver else receiver.binaryComputation(a, operation)
         }
         if (a is MCAny && a !is MCObject) {
-            val operand = a.semanticValue()
+            val operand = top.mcfpp.analysis.StorageAccess.actualView(a)
             return if (operand.isError) operand else binaryComputation(operand, operation)
         }
         if (rejectNbtArithmetic(a, operation)) return UnknownVar(identifier).apply { isError = true }
@@ -425,30 +334,11 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         return re
     }
 
-    fun constUnaryComputation(operation: String): Var<*>{
-        if (rejectNbtArithmetic(null, operation)) return UnknownVar(identifier).apply { isError = true }
-        if(this !is MCFPPValue<*>){
-            LogProcessor.error("$identifier is not a concrete value")
-            return UnknownVar("${type.typeName}_${operation}_" + TempPool.getVarIdentify()).apply { isError = true }
-        }
-        val operator = type.instanceData.getOperator(operation, null)
-        val re = if(operator != null && operator is NativeFunction && operator.returnsConstWhenArgsConst) {
-            operator.invoke(arrayListOf(), this)
-        } else if(operator == null) {
-            LogProcessor.error("Unsupported operation '$operation' for ${type.typeName}")
-            UnknownVar("${type.typeName}_${operation}_" + TempPool.getVarIdentify()).apply { isError = true }
-        } else {
-            LogProcessor.error("Only const native function is premise here")
-            UnknownVar("${type.typeName}_${operation}_" + TempPool.getVarIdentify()).apply { isError = true }
-        }
-        return re
-    }
-
     fun unaryComputation(operation: String): Var<*>{
         val loaded = top.mcfpp.analysis.StorageAccess.read(this)
         if (loaded !== this) return loaded.unaryComputation(operation)
         if (this is MCAny && this !is MCObject) {
-            val receiver = semanticValue()
+            val receiver = top.mcfpp.analysis.StorageAccess.actualView(this)
             return if (receiver.isError) receiver else receiver.unaryComputation(operation)
         }
         if (rejectNbtArithmetic(null, operation)) return UnknownVar(identifier).apply { isError = true }
@@ -561,15 +451,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     open fun ref(): Var<*>? = null
 
     open fun toNBTVar(): NBTBasedData {
-        val n = NBTBasedData()
-        n.identifier = identifier
-        n.isStatic = isStatic
-        n.accessModifier = accessModifier
-        n.isTemp = isTemp
-        n.stackIndex = stackIndex
-        n.isConst = isConst
-        n.nbtPath = nbtPath.clone()
-        return n
+        val view = top.mcfpp.analysis.StorageAccess.view(this, MCFPPNBTType.NBT, diagnose = false)
+        return view as? NBTBasedData ?: NBTBasedData(identifier).apply { isError = true }
     }
 
     /**
@@ -577,11 +460,11 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
      *
      * @return
      */
-    abstract fun getTempVar(): Self
+    abstract fun getTempVar(): Var<*>
 
-    abstract fun storeToStack()
+    open fun storeToStack() = top.mcfpp.analysis.StorageAccess.materialize(this)
 
-    abstract fun getFromStack()
+    open fun getFromStack() { top.mcfpp.analysis.StorageAccess.read(this) }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         return null to true
@@ -607,11 +490,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     }
 
     override fun toString(): String {
-        return if(this is MCFPPValue<*>){
-            "Var([$type]$identifier=$value)"
-        }else{
-            "Var([$type]$identifier)"
-        }
+        return "Var([$type]$identifier)"
     }
 
     override fun replaceMemberVar(v: Var<*>){}
@@ -631,17 +510,30 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     }
 
     open fun toCommandPart(): Command{
-        return if(this is MCFPPValue<*>){
-            Command(value.toString())
-        }else{
-            Command().buildMacro(this)
+        if (type == MCFPPBaseType.Float) {
+            var known = top.mcfpp.analysis.StorageAccess.snapshot(this)
+            while (known is top.mcfpp.analysis.CompilerValue.Typed) known = known.payload
+            if (known is top.mcfpp.analysis.CompilerValue.FloatBits)
+                return Command(Float.fromBits(known.bits).toString())
         }
+        return top.mcfpp.analysis.StorageAccess.constantEncoding(this)?.let {
+            val token = when (it) {
+                is top.mcfpp.nbt.tags.primitive.ByteTag -> it.value.toString()
+                is top.mcfpp.nbt.tags.primitive.ShortTag -> it.value.toString()
+                is top.mcfpp.nbt.tags.primitive.IntTag -> it.value.toString()
+                is top.mcfpp.nbt.tags.primitive.LongTag -> it.value.toString()
+                is top.mcfpp.nbt.tags.primitive.FloatTag -> it.value.toString()
+                is top.mcfpp.nbt.tags.primitive.DoubleTag -> it.value.toString()
+                else -> top.mcfpp.backend.NbtEncoding.snbt(it)
+            }
+            Command(token)
+        } ?: Command().buildMacro(this)
     }
 
     companion object {
 
         fun buildCastErrorVar(type: MCFPPType): Var<*>{
-            val qwq = type.build("error_cast_" + UUID.randomUUID().toString(), Function.currFunction)
+            val qwq = UnknownVar("error_cast_" + UUID.randomUUID().toString()).apply { this.type = type }
             qwq.isError = true
             return qwq
         }

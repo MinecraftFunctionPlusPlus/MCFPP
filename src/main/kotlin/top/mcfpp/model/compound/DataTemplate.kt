@@ -8,7 +8,6 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
-import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.DataTemplateConstructor
@@ -310,19 +309,6 @@ open class DataTemplate : FieldContainer, CompoundData {
                 extends(MCFPPBaseType.Object.instanceData)
                 //在GlobalField中注册和获取函数
             }
-        }
-
-        @JvmStatic
-        fun newInstance(namespace: String?, templateID: String, varID: String): DataTemplateObjectConcrete {
-            return GlobalScope.getTemplate(namespace, templateID)!!.getType().build(varID) as DataTemplateObjectConcrete
-        }
-
-        @JvmStatic
-        fun newInstance(namespace: String?, templateID: String) = newInstance(namespace, templateID, TempPool.getVarIdentify())
-
-        @JvmStatic
-        fun newInstance(namespace: String?, templateID: String, tag: Tag<*>): DataTemplateObjectConcrete {
-            return GlobalScope.getTemplate(namespace, templateID)!!.getType().build(tag) as DataTemplateObjectConcrete
         }
 
         @Suppress("UNCHECKED_CAST")
