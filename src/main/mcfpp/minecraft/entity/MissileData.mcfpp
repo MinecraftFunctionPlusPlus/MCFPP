@@ -1,4 +1,4 @@
 data MissileData {
     @Name<"Item">
-    item as ItemData;
+    var item as ItemData;
 }

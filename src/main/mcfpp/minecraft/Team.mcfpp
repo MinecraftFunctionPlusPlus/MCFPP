@@ -2,8 +2,8 @@ import mcfpp.minecraft.std:*;
 
 @From<"top.mcfpp.mni.minecraft.TeamData">
 data Team {
-    id as string;
-    displayName as text;
+    var id as string;
+    var displayName as text;
 
     constructor(string){
         this.id = p0;

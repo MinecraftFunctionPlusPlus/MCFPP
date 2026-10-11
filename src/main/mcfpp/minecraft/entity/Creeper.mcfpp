@@ -1,12 +1,12 @@
 @MCFPPEntity
 data CreeperData: EntityData, CreatureData, AIMobData {
     @Name<"ExplosionRadius">
-    explosionRadius as byte;
+    var explosionRadius as byte;
 
     @Name<"Fuse">
-    fuse as short;
+    var fuse as short;
 
-    ignited as bool;
+    var ignited as bool;
 
-    powered as bool;
+    var powered as bool;
 }

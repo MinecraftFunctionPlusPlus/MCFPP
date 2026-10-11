@@ -39,8 +39,8 @@ class CallShapeIRTest {
 
     @Test fun returnedNestedShapesKeepTypesAndLengthsButNoConstantValues() = modes {
         val main = compile("""
-            func make() -> dict<any> { return {row:[2,9]} as dict<any>; }
-            func forward(value as dict<any>) -> dict<any> { return value; }
+            func make(): dict<any> { return {row:[2,9]} as dict<any>; }
+            func forward(value as dict<any>): dict<any> { return value; }
             func main(){
                 var values = forward(make());
                 dynamic var result = values["row"][-1] + values["row"][0];
@@ -56,8 +56,8 @@ class CallShapeIRTest {
 
     @Test fun argumentsUseCapturedShapesBeforeLaterCallsReplaceTheirSource() = modes {
         val main = compile("""
-            func replace(static value as list<any>) -> int { value = [false,false] as list<any>; return 0; }
-            func forward(value as list<any>, ignored as int) -> list<any> { return value; }
+            func replace(static value as list<any>): int { value = [false,false] as list<any>; return 0; }
+            func forward(value as list<any>, ignored as int): list<any> { return value; }
             func main(){
                 var values = [2,9] as list<any>;
                 var copied = forward(values, replace(values));
@@ -89,7 +89,7 @@ class CallShapeIRTest {
 
     @Test fun branchingReturnsKeepOnlyCommonTypesAndShapes() = modes {
         val main = compile("""
-            func choose(flag as bool) -> list<any> {
+            func choose(flag as bool): list<any> {
                 if(flag){ return [2,9] as list<any>; }
                 return [7] as list<any>;
             }
@@ -103,7 +103,7 @@ class CallShapeIRTest {
 
     @Test fun arrayReturnsPreserveLengthsAcrossOrdinaryCalls() = modes {
         val main = compile("""
-            func make() -> IntArray { return [I; 2,9]; }
+            func make(): IntArray { return [I; 2,9]; }
             func main(){ var values = make(); dynamic var result = values[-1]; }
         """, "1.20.1")
         assertEquals(9, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -111,7 +111,7 @@ class CallShapeIRTest {
 
     @Test fun ordinaryArgumentsDoNotSelectReturnOrStaticWriteBranches() = modes {
         for (source in listOf("""
-            func choose(flag as bool) -> list<any> {
+            func choose(flag as bool): list<any> {
                 if(flag){ return [2] as list<any>; }
                 return [false] as list<any>;
             }
@@ -130,7 +130,7 @@ class CallShapeIRTest {
 
     @Test fun recursiveErasedReturnsPreserveNestedShapeWithoutEvaluatingArguments() = modes {
         val main = compile("""
-            func relay(depth as int) -> any {
+            func relay(depth as int): any {
                 if(depth <= 0){ return {row:[2,9]} as dict<any>; }
                 return relay(depth - 1);
             }
@@ -143,11 +143,11 @@ class CallShapeIRTest {
 
     @Test fun mutualRecursionPreservesRangeEndpointEvidence() = modes {
         val main = compile("""
-            func left(depth as int) -> any {
+            func left(depth as int): any {
                 if(depth <= 0){ return 16777217 .. 16777218; }
                 return right(depth - 1);
             }
-            func right(depth as int) -> any { return left(depth - 1); }
+            func right(depth as int): any { return left(depth - 1); }
             func main(){
                 var bounds = left(3);
                 var sum = 0;
@@ -175,7 +175,7 @@ class CallShapeIRTest {
 
     @Test fun recursiveAlternativesAndChangedInputShapesDoNotInventProofs() = modes {
         for (source in listOf("""
-            func choose(depth as int, flag as bool) -> any {
+            func choose(depth as int, flag as bool): any {
                 if(depth <= 0){
                     if(flag){ return [2] as list<any>; }
                     return [false] as list<any>;
@@ -184,7 +184,7 @@ class CallShapeIRTest {
             }
             func main(){ var values = choose(2,true); var result = values[0] + 1; }
         """, """
-            func change(value as any, depth as int) -> any {
+            func change(value as any, depth as int): any {
                 if(depth <= 0){ return value; }
                 return change(false,depth - 1);
             }
@@ -198,7 +198,7 @@ class CallShapeIRTest {
 
     @Test fun recursionWithoutAnExitCannotProveTheValueAfterItsCall() {
         MCFPPStringTest.readFromString("""
-            func spin() -> any { var again = spin(); return 2; }
+            func spin(): any { var again = spin(); return 2; }
             func main(){ var value = spin(); var result = value + 1; }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0)
@@ -215,7 +215,7 @@ class CallShapeIRTest {
 
     @Test fun recursivelyNestedOutputKeepsOnlyTheCommonFiniteShape() = modes {
         val main = compile("""
-            func nest(depth as int) -> dict<any> {
+            func nest(depth as int): dict<any> {
                 if(depth <= 0){ return {value:2} as dict<any>; }
                 return {value:nest(depth - 1)} as dict<any>;
             }

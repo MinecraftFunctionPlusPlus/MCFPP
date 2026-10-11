@@ -1,9 +1,8 @@
 @MCFPPEntity
 data AxolotlData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"FromBucket">
-    fromBucket as bool;
+    var fromBucket as bool;
 
     @Name<"Variant">
-    variant as int;
+    var variant as int;
 }
-

@@ -1,25 +1,25 @@
 @MCFPPEntity
 data VillagerData: EntityData, CreatureData, AIMobData, GrowableData {
-    @Name<"AssignProfessionWhenSpawned"> assignProfessionWhenSpawned as bool;
-    @Name<"FoodLevel"> foodLevel as byte;
-    @Name<"Inventory"> inventory as list<ItemData>;
-    @Name<"Gossips"> gossips as list<VillagerGossip>;
-    @Name<"LastRestock"> lastRestock as long;
-    @Name<"LastGossipDecay"> lastGossipDecay as long;
+    @Name<"AssignProfessionWhenSpawned"> var assignProfessionWhenSpawned as bool;
+    @Name<"FoodLevel"> var foodLevel as byte;
+    @Name<"Inventory"> var inventory as list<ItemData>;
+    @Name<"Gossips"> var gossips as list<VillagerGossip>;
+    @Name<"LastRestock"> var lastRestock as long;
+    @Name<"LastGossipDecay"> var lastGossipDecay as long;
 
-    @Name<"Offers"> offers as data {
-        @Name<"Recipes"> recipes as list<VillagerRecipe>;
+    @Name<"Offers"> var offers as data {
+        @Name<"Recipes"> var recipes as list<VillagerRecipe>;
     };
 
-    @Name<"RestocksToday"> restocksToday as int;
+    @Name<"RestocksToday"> var restocksToday as int;
 
-    @Name<"VillagerData"> villagerData as data {
-        level as int;
-        profession as string;
-        type as string;
+    @Name<"VillagerData"> var villagerData as data {
+        var level as int;
+        var profession as string;
+        var type as string;
     };
 
-    @Name<"Xp"> xp as int;
+    @Name<"Xp"> var xp as int;
 }
 
 enum GossipType {
@@ -31,26 +31,26 @@ enum GossipType {
 }
 
 data VillagerGossip {
-    target as IntArray;
-    type as GossipType;
-    value as int;
+    var target as IntArray;
+    var type as GossipType;
+    var value as int;
 }
 
 data VillagerRecipe {
-    buy as data {
-        id as string;
-        components as nbt;
+    var buy as data {
+        var id as string;
+        var components as nbt;
     };
-    buyB as data {
-        id as string;
-        components as nbt;
+    var buyB as data {
+        var id as string;
+        var components as nbt;
     };
-    demand as int;
-    maxUses as int;
-    priceMultiplier as float;
-    rewardExp as bool;
-    sell as ItemData;
-    specialPrice as int;
-    uses as int;
-    xp as int;
+    var demand as int;
+    var maxUses as int;
+    var priceMultiplier as float;
+    var rewardExp as bool;
+    var sell as ItemData;
+    var specialPrice as int;
+    var uses as int;
+    var xp as int;
 }

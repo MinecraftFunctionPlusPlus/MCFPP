@@ -3,63 +3,63 @@ import mcfpp.minecraft.item:ItemStackData;
 
 @MCFPPEntity
 data PlayerData: EntityData, CreatureData {
-    @Name<"DataVersion"> dataVersion as int;
-    @Name<"Abilities"> abilities as data {
-        @Name<"Flying"> flying as bool;
-        @Name<"FlySpeed"> flySpeed as float;
-        @Name<"Instabuild"> instabuild as bool;
-        @Name<"Invulnerable"> invulnerable as bool;
-        @Name<"MayBuild"> mayBuild as bool;
-        @Name<"MayFly"> mayFly as bool;
-        @Name<"WalkSpeed"> walkSpeed as float;
+    @Name<"DataVersion"> var dataVersion as int;
+    @Name<"Abilities"> var abilities as data {
+        @Name<"Flying"> var flying as bool;
+        @Name<"FlySpeed"> var flySpeed as float;
+        @Name<"Instabuild"> var instabuild as bool;
+        @Name<"Invulnerable"> var invulnerable as bool;
+        @Name<"MayBuild"> var mayBuild as bool;
+        @Name<"MayFly"> var mayFly as bool;
+        @Name<"WalkSpeed"> var walkSpeed as float;
     };
-    @Name<"current_explosion_impact_pos"> currentExplosionImpactPos as list<double>;
-    @Name<"current_impulse_context_reset_grace_time"> currentImpulseContextResetGraceTime as int;
-    @Name<"Dimension"> dimension as string;
-    @Name<"ender_pearls"> enderPearls as list<data: EnderPearlData {
-        @Name<"ender_pearl_dimension"> enderPearlDimension as string;
+    @Name<"current_explosion_impact_pos"> var currentExplosionImpactPos as list<double>;
+    @Name<"current_impulse_context_reset_grace_time"> var currentImpulseContextResetGraceTime as int;
+    @Name<"Dimension"> var dimension as string;
+    @Name<"ender_pearls"> var enderPearls as list<data: EnderPearlData {
+        @Name<"ender_pearl_dimension"> var enderPearlDimension as string;
     }>;
-    @Name<"EnderItems"> enderItems as list<ItemData>;
-    enteredNetherPosition as list<double>;
-    foodExhaustionLevel as float;
-    foodLevel as int;
-    foodSaturationLevel as float;
-    foodTickTimer as int;
-    @Name<"ignore_fall_damage_from_current_explosion"> ignoreFallDamageFromCurrentExplosion as bool;
-    @Name<"Inventory"> inventory as list<ItemData>;
-    @Name<"LastDeathLocation"> lastDeathLocation as data {
-        dimension as string;
-        pos as IntArray;
+    @Name<"EnderItems"> var enderItems as list<ItemData>;
+    var enteredNetherPosition as list<double>;
+    var foodExhaustionLevel as float;
+    var foodLevel as int;
+    var foodSaturationLevel as float;
+    var foodTickTimer as int;
+    @Name<"ignore_fall_damage_from_current_explosion"> var ignoreFallDamageFromCurrentExplosion as bool;
+    @Name<"Inventory"> var inventory as list<ItemData>;
+    @Name<"LastDeathLocation"> var lastDeathLocation as data {
+        var dimension as string;
+        var pos as IntArray;
     };
-    playerGameType as int;
-    previousplayerGameType as int;
-    @Name<"raid_omen_position"> raidOmenPosition as IntArray;
-    @Name<"RecipeBook"> recipeBook as list<RecipeBook>;
-    @Name<"RootVehicle"> rootVehicle as data {
-        @Name<"Attach"> attach as IntArray;
-        @Name<"Entity"> _entity as EntityData;
+    var playerGameType as int;
+    var previousplayerGameType as int;
+    @Name<"raid_omen_position"> var raidOmenPosition as IntArray;
+    @Name<"RecipeBook"> var recipeBook as list<RecipeBook>;
+    @Name<"RootVehicle"> var rootVehicle as data {
+        @Name<"Attach"> var attach as IntArray;
+        @Name<"Entity"> var _entity as EntityData;
     };
-    @Name<"Score"> score as int;
-    seenCredits as byte;
-    @Name<"SelectedItem"> selectedItem as ItemStackData;
-    @Name<"SelectedItemSlot"> selectedItemSlot as int;
-    @Name<"ShoulderEntityLeft"> shoulderEntityLeft as EntityData;
-    @Name<"ShoulderEntityRight"> shoulderEntityRight as EntityData;
-    @Name<"SleepTimer"> sleepTimer as short;
-    @Name<"spawn_extra_particles_on_fall"> spawnExtraParticlesOnFall as bool;
-    @Name<"SpawnAngle"> spawnAngle as float;
-    @Name<"SpawnDimension"> spawnDimension as string;
-    @Name<"SpawnForced"> spawnForced as bool;
-    @Name<"SpawnX"> spawnX as int;
-    @Name<"SpawnY"> spawnY as int;
-    @Name<"SpawnZ"> spawnZ as int;
-    @Name<"warden_spawn_tracker"> wardenSpawnTracker as data {
-        @Name<"cooldown_ticks"> cooldownTicks as int;
-        @Name<"ticks_since_last_warning"> ticksSinceLastWarning as int;
-        @Name<"warning_level"> warningLevel as int;
+    @Name<"Score"> var score as int;
+    var seenCredits as byte;
+    @Name<"SelectedItem"> var selectedItem as ItemStackData;
+    @Name<"SelectedItemSlot"> var selectedItemSlot as int;
+    @Name<"ShoulderEntityLeft"> var shoulderEntityLeft as EntityData;
+    @Name<"ShoulderEntityRight"> var shoulderEntityRight as EntityData;
+    @Name<"SleepTimer"> var sleepTimer as short;
+    @Name<"spawn_extra_particles_on_fall"> var spawnExtraParticlesOnFall as bool;
+    @Name<"SpawnAngle"> var spawnAngle as float;
+    @Name<"SpawnDimension"> var spawnDimension as string;
+    @Name<"SpawnForced"> var spawnForced as bool;
+    @Name<"SpawnX"> var spawnX as int;
+    @Name<"SpawnY"> var spawnY as int;
+    @Name<"SpawnZ"> var spawnZ as int;
+    @Name<"warden_spawn_tracker"> var wardenSpawnTracker as data {
+        @Name<"cooldown_ticks"> var cooldownTicks as int;
+        @Name<"ticks_since_last_warning"> var ticksSinceLastWarning as int;
+        @Name<"warning_level"> var warningLevel as int;
     };
-    @Name<"XpLevel"> xpLevel as int;
-    @Name<"XpP"> xpP as float;
-    @Name<"XpSeed"> xpSeed as int;
-    @Name<"XpTotal"> xpTotal as int;
+    @Name<"XpLevel"> var xpLevel as int;
+    @Name<"XpP"> var xpP as float;
+    @Name<"XpSeed"> var xpSeed as int;
+    @Name<"XpTotal"> var xpTotal as int;
 }

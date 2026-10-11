@@ -17,10 +17,10 @@ class TypeVariableDeclarationTest {
         for (source in listOf(
             "func main(){var invalid as list<type>;}",
             "func main(){var invalid as list<type>=[];}",
-            "data Holder{values as dict<list<type>>;}\nfunc main(){}",
+            "data Holder{var values as dict<list<type>>;}\nfunc main(){}",
             "func invalid(values as list<type>){}\nfunc main(){}",
-            "func invalid()->list<type>{return [];}\nfunc main(){}",
-            "data Box<T as type>{values as list<T>;}\nfunc main(){var invalid=Box<type>();}")) {
+            "func invalid():list<type>{return [];}\nfunc main(){}",
+            "data Box<T as type>{var values as list<T>;}\nfunc main(){var invalid=Box<type>();}")) {
             MCFPPStringTest.readFromString(source.replace(">=", "> = "),version="26.3")
             assertTrue(Project.errorCount>0,source)
         }
@@ -45,12 +45,12 @@ class TypeVariableDeclarationTest {
     @Test fun ordinaryTemplateAndObjectTypeFieldsAreRejected() {
         MCFPPStringTest.readFromString("""
             data Holder {
-                typed as type=int;
-                inferred=int;
+                var typed as type=int;
+                var inferred=int;
             }
             object data Defaults {
-                typed as type=int;
-                inferred=int;
+                var typed as type=int;
+                var inferred=int;
                 constructor(){}
             }
             func main(){}
@@ -66,8 +66,8 @@ class TypeVariableDeclarationTest {
     }
 
     @Test fun ordinaryFunctionTypeParametersAndReturnsAreRejected() {
-        for (source in listOf("func invalid(value as type)->int{return 1;}\nfunc main(){}",
-            "func invalid()->type{return int;}\nfunc main(){}")) {
+        for (source in listOf("func invalid(value as type):int{return 1;}\nfunc main(){}",
+            "func invalid():type{return int;}\nfunc main(){}")) {
             MCFPPStringTest.readFromString(source, version = "26.3")
             assertTrue(Project.errorCount > 0, source)
             val invalid = GlobalScope.localNamespaces.getValue("default.test").scope.functions["invalid"].orEmpty()
@@ -82,9 +82,9 @@ class TypeVariableDeclarationTest {
         MCFPPStringTest.readFromString("""
             typealias int as Number;
             data Box<T as type> {
-                private value as T;
+                private var value as T;
                 constructor(v as T){this.value=v;}
-                func read()->T{return this.value;}
+                func read():T{return this.value;}
             }
             func main(){
                 var integer=Box<Number>(4);
@@ -133,7 +133,7 @@ class TypeVariableDeclarationTest {
         assertFalse(top.mcfpp.analysis.StorageAccess.snapshot(destination)?.containsTypeValue() == true)
         assertTrue(scope.functions.getValue("accept").single().compiledFunctions.isEmpty())
         MCFPPStringTest.readFromString("""
-            func produce()->object{return int;}
+            func produce():object{return int;}
             func main(){produce();}
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0)
@@ -145,10 +145,10 @@ class TypeVariableDeclarationTest {
 
     @Test fun dependentNormalSignaturesCannotBindMetaSlots() {
         for (source in listOf("""
-            func bad<T as type>(value as T)->int{return 1;}
+            func bad<T as type>(value as T):int{return 1;}
             func main(){bad<type>(1);}
         """, """
-            func bad<T as type>()->T{return 1;}
+            func bad<T as type>():T{return 1;}
             func main(){bad<type>();}
         """)) {
             MCFPPStringTest.readFromString(source.trimIndent(), version = "26.3")
@@ -173,8 +173,8 @@ class TypeVariableDeclarationTest {
     @Test fun templateReadonlyTypesCannotBeCopiedIntoOrdinaryFields() {
         MCFPPStringTest.readFromString("""
             data Holder<T as type> {
-                selected as type=T;
-                const mirrored=T;
+                var selected as type=T;
+                const var mirrored=T;
             }
             func main(){var holder=Holder<int>();}
         """.trimIndent(), version = "26.3")

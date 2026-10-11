@@ -22,7 +22,7 @@ object VersionPreprocessor {
         var active: Boolean
     )
 
-    private enum class SourceState { CODE, SINGLE_STRING, DOUBLE_STRING, MULTILINE_STRING, BLOCK_COMMENT, DOC_COMMENT, TRIPLE_DOC_COMMENT }
+    private enum class SourceState { CODE, SINGLE_STRING, DOUBLE_STRING, MULTILINE_STRING }
 
     private val directive = Regex("^[ \\t]*#(if|elif|else|endif)(?=[ \\t\\r]|$)(.*)$")
     private val condition = Regex("^MC[ \\t]+(==|!=|<=|>=|<|>)[ \\t]+([0-9]+(?:\\.[0-9]+)+)$")
@@ -125,30 +125,13 @@ object VersionPreprocessor {
             when (state) {
                 SourceState.CODE -> when {
                     line.startsWith("\"\"\"", i) -> { state = SourceState.MULTILINE_STRING; i += 3; continue }
-                    line.startsWith("#{", i) -> { state = SourceState.DOC_COMMENT; i += 2; continue }
-                    line.startsWith("###", i) -> {
-                        if (i + 3 == line.trimEnd('\r').length) state = SourceState.TRIPLE_DOC_COMMENT
-                        else return SourceState.CODE
-                        i += 3
-                        continue
-                    }
-                    line.startsWith("##", i) -> { state = SourceState.BLOCK_COMMENT; i += 2; continue }
-                    line[i] == '#' -> return SourceState.CODE
+                    line.startsWith("//", i) -> return SourceState.CODE
                     line[i] == '"' -> state = SourceState.DOUBLE_STRING
                     line[i] == '\'' -> state = SourceState.SINGLE_STRING
                 }
                 SourceState.SINGLE_STRING -> if (line[i] == '\'') state = SourceState.CODE
                 SourceState.DOUBLE_STRING -> if (line[i] == '"') state = SourceState.CODE
                 SourceState.MULTILINE_STRING -> if (line.startsWith("\"\"\"", i)) {
-                    state = SourceState.CODE; i += 3; continue
-                }
-                SourceState.BLOCK_COMMENT -> if (line.startsWith("##", i)) {
-                    state = SourceState.CODE; i += 2; continue
-                }
-                SourceState.DOC_COMMENT -> if (line.startsWith("}#", i)) {
-                    state = SourceState.CODE; i += 2; continue
-                }
-                SourceState.TRIPLE_DOC_COMMENT -> if (line.startsWith("###", i)) {
                     state = SourceState.CODE; i += 3; continue
                 }
             }

@@ -34,7 +34,7 @@ class LoopIRTest {
     @Test fun doWhileTestsAfterTheBodyAndContinueRunsTheCondition() = modes {
         for (version in listOf("26.3", "1.20.2", "1.20.1")) {
             val main = compile("""
-                func check(static count as int) -> bool { count += 1; return count < 3; }
+                func check(static count as int): bool { count += 1; return count < 3; }
                 func main(){
                     var count = 0;
                     var sum = 0;
@@ -50,8 +50,8 @@ class LoopIRTest {
 
     @Test fun rangeBoundsAreCapturedOnceAndLoopVariablesAreIndependentCopies() = modes {
         val main = compile("""
-            func start(static limit as int) -> int { limit = 3; return 1; }
-            func end(static limit as int) -> int { var result = limit; limit = 0; return result; }
+            func start(static limit as int): int { limit = 3; return 1; }
+            func end(static limit as int): int { var result = limit; limit = 0; return result; }
             func main(){
                 var limit = 0;
                 var count = 0;
@@ -87,7 +87,7 @@ class LoopIRTest {
 
     @Test fun integerBoundariesDoNotRoundOrOverflowAndUnknownEmptyRangesSkip() = modes {
         val main = compile("""
-            func count(first as int, last as int) -> int {
+            func count(first as int, last as int): int {
                 var result = 0;
                 for(value : first .. last){ result += 1; }
                 return result;
@@ -104,12 +104,12 @@ class LoopIRTest {
 
     @Test fun returnAndRecursiveCallsPreserveLoopFrames() = modes {
         val main = compile("""
-            func recurse(value as int) -> int {
+            func recurse(value as int): int {
                 if(value == 0){ return 0; }
                 for(index : value .. value){ return index + recurse(value-1); }
                 return 99;
             }
-            func first() -> int { do { return 7; } while(true); }
+            func first(): int { do { return 7; } while(true); }
             func main(){ dynamic var result = recurse(4)*10 + first(); }
         """)
         assertEquals(107, execute(main).read(main.scope.getVar("result") as MCInt))

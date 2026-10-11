@@ -1,7 +1,7 @@
 data AnimalData{
     @Name<"InLove">
-    inLove as int;
+    var inLove as int;
 
     @Name<"LoveCause">
-    loveCause as IntArray;
+    var loveCause as IntArray;
 }

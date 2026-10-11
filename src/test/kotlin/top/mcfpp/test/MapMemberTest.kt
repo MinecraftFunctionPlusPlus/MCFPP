@@ -88,11 +88,11 @@ class MapMemberTest {
 
     @Test fun runtimeQueriesAndMutationsSupportParametersAndIndependentResults() {
         val main = compile("""
-            func edit(values as map<int>, key as string, value as int) -> map<int> {
+            func edit(values as map<int>, key as string, value as int): map<int> {
                 values[key] = value;
                 return values;
             }
-            func lookup(values as map<int>, key as string) -> bool { return values.containsKey(key); }
+            func lookup(values as map<int>, key as string): bool { return values.containsKey(key); }
             func main(){
                 var original = {entries:[{key:"first",value:2}]} as map<int>;
                 var changed = edit(original,"first",7);
@@ -111,7 +111,7 @@ class MapMemberTest {
 
     @Test fun mergingMapsReplacesWholeValuesAndDeduplicatesKeys() {
         val main = compile("""
-            func overlay(values as map<dict<int>>, extra as map<dict<int>>) -> map<dict<int>> {
+            func overlay(values as map<dict<int>>, extra as map<dict<int>>): map<dict<int>> {
                 values.merge(extra);
                 return values;
             }
@@ -130,7 +130,7 @@ class MapMemberTest {
 
     @Test fun unknownKeyRemovalWorksOnTargetsWithoutMacros() {
         val main = compile("""
-            func erase(values as map<int>, key as string) -> map<int> { values.remove(key); return values; }
+            func erase(values as map<int>, key as string): map<int> { values.remove(key); return values; }
             func main(){
                 var values = {entries:[{key:"first",value:2},{key:"second",value:3}]} as map<int>;
                 var result = erase(values,"first");
@@ -143,8 +143,8 @@ class MapMemberTest {
 
     @Test fun runtimeStringKeysUseCompoundPredicatesWithTheirFullEscaping() {
         val main = compile("""
-            func lookup(values as map<int>, key as string) -> int { return values[key]; }
-            func edit(values as map<int>, key as string) -> map<int> { values[key] = 8; return values; }
+            func lookup(values as map<int>, key as string): int { return values[key]; }
+            func edit(values as map<int>, key as string): map<int> { values[key] = 8; return values; }
             func main(){
                 var values = {entries:[{key:"",value:2},{key:"q\".[]\\end",value:3}]} as map<int>;
                 var result = edit(values,"q\".[]\\end");
@@ -157,7 +157,7 @@ class MapMemberTest {
 
     @Test fun runtimeKeyInsertionAndReplacementWorkWithoutMacros() {
         val main = compile("""
-            func put(values as map<int>, key as string, value as int) -> map<int> {
+            func put(values as map<int>, key as string, value as int): map<int> {
                 values[key] = value;
                 values[key] = value+1;
                 return values;
@@ -174,7 +174,7 @@ class MapMemberTest {
 
     @Test fun unknownSourceMergeInitializesTheReceiverOnceAndCopiesIncomingValues() {
         val main = compile("""
-            func overlay(extra as map<int>) -> map<int> {
+            func overlay(extra as map<int>): map<int> {
                 var values = {entries:[{key:"first",value:2}]} as map<int>;
                 values.merge(extra);
                 values.merge(values);
@@ -191,7 +191,7 @@ class MapMemberTest {
 
     @Test fun keysAreIndependentProjectionsOfTheCurrentMembership() {
         val main = compile("""
-            func allKeys(values as map<int>) -> list<string> { return values.keys; }
+            func allKeys(values as map<int>): list<string> { return values.keys; }
             func main(){
                 var values = {entries:[{key:"first",value:2},{key:"second",value:3}]} as map<int>;
                 var names = allKeys(values);
@@ -230,7 +230,7 @@ class MapMemberTest {
 
     @Test fun unknownKeyWritesKeepAUniformErasedValueTypeAndDropOldConstants() {
         val main = compile("""
-            func edit(key as string, value as int) -> int {
+            func edit(key as string, value as int): int {
                 var values = {entries:[{key:"first",value:2 as any}]} as map<any>;
                 values[key] = value;
                 return values["first"] + values[key];

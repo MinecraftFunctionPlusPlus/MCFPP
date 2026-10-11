@@ -50,10 +50,10 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Base {
-                private hidden as int;
-                protected shared as int;
+                private var hidden as int;
+                protected var shared as int;
                 constructor(){ this.hidden=4; }
-                func read()->int {
+                func read():int {
                     if(true){
                         dynamic var counter=0;
                         while(counter<1){ this.hidden=this.hidden+1; counter=counter+1; }
@@ -63,7 +63,7 @@ class LibFieldAccessTest {
             }
             data Child:Base {
                 constructor(){ this.shared=6; }
-                func readProtected()->int { return this.shared; }
+                func readProtected():int { return this.shared; }
             }
             func main(){
                 var base=Base(); var child=Child();
@@ -103,7 +103,7 @@ class LibFieldAccessTest {
                 func main(){ var child=Child(); child.shared; }
             """.trimIndent(),
             """
-                data Intruder:Base { func leak()->int { return this.hidden; } }
+                data Intruder:Base { func leak():int { return this.hidden; } }
                 func main(){ var child=Intruder(); child.leak(); }
             """.trimIndent()
         )) {
@@ -116,9 +116,9 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             object data Defaults {
-                private value as int=4;
+                private var value as int=4;
                 func setValue(v as int){ Defaults.value=v; }
-                func read()->int { return Defaults.value; }
+                func read():int { return Defaults.value; }
             }
             func main(){ Defaults.setValue(7); dynamic var result=Defaults.read(); }
         """, output)
@@ -155,17 +155,17 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Base {
-                private hidden as int;
+                private var hidden as int;
                 constructor(){ this.hidden=4; }
-                func read()->int { return this.hidden; }
+                func read():int { return this.hidden; }
             }
             data Intruder:Base {
-                func shadow()->int { var hidden=8; return hidden; }
+                func shadow():int { var hidden=8; return hidden; }
             }
             object data Defaults {
-                private value as int=4;
+                private var value as int=4;
                 func setValue(v as int){ Defaults.value=v; }
-                func read()->int { return value; }
+                func read():int { return value; }
             }
             func main(){
                 var base=Base(); var child=Intruder();
@@ -202,7 +202,7 @@ class LibFieldAccessTest {
         consume("""
             import fixture.fields:*;
             data IntruderLeak:Base {
-                func leak()->int { return hidden; }
+                func leak():int { return hidden; }
             }
             func main(){ var child=IntruderLeak(); child.leak(); }
         """, output)
@@ -213,22 +213,22 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Base {
-                private hidden as int;
-                protected shared as int;
+                private var hidden as int;
+                protected var shared as int;
                 constructor(v as int){ hidden=v; }
-                func increment()->int {
+                func increment():int {
                     if(true){
                         dynamic var counter=0;
                         while(counter<1){ hidden=hidden+1; counter=counter+1; }
                     }
                     return hidden;
                 }
-                func read()->int { return hidden; }
-                func shadow()->int { var hidden=8; return hidden; }
+                func read():int { return hidden; }
+                func shadow():int { var hidden=8; return hidden; }
             }
             data Child:Base {
                 constructor(){ shared=6; }
-                func readProtected()->int { return shared; }
+                func readProtected():int { return shared; }
             }
             func main(){
                 var first=Base(4); var second=Base(9); var child=Child();
@@ -262,11 +262,11 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Box<N as int> {
-                private value as int;
+                private var value as int;
                 constructor(v as int){ this.value=v; }
-                private func secret()->int { return this.value; }
-                func read()->int { return this.secret(); }
-                func readArgument()->int { return N; }
+                private func secret():int { return this.value; }
+                func read():int { return this.secret(); }
+                func readArgument():int { return N; }
             }
             func main(){
                 dynamic var n=3;
@@ -339,7 +339,7 @@ class LibFieldAccessTest {
         assertEquals(5, machine.read(main.scope.getVar("thirdArgument") as MCInt))
         consume("""
             import fixture.fields:*;
-            func make(n as int)->int {
+            func make(n as int):int {
                 var item=Box<n>(1);
                 return item.read();
             }
@@ -357,9 +357,9 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Cell<T as type> {
-                private value as T;
+                private var value as T;
                 constructor(v as T){ this.value=v; }
-                func read()->T { return this.value; }
+                func read():T { return this.value; }
             }
             func main(){
                 var first=Cell<int>(4); var second=Cell<int>(9); var flag=Cell<bool>(true);
@@ -440,18 +440,18 @@ class LibFieldAccessTest {
     @Test fun explicitGenericTypesShareCanonicalSpecializationsAcrossSignaturesAndInheritance() = withLibrary { output ->
         write("""
             namespace fixture.fields;
-            func readCell(value as Cell<int>)->int { return value.read(); }
-            func readFlag(value as Cell<bool>)->bool { return value.read(); }
-            func read(value as Cell<bool>)->bool { return readFlag(value); }
-            func read(value as Cell<int>)->int { return readCell(value); }
+            func readCell(value as Cell<int>):int { return value.read(); }
+            func readFlag(value as Cell<bool>):bool { return value.read(); }
+            func read(value as Cell<bool>):bool { return readFlag(value); }
+            func read(value as Cell<int>):int { return readCell(value); }
             data Cell<T as type>:Base {
-                private value as T;
+                private var value as T;
                 constructor(v as T){ this.base=2; this.value=v; }
-                func read()->T { return this.value; }
-                func readBase()->int { return this.base; }
+                func read():T { return this.value; }
+                func readBase():int { return this.base; }
             }
             data Base {
-                protected base as int;
+                protected var base as int;
             }
             func main(){
                 var first as Cell<int> = Cell<int>(4); var second as Cell<int> = Cell<int>(9);
@@ -550,23 +550,23 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Cell<T as type> {
-                private value as T;
+                private var value as T;
                 constructor(v as T){ this.value=v; }
-                func read()->T { return this.value; }
+                func read():T { return this.value; }
             }
             data Sized<N as int> {
-                private value as int;
+                private var value as int;
                 constructor(v as int){ this.value=v+N; }
-                func read()->int { return this.value; }
+                func read():int { return this.value; }
             }
             data Envelope<T as type,N as int> {
-                private cell as Cell<(T)>;
-                private sized as Sized<(N+1)>;
+                private var cell as Cell<(T)>;
+                private var sized as Sized<(N+1)>;
                 constructor(supplied as Cell<(T)>){ this.cell=supplied; this.sized=Sized<N+1>(3); }
-                func passCell(item as Cell<(T)>)->Cell<(T)> { return item; }
-                func passSized(item as Sized<(N+1)>)->Sized<(N+1)> { return item; }
-                func read()->T { return this.passCell(this.cell).read(); }
-                func amount()->int { return this.passSized(this.sized).read(); }
+                func passCell(item as Cell<(T)>):Cell<(T)> { return item; }
+                func passSized(item as Sized<(N+1)>):Sized<(N+1)> { return item; }
+                func read():T { return this.passCell(this.cell).read(); }
+                func amount():int { return this.passSized(this.sized).read(); }
             }
             func main(){
                 var T=true; var N=90;
@@ -669,17 +669,17 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             typealias Leaf as LeafAlias;
-            func readLeaf(arg as Holder<LeafAlias>)->int { return arg.read().read(); }
-            func readList(arg as Holder<list<int>>)->int { var values=arg.read(); return values[0]; }
+            func readLeaf(arg as Holder<LeafAlias>):int { return arg.read().read(); }
+            func readList(arg as Holder<list<int>>):int { var values=arg.read(); return values[0]; }
             data Leaf {
-                private value as int;
+                private var value as int;
                 constructor(v as int){ this.value=v; }
-                func read()->int { return this.value; }
+                func read():int { return this.value; }
             }
             data Holder<T as type> {
-                private value as T;
+                private var value as T;
                 constructor(v as T){ this.value=v; }
-                func read()->T { return this.value; }
+                func read():T { return this.value; }
             }
             func main(){
                 var first=Holder<LeafAlias>(Leaf(4));
@@ -767,21 +767,21 @@ class LibFieldAccessTest {
     @Test fun frozenTypeCollectionsShareCanonicalSpecializationsAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
             namespace fixture.fields;
-            func readBundle(arg as Bundle<[Leaf]>)->int { return arg.read(); }
+            func readBundle(arg as Bundle<[Leaf]>):int { return arg.read(); }
             data Leaf {
-                private value as int;
+                private var value as int;
                 constructor(v as int){ this.value=v; }
-                func read()->int { return this.value; }
+                func read():int { return this.value; }
             }
             data Cell<T as type> {
-                private value as T;
+                private var value as T;
                 constructor(v as T){ this.value=v; }
-                func read()->T { return this.value; }
+                func read():T { return this.value; }
             }
             data Bundle<Types as list<type>> {
-                private cell as Cell<(Types[0])>;
+                private var cell as Cell<(Types[0])>;
                 constructor(v as Cell<(Types[0])>){ this.cell=v; }
-                func read()->int { return this.cell.read().read(); }
+                func read():int { return this.cell.read().read(); }
             }
             func main(){
                 var first=Bundle<[Leaf]>(Cell<Leaf>(Leaf(4)));
@@ -861,16 +861,16 @@ class LibFieldAccessTest {
     @Test fun frozenSpecializedTypeArgumentsRestoreCanonicalTypesAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
             namespace fixture.fields;
-            func readNested(arg as Holder<Cell<int>>)->int { return arg.read().read(); }
+            func readNested(arg as Holder<Cell<int>>):int { return arg.read().read(); }
             data Cell<T as type> {
-                private value as T;
+                private var value as T;
                 constructor(v as T){ this.value=v; }
-                func read()->T { return this.value; }
+                func read():T { return this.value; }
             }
             data Holder<T as type> {
-                private value as T;
+                private var value as T;
                 constructor(v as T){ this.value=v; }
-                func read()->T { return this.value; }
+                func read():T { return this.value; }
             }
             func main(){
                 var first=Holder<Cell<int>>(Cell<int>(4));
@@ -952,11 +952,11 @@ class LibFieldAccessTest {
             namespace fixture.fields;
             typealias (int|string) as Scalar;
             typealias (string|int|int) as ReorderedScalar;
-            func readBox(arg as Box<Scalar>)->int { return arg.read(); }
+            func readBox(arg as Box<Scalar>):int { return arg.read(); }
             data Box<T as type> {
-                private value as int;
+                private var value as int;
                 constructor(v as int){ this.value=v; }
-                func read()->int { return this.value; }
+                func read():int { return this.value; }
             }
             func main(){
                 var first=Box<Scalar>(4);
@@ -1030,12 +1030,12 @@ class LibFieldAccessTest {
     @Test fun frozenVectorTypeArgumentsRestoreDimensionsAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
             namespace fixture.fields;
-            func readTwo(arg as Box<vec2>)->int { return arg.read(); }
-            func readThree(arg as Box<vec3>)->int { return arg.read(); }
+            func readTwo(arg as Box<vec2>):int { return arg.read(); }
+            func readThree(arg as Box<vec3>):int { return arg.read(); }
             data Box<T as type> {
-                private value as int;
+                private var value as int;
                 constructor(v as int){ this.value=v; }
-                func read()->int { return this.value; }
+                func read():int { return this.value; }
             }
             func main(){
                 var two=Box<vec2>(4); var three=Box<vec3>(9);
@@ -1099,12 +1099,12 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             typealias entity<2,"minecraft:pig","!minecraft:cow"> as Selection;
-            func readSelection(arg as Box<Selection>)->int { return arg.read(); }
-            func readAnyEntity(arg as Box<entity>)->int { return arg.read(); }
+            func readSelection(arg as Box<Selection>):int { return arg.read(); }
+            func readAnyEntity(arg as Box<entity>):int { return arg.read(); }
             data Box<T as type> {
-                private value as int;
+                private var value as int;
                 constructor(v as int){ this.value=v; }
-                func read()->int { return this.value; }
+                func read():int { return this.value; }
             }
             func main(){
                 var selected=Box<Selection>(4); var anyEntity=Box<entity>(9);
@@ -1175,11 +1175,11 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             typealias (int|string) as Scalar;
-            func readBox(arg as Box<(int|string)>)->int { return arg.read(); }
+            func readBox(arg as Box<(int|string)>):int { return arg.read(); }
             data Box<T as type> {
-                private value as int;
+                private var value as int;
                 constructor(v as int){ this.value=v; }
-                func read()->int { return this.value; }
+                func read():int { return this.value; }
             }
             func main(){
                 var first=Box<int|string>(4);
@@ -1243,15 +1243,15 @@ class LibFieldAccessTest {
             namespace fixture.fields;
             typealias data {
                 @DataOnly
-                value as int;
+                var value as int;
             } as X;
             typealias X as Y;
-            data $namedIdentifier { value as int; }
-            func readBox(arg as Box<X>)->int { return arg.read(); }
+            data $namedIdentifier { var value as int; }
+            func readBox(arg as Box<X>):int { return arg.read(); }
             data Box<T as type> {
-                private value as int;
+                private var value as int;
                 constructor(v as int){ this.value=v; }
-                func read()->int { return this.value; }
+                func read():int { return this.value; }
             }
             func main(){
                 var first=Box<X>(4); var second=Box<Y>(9);
@@ -1326,11 +1326,11 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Box<T as type> {
-                private value as int;
+                private var value as int;
                 constructor(v as int){ this.value=v; }
-                func read()->int { return this.value; }
+                func read():int { return this.value; }
             }
-            func relay<T as type>(arg as Box<(T)>)->Box<(T)> { return arg; }
+            func relay<T as type>(arg as Box<(T)>):Box<(T)> { return arg; }
             func main(){
                 var T="caller";
                 dynamic var firstInput=4; dynamic var secondInput=9; dynamic var thirdInput=7;
@@ -1420,7 +1420,7 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             object data Settings<N as int> {
-                func read()->int { return N; }
+                func read():int { return N; }
             }
             func main(){
                 dynamic var firstResult=(Settings<4>).read();
@@ -1496,15 +1496,15 @@ class LibFieldAccessTest {
     @Test fun frozenGenericInterfaceTypeArgumentsRestoreBoundSignaturesAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
             namespace fixture.fields;
-            func readIntBox(arg as Box<(Contract<int>)>)->int { return arg.read(); }
-            func readBoolBox(arg as Box<(Contract<bool>)>)->int { return arg.read(); }
+            func readIntBox(arg as Box<(Contract<int>)>):int { return arg.read(); }
+            func readBoolBox(arg as Box<(Contract<bool>)>):int { return arg.read(); }
             interface Contract<T as type> {
-                abstract func exchange(value as T)->T;
+                abstract func exchange(value as T):T;
             }
             data Box<T as type> {
-                private value as int;
+                private var value as int;
                 constructor(v as int){ this.value=v; }
-                func read()->int { return this.value; }
+                func read():int { return this.value; }
             }
             func main(){
                 dynamic var firstInput=4; dynamic var secondInput=9;
@@ -1612,13 +1612,13 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Box<T as type> {
-                private value as int;
+                private var value as int;
                 constructor(v as int){ this.value=v; }
-                func read()->int { return this.value; }
+                func read():int { return this.value; }
             }
-            func relay<T as type>(arg as Box<(T)>)->int { return arg.read(); }
+            func relay<T as type>(arg as Box<(T)>):int { return arg.read(); }
             object data Settings<N as int> {
-                func read()->int { return N; }
+                func read():int { return N; }
             }
             func main(){
                 dynamic var firstInput=4; dynamic var secondInput=9;
@@ -1658,13 +1658,13 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             object data Settings<N as int> {
-                func read()->int { return N; }
+                func read():int { return N; }
             }
             object data Settings_int_0 {
-                func read()->int { return 9; }
+                func read():int { return 9; }
             }
-            func relay<T as type>(arg as int)->int { return arg; }
-            func relay_0(arg as int)->int { return arg+5; }
+            func relay<T as type>(arg as int):int { return arg; }
+            func relay_0(arg as int):int { return arg+5; }
             func main(){
                 dynamic var input=4;
                 dynamic var generatedObject=(Settings<4>).read();
@@ -1700,9 +1700,9 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             object data Settings<N as int> {
-                value as int=N;
+                var value as int=N;
                 constructor(){}
-                func read()->int { return value; }
+                func read():int { return value; }
             }
             func main(){
                 dynamic var readFirst=(Settings<4>).read();
@@ -1773,23 +1773,23 @@ class LibFieldAccessTest {
     @Test fun templateModifiersSurviveLibraryRoundTrip() = withLibrary { output ->
         write("""
             namespace fixture.fields;
-            data abstract Base { abstract func read()->int; }
+            data abstract Base { abstract func read():int; }
             data Child : Base {
-                private value as int;
+                private var value as int;
                 constructor(v as int){this.value=v;}
-                override func read()->int{return this.value;}
+                override func read():int{return this.value;}
             }
-            data abstract Contract<T as type> { abstract func exchange(value as T)->T; }
+            data abstract Contract<T as type> { abstract func exchange(value as T):T; }
             data Box<T as type> {
-                private value as int;
+                private var value as int;
                 constructor(v as int){this.value=v;}
-                func read()->int{return this.value;}
+                func read():int{return this.value;}
             }
             final data Closed {}
             final data GenericClosed<T as type> {}
             final object data ClosedObject {}
-            final object data GenericClosedObject<N as int> { func read()->int{return N;} }
-            func acceptClosed(value as Closed)->int{return 0;}
+            final object data GenericClosedObject<N as int> { func read():int{return N;} }
+            func acceptClosed(value as Closed):int{return 0;}
             func main(){
                 var first=Child(4);
                 var second=Child(9);
@@ -1886,13 +1886,13 @@ class LibFieldAccessTest {
             interface BaseMarker {}
             interface DerivedMarker : BaseMarker {}
             data Parent<T as type> {
-                protected value as T;
+                protected var value as T;
                 constructor(v as T){this.value=v;}
-                func read()->T{return this.value;}
+                func read():T{return this.value;}
             }
             data IntChild : Parent<int> { constructor(v as int){this.value=v;} }
             data Child<T as type> : Parent<(T)> { constructor(v as T){this.value=v;} }
-            data Offset<N as int> { func number()->int{return N;} }
+            data Offset<N as int> { func number():int{return N;} }
             data Shift<N as int> : Offset<(N+1)> {}
             func main(){
                 dynamic var input4=4; dynamic var input9=9;
@@ -1984,9 +1984,9 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Box {
-                items as list<int>;
+                var items as list<int>;
                 constructor(){this.items=[2,3];}
-                func reset()->int {
+                func reset():int {
                     this.items.clear();
                     this.items.add(7);
                     return this.items[0];
@@ -2030,18 +2030,18 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Box {
-                items as list<int>; extra as list<int>;
+                var items as list<int>; var extra as list<int>;
                 constructor(){this.items=[2,3,2];this.extra=[4,5];}
-                func mutation(index as int)->int {
+                func mutation(index as int):int {
                     this.items.prepend(1); this.items.add(4);
                     this.items.insert(index,8); this.items.removeAt(-1); this.items.remove(8);
                     return this.items[2];
                 }
-                func bulk()->int {
+                func bulk():int {
                     this.items.addAll(this.extra); this.items.prependAll(this.extra);
                     return this.items[0]+this.items[6];
                 }
-                func query(needle as int)->int {
+                func query(needle as int):int {
                     var first=this.items.indexOf(needle);
                     var last=this.items.lastIndexOf(needle);
                     if(this.items.contains(needle)){return first*10+last;}
@@ -2082,16 +2082,16 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Box {
-                dictionaryItems as dict<int>; dictionaryExtra as dict<int>;
-                mapItems as map<int>; mapExtra as map<int>;
-                readOnlyItems as ImmutableList<int>;
+                var dictionaryItems as dict<int>; var dictionaryExtra as dict<int>;
+                var mapItems as map<int>; var mapExtra as map<int>;
+                var readOnlyItems as ImmutableList<int>;
                 constructor(){
                     this.dictionaryItems={gone:2,kept:3} as dict<int>; this.dictionaryExtra={added:5} as dict<int>;
                     this.mapItems={entries:[{key:"first",value:2},{key:"second",value:3}]} as map<int>;
                     this.mapExtra={entries:[{key:"third",value:7}]} as map<int>;
                     this.readOnlyItems=[2,3,2] as ImmutableList<int>;
                 }
-                func dictionary()->int {
+                func dictionary():int {
                     var before=this.dictionaryItems.containsKey("gone");
                     this.dictionaryItems.remove("gone");
                     var gone=this.dictionaryItems.containsKey("gone");
@@ -2103,7 +2103,7 @@ class LibFieldAccessTest {
                     if(before&&!gone&&merged&&!cleared){return copied+this.dictionaryExtra["added"];}
                     return -1;
                 }
-                func mapEdit(key as string)->int {
+                func mapEdit(key as string):int {
                     var firstSize=this.mapItems.size();
                     var found=this.mapItems.containsKey(key);
                     this.mapItems.remove(key); this.mapItems.merge(this.mapExtra);
@@ -2116,7 +2116,7 @@ class LibFieldAccessTest {
                     if(found&&present&&empty){return firstSize*100+afterSize*10+copied+clearedSize;}
                     return -1;
                 }
-                func query(needle as int)->int {
+                func query(needle as int):int {
                     var first=this.readOnlyItems.indexOf(needle);
                     var last=this.readOnlyItems.lastIndexOf(needle);
                     if(this.readOnlyItems.contains(needle)){return first*10+last;}
@@ -2159,7 +2159,7 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Box {
-                func integer(a as int,b as int)->int {
+                func integer(a as int,b as int):int {
                     if(a+b!=22){return -1;}
                     if(a-b!=12){return -2;}
                     if(a*b!=85){return -3;}
@@ -2168,7 +2168,7 @@ class LibFieldAccessTest {
                     if(a>b&&b<a&&a>=b&&b<=a&&a!=b&&a==a){return 1;}
                     return 0;
                 }
-                func floating(a as float,b as float)->int {
+                func floating(a as float,b as float):int {
                     if(a+b!=9.5){return -1;}
                     if(a-b!=5.5){return -2;}
                     if(a*b!=15.0){return -3;}
@@ -2177,11 +2177,11 @@ class LibFieldAccessTest {
                     if(a>b&&b<a&&a>=b&&b<=a&&a!=b&&a==a){return 1;}
                     return 0;
                 }
-                func ranged(value as int)->int {
+                func ranged(value as int):int {
                     if(value~=10..20){return 1;}
                     return 0;
                 }
-                func logical(a as bool,b as bool)->bool {
+                func logical(a as bool,b as bool):bool {
                     return (a!=b)&&!(a==b)&&(a||b)&&!(a&&b)&&!(!a);
                 }
             }
@@ -2223,13 +2223,13 @@ class LibFieldAccessTest {
         """
         write("""
             namespace fixture.fields;
-            func decodeByte(value as byte)->int = top.mcfpp.mni.ConversionData.toIntFromByte;
+            func decodeByte(value as byte):int = top.mcfpp.mni.ConversionData.toIntFromByte;
             data Box {
-                func narrow(value as int)->int {return decodeByte(toByte(value));}
-                func promote(value as int)->int {return toInt(toFloat(value));}
-                func boolPayload(value as bool)->nbt {return toNBT(value);}
-                func stringPayload(value as string)->nbt {return toNBT(value);}
-                func nbtPayload(value as nbt)->nbt {return toNBT(value);}
+                func narrow(value as int):int {return decodeByte(toByte(value));}
+                func promote(value as int):int {return toInt(toFloat(value));}
+                func boolPayload(value as bool):nbt {return toNBT(value);}
+                func stringPayload(value as string):nbt {return toNBT(value);}
+                func nbtPayload(value as nbt):nbt {return toNBT(value);}
             }
             $mainSource
         """, output)
@@ -2260,7 +2260,7 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Box {
-                func observe(v as int,s as string,n as nbt)->int {
+                func observe(v as int,s as string,n as nbt):int {
                     dynamic var runtimeInt=v.toText();
                     dynamic var constantInt=(4).toText();
                     dynamic var runtimeString=s.toText();
@@ -2319,7 +2319,7 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Box {
-                func observe(left as text,right as text)->int {
+                func observe(left as text,right as text):int {
                     dynamic var leftCopy=left; dynamic var rightCopy=right;
                     var constantLeft=("A").toText(); var constantRight=("B").toText();
                     dynamic var constantLeftCopy=constantLeft; dynamic var constantRightCopy=constantRight;
@@ -2365,7 +2365,7 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Box {
-                func observe()->int {
+                func observe():int {
                     var original as text = ("A").toText();
                     var copied as text = original;
                     var joined as text = ("A").toText()+("B").toText();
@@ -2411,11 +2411,11 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Payload {
-                value as int;
+                var value as int;
                 constructor(initial as int){this.value=initial;}
             }
             data Box {
-                func observe(payload as Payload)->int {
+                func observe(payload as Payload):int {
                     dynamic var payloadText=payload.toText();
                     /data modify storage fixture:observed payloadText set from storage mcfpp:system stack_frame[0].payloadText
                     /data modify storage fixture:observed payloadValue set from storage mcfpp:system stack_frame[0].payload.value
@@ -2448,7 +2448,7 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Box {
-                func observe()->int {
+                func observe():int {
                     var original as text = ("quote \" slash \\").toText();
                     var copied as text = original;
                     var joined as text = ("quote \" slash \\").toText()+" tail";
@@ -2495,7 +2495,7 @@ class LibFieldAccessTest {
             namespace fixture.fields;
             import mcfpp.minecraft.resource:*;
             data Box {
-                func observe()->int {
+                func observe():int {
                     dynamic var passed=Predicate.of("fixture:allowed").pass();
                     dynamic var failed=Predicate.of("fixture:allowed").fail();
                     return 7;
@@ -2538,7 +2538,7 @@ class LibFieldAccessTest {
             import mcfpp.minecraft.resource:*;
             import mcfpp.minecraft.std:*;
             data Box {
-                func observe(target as string)->int {
+                func observe(target as string):int {
                     var pool=TemplatePool();
                     pool.id=target;
                     place(pool,"fixture:constant",2);
@@ -2608,7 +2608,7 @@ class LibFieldAccessTest {
             import mcfpp.minecraft.resource:*;
             import mcfpp.minecraft.std:*;
             data Box {
-                func observe(amount as float)->int {
+                func observe(amount as float):int {
                     var kind=DamageType();
                     kind.id="minecraft:generic";
                     damage(@p,amount,kind);
@@ -2696,9 +2696,9 @@ class LibFieldAccessTest {
         """
         write("""
             namespace fixture.fields;
-            data Payload {value as int;constructor(initial as int){this.value=initial;}}
+            data Payload {var value as int;constructor(initial as int){this.value=initial;}}
             data Box {
-                func observe(i as int,b as bool,s as string,n as nbt,erased as any,payload as Payload)->int {
+                func observe(i as int,b as bool,s as string,n as nbt,erased as any,payload as Payload):int {
                     print(i); print(b); print(s); print(n); print(erased); print(payload);
                     print(("styled").toText()); print([2,3]); print({value:4});
                     print("quote \" slash \\");
@@ -2801,7 +2801,7 @@ class LibFieldAccessTest {
             namespace fixture.fields;
             data Seconds as int;
             data Box {
-                func observe(initial as int)->int {
+                func observe(initial as int):int {
                     var original=Seconds(initial);
                     var copied=original;
                     var view=copied as int;
@@ -2844,7 +2844,7 @@ class LibFieldAccessTest {
             namespace fixture.fields;
             import mcfpp.minecraft:*;
             data Box {
-                func observe(initial as int,offset as int)->int {
+                func observe(initial as int,offset as int):int {
                     var ticks=Time.tick(initial); var seconds=Time.second(initial);
                     var minutes=Time.min(initial); var hours=Time.hour(initial);
                     var days=Time.day(initial); var gameDays=Time.gameDay(initial);
@@ -2897,7 +2897,7 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Box {
-                func observe(value as int)->int {
+                func observe(value as int):int {
                     dynamic var total=7;
                     if(value>0){ total=total+1; }
                     if(value>1){ total=total+2; }
@@ -2930,7 +2930,7 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields;
             data Box {
-                func observe(message as string)->int {
+                func observe(message as string):int {
                     debug();
                     info("fixture-info"); info(message);
                     warn("fixture-warn"); warn(message);
@@ -2968,7 +2968,7 @@ class LibFieldAccessTest {
             namespace fixture.fields;
             import mcfpp.minecraft.std:*;
             data Box {
-                func observe()->int {
+                func observe():int {
                     var answer=seed();
                     var first=answer.result; var passed=answer.success;
                     var again=answer.result; var passedAgain=answer.success;
@@ -3040,7 +3040,7 @@ class LibFieldAccessTest {
             namespace fixture.fields;
             import mcfpp.minecraft.std:*;
             data Box {
-                func observe(message as string)->int {
+                func observe(message as string):int {
                     var seeded=seed(); var helped=help(); var spoken=say(message);
                     var seedValue=seeded.result; var helpSuccess=helped.success; var sayValue=spoken.result;
                     return 7;
@@ -3119,10 +3119,10 @@ class LibFieldAccessTest {
             import mcfpp.minecraft.std:*;
             @From<"top.mcfpp.mni.minecraft.DatapackData">
             object data Packs;
-            func profileStart()->CommandResult = top.mcfpp.mni.minecraft.DebugData.start;
-            func profileStop()->CommandResult = top.mcfpp.mni.minecraft.DebugData.stop;
+            func profileStart():CommandResult = top.mcfpp.mni.minecraft.DebugData.start;
+            func profileStop():CommandResult = top.mcfpp.mni.minecraft.DebugData.stop;
             data Box {
-                func observe(name as string)->int {
+                func observe(name as string):int {
                     var started=profileStart(); var listed=Packs.listAll();
                     var enabled=Packs.enable(name); var stopped=profileStop();
                     var startValue=started.result; var listSuccess=listed.success;
@@ -3203,7 +3203,7 @@ class LibFieldAccessTest {
             import mcfpp.minecraft:*;
             import mcfpp.minecraft.std:*;
             data Box {
-                func observe(name as string)->int {
+                func observe(name as string):int {
                     var team=Team(name,("Label").toText());
                     var registered=team.register(); var emptied=team.clear(); var removed=team.unregister();
                     var registerValue=registered.result; var clearSuccess=emptied.success; var removeValue=removed.result;
@@ -3292,7 +3292,7 @@ class LibFieldAccessTest {
             @From<"top.mcfpp.mni.minecraft.OpData">
             object data Operators;
             data Box {
-                func observe(name as string)->int {
+                func observe(name as string):int {
                     var granted=Operators.op(@a); var revoked=Operators.deop(@a);
                     var allGiven=Recipe.giveAll(@a); var allTaken=Recipe.takeAll(@a);
                     var recipe=Recipe(); recipe.id=name;
@@ -3405,7 +3405,7 @@ class LibFieldAccessTest {
             @From<"top.mcfpp.mni.minecraft.WorldborderData">
             object data Border;
             data Box {
-                func observe(amount as float,ticks as int)->int {
+                func observe(amount as float,ticks as int):int {
                     var added=Border.add(amount,ticks); var centered=Border.setCenter(1 2);
                     var damaged=Border.setDamageAmount(amount); var buffered=Border.setDamageBuffer(amount);
                     var sized=Border.setSize(amount,ticks); var distance=Border.setWarningDistance(ticks); var time=Border.setWarningTime(ticks);
@@ -3514,7 +3514,7 @@ class LibFieldAccessTest {
             import mcfpp.minecraft.std:*;
             import mcfpp.minecraft.resource:*;
             data Box {
-                func observe(name as string)->int {
+                func observe(name as string):int {
                     var first=BossBar(name); var bar=BossBar(name,("Label").toText());
                     var added=bar.add(); var removed=bar.remove(); var listed=bar.listAll();
                     var colored=bar.setColor(BossBarColor.RED); var named=bar.setName(("NewLabel").toText());
@@ -3641,7 +3641,7 @@ class LibFieldAccessTest {
             @From<"top.mcfpp.mni.minecraft.WorldObjectData">
             object data FixtureWorld;
             data Box {
-                func observe(duration as int)->int {
+                func observe(duration as int):int {
                     var difficulty=FixtureWorld.setDifficulty(Difficulty.hard);
                     var weather=FixtureWorld.setWeather(Weather.rain,duration);
                     var difficultyValue=difficulty.result; var weatherSuccess=weather.success;
@@ -3733,7 +3733,7 @@ class LibFieldAccessTest {
             import mcfpp.minecraft:*;
             import mcfpp.minecraft.std:*;
             data Box {
-                func observe(seed as int)->int {
+                func observe(seed as int):int {
                     var sequence=Random("fixture:sequence");
                     var own=sequence.reset<true,false>(seed);
                     var all=Random.reset<false,true>(seed); var cleared=Random.resetAll();
@@ -3902,7 +3902,7 @@ class LibFieldAccessTest {
             import mcfpp.minecraft.entity:*;
             import mcfpp.minecraft.std:*;
             data Box {
-                func observe(tag as string)->int {
+                func observe(tag as string):int {
                     var target=@e;
                     var added=target.addTag(tag); var removed=target.removeTag(tag); var listed=target.listTag();
                     var addedValue=added.result; var removedSuccess=removed.success; var listedValue=listed.result;
@@ -3998,7 +3998,7 @@ class LibFieldAccessTest {
             import mcfpp.minecraft:*;
             import mcfpp.minecraft.std:*;
             data Box {
-                func observe(teamId as string)->int {
+                func observe(teamId as string):int {
                     var team=Team(teamId,("Label").toText()); var target=@a;
                     var joined=target.joinTeam(team); var left=target.leaveTeam();
                     var joinedValue=joined.result; var leftSuccess=left.success;
@@ -4091,7 +4091,7 @@ class LibFieldAccessTest {
             import mcfpp.minecraft.resource:*;
             import mcfpp.minecraft.std:*;
             data Box {
-                func observe(effectId as string)->int {
+                func observe(effectId as string):int {
                     var effect=Effect(); effect.id=effectId; var target=@e;
                     var specific=target.clearEffect(effect); var all=target.clearAllEffects();
                     var specificValue=specific.result; var allSuccess=all.success;
@@ -4182,7 +4182,7 @@ class LibFieldAccessTest {
             import mcfpp.minecraft.resource:*;
             import mcfpp.minecraft.std:*;
             data Box {
-                func observe(effectId as string,seconds as int,amplifier as int,hide as bool)->int {
+                func observe(effectId as string,seconds as int,amplifier as int,hide as bool):int {
                     var effect=Effect(); effect.id=effectId; var target=@e;
                     var timed=target.effect(effect,seconds,amplifier,hide);
                     var infinite=target.effectInfinite(effect,amplifier,hide);
@@ -4309,7 +4309,7 @@ class LibFieldAccessTest {
             namespace fixture.fields;
             import mcfpp.minecraft.std:*;
             data Box {
-                func observe()->int {
+                func observe():int {
                     var target=@s;
                     var first=target.stopRide(); var second=target.stopRide();
                     var firstValue=first.result; var secondSuccess=second.success;
@@ -4375,7 +4375,7 @@ class LibFieldAccessTest {
             namespace fixture.fields;
             import mcfpp.minecraft.std:*;
             data Box {
-                func observe(amount as int)->int {
+                func observe(amount as int):int {
                     var targets=@a; var one=@p;
                     var addedPoints=targets.addXpPoints(amount); var addedLevels=targets.addXpLevels(amount);
                     var setPoints=targets.setXpPoints(amount); var setLevels=targets.setXpLevels(amount);
@@ -4478,7 +4478,7 @@ class LibFieldAccessTest {
             import mcfpp.minecraft.resource:*;
             import mcfpp.minecraft.std:*;
             data Box {
-                func observe(advancementId as string)->int {
+                func observe(advancementId as string):int {
                     var advancement=Advancement(); advancement.id=advancementId; var target=@a;
                     var grant=target.grant(advancement); var grantAll=target.grantAll();
                     var grantFrom=target.grantFrom(advancement); var grantThrough=target.grantThrough(advancement); var grantUntil=target.grantUntil(advancement);
@@ -4582,7 +4582,7 @@ class LibFieldAccessTest {
             import mcfpp.minecraft.std:*;
             import mcfpp.minecraft.other:*;
             data Box {
-                func observe(itemId as string,count as int)->int {
+                func observe(itemId as string,count as int):int {
                     var players=@a; var rider=@s; var mount=@p;
                     var cleared=players.clear(); var items=players.clear(itemId,count);
                     var mode=players.setGamemode(Gamemode.creative); var riding=rider.ride(mount);
@@ -4687,7 +4687,7 @@ class LibFieldAccessTest {
             namespace fixture.fields;
             import mcfpp.minecraft.std:*;
             data Box {
-                func observe()->int {
+                func observe():int {
                     var targets=@a; var destination=@p;
                     var first=targets.tp(destination); var second=targets.tp(destination);
                     var firstValue=first.result; var secondSuccess=second.success;
@@ -4758,7 +4758,7 @@ class LibFieldAccessTest {
             namespace fixture.fields;
             import mcfpp.minecraft.std:*;
             data Box {
-                func observe(message as string)->int {
+                func observe(message as string):int {
                     var sender=@p; var targets=@a;
                     var told=sender.tell(targets,message); var whispered=sender.w(targets,message);
                     var toldValue=told.result; var whisperedSuccess=whispered.success;
@@ -4840,7 +4840,7 @@ class LibFieldAccessTest {
             import mcfpp.minecraft.std:*;
             import mcfpp.minecraft.other:*;
             data Box {
-                func observe(attributeId as string,modifier as AttributeModifier)->int {
+                func observe(attributeId as string,modifier as AttributeModifier):int {
                     var target=@p;
                     var base=target.getAttributeBase(attributeId,1.0);
                     var total=target.getAttribute(attributeId,1.0);
@@ -4932,9 +4932,9 @@ class LibFieldAccessTest {
             namespace fixture.fields;
             enum Choice { One="fixture:payload", Two={label:"x"} }
             data Box<E as Choice> {
-                private value as int;
+                private var value as int;
                 constructor(v as int){ this.value=v; }
-                func read()->int { return this.value; }
+                func read():int { return this.value; }
             }
             func main(){
                 var first=Box<Choice.One>(4); var second=Box<Choice.Two>(9);
@@ -4985,7 +4985,7 @@ class LibFieldAccessTest {
             import mcfpp.minecraft.std:*;
             import mcfpp.minecraft.other:*;
             data Box {
-                func observe(attributeId as string,amount as double,modifier as AttributeModifier)->int {
+                func observe(attributeId as string,amount as double,modifier as AttributeModifier):int {
                     var target=@p;
                     var dynamicSet=target.setAttributeBase(attributeId,amount);
                     var preciseSet=target.setAttributeBase(attributeId,1.234567890123d);
@@ -5108,7 +5108,7 @@ class LibFieldAccessTest {
             import mcfpp.minecraft.std:*;
             import mcfpp.minecraft.other:*;
             data Box {
-                func observe()->int {
+                func observe():int {
                     var targets=@a; var destination=@p;
                     var position=1 2 3; var alias=position as pos3; var replacement=9 8 7;
                     alias.x=replacement.x;
@@ -5185,7 +5185,7 @@ class LibFieldAccessTest {
             namespace fixture.fields;
             import mcfpp.minecraft.item:*;
             data Box {
-                func observe(first as int,second as int)->int {
+                func observe(first as int,second as int):int {
                     var left=CountMatchPart(); var right=CountMatchPart();
                     left.count=first; right.count=second;
                     var joined=left|right; var copy=joined;
@@ -5239,7 +5239,7 @@ class LibFieldAccessTest {
             namespace fixture.fields;
             import mcfpp.minecraft.item:*;
             data Box {
-                func observe(id as string,count as int,payload as nbt)->int {
+                func observe(id as string,count as int,payload as nbt):int {
                     var damage=DamagePredicate(); damage.damage=2;
                     var contained=ItemPredicate.hasComponent(id);
                     var matched=ItemPredicate.componentMatches(id,payload);

@@ -125,26 +125,22 @@ class VersionPreprocessorTest {
             "#if MC >= 26.3",
             "\"\"\";",
             "}",
-            "#{",
-            "#endif",
-            "}#",
-            "##",
-            "#if MC >= 26.3",
-            "##",
-            "###",
-            "#else",
-            "###",
-            "# ordinary comment",
+            "/// #endif",
+            "/// #if MC >= 26.3",
+            "/// #else",
+            "func documented(){}",
+            "// ordinary comment",
+            "// #if MC >= 26.3",
             "#if MC >= 26.1",
             "func retained(){}",
             "#endif"
         ).joinToString("\n")
         val processed = VersionPreprocessor.process(source, "26.1")
         assertTrue(processed.contains("\n#if MC >= 26.3\n"))
-        assertTrue(processed.contains("\n#endif\n}#"))
-        assertTrue(processed.contains("\n#else\n###"))
+        assertTrue(processed.contains("/// #endif"))
+        assertTrue(processed.contains("/// #else"))
         assertTrue(processed.contains("func retained"))
-        parse(source.substringBefore("#{") + "\nfunc retained(){}", "26.1")
+        parse(source, "26.1")
 
         val skippedString = listOf(
             "#if MC < 26.1",

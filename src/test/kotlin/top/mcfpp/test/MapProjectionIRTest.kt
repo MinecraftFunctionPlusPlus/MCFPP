@@ -59,11 +59,11 @@ class MapProjectionIRTest {
 
     @Test fun runtimeKeyListsSupportRecursiveReturnsAndTargetsWithoutMacros() = modes {
         val main = compile("""
-            func names(values as map<int>, depth as int) -> list<string> {
+            func names(values as map<int>, depth as int): list<string> {
                 if(depth == 0){ return values.keys; }
                 return names(values,depth-1);
             }
-            func first(values as map<int>) -> string { return values.keys[0]; }
+            func first(values as map<int>): string { return values.keys[0]; }
             func main(){
                 var values = {entries:[{key:"",value:2},{key:"q\".[]\\end",value:3}]} as map<int>;
                 var keys = names(values,2);
@@ -84,8 +84,8 @@ class MapProjectionIRTest {
 
     @Test fun projectionArgumentsRetainTheirValuesBeforeLaterStaticCalls() = modes {
         val main = compile("""
-            func clear(static values as map<list<int>>) -> int { values.clear(); return 1; }
-            func take(value as dict<list<int>>, ignored as int) -> int { return value["first"][0]; }
+            func clear(static values as map<list<int>>): int { values.clear(); return 1; }
+            func take(value as dict<list<int>>, ignored as int): int { return value["first"][0]; }
             func main(){
                 var values = {entries:[{key:"first",value:[2,3]}]} as map<list<int>>;
                 dynamic var result = take(values.keyValueSet,clear(values));
@@ -117,7 +117,7 @@ class MapProjectionIRTest {
 
     @Test fun dictionaryProjectionRejectsUnprovenKeysEmptyNamesAndOldLayouts() {
         for (source in listOf(
-            "func project(values as map<int>) -> dict<int> { return values.keyValueSet; }\nfunc main(){ var values = {entries:[{key:\"a\",value:2}]} as map<int>; var result = project(values); }",
+            "func project(values as map<int>): dict<int> { return values.keyValueSet; }\nfunc main(){ var values = {entries:[{key:\"a\",value:2}]} as map<int>; var result = project(values); }",
             "func main(){ var values = {entries:[{key:\"\",value:2}]} as map<int>; var result = values.keyValueSet; }",
             "func main(){ var values = {keys:[],values:{}} as map<int>; var result = values.keys; }")) {
             MCFPPStringTest.readFromString(source, version = "26.3")

@@ -210,7 +210,7 @@ class CollectionStorageTest {
 
     @Test fun unknownDictionaryKeysHaveAnExplicitBackendDiagnostic() {
         MCFPPStringTest.readFromString("""
-            func lookup(values as dict<any>, key as string) -> int { return values[key] as int; }
+            func lookup(values as dict<any>, key as string): int { return values[key] as int; }
             func main(){ var values as dict<any> = {first:2}; dynamic var result = lookup(values,"first"); }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0)
@@ -298,7 +298,7 @@ class CollectionStorageTest {
 
     @Test fun aLaterRhsCallDoesNotChangeAnAlreadyEvaluatedIndex() {
         val main = compile("""
-            func change(static index as int) -> int { index = 0; return 7; }
+            func change(static index as int): int { index = 0; return 7; }
             func main(){
                 var values = [2,9] as list<any>;
                 dynamic var index = 1;
@@ -314,7 +314,7 @@ class CollectionStorageTest {
 
     @Test fun aLaterLiteralElementCallPreservesTheEarlierElementValue() {
         val main = compile("""
-            func change(static value as int) -> int { value = 9; return 1; }
+            func change(static value as int): int { value = 9; return 1; }
             func main(){
                 var value = 4;
                 var values = [value,change(value)] as list<any>;
@@ -416,7 +416,7 @@ class CollectionStorageTest {
         assertEquals(7, execute(main).read(main.scope.getVar("result") as MCInt))
         assertTrue(Project.macroFunction.isEmpty())
         MCFPPStringTest.readFromString("""
-            func identity(value as int) -> int { return value; }
+            func identity(value as int): int { return value; }
             func main(){
                 var values = [2,9] as list<any>;
                 dynamic var index = identity(1);

@@ -60,7 +60,7 @@ class MapIRTest {
                     values[key] = count;
                     edit(values,key,count-1);
                 }
-                func lookup(values as map<int>, key as string) -> bool { return values.containsKey(key); }
+                func lookup(values as map<int>, key as string): bool { return values.containsKey(key); }
                 func main(){
                     var values = {entries:[]} as map<int>;
                     var index = 0;
@@ -86,7 +86,7 @@ class MapIRTest {
 
     @Test fun mergeCopiesInputsAndReplacesWholeNestedValues() = modes {
         val main = compile("""
-            func merge(values as map<dict<int>>, source as map<dict<int>>) -> map<dict<int>> { values.merge(source); return values; }
+            func merge(values as map<dict<int>>, source as map<dict<int>>): map<dict<int>> { values.merge(source); return values; }
             func main(){
                 var left = {entries:[{key:"same",value:{old:2}},{key:"other",value:{keep:3}}]} as map<dict<int>>;
                 var right = {entries:[{key:"same",value:{fresh:7}},{key:"new",value:{fresh:9}}]} as map<dict<int>>;
@@ -104,9 +104,9 @@ class MapIRTest {
 
     @Test fun assignmentCapturesKeysAndDynamicReceiversBeforeRightHandSideCalls() = modes {
         val main = compile("""
-            func change(static key as string, static index as int) -> int { key = "other"; index = 1; return 7; }
-            func identity(value as int) -> int { return value; }
-            func read(values as map<int>, key as string) -> int { return values[key]; }
+            func change(static key as string, static index as int): int { key = "other"; index = 1; return 7; }
+            func identity(value as int): int { return value; }
+            func read(values as map<int>, key as string): int { return values[key]; }
             func main(){
                 var first = {entries:[{key:"q\".[]\\end",value:2}]} as map<int>;
                 var second = {entries:[{key:"q\".[]\\end",value:3}]} as map<int>;
@@ -123,7 +123,7 @@ class MapIRTest {
 
     @Test fun unknownKeysKeepOnlyCommonValueEvidence() = modes {
         val main = compile("""
-            func identity(value as string) -> string { return value; }
+            func identity(value as string): string { return value; }
             func main(){
                 var values = {entries:[{key:"first",value:2},{key:"second",value:3}]} as map<any>;
                 var key = identity("first");
@@ -139,8 +139,8 @@ class MapIRTest {
             "func main(){ var values = {keys:[],values:{}} as map<int>; var result = values.size(); }" to "26.3",
             "func main(){ var values = {entries:[]} as map<int>; values[1] = 2; }" to "26.3",
             "func main(){ var values = {entries:[]} as map<int>; values[\"a\"] = true; }" to "26.3",
-            "func read(values as map<any>, key as string) -> int { return values[key] + 1; }\nfunc main(){ var values = {entries:[]} as map<any>; read(values,\"a\"); }" to "26.3",
-            "func read(values as map<int>, key as string) -> int { return values[key]; }\nfunc main(){ var values = {entries:[]} as map<int>; read(values,\"a\"); }" to "1.20.1")) {
+            "func read(values as map<any>, key as string): int { return values[key] + 1; }\nfunc main(){ var values = {entries:[]} as map<any>; read(values,\"a\"); }" to "26.3",
+            "func read(values as map<int>, key as string): int { return values[key]; }\nfunc main(){ var values = {entries:[]} as map<int>; read(values,\"a\"); }" to "1.20.1")) {
             MCFPPStringTest.readFromString(source, version = version)
             assertTrue(Project.errorCount > 0, source)
         }

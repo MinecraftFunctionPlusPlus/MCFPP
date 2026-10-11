@@ -39,8 +39,8 @@ class IRCallTest {
 
     @Test fun callsInErasedLoopsKeepTypeKnowledgeAndOneRuntimeBody() = modes {
         val main = compile("""
-            func increment(value as int) -> int { return value + 1; }
-            func wrapper(value as int) -> int { return increment(value); }
+            func increment(value as int): int { return value + 1; }
+            func wrapper(value as int): int { return increment(value); }
             func main(){
                 var value as any = 1;
                 var i = 0;
@@ -61,11 +61,11 @@ class IRCallTest {
     @Test fun recursiveCallsPreserveParametersAndEarlierResultsAcrossTargets() = modes {
         for (version in listOf("26.3", "1.20.2", "1.20")) {
             val main = compile("""
-                func sum(value as int) -> int {
+                func sum(value as int): int {
                     if(value <= 0){ return 0; }
                     return value + sum(value - 1);
                 }
-                func add(left as int, right as int) -> int { return left + right; }
+                func add(left as int, right as int): int { return left + right; }
                 func main(){ dynamic var result = add(sum(3),sum(4)); }
             """, version)
             assertEquals(16, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -76,11 +76,11 @@ class IRCallTest {
 
     @Test fun mutualRecursionAndForwardCallsHavePureSummaries() {
         val main = compile("""
-            func even(value as int) -> bool {
+            func even(value as int): bool {
                 if(value <= 0){ return true; }
                 return odd(value - 1);
             }
-            func odd(value as int) -> bool {
+            func odd(value as int): bool {
                 if(value <= 0){ return false; }
                 return even(value - 1);
             }
@@ -114,8 +114,8 @@ class IRCallTest {
 
     @Test fun staticCallsDoNotChangeAlreadyEvaluatedOperandsOrEarlierArguments() {
         val main = compile("""
-            func change(static value as int) -> int { value = 9; return 7; }
-            func add(left as int, right as int) -> int { return left + right; }
+            func change(static value as int): int { value = 9; return 7; }
+            func add(left as int, right as int): int { return left + right; }
             func main(){
                 var first = 2;
                 var result = first + change(first);
@@ -146,7 +146,7 @@ class IRCallTest {
 
     @Test fun erasedParametersAndReturnsCopyTheirPayloadsAndPreserveProvenTypes() {
         val main = compile("""
-            func identity(value as any) -> any { return value; }
+            func identity(value as any): any { return value; }
             func main(){
                 var original as any = 2;
                 var copied = identity(original);
@@ -161,7 +161,7 @@ class IRCallTest {
 
     @Test fun aLoopBackedgeDoesNotBindAConcreteOverloadFromTheFirstIteration() = modes {
         MCFPPStringTest.readFromString("""
-            func consume(value as int) -> int { return value + 1; }
+            func consume(value as int): int { return value + 1; }
             func main(){
                 var value as any = 2;
                 var i = 0;
@@ -174,8 +174,8 @@ class IRCallTest {
 
     @Test fun pureWrappersPreserveFactsForCallersStillUsingCollectionAdapters() {
         MCFPPStringTest.readFromString("""
-            func increment(value as int) -> int { return value + 1; }
-            func wrapper(value as int) -> int { return increment(value); }
+            func increment(value as int): int { return value + 1; }
+            func wrapper(value as int): int { return increment(value); }
             func main(){
                 var values = {field:2};
                 var result = wrapper(4);
@@ -190,12 +190,12 @@ class IRCallTest {
 
     @Test fun defaultsAndKnownErasedArgumentsUseTheSharedOverloadRules() {
         val main = compile("""
-            func choose(value as int) -> int { return value + 1; }
-            func choose(value as bool) -> int {
+            func choose(value as int): int { return value + 1; }
+            func choose(value as bool): int {
                 if(value){ return 10; }
                 return 20;
             }
-            func add(value as int, delta as int = 2) -> int { return value + delta; }
+            func add(value as int, delta as int = 2): int { return value + delta; }
             func main(){
                 var value as any = 2;
                 dynamic var result = choose(value) + choose(false) + add(3);
@@ -226,7 +226,7 @@ class IRCallTest {
 
     @Test fun expressionViewsReadBeforeLaterCallsAndStaticViewsWriteTheSamePlace() {
         val main = compile("""
-            func change(static value as any) -> int { value = 9; return 7; }
+            func change(static value as any): int { value = 9; return 7; }
             func put(static value as int) { value = 7; }
             func main(){
                 var value as any = 2;
@@ -243,7 +243,7 @@ class IRCallTest {
 
     @Test fun overloadBindingUsesReachableFactsInsteadOfLexicalBranchGuesses() = modes {
         val main = compile("""
-            func consume(value as int) -> int { return value + 1; }
+            func consume(value as int): int { return value + 1; }
             func main(){
                 var value as any = 2;
                 if(false){ value = false; }
@@ -258,7 +258,7 @@ class IRCallTest {
 
     @Test fun directErasedCallResultsProvideIndependentPlacesForViews() = modes {
         val main = compile("""
-            func identity(value as any) -> any { return value; }
+            func identity(value as any): any { return value; }
             func main(){ dynamic var result = (identity(2) as int) + (identity(3) as int); }
         """)
         assertEquals(5, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -269,7 +269,7 @@ class IRCallTest {
     @Test fun recursiveErasedReturnsSupportExplicitViewsAcrossTargets() = modes {
         for (version in listOf("26.3", "1.20.2", "1.20")) {
             val main = compile("""
-                func sum(value as int) -> any {
+                func sum(value as int): any {
                     if(value <= 0){ return 0; }
                     return value + (sum(value - 1) as int);
                 }
@@ -282,8 +282,8 @@ class IRCallTest {
 
     @Test fun provenErasedCallResultsCanUseConcreteOperationsAndOverloadsWithoutValueFolding() = modes {
         val main = compile("""
-            func identity(value as any) -> any { return value; }
-            func increment(value as int) -> int { return value + 1; }
+            func identity(value as any): any { return value; }
+            func increment(value as int): int { return value + 1; }
             func main(){
                 var result = identity(2) + increment(identity(3));
                 dynamic var number = result;
@@ -306,7 +306,7 @@ class IRCallTest {
 
     @Test fun reachableReturnChecksUseConstantConditionsWhileRespectingDynamicBranches() {
         val main = compile("""
-            func choose() -> int {
+            func choose(): int {
                 if(1 < 2){ return 7; }
             }
             func main(){ dynamic var result = choose(); }
@@ -314,7 +314,7 @@ class IRCallTest {
         assertNotNull(function("choose").typedIR)
         assertEquals(7, execute(main).read(main.scope.getVar("result") as MCInt))
         MCFPPStringTest.readFromString("""
-            func choose() -> int {
+            func choose(): int {
                 dynamic var condition = 1 < 2;
                 if(condition){ return 7; }
             }

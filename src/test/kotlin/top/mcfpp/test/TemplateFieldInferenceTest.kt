@@ -45,15 +45,15 @@ class TemplateFieldInferenceTest {
         val main = compile("""
             data Box {
                 @DataOnly
-                const value = produce(initial);
+                const var value = produce(initial);
                 var next = this.value + 1;
                 constructor(initial as int){}
             }
-            func produce(value as int) -> int {
+            func produce(value as int): int {
                 /say produced
                 return value;
             }
-            func inspect(box as Box) -> int { return box.next; }
+            func inspect(box as Box): int { return box.next; }
             func main(){
                 var first = Box(3);
                 var second = Box(6);
@@ -73,10 +73,10 @@ class TemplateFieldInferenceTest {
         val main = compile("""
             data Box {
                 var erased as any = produce(initial);
-                const value = (this.erased as int) + 1;
+                const var value = (this.erased as int) + 1;
                 constructor(initial as int){}
             }
-            func produce(value as int) -> any { return value; }
+            func produce(value as int): any { return value; }
             func main(){
                 var first = Box(3);
                 var second = Box(6);
@@ -92,7 +92,7 @@ class TemplateFieldInferenceTest {
     @Test fun inconsistentConstructorsAndPendingReadsDiagnoseWithoutChoosingTheFirstCall() {
         compile("""
             data Box {
-                const value = initial;
+                const var value = initial;
                 constructor(initial as int){}
                 constructor(initial as bool){}
             }
@@ -109,8 +109,8 @@ class TemplateFieldInferenceTest {
         compile("""
             data Parent { var value = 4; }
             data Child: Parent {}
-            func inspect(child as Child) -> int { return child.value; }
-            func copy(child as Child) -> Child { return child; }
+            func inspect(child as Child): int { return child.value; }
+            func copy(child as Child): Child { return child; }
             func main(){}
         """)
         assertEquals(MCFPPBaseType.Int.typeId, template("Child").scope.getVar("value")!!.type.typeId)
@@ -120,8 +120,8 @@ class TemplateFieldInferenceTest {
 
     @Test fun anonymousTemplateSignaturesAlsoWaitForForwardFunctionDeclarations() {
         compile("""
-            func inspect(box as data { const value = produce(); }) -> int { return box.value; }
-            func produce() -> int { return 4; }
+            func inspect(box as data { const var value = produce(); }) : int { return box.value; }
+            func produce(): int { return 4; }
             func main(){}
         """)
         val inspect = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("inspect").single()
@@ -137,7 +137,7 @@ class TemplateFieldInferenceTest {
             data Parent { var value as int = 1; }
             data Child: Parent {
                 @DataOnly
-                const value = 8;
+                const var value = 8;
             }
             func main(){}
         """)

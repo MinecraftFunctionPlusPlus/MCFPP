@@ -35,7 +35,7 @@ class ListQueryIRTest {
     @Test fun runtimeQueriesArePureIndependentAndKeepTheirSource() = modes {
         for (version in listOf("26.3", "1.20.2", "1.20")) {
             val main = compile("""
-                func find(values as list<int>, needle as int) -> int {
+                func find(values as list<int>, needle as int): int {
                     var first = values.indexOf(needle);
                     var last = values.lastIndexOf(needle);
                     var missing = values.indexOf(9);
@@ -84,7 +84,7 @@ class ListQueryIRTest {
 
     @Test fun erasedSearchesUseProvenElementIdentitiesAndKnownRemovalKeepsShape() = modes {
         val main = compile("""
-            func identity(value as int) -> int { return value; }
+            func identity(value as int): int { return value; }
             func main(){
                 var values = [true,1,true] as list<any>;
                 dynamic var first = values.indexOf(true);
@@ -105,8 +105,8 @@ class ListQueryIRTest {
 
     @Test fun dynamicReceiversAndReadonlyQueriesRetainTheirSelectedLocation() = modes {
         val main = compile("""
-            func identity(value as int) -> int { return value; }
-            func change(static index as int) -> int { index = 1; return 2; }
+            func identity(value as int): int { return value; }
+            func change(static index as int): int { index = 1; return 2; }
             func main(){
                 var values = [[2,9],[2,8]];
                 var index = identity(0);
@@ -123,13 +123,13 @@ class ListQueryIRTest {
 
     @Test fun unknownErasedElementsRequireAViewAndUniformLoopGrowthRemainsSearchable() = modes {
         MCFPPStringTest.readFromString("""
-            func find(values as list<any>, needle as int) -> int { return values.indexOf(needle); }
+            func find(values as list<any>, needle as int): int { return values.indexOf(needle); }
             func main(){ var values = [2,4] as list<any>; var result = find(values,2); }
         """.trimIndent(), version = "26.3")
         assertNotNull(function("find").typedIR)
         assertTrue(Project.errorCount > 0)
         val main = compile("""
-            func find(values as list<any>, needle as int) -> int { return (values as list<int>).indexOf(needle); }
+            func find(values as list<any>, needle as int): int { return (values as list<int>).indexOf(needle); }
             func main(){
                 var values = [2] as list<any>;
                 var i = 0;

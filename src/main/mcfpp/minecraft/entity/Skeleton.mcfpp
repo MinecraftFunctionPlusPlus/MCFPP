@@ -1,5 +1,5 @@
 @MCFPPEntity
 data SkeletonData: EntityData, CreatureData, AIMobData {
     @Name<"StrayConversionTime">
-    strayConversionTime as int;
+    var strayConversionTime as int;
 }

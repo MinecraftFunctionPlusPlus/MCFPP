@@ -26,9 +26,9 @@ class GenericDeclarationContractTest {
             namespace fixture.variance;
             data Base {}
             data Child:Base {}
-            data abstract Producer<out T as type> { abstract func read()->T; }
+            data abstract Producer<out T as type> { abstract func read():T; }
             data abstract Consumer<in T as type> { abstract func accept(value as T); }
-            data abstract Nested<out T as type> { abstract func read()->Producer<T>; }
+            data abstract Nested<out T as type> { abstract func read():Producer<T>; }
             data Invariant<T as type> {}
         """, output)
         assertEquals(0, Project.errorCount)
@@ -52,8 +52,8 @@ class GenericDeclarationContractTest {
         assertFalse(specialize("Invariant", child).isSubOf(specialize("Invariant", base)))
         for (source in listOf(
             "data abstract Bad<out T as type>{abstract func accept(value as T);}",
-            "data abstract Bad<in T as type>{abstract func read()->T;}",
-            "data Invariant<T as type>{}\ndata abstract Bad<out T as type>{abstract func read()->Invariant<T>;}",
+            "data abstract Bad<in T as type>{abstract func read():T;}",
+            "data Invariant<T as type>{}\ndata abstract Bad<out T as type>{abstract func read():Invariant<T>;}",
             "data Invariant<T as type>{}\ndata Bad<out T as type>:Invariant<T>{}",
             "data Bad<out N as int>{}",
             "data Bad<T as type>{}\nfunc main(){var item as Bad<*>;}",
@@ -70,24 +70,24 @@ class GenericDeclarationContractTest {
         val declarations = """
             namespace fixture.companions;
             data Box<N as int> {
-                private value as int;
+                private var value as int;
                 constructor(value as int){this.value=value;}
-                func read()->int{return this.value;}
-                func companionRead()->int{return Box<N>.read();}
+                func read():int{return this.value;}
+                func companionRead():int{return Box<N>.read();}
             }
             object data Box<N as int> {
-                private value as int;
+                private var value as int;
                 constructor(){}
                 func setValue(value as int){Box<N>.value=value;}
-                private func read()->int{return Box<N>.value;}
-                func inspect(item as Box<N>)->int{return item.value;}
+                private func read():int{return Box<N>.value;}
+                func inspect(item as Box<N>):int{return item.value;}
             }
-            data Shared<N as int>{func read()->int{return Shared.read();}}
+            data Shared<N as int>{func read():int{return Shared.read();}}
             object data Shared {
-                private value as int;
+                private var value as int;
                 constructor(){}
                 func setValue(value as int){Shared.value=value;}
-                private func read()->int{return Shared.value;}
+                private func read():int{return Shared.value;}
             }
         """
         val main = """

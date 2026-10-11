@@ -62,11 +62,11 @@ class ConversionIRTest {
 
     @Test fun nativeFloatConversionParticipatesInLoopsCallsAndRecursion() = modes {
         val main = compile("""
-            func sum(depth as int) -> float {
+            func sum(depth as int): float {
                 if(depth <= 0){ return toFloat(-7s); }
                 return toFloat(depth) + sum(depth - 1);
             }
-            func expose() -> any { return -1.8; }
+            func expose(): any { return -1.8; }
             func main(){
                 var value = sum(3);
                 while(value < 2.5){ value += 0.5; }
@@ -78,7 +78,7 @@ class ConversionIRTest {
 
     @Test fun nbtEncodingCopiesPayloadAndDirectViewsKeepTheEncodedValue() = modes {
         val main = compile("""
-            func forward(value as nbt) -> nbt { return value; }
+            func forward(value as nbt): nbt { return value; }
             func main(){
                 dynamic var source = 12s;
                 var encoded = toNBT(source);
@@ -122,7 +122,7 @@ class ConversionIRTest {
 
     @Test fun userFunctionsNamedLikeConversionsKeepTheirOwnBehavior() = modes {
         val main = compile("""
-            func toInt(value as int) -> int { return value + 10; }
+            func toInt(value as int): int { return value + 10; }
             func main(){ dynamic var result = toInt(2); }
         """)
         assertEquals(12, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -132,8 +132,8 @@ class ConversionIRTest {
     @Test fun legacyAndIRCallersCanReadNarrowIntegerReturns() {
         for (legacy in listOf(true, false)) {
             MCFPPStringTest.readFromString("""
-                func narrow(value as int) -> short { return toShort(value); }
-                func narrowByte(value as int) -> byte { return toByte(value); }
+                func narrow(value as int): short { return toShort(value); }
+                func narrowByte(value as int): byte { return toByte(value); }
                 func main(){
                     ${if (legacy) "var ignored = 6 / 2;" else ""}
                     var small = narrow(65535);

@@ -109,9 +109,25 @@ func test(){
 }
 ```
 
+## Functions, comments, and fields
+
+Function return types use `:`. Ordinary comments start with `//`; documentation comments start with `///` and contain Markdown. Consecutive documentation lines form one block. A single space after `///` is a separator; further indentation and Markdown markers are preserved. Fields in `data`, `object data`, and anonymous `data` bodies require `var`, including `const var` fields.
+
+```mcfpp
+/// # Counter
+/// Stores the current count, with **bold** and `code` documentation.
+data Counter {
+  // Fields require var
+  var value as int = 0;
+  func read(): int { return this.value; }
+}
+```
+
+The old `->` return marker and `#`, `##`, `#{…}#`, and `###` comments are no longer accepted. Version directives `#if/#elif/#else/#endif` retain their syntax.
+
 ## Line breaks and arithmetic expressions
 
-A newline or semicolon ends a statement. An expression can continue on the next line when its operator ends the current line. If `/` is the first non-whitespace character on a line, that line is a vanilla Minecraft command; put a division operator on the previous line when splitting division across lines.
+A newline or semicolon ends a statement. An expression can continue on the next line when its operator ends the current line. A line starting with a single `/` after optional whitespace is a vanilla Minecraft command; put a division operator on the previous line when splitting division across lines.
 
 ```mcfpp
 func calculate(){

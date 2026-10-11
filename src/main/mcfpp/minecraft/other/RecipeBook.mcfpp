@@ -1,12 +1,12 @@
 data RecipeBook {
-    isBlastingFurnaceFilteringCraftable as bool;
-    isBlastingFurnaceGuiOpen as bool;
-    isFilteringCraftable as bool;
-    isFurnaceFilteringCraftable as bool;
-    isFurnaceGuiOpen as bool;
-    isGuiOpen as bool;
-    isSmokerFilteringCraftable as bool;
-    isSmokerGuiOpen as bool;
-    recipes as list<string>;
-    toBeDisplayed as list<string>;
+    var isBlastingFurnaceFilteringCraftable as bool;
+    var isBlastingFurnaceGuiOpen as bool;
+    var isFilteringCraftable as bool;
+    var isFurnaceFilteringCraftable as bool;
+    var isFurnaceGuiOpen as bool;
+    var isGuiOpen as bool;
+    var isSmokerFilteringCraftable as bool;
+    var isSmokerGuiOpen as bool;
+    var recipes as list<string>;
+    var toBeDisplayed as list<string>;
 }

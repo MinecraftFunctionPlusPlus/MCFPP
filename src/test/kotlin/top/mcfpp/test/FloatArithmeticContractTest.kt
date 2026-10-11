@@ -56,10 +56,10 @@ class FloatArithmeticContractTest {
             val source = buildString {
                 appendLine("namespace fixture.floats;")
                 if (!ir) appendLine("data Box {")
-                appendLine("func observe(left as float,right as float)->int {")
+                appendLine("func observe(left as float,right as float):int {")
                 append(body(null, version)); appendLine("}")
                 for ((index, input) in inputs.withIndex()) {
-                    appendLine("func known_$index()->int {")
+                    appendLine("func known_$index():int {")
                     append(body(input, version)); appendLine("}")
                 }
                 if (!ir) appendLine("}")

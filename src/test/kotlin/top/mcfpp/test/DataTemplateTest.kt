@@ -9,7 +9,7 @@ class DataTemplateTest {
         val test =
             """
                 data Test{
-                    qwq as int;
+                    var qwq as int;
                     func test(){}
                 }
                 
@@ -29,7 +29,7 @@ class DataTemplateTest {
         val test =
             """
                 data Test{
-                    qwq as (int|string);
+                    var qwq as (int|string);
                 }
                 
                 func main(){
@@ -53,11 +53,11 @@ class DataTemplateTest {
         val test =
             """
                 data Test{
-                    qwq as int;
+                    var qwq as int;
                 }
                 
                 data Test2: Test{
-                    qwq2 as string;
+                    var qwq2 as string;
                 }
                 
                 func main(){
@@ -81,11 +81,11 @@ class DataTemplateTest {
         val test =
             """
                 data Test1 {
-                    qwq as int;
+                    var qwq as int;
                 }
                 
                 data Test2 {
-                    qwq2 as string;
+                    var qwq2 as string;
                 }
                 
                 func main(){

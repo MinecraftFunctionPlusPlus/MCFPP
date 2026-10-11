@@ -35,7 +35,7 @@ class ScopeIRTest {
 
     @Test fun siblingBlocksAndNestedDeclarationsKeepTheirOwnSymbols() = modes {
         val main = compile("""
-            func choose(flag as bool) -> int {
+            func choose(flag as bool): int {
                 var result = 0;
                 if(flag){ var value = 2; result = value; }
                 else { var value = 3; result = value; }
@@ -74,7 +74,7 @@ class ScopeIRTest {
 
     @Test fun recursiveCallsAndRepeatedLoopScopesKeepLocalStorageSeparate() = modes {
         val main = compile("""
-            func recurse(value as int) -> int {
+            func recurse(value as int): int {
                 if(value == 0){ return 0; }
                 if(true){ var value = value + 1; return value + recurse(value-2); }
                 return 99;

@@ -13,60 +13,60 @@ import mcfpp.minecraft.other:*;
 @From<"top.mcfpp.mni.minecraft.EntityAttributeData">
 data EntityData {
     @Name<"Air">
-    air as short;
+    var air as short;
 
     @Name<"CustomName">
-    customName as string;
+    var customName as string;
 
     @Name<"CustomNameVisible">
-    customNameVisible as bool;
+    var customNameVisible as bool;
 
     @Name<"FallDistance", "1.21.5">
     @Name<"fall_distance">
-    fallDistance as float;
+    var fallDistance as float;
 
     @Name<"Fire">
-    fire as short;
+    var fire as short;
 
     @Name<"Glowing">
-    glowing as bool;
+    var glowing as bool;
 
     @Name<"HasVisualFire">
-    hasVisualFire as bool;
+    var hasVisualFire as bool;
 
     @Name<"Invulnerable">
-    invulnerable as bool;
+    var invulnerable as bool;
 
     @Name<"Motion">
-    motion as list<double>;
+    var motion as list<double>;
 
     @Name<"NoGravity">
-    noGravity as bool;
+    var noGravity as bool;
 
     @Name<"onGround">
-    onGround as bool;
+    var onGround as bool;
 
     @Name<"Passengers">
-    passengers as list<EntityData>;
+    var passengers as list<EntityData>;
 
     @Name<"PortalCooldown">
-    portalCooldown as int;
+    var portalCooldown as int;
 
     @Name<"Pos">
-    pos as list<double>;
+    var pos as list<double>;
 
     @Name<"Rotation">
-    rotation as list<float>;
+    var rotation as list<float>;
 
     @Name<"Silent">
-    silent as bool;
+    var silent as bool;
 
     @Name<"Tags">
-    tags as list<string>;
+    var tags as list<string>;
 
     @Name<"TicksFrozen">
-    ticksFrozen as int;
+    var ticksFrozen as int;
 
     @Name<"UUID">
-    uuid as IntArray;
+    var uuid as IntArray;
 }

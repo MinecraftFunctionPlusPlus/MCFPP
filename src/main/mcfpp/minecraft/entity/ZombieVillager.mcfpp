@@ -1,19 +1,19 @@
 @MCFPPEntity
 data ZombieVillagerData: EntityData, CreatureData, AIMobData, GeneralZombieData {
-    @Name<"ConversionTime"> conversionTime as int;
-    @Name<"ConversionPlayer"> conversionPlayer as IntArray;
+    @Name<"ConversionTime"> var conversionTime as int;
+    @Name<"ConversionPlayer"> var conversionPlayer as IntArray;
 
-    @Name<"Offers"> offers as data {
-        @Name<"Recipes"> recipes as list<VillagerRecipe>;
+    @Name<"Offers"> var offers as data {
+        @Name<"Recipes"> var recipes as list<VillagerRecipe>;
     };
 
-    @Name<"Gossips"> gossips as list<VillagerGossip>;
+    @Name<"Gossips"> var gossips as list<VillagerGossip>;
 
-    @Name<"VillagerData"> villagerData as data {
-        level as int;
-        profession as string;
-        type as string;
+    @Name<"VillagerData"> var villagerData as data {
+        var level as int;
+        var profession as string;
+        var type as string;
     };
 
-    @Name<"Xp"> xp as int;
+    @Name<"Xp"> var xp as int;
 }

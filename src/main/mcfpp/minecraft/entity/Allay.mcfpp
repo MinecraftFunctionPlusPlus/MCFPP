@@ -3,43 +3,43 @@ import mcfpp.minecraft.item:ItemStackData;
 @MCFPPEntity
 data AllayData: EntityData, AIMobData, CreatureData {
     @Name<"CanDuplicate">
-    canDuplicate as byte;
+    var canDuplicate as byte;
 
     @Name<"DuplicationCooldown">
-    duplicationCooldown as long;
+    var duplicationCooldown as long;
 
     @Name<"Inventory">
-    inventory as list<ItemStackData>;
+    var inventory as list<ItemStackData>;
 
     @Name<"Listener">
-    listener as Listener;
+    var listener as Listener;
 }
 
 data Listener {
-    event as data {
-        distance as float;
+    var event as data {
+        var distance as float;
         @Name<"game_event">
-        gameEvent as string;
+        var gameEvent as string;
         
-        pos as list<double>;
+        var pos as list<double>;
         
         @Name<"projectile_owner">
-        projectileOwner as IntArray;
-        source as IntArray;
+        var projectileOwner as IntArray;
+        var source as IntArray;
     };
     @Name<"event_delay">
-    eventDelay as int;
+    var eventDelay as int;
     @Name<"selector">
-    _selector as data {
-        tick as long;
-        event as data {
-            distance as float;
+    var _selector as data {
+        var tick as long;
+        var event as data {
+            var distance as float;
             @Name<"game_event">
-            gameEvent as string;
-            pos as list<double>;
+            var gameEvent as string;
+            var pos as list<double>;
             @Name<"projectile_owner">
-            projectileOwner as IntArray;
-            source as IntArray;
+            var projectileOwner as IntArray;
+            var source as IntArray;
         };
     };
 }

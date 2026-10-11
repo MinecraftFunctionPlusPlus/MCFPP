@@ -30,7 +30,7 @@ class FloatProviderTest {
     @Test
     fun declarationsArePureAndLegacyConsumersEnableTheFloatModule() {
         for (version in listOf("1.20.1", "1.20.2", "26.3")) {
-            MCFPPStringTest.readFromString("func signature(value as float)->float { return value; }\nfunc main(){}", version = version)
+            MCFPPStringTest.readFromString("func signature(value as float):float { return value; }\nfunc main(){}", version = version)
             assertEquals(0, Project.errorCount)
             val module = Project.modules.single { it.id == "stdlib" }
             val floatPackage = module.packages.keys.single { it.id == "math.float" }
@@ -311,7 +311,7 @@ class FloatProviderTest {
     @Test
     fun nativeFunctionArgumentsAndRepeatedReturnsSurviveStackChanges() {
         MCFPPStringTest.readFromString("""
-            func half(value as float) -> float {
+            func half(value as float): float {
                 return value / 2.0;
             }
             func doubleValue(static value as float) {

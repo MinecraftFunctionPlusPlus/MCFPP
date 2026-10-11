@@ -3,11 +3,11 @@ import mcfpp.minecraft.std:*;
 @From<"top.mcfpp.mni.minecraft.BossBarData">
 data BossBar: ResourceID{
 
-    name as text;
+    var name as text;
 
-    max as int { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
-    value as int { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
-    visible as bool { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
+    var max as int { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
+    var value as int { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
+    var visible as bool { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
 
     constructor(id as string){
         this.id = id;

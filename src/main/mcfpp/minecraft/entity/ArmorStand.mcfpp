@@ -4,47 +4,47 @@ import mcfpp.minecraft.item:ItemStackData;
 data ArmorStandData: EntityData, CreatureData {
 
     @Name<"ArmorItems">
-    armorItems as list<ItemData>;
+    var armorItems as list<ItemData>;
 
     @Name<"DisabledSlots">
-    disabledslots as int;
+    var disabledslots as int;
 
     @Name<"HandItems">
-    handItems as list<ItemData>;
+    var handItems as list<ItemData>;
 
     @Name<"Invisible">
-    invisible as bool;
+    var invisible as bool;
 
     @Name<"Marker">
-    marker as bool;
+    var marker as bool;
 
     @Name<"NoBasePlate">
-    noBasePlate as bool;
+    var noBasePlate as bool;
 
     @Name<"Pose">
-    pose as data {
+    var pose as data {
         @Name<"Body">
-        body as list<float>;
+        var body as list<float>;
 
         @Name<"Head">
-        head as list<float>;
+        var head as list<float>;
 
         @Name<"LeftArm">
-        leftArm as list<float>;
+        var leftArm as list<float>;
 
         @Name<"LeftLeg">
-        leftLeg as list<float>;
+        var leftLeg as list<float>;
 
         @Name<"RightArm">
-        rightArm as list<float>;
+        var rightArm as list<float>;
 
         @Name<"RightLeg">
-        rightLeg as list<float>;
+        var rightLeg as list<float>;
     };
 
     @Name<"ShowArms">
-    showArms as bool;
+    var showArms as bool;
 
     @Name<"Small">
-    small as bool;
+    var small as bool;
 }

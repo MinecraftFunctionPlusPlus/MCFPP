@@ -67,7 +67,7 @@ object data Snake {
         Snake.tailIdx = (Snake.tailIdx + 1) % Snake.MAXCELLS
     }
 
-    func queueRemove() -> int {
+    func queueRemove(): int {
         var v as int = Snake.snake[Snake.headIdx]
         Snake.headIdx = (Snake.headIdx + 1) % Snake.MAXCELLS
         return v
@@ -146,7 +146,7 @@ object data Snake {
         }
     }
 
-    func step() -> bool {
+    func step(): bool {
         var headPos = Snake.snake[(Snake.tailIdx - 1 + Snake.MAXCELLS) % Snake.MAXCELLS]
         var hr = headPos / Snake.COLS
         var hc = headPos % Snake.COLS

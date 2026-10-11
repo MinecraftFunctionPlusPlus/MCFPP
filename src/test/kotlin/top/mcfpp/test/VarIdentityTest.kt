@@ -109,7 +109,7 @@ class VarIdentityTest {
 
     @Test fun legacyRecursiveExpressionsPreserveBothPendingValuesAcrossCalls() {
         val main = compile("""
-            func sum(value as int) -> int {
+            func sum(value as int): int {
                 var ignored = 6/2;
                 if(value <= 0){ return 0; }
                 return value + ((value + 1) + sum(value - 1));

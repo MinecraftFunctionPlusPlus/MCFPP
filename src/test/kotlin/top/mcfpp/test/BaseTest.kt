@@ -55,7 +55,7 @@ class BaseTest {
     fun functionReturnTest(){
         val test =
             """
-                func test<i as int>()->int{
+                func test<i as int>():int{
                      var p = i + 1;
                      return p;
                 }
@@ -73,7 +73,7 @@ class BaseTest {
     fun funcDefaultValueTest(){
         val test =
             """
-                func test(i as int = 1) -> int{
+                func test(i as int = 1): int{
                      var p = i + 1;
                      return p;
                 }
@@ -109,7 +109,7 @@ class BaseTest {
     fun concreteTest(){
         val test =
             """
-                func test() -> int{
+                func test(): int{
                     dynamic var a = 1;
                     return a;
                 }

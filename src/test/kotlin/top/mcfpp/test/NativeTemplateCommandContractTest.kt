@@ -158,7 +158,7 @@ class NativeTemplateCommandContractTest {
             namespace fixture.contracts;
             import mcfpp.minecraft.resource:*;
             data Box {
-                func observe(id as string)->int {
+                func observe(id as string):int {
                     var original=Predicate.of(id);
                     var copied=original;
                     id="fixture:changed";
@@ -215,7 +215,7 @@ class NativeTemplateCommandContractTest {
                     var area=DifferentArea(flag);
                     clone(area,7 8 9,CloneMaskMode.replace,CloneOperation.normal);
                 }
-                func observe(index as int,kind as SlotType,id as string,flag as bool)->int {
+                func observe(index as int,kind as SlotType,id as string,flag as bool):int {
                     var area=Area(1 2 3,4 5 6);
                     var areaCopy=area;
                     area.end=10 11 12;
@@ -290,7 +290,7 @@ class NativeTemplateCommandContractTest {
             namespace fixture.contracts;
             import mcfpp.minecraft.resource:*;
             data Box {
-                func observe(id as string,number as int,flag as bool)->int {
+                func observe(id as string,number as int,flag as bool):int {
                     var bar=BossBar(id);
                     bar.max=number;bar.value=number;bar.visible=flag;
                     dynamic var maximum=bar.max;

@@ -3,14 +3,14 @@ import mcfpp.minecraft.item:ItemStackData;
 @MCFPPEntity
 data FireworkRocketData {
     @Name<"FireworksItem">
-    fireworksItem as list<ItemStackData>;
+    var fireworksItem as list<ItemStackData>;
 
     @Name<"Life">
-    life as int;
+    var life as int;
 
     @Name<"LifeTime">
-    lifeTime as int;
+    var lifeTime as int;
 
     @Name<"ShotAtAngle">
-    shotAtAngle as byte;
+    var shotAtAngle as byte;
 }

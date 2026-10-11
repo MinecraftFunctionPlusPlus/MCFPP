@@ -1,8 +1,8 @@
 @MCFPPEntity
 data EnderDragonData: EntityData, CreatureData {
     @Name<"DragonDeathTime">
-    dragonDeathTime as int;
+    var dragonDeathTime as int;
 
     @Name<"DragonPhase">
-    dragonPhase as int;
+    var dragonPhase as int;
 }

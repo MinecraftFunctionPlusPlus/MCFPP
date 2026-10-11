@@ -6,7 +6,7 @@ func print(any) = top.mcfpp.mni.System.printAny;
 func print(DataObject) = top.mcfpp.mni.System.printObject;
 func print(text) = top.mcfpp.mni.System.printText;
 
-#func insert(string) = top.mcfpp.mni.System.insert;
+// func insert(string) = top.mcfpp.mni.System.insert;
 func debug() = top.mcfpp.mni.System.debug;
 
 func info(string) = top.mcfpp.mni.System.info;

@@ -98,7 +98,7 @@ class CollectionIRTest {
     @Test fun staticFieldEffectsPreserveOtherFieldsAndOrdinaryParameterCopies() {
         val main = compile("""
             func put(static value as dict<int>) { value["first"] = 7; }
-            func privateChange(value as dict<int>) -> int { value["first"] = 4; return value["first"]; }
+            func privateChange(value as dict<int>): int { value["first"] = 4; return value["first"]; }
             func main(){
                 var values = {first:2, second:9};
                 var changed = privateChange(values);
@@ -116,7 +116,7 @@ class CollectionIRTest {
 
     @Test fun recursiveCollectionParametersAndReturnsPreserveIndependentPayloads() = modes {
         val main = compile("""
-            func change(value as list<int>, count as int) -> list<int> {
+            func change(value as list<int>, count as int): list<int> {
                 if(count <= 0){ return value; }
                 value[0] += 1;
                 return change(value, count - 1);
@@ -135,7 +135,7 @@ class CollectionIRTest {
 
     @Test fun collectionLiteralOperandsAreCapturedBeforeLaterCalls() {
         val main = compile("""
-            func change(static value as int) -> int { value = 7; return 5; }
+            func change(static value as int): int { value = 7; return 5; }
             func main(){
                 var value = 2;
                 var values = [value,change(value)];
@@ -230,7 +230,7 @@ class CollectionIRTest {
 
     @Test fun nestedLiteralShapesBelongToCapturedOperandsBeforeLaterStaticCalls() = modes {
         val main = compile("""
-            func replace(static value as list<any>) -> list<any> {
+            func replace(static value as list<any>): list<any> {
                 value = [false,false] as list<any>;
                 return [7] as list<any>;
             }

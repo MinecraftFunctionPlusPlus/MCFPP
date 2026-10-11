@@ -23,13 +23,13 @@ class SpecializationPolicyTest {
 
     @Test fun missingReturnPathsAreRejectedWhileAContinuationReturnIsAccepted() {
         MCFPPStringTest.readFromString("""
-            func choose(flag as bool) -> int {
+            func choose(flag as bool): int {
                 if(flag){ return 1; }
             }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0)
         MCFPPStringTest.readFromString("""
-            func choose(flag as bool) -> int {
+            func choose(flag as bool): int {
                 if(flag){ return 1; }
                 return 2;
             }
@@ -49,7 +49,7 @@ class SpecializationPolicyTest {
 
     @Test fun ordinaryConstantCallsKeepOneBodyAndMaterializeParameters() {
         MCFPPStringTest.readFromString("""
-            func increment(value as int) -> int { return value + 1; }
+            func increment(value as int): int { return value + 1; }
             func main(){
                 var first = increment(1);
                 var second = increment(2);
@@ -71,7 +71,7 @@ class SpecializationPolicyTest {
 
     @Test fun genericCacheIgnoresOrdinaryConstantValuesButKeepsGenericValues() {
         MCFPPStringTest.readFromString("""
-            func add<offset as int>(value as int) -> int { return offset + value; }
+            func add<offset as int>(value as int): int { return offset + value; }
             func main(){
                 var first = add<10>(1);
                 var second = add<10>(2);
@@ -92,7 +92,7 @@ class SpecializationPolicyTest {
 
     @Test fun genericTypeBindingsApplyBeforeNormalParameterAndReturnConstruction() {
         MCFPPStringTest.readFromString("""
-            func identity<T as type>(value as T) -> T { return value; }
+            func identity<T as type>(value as T): T { return value; }
             func main(){
                 var first = identity<int>(1);
                 var second = identity<int>(2);
@@ -120,8 +120,8 @@ class SpecializationPolicyTest {
 
     @Test fun nestedCallsDoNotOverwriteAnUnconsumedIntegerReturn() {
         MCFPPStringTest.readFromString("""
-            func increment(value as int) -> int { return value + 1; }
-            func add(left as int, right as int) -> int { return left + right; }
+            func increment(value as int): int { return value + 1; }
+            func add(left as int, right as int): int { return left + right; }
             func main(){
                 var expression = increment(1) + increment(2);
                 var arguments = add(increment(3), increment(4));
@@ -137,7 +137,7 @@ class SpecializationPolicyTest {
 
     @Test fun booleanCallResultsAreCapturedBeforeTheNextCall() {
         MCFPPStringTest.readFromString("""
-            func identity(value as bool) -> bool { return value; }
+            func identity(value as bool): bool { return value; }
             func main(){ var different = identity(true) != identity(false); }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
@@ -148,7 +148,7 @@ class SpecializationPolicyTest {
 
     @Test fun runtimeBranchesDoNotTurnTheLastCompiledReturnIntoAConstant() {
         MCFPPStringTest.readFromString("""
-            func choose(flag as bool) -> int {
+            func choose(flag as bool): int {
                 if(flag){ return 1; } else { return 2; }
             }
             func main(){ var first = choose(true); var second = choose(false); }

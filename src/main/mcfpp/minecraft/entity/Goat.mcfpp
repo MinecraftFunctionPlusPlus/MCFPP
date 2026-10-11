@@ -1,11 +1,11 @@
 @MCFPPEntity
 data GoatData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"HasLeftHorn">
-    hasLeftHorn as bool;
+    var hasLeftHorn as bool;
 
     @Name<"HasRightHorn">
-    hasRightHorn as bool;
+    var hasRightHorn as bool;
 
     @Name<"IsScreamingGoat">
-    isScreamingGoat as bool;
+    var isScreamingGoat as bool;
 }

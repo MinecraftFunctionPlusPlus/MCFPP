@@ -1,7 +1,7 @@
 data BlockState {
     @Name<"Name">
-    name as string;
+    var name as string;
 
     @Name<"Properties">
-    properties as nbt;
+    var properties as nbt;
 }

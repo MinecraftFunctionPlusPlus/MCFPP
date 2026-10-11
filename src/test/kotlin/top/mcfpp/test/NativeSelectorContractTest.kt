@@ -73,7 +73,7 @@ class NativeSelectorContractTest {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString("""
             namespace mcfpp.minecraft.resource;
-            data ResourceID { id as string; }
+            data ResourceID { var id as string; }
             data EntityType: ResourceID {}
             data Predicate: ResourceID {}
             data Advancement: ResourceID {}
@@ -90,7 +90,7 @@ class NativeSelectorContractTest {
             namespace fixture.selectors;
             import mcfpp.minecraft.resource:*;
             data Box {
-                func observe(number as int, label as string, word as string, payload as nbt, bounds as range, mode as string, order as string)->int {
+                func observe(number as int, label as string, word as string, payload as nbt, bounds as range, mode as string, order as string):int {
                     var kind = EntityType(); kind.id = label;
                     var predicate = Predicate(); predicate.id = label;
                     var advancement = Advancement(); advancement.id = label;
@@ -114,7 +114,7 @@ class NativeSelectorContractTest {
                     /say ${'$'}{copied}
                     return 7;
                 }
-                func recurse(depth as int, label as string)->int {
+                func recurse(depth as int, label as string):int {
                     var selected = @e;
                     selected.tag(label);
                     if (depth > 0) { this.recurse(depth - 1, "inner"); }
@@ -320,7 +320,7 @@ class NativeSelectorContractTest {
         Project.config.includes=arrayListOf()
         MCFPPStringTest.readFromString("""
             namespace mcfpp.minecraft.resource;
-            data ResourceID {id as string;}
+            data ResourceID {var id as string;}
             data EntityType:ResourceID {}
             data Predicate:ResourceID {}
             data Advancement:ResourceID {}
@@ -336,15 +336,15 @@ class NativeSelectorContractTest {
         val source="""
             namespace fixture.guards;
             data Box {
-                func name(input as string)->int {var selected=@e;selected.name(input);input="changed";
+                func name(input as string):int {var selected=@e;selected.name(input);input="changed";
                     /say ${'$'}{selected}
                     return 7;
                 }
-                func tag(input as string)->int {var selected=@e;selected.tag(input);input="changed";
+                func tag(input as string):int {var selected=@e;selected.tag(input);input="changed";
                     /say ${'$'}{selected}
                     return 7;
                 }
-                func team(input as string)->int {var selected=@e;selected.team(input);input="changed";
+                func team(input as string):int {var selected=@e;selected.team(input);input="changed";
                     /say ${'$'}{selected}
                     return 7;
                 }

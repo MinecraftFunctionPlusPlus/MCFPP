@@ -1,13 +1,13 @@
 data Attribute {
-    id as string;
-    base as double;
-    modifiers as list<AttributeModifier>;
+    var id as string;
+    var base as double;
+    var modifiers as list<AttributeModifier>;
 }
 
 data AttributeModifier {
-    type as AttributeModifierType;
-    amount as double;
-    id as string;
+    var type as AttributeModifierType;
+    var amount as double;
+    var id as string;
 }
 
 enum AttributeModifierType {

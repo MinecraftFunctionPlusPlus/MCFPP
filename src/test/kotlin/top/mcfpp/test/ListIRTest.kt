@@ -77,8 +77,8 @@ class ListIRTest {
     @Test fun dynamicInsertionCapturesTheIndexValueBeforeLaterArguments() = modes {
         for (version in listOf("26.3", "1.20.2")) {
             val main = compile("""
-                func identity(value as int) -> int { return value; }
-                func change(static index as int) -> int { index = 0; return 7; }
+                func identity(value as int): int { return value; }
+                func change(static index as int): int { index = 0; return 7; }
                 func main(){
                     var values = [2,9] as list<any>;
                     var index = identity(-1);
@@ -115,7 +115,7 @@ class ListIRTest {
             "func main(){ var values = [2]; values.insert(2,7); }" to "26.3",
             "func main(){ var values = [] as list<int>; values.removeAt(-1); }" to "26.3",
             "func main(){ var values = [2] as ImmutableList<int>; values.clear(); }" to "26.3",
-            "func identity(value as int) -> int { return value; }\nfunc main(){ var values = [2]; values.insert(identity(0),7); }" to "1.20",
+            "func identity(value as int): int { return value; }\nfunc main(){ var values = [2]; values.insert(identity(0),7); }" to "1.20",
             "func main(){ var values = [2] as list<any>; var i = 0; while(i < 2){ var value = values[i] + 1; values.add(true); i += 1; }; }" to "26.3"
         )
         for ((source, version) in cases) {

@@ -39,7 +39,7 @@ class ConstructorExecutionTest {
         try {
             val main = compile("""
                 data Box {
-                    value as int;
+                    var value as int;
                     constructor(value as int){ this.value = value; }
                 }
                 func main(){
@@ -62,7 +62,7 @@ class ConstructorExecutionTest {
     @Test fun fieldInitializersRunForExplicitAndImplicitConstructors() {
         for (constructor in listOf("", "constructor(){}")) {
             val main = compile("""
-                data Box { value as int = 4; $constructor }
+                data Box { var value as int = 4; $constructor }
                 func main(){
                     var first = Box();
                     first.value = 9;
@@ -77,7 +77,7 @@ class ConstructorExecutionTest {
         val output = Files.createTempDirectory("mcfpp-object-initializer-")
         try {
             compile("""
-                object data Defaults { value as int = 4; }
+                object data Defaults { var value as int = 4; }
                 func main(){}
             """, output)
             val defaults = GlobalScope.localNamespaces.getValue("default.test").scope.objects
@@ -104,7 +104,7 @@ class ConstructorExecutionTest {
         try {
             val main = compile("""
                 data Box {
-                    value as int;
+                    var value as int;
                     constructor(kind as int, value as int){ this.value = kind + value; }
                 }
                 func main(){
@@ -126,9 +126,9 @@ class ConstructorExecutionTest {
 
     @Test fun nestedCallsPreserveTheConstructorReceiver() {
         val main = compile("""
-            func bump(value as int) -> int { return value + 1; }
+            func bump(value as int): int { return value + 1; }
             data Box {
-                value as int;
+                var value as int;
                 constructor(value as int){
                     this.value = value;
                     this.value += bump(value);
@@ -146,7 +146,7 @@ class ConstructorExecutionTest {
     @Test fun memberCallsWriteBackOnlyTheirOwnReceiver() {
         val main = compile("""
             data Box {
-                value as int;
+                var value as int;
                 constructor(value as int){ this.value = value; }
                 func setValue(value as int){ this.value = value; }
             }
@@ -163,13 +163,13 @@ class ConstructorExecutionTest {
 
     @Test fun calledDynamicBranchesLeaveTheirFramesForWritebackAndEntryReturnsPopOnce() {
         val main = compile("""
-            func choose(value as int) -> int {
+            func choose(value as int): int {
                 var ignored = 6/2;
                 if(value > 0){ return value + 1; }
                 return 0;
             }
             data Box {
-                value as int;
+                var value as int;
                 constructor(value as int){
                     if(value > 0){ this.value = value; }
                     else{ this.value = 0; }
@@ -196,11 +196,11 @@ class ConstructorExecutionTest {
     @Test fun aViewReceiverSharesWritesWithoutChangingSourceTypeOrItsIndependentCopy() {
         val main = compile("""
             data Source {
-                value as int;
+                var value as int;
                 constructor(value as int){ this.value = value; }
             }
             data Target {
-                value as int;
+                var value as int;
                 func setValue(value as int){ this.value = value; }
             }
             func main(){

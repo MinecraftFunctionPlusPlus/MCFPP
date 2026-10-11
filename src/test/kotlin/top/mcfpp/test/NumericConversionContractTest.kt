@@ -56,10 +56,10 @@ class NumericConversionContractTest {
             val source = """
                 namespace fixture.numeric;
                 data Box {
-                    func observe($parameters)->int {
+                    func observe($parameters):int {
                         ${body(false)}
                     }
-                    func known()->int {
+                    func known():int {
                         ${body(true)}
                     }
                 }
@@ -107,10 +107,10 @@ class NumericConversionContractTest {
                 val main="func main(){dynamic var result=observe($arguments);dynamic var knownResult=known();}"
                 val source="""
                     namespace fixture.numeric;
-                    func observe($parameters)->int {
+                    func observe($parameters):int {
                         ${numericBody(false,version)}
                     }
-                    func known()->int {
+                    func known():int {
                         ${numericBody(true,version)}
                     }
                     $main
@@ -173,7 +173,7 @@ class NumericConversionContractTest {
                     if(fresh)appendLine("import fixture.numeric:*;")
                     if(!ir)appendLine("data Reject {")
                     for((source,target)in pairs)for(known in listOf(false,true)) {
-                        appendLine("func reject_${source.name}_${target}_$known(${if(known)"" else "value as ${source.name}"})->int {")
+                        appendLine("func reject_${source.name}_${target}_$known(${if(known)"" else "value as ${source.name}"}):int {")
                         appendLine("var result=${conversion(target)}(${if(known)source.literal else "value"});return 7;")
                         appendLine("}")
                     }
@@ -220,9 +220,9 @@ class NumericConversionContractTest {
         """.trimIndent()
         val source = """
             namespace fixture.payloads;
-            data Payload { value as int; constructor(value as int){this.value=value;} }
+            data Payload { var value as int; constructor(value as int){this.value=value;} }
             data Box {
-                func observe(flag as bool,label as string,payload as nbt,objectValue as Payload,bytes as ByteArray,ints as IntArray,longs as LongArray)->int {
+                func observe(flag as bool,label as string,payload as nbt,objectValue as Payload,bytes as ByteArray,ints as IntArray,longs as LongArray):int {
                     /data modify storage fixture:payloads runtime set value {}
                     var booleanValue=toNBT(flag);var stringValue=toNBT(label);var nbtValue=toNBT(payload);
                     var dataValue=toNBT(objectValue);var bytesValue=toNBT(bytes);var intsValue=toNBT(ints);var longsValue=toNBT(longs);
@@ -237,7 +237,7 @@ class NumericConversionContractTest {
                     /data modify storage fixture:payloads runtime.longsValue set from storage mcfpp:system stack_frame[0].longsValue
                     return 7;
                 }
-                func known()->int {
+                func known():int {
                     /data modify storage fixture:payloads known set value {}
                     var booleanValue=toNBT(true);var stringValue=toNBT("quote \" slash \\");var nbtValue=toNBT({value:7} as nbt);
                     var dataValue=toNBT(Payload(9));var bytesValue=toNBT([B;1b,-2b]);var intsValue=toNBT([I;3,-4]);var longsValue=toNBT([L;5L,-6L]);
@@ -322,15 +322,15 @@ class NumericConversionContractTest {
             val source="""
                 namespace fixture.boundaries;
                 data Box {
-                    func narrow(value as int)->int {dynamic var small=toByte(value);dynamic var medium=toShort(value);
+                    func narrow(value as int):int {dynamic var small=toByte(value);dynamic var medium=toShort(value);
                         ${observe("small")}
                         ${observe("medium")}
                         return 7;
                     }
-                    func wide(wide as long,precise as double)->int {
+                    func wide(wide as long,precise as double):int {
                         $wideBody
                     }
-                    func known()->int {
+                    func known():int {
                         $known
                     }
                 }
@@ -370,7 +370,7 @@ class NumericConversionContractTest {
         val main="func main(){var hidden=Hidden();}"
         val source="""
             namespace fixture.compileronly;
-            data Hidden {point as pos3;constructor(){this.point=1 2 3;} }
+            data Hidden {var point as pos3;constructor(){this.point=1 2 3;} }
             $main
         """.trimIndent()
         for(fresh in listOf(false,true)) {
@@ -414,7 +414,7 @@ class NumericConversionContractTest {
         val source="""
             namespace fixture.floatbounds;
             ${if(ir) "" else "data Box {"}
-                func observe(value as float)->int {
+                func observe(value as float):int {
                     dynamic var integer=toInt(value);dynamic var small=toByte(value);dynamic var medium=toShort(value);
                     /data modify storage fixture:floatbounds integer set from storage mcfpp:system stack_frame[0].integer
                     /data modify storage fixture:floatbounds small set from storage mcfpp:system stack_frame[0].small
@@ -449,7 +449,7 @@ class NumericConversionContractTest {
                 Project.config.includes=if(fresh)arrayListOf(library.toString())else arrayListOf()
                 MCFPPStringTest.readFromString("""
                     ${if(ir) "" else "data Reject {"}
-                    func known()->int {
+                    func known():int {
                         var positive=to$target(1.0e30);
                         var negative=to$target(-1.0e30);
                         return 7;
@@ -480,8 +480,8 @@ class NumericConversionContractTest {
                 val library=output.resolve("legacy-bounds-$version-$fold.mclib")
                 val declarations=buildString {
                     appendLine("namespace fixture.legacybounds;")
-                    appendLine("func runtime(value as float)->int{return toInt(value);}")
-                    for((index,value)in values.withIndex()) appendLine("func known_$index()->int{return toInt(${value.first});}")
+                    appendLine("func runtime(value as float):int{return toInt(value);}")
+                    for((index,value)in values.withIndex()) appendLine("func known_$index():int{return toInt(${value.first});}")
                 }
                 val main=buildString {
                     appendLine("func main(){")

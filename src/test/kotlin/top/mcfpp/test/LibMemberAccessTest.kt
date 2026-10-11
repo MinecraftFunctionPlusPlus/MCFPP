@@ -25,8 +25,8 @@ class LibMemberAccessTest {
         write("""
             namespace fixture.access;
             data Box {
-                private func secret()->int { return 4; }
-                protected func add<T as type>(value as int)->int { return value+4; }
+                private func secret():int { return 4; }
+                protected func add<T as type>(value as int):int { return value+4; }
             }
             data Child:Box {}
         """, output)
@@ -49,12 +49,12 @@ class LibMemberAccessTest {
         write("""
             namespace fixture.access;
             data Box {
-                private func secret()->int { return 4; }
-                protected func add<T as type>(value as int)->int { return value+4; }
-                func read()->int { return this.secret(); }
+                private func secret():int { return 4; }
+                protected func add<T as type>(value as int):int { return value+4; }
+                func read():int { return this.secret(); }
             }
             data Child:Box {
-                func readProtected()->int { return this.add<int>(2); }
+                func readProtected():int { return this.add<int>(2); }
             }
             func main(){
                 var box=Box(); var child=Child();
@@ -74,7 +74,7 @@ class LibMemberAccessTest {
         assertEquals(6, machine.read(main.scope.getVar("second") as MCInt))
         consume("""
             import fixture.access:*;
-            data Intruder:Box { func steal()->int { return this.secret(); } }
+            data Intruder:Box { func steal():int { return this.secret(); } }
             func main(){ var child=Intruder(); child.steal(); }
         """, output)
         assertEquals(1, Project.errorCount, "A derived receiver must not grant access to the base owner's private method")

@@ -48,7 +48,7 @@ class PrimitiveIRTest {
             for (version in listOf("26.3", "1.20.2", "1.20")) for (enabled in listOf(true, false)) {
                 top.mcfpp.CompileSettings.foldIRConstants = enabled
                 MCFPPStringTest.readFromString("""
-                    func accumulate(value as int) -> int {
+                    func accumulate(value as int): int {
                         var result = 0;
                         while(value > 0){
                             result += value;
@@ -56,7 +56,7 @@ class PrimitiveIRTest {
                         }
                         return result;
                     }
-                    func decision(flag as bool) -> bool {
+                    func decision(flag as bool): bool {
                         if(flag){ return true; } else { return false; }
                     }
                     func main(){

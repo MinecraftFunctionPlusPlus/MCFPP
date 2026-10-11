@@ -1,9 +1,9 @@
 @MCFPPEntity
 data LlamaData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, GeneralHorseData {
-    @Name<"ChestedHorse"> chestedHorse as bool;
-    @Name<"Items"> items as list<ItemData>;
-    @Name<"Strength"> strength as int;
-    @Name<"Variant"> variant as LlamaVariant;
+    @Name<"ChestedHorse"> var chestedHorse as bool;
+    @Name<"Items"> var items as list<ItemData>;
+    @Name<"Strength"> var strength as int;
+    @Name<"Variant"> var variant as LlamaVariant;
 }
 
 

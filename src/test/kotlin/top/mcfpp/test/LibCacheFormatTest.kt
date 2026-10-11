@@ -80,10 +80,10 @@ class LibCacheFormatTest {
                 enum Mode {first=3,second=7}
                 data Frozen<M as Mode>{constructor(){}}
                 data Node {
-                    children as list<Node>;
+                    var children as list<Node>;
                     constructor(){this.children=[] as list<Node>;}
                 }
-                func choose(modes as list<Mode> = [Mode.second])->int{return 7;}
+                func choose(modes as list<Mode> = [Mode.second]):int{return 7;}
             """.trimIndent()
             val body = """
                 func main(){

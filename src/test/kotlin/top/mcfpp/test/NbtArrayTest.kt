@@ -59,7 +59,7 @@ class NbtArrayTest {
 
     @Test fun runtimeArrayParametersIndicesAndReturnsKeepTheirEncoding() {
         val main = compile("""
-            func put(values as IntArray, index as int, value as int) -> IntArray { values[index] = value; return values; }
+            func put(values as IntArray, index as int, value as int): IntArray { values[index] = value; return values; }
             func main(){
                 var values = [I;2,3];
                 var result = put(values,1,7);
@@ -72,8 +72,8 @@ class NbtArrayTest {
 
     @Test fun byteAndLongArrayElementsKeepTheirLanguageTypesAcrossRuntimeCalls() {
         val main = compile("""
-            func putByte(values as ByteArray, index as int, value as byte) -> ByteArray { values[index] = value; return values; }
-            func putLong(values as LongArray, index as int, value as long) -> LongArray { values[index] = value; return values; }
+            func putByte(values as ByteArray, index as int, value as byte): ByteArray { values[index] = value; return values; }
+            func putLong(values as LongArray, index as int, value as long): LongArray { values[index] = value; return values; }
             func main(){
                 var bytes = [B;2b,3b];
                 var longs = [L;4l,5l];
@@ -87,8 +87,8 @@ class NbtArrayTest {
 
     @Test fun arrayWriteCapturesTheIndexBeforeRightHandCalls() {
         val main = compile("""
-            func change(static index as int) -> int { index = 1; return 7; }
-            func put(values as IntArray, index as int) -> IntArray { values[index] = change(index); return values; }
+            func change(static index as int): int { index = 1; return 7; }
+            func put(values as IntArray, index as int): IntArray { values[index] = change(index); return values; }
             func main(){
                 var result = put([I;2,3],0);
                 dynamic var number = result[0]*10 + result[1];
@@ -99,7 +99,7 @@ class NbtArrayTest {
 
     @Test fun multipleUnknownIndicesUseIndependentReadsAndAliasCachesReload() {
         val main = compile("""
-            func read(values as IntArray, left as int, right as int) -> int { return values[left] + values[right]; }
+            func read(values as IntArray, left as int, right as int): int { return values[left] + values[right]; }
             func main(){
                 var values = [I;2,3];
                 var view = values as IntArray;
@@ -145,9 +145,9 @@ class NbtArrayTest {
 
     @Test fun emptyArraysKeepTheirFormatAcrossRuntimeParametersAndReturns() {
         val main = compile("""
-            func bytes(value as ByteArray) -> ByteArray { return value; }
-            func ints(value as IntArray) -> IntArray { return value; }
-            func longs(value as LongArray) -> LongArray { return value; }
+            func bytes(value as ByteArray): ByteArray { return value; }
+            func ints(value as IntArray): IntArray { return value; }
+            func longs(value as LongArray): LongArray { return value; }
             func main(){
                 var bytesResult = bytes([B;]);
                 var intsResult = ints([I;]);
@@ -165,7 +165,7 @@ class NbtArrayTest {
 
     @Test fun nestedAndErasedCopiesKeepArrayElementsAndIndependentPayloads() {
         val main = compile("""
-            func copy(value as any) -> any { return value; }
+            func copy(value as any): any { return value; }
             func main(){
                 var source = {values:[I;2,3]};
                 var copied = source;

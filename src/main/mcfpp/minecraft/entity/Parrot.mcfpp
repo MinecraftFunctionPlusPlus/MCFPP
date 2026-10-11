@@ -1,5 +1,5 @@
 @MCFPPEntity
 data ParrotData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, TameableData {
     @Name<"Variant">
-    variant as int;
+    var variant as int;
 }

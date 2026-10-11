@@ -93,7 +93,7 @@ class DictionaryMemberTest {
 
     @Test fun mergingKnownFieldsIntoAPartialReceiverPreservesKnownSiblings() {
         val main = compile("""
-            func update(source as dict<any>, runtime as int) -> int {
+            func update(source as dict<any>, runtime as int): int {
                 source["runtime"] = runtime;
                 source.merge({added:7});
                 return source["added"] + (source["runtime"] as int);
@@ -128,7 +128,7 @@ class DictionaryMemberTest {
 
     @Test fun genericDictionaryParametersAndReturnsKeepTheirLayoutAndLanguageType() {
         val main = compile("""
-            func copy(source as dict<int>) -> dict<int> { return source; }
+            func copy(source as dict<int>): dict<int> { return source; }
             func main(){
                 var source = {value:4} as dict<int>;
                 var copied = copy(source);
@@ -141,7 +141,7 @@ class DictionaryMemberTest {
 
     @Test fun aLegacyVisitorBooleanParameterReadsItsIncomingFrameAndKeepsBoolIdentity() {
         val main = compile("""
-            func put(source as dict<any>, flag as bool) -> bool {
+            func put(source as dict<any>, flag as bool): bool {
                 source["flag"] = flag;
                 return source["flag"] == true;
             }
@@ -193,7 +193,7 @@ class DictionaryMemberTest {
 
     @Test fun aBulkDeepMergeKeepsUnrelatedFactsAndRecordsKnownScalarInputs() {
         val main = compile("""
-            func update(values as dict<any>, runtime as int) -> int {
+            func update(values as dict<any>, runtime as int): int {
                 values["runtime"] = runtime;
                 values.merge({nested:{added:8},scalar:7});
                 return (values["runtime"] as int) + values["scalar"];
@@ -208,7 +208,7 @@ class DictionaryMemberTest {
 
     @Test fun mergingAnUnknownRuntimeSourceCopiesWholeNbtAndDeepMergesExistingFields() {
         val main = compile("""
-            func update(values as dict<any>, extra as dict<any>) -> int {
+            func update(values as dict<any>, extra as dict<any>): int {
                 values.merge(extra);
                 var nested = values["nested"] as dict<any>;
                 return (nested["kept"] as int)*100 + (nested["added"] as int)*10 + (values["scalar"] as int);

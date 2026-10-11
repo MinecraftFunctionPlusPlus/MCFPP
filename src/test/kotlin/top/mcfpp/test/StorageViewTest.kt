@@ -211,8 +211,8 @@ class StorageViewTest {
 
     @Test fun templateViewsShareWritesAndPreserveSiblingFacts() {
         val main = compile("""
-            data Source { value as int; sibling as int; }
-            data Target { value as int; sibling as int; }
+            data Source { var value as int; var sibling as int; }
+            data Target { var value as int; var sibling as int; }
             func main(){
                 var source = {value:2, sibling:9} as Source;
                 source.sibling = 9;
@@ -237,8 +237,8 @@ class StorageViewTest {
     @Test fun aViewNeverAddsMissingFieldsOrCallsATemplateConstructor() {
         val main = compile("""
             data Target {
-                present as int;
-                missing as int;
+                var present as int;
+                var missing as int;
                 constructor(){
                     /say constructor
                 }
@@ -254,7 +254,7 @@ class StorageViewTest {
 
     @Test fun ordinaryTemplateAssignmentCopiesThePayloadIntoAnIndependentPlace() {
         val main = compile("""
-            data Source { value as int; sibling as int; }
+            data Source { var value as int; var sibling as int; }
             func main(){
                 var source = {value:2, sibling:9} as Source;
                 var copied = source;
@@ -349,7 +349,7 @@ class StorageViewTest {
 
     @Test fun erasedParametersReturnsAndSequentialCallsKeepSeparatePayloads() {
         val main = compile("""
-            func identity(value as any) -> any { return value; }
+            func identity(value as any): any { return value; }
             func main(){
                 var first = identity(4);
                 var second = identity(9);
@@ -375,7 +375,7 @@ class StorageViewTest {
 
     @Test fun returnedTypeKnowledgeDoesNotEvaluateAnOrdinaryFunctionForConstantArguments() {
         val main = compile("""
-            func choose(flag as bool) -> any {
+            func choose(flag as bool): any {
                 if(flag){ return 2; } else { return false; }
             }
             func main(){ var value = choose(true); dynamic var result = (value as int) + 4; }
@@ -447,8 +447,8 @@ class StorageViewTest {
 
     @Test fun templateParametersAndReturnsCopyThePayloadAcrossFrames() {
         val main = compile("""
-            data Payload { value as int; }
-            func adjust(value as Payload) -> Payload { value.value += 3; return value; }
+            data Payload { var value as int; }
+            func adjust(value as Payload): Payload { value.value += 3; return value; }
             func main(){
                 var source = {value:2} as Payload;
                 var first = adjust(source);
@@ -465,8 +465,8 @@ class StorageViewTest {
 
     @Test fun recursiveCallsPreserveAnUnconsumedErasedReturn() {
         val main = compile("""
-            func identity(value as int) -> any { return value; }
-            func sum(value as int) -> int {
+            func identity(value as int): any { return value; }
+            func sum(value as int): int {
                 if(value <= 0){ return 0; }
                 return (identity(value) as int) + sum(value - 1);
             }
@@ -477,7 +477,7 @@ class StorageViewTest {
 
     @Test fun evaluatingALaterOperandKeepsTheEarlierValueAndTheCallsWriteBack() {
         val main = compile("""
-            func change(static value as int) -> int { value = 9; return 1; }
+            func change(static value as int): int { value = 9; return 1; }
             func main(){
                 var value = 4;
                 var view = value as int;
@@ -492,9 +492,9 @@ class StorageViewTest {
 
     @Test fun anEarlierArgumentSurvivesARecursiveCallInALaterArgument() {
         val main = compile("""
-            func identity(value as int) -> any { return value; }
-            func add(left as int, right as int) -> int { return left + right; }
-            func sum(value as int) -> int {
+            func identity(value as int): any { return value; }
+            func add(left as int, right as int): int { return left + right; }
+            func sum(value as int): int {
                 if(value <= 0){ return 0; }
                 return add(identity(value) as int, sum(value - 1));
             }

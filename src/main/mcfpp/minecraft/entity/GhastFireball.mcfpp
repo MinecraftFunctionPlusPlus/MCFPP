@@ -1,8 +1,8 @@
 @MCFPPEntity
 data GhastFireballData : EntityData, ProjectileData, FireballData {
     @Name<"ExplosionPower">
-    explosionPower as byte;
+    var explosionPower as byte;
 
     @Name<"Item">
-    item as ItemData;
+    var item as ItemData;
 }

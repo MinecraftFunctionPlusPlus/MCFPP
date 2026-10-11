@@ -1,4 +1,4 @@
 data TameableData {
-    @Name<"Owner"> owner as IntArray;
-    @Name<"Sitting"> sitting as bool;
+    @Name<"Owner"> var owner as IntArray;
+    @Name<"Sitting"> var sitting as bool;
 }

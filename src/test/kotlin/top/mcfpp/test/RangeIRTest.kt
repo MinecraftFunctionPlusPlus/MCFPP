@@ -39,8 +39,8 @@ class RangeIRTest {
 
     @Test fun namedAndReturnedRangesKeepIntegerPrecisionAndCaptureLoopBounds() = modes {
         val main = compile("""
-            func make() -> range { return 16777217 .. 16777218; }
-            func forward(value as any) -> any { return value; }
+            func make(): range { return 16777217 .. 16777218; }
+            func forward(value as any): any { return value; }
             func main(){
                 var bounds = forward(make());
                 var sum = 0;
@@ -67,9 +67,9 @@ class RangeIRTest {
 
     @Test fun constructingBoundsCapturesEarlierReadsAndSeparatesCallResults() = modes {
         val main = compile("""
-            func end(static value as int) -> int { value = 10; return 3; }
-            func start() -> int { return 4; }
-            func finish() -> int { return 5; }
+            func end(static value as int): int { value = 10; return 3; }
+            func start(): int { return 4; }
+            func finish(): int { return 5; }
             func main(){
                 var first = 1;
                 var bounds = first .. end(first);
@@ -166,7 +166,7 @@ class RangeIRTest {
 
     @Test fun legacyMaterializationAndIterationUseIndependentExactBounds() {
         MCFPPStringTest.readFromString("""
-            func make() -> range { var ignored = 6 / 2; return 16777217 .. 16777218; }
+            func make(): range { var ignored = 6 / 2; return 16777217 .. 16777218; }
             func main(){
                 var ignored = 6 / 2;
                 dynamic var first = 16777217;

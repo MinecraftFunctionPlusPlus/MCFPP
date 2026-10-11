@@ -1,11 +1,11 @@
 @MCFPPEntity
 data MooshroomData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"Stew_Effects">
-    stew_effects as list<data {
-        duration as int;
-        id as string;
+    var stew_effects as list<data {
+        var duration as int;
+        var id as string;
     }>;
 
     @Name<"Type">
-    type as string;
+    var type as string;
 }

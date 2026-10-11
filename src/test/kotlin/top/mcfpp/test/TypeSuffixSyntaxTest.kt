@@ -15,10 +15,10 @@ class TypeSuffixSyntaxTest {
     @Test fun removedSuffixesRejectSourceBeforeDeclarationsOrCommandsRun() {
         val programs = listOf(
             "func main(){ var value as int! = 1; }",
-            "data Invalid { value as int!; } func main(){}",
+            "data Invalid { var value as int!; } func main(){}",
             "func invalid(value as int!){} func main(){}",
-            "func invalid()->int! { return 1; } func main(){}",
-            "data Invalid<T as type> { value as T!; } func main(){}",
+            "func invalid():int! { return 1; } func main(){}",
+            "data Invalid<T as type> { var value as T!; } func main(){}",
             "func main(){ var value as list<int!> = [1]; }",
             "data Invalid<T as type>{} func main(){ var value=Invalid<int!>(); }",
             "func main(){ var value=1 as int!; }",
@@ -47,7 +47,7 @@ class TypeSuffixSyntaxTest {
     @Test fun constReadonlyGenericsAndLogicalOperatorsRemainLegal() {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString("""
-            data Box<T as type> { value as T; }
+            data Box<T as type> { var value as T; }
             func main(){
                 const var immutable as int=4;
                 var ordinary as int=7;

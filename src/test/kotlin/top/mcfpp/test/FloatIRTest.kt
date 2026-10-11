@@ -54,12 +54,12 @@ class FloatIRTest {
 
     @Test fun recursiveCallsPreserveEarlierOperandsAndStaticWriteback() = modes {
         val main = compile("""
-            func sum(value as float, depth as int) -> float {
+            func sum(value as float, depth as int): float {
                 if(depth <= 0){ return value; }
                 return value + sum(value + 0.5,depth - 1);
             }
-            func change(static value as float) -> float { value = 10.0; return 0.5; }
-            func forward(value as float, ignored as float) -> any { return value; }
+            func change(static value as float): float { value = 10.0; return 0.5; }
+            func forward(value as float, ignored as float): any { return value; }
             func main(){
                 var value = 1.25;
                 var captured = forward(value,change(value));
@@ -73,7 +73,7 @@ class FloatIRTest {
 
     @Test fun collectionsPromoteElementsAndKeepViewsAndCapturedDynamicIndices() = modes {
         val main = compile("""
-            func replace(static index as int) -> float { index = 1; return 2.5; }
+            func replace(static index as int): float { index = 1; return 2.5; }
             func main(){
                 var values as list<float> = [1,2.0];
                 dynamic var index = 0;
@@ -96,8 +96,8 @@ class FloatIRTest {
 
     @Test fun implicitReturnAndDefaultArgumentsRoundIntOnlyAtPromotion() = modes {
         val main = compile("""
-            func promoted(value as int) -> float { return value; }
-            func add(value as float, extra as float = 0.5) -> float { return value + extra; }
+            func promoted(value as int): float { return value; }
+            func add(value as float, extra as float = 0.5): float { return value + extra; }
             func main(){
                 dynamic var integer = 16777217;
                 var rounded = promoted(integer);

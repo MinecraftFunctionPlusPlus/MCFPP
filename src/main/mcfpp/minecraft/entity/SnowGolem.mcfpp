@@ -1,4 +1,4 @@
 @MCFPPEntity
 data SnowGolemData: EntityData, CreatureData, AIMobData {
-    @Name<"Pumpkin"> pumpkin as bool;
+    @Name<"Pumpkin"> var pumpkin as bool;
 }

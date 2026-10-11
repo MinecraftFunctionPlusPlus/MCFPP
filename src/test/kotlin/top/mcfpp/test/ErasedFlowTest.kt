@@ -156,7 +156,7 @@ class ErasedFlowTest {
 
     @Test fun returnKnowledgePreservesRuntimeConditionsAndDoesNotEvaluateTheCall() {
         MCFPPStringTest.readFromString("""
-            func choose() -> any {
+            func choose(): any {
                 dynamic var condition = true;
                 while(condition){ return false; }
                 return 2;

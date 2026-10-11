@@ -80,7 +80,7 @@ class LegacyFloatIRTest {
 
     @Test fun promotionAndExplicitConversionKeepEightDecimalDigitsInsteadOfHostFloatPrecision() = modes {
         val main = compile("""
-            func promote(value as int) -> float { return value; }
+            func promote(value as int): float { return value; }
             func main(){
                 var promoted as float = 16777217;
                 var returned = promote(16777217);
@@ -105,12 +105,12 @@ class LegacyFloatIRTest {
 
     @Test fun recursiveCallsCaptureEarlierArgumentsAndStaticWritebackSeparately() = modes {
         val main = compile("""
-            func sum(value as float, depth as int) -> float {
+            func sum(value as float, depth as int): float {
                 if(depth <= 0){ return value; }
                 return value + sum(value + 0.5, depth - 1);
             }
-            func change(static value as float) -> float { value = 10.0; return 0.5; }
-            func forward(value as float, ignored as float) -> any { return value; }
+            func change(static value as float): float { value = 10.0; return 0.5; }
+            func forward(value as float, ignored as float): any { return value; }
             func main(){
                 var value = 1.25;
                 var earlier = forward(value, change(value));
@@ -126,9 +126,9 @@ class LegacyFloatIRTest {
     @Test fun legacyAndIRCallersKeepMultipleFloatParametersAndConsecutiveReturnsIndependent() = modes {
         for (legacy in listOf(true, false)) {
             val main = compile("""
-                func identity(value as float) -> float { return value; }
-                func literal() -> float { return 1.25; }
-                func mix(left as float, right as float = 0.75) -> float { return left * 10.0 + right; }
+                func identity(value as float): float { return value; }
+                func literal(): float { return 1.25; }
+                func mix(left as float, right as float = 0.75): float { return left * 10.0 + right; }
                 func main(){
                     ${if (legacy) "var ignored = 6 / 2;" else ""}
                     var left = 1.25;
@@ -147,11 +147,11 @@ class LegacyFloatIRTest {
 
     @Test fun IRCallerReadsLegacyReturnsAndStaticParametersFromTheSameCompoundABI() = modes {
         val main = compile("""
-            func oldMix(left as float, right as float) -> float {
+            func oldMix(left as float, right as float): float {
                 var ignored = 6 / 2;
                 return left * 10.0 + right;
             }
-            func oldChange(static value as float) -> float {
+            func oldChange(static value as float): float {
                 var ignored = 6 / 2;
                 value += 1.25;
                 return value;
@@ -199,7 +199,7 @@ class LegacyFloatIRTest {
 
     @Test fun erasedAndUnknownFloatViewsShareThePayloadWithoutRuntimeTypeChecks() = modes {
         val main = compile("""
-            func expose(value as float) -> any { return value; }
+            func expose(value as float): any { return value; }
             func main(){
                 var source as any = expose(1.25);
                 var view = source as float;

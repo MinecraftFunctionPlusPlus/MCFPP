@@ -2,7 +2,7 @@ import mcfpp.minecraft.std:*;
 
 @From<"top.mcfpp.mni.minecraft.RandomData">
 data Random {
-    private id as string;
+    private var id as string;
 
     constructor(){
         /random reset ${this.id} 0 true true

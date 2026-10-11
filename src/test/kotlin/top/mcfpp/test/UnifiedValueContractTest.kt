@@ -67,7 +67,7 @@ class UnifiedValueContractTest {
         for (ir in listOf(false, true)) for (fold in listOf(false, true)) {
             CompileSettings.foldIRConstants = fold
             val declarations = "namespace fixture.const_values;\nfunc append(static values as list<int>){values[0]+=1;values.add(8);}\n" +
-                if (ir) "func choose(flag as bool)->int {$body}" else "data Box {func choose(flag as bool)->int {$body}}"
+                if (ir) "func choose(flag as bool):int {$body}" else "data Box {func choose(flag as bool):int {$body}}"
             val receiver = if (ir) "" else "box."
             val main = "func main(){${if (ir) "" else "var box=Box();"}" +
                 "dynamic var result=${receiver}choose(true)*100+${receiver}choose(false);}"
@@ -88,7 +88,7 @@ class UnifiedValueContractTest {
         val entities = output.resolve("entities")
         compile("""
             namespace mcfpp.minecraft.resource;
-            data ResourceID {id as string;}
+            data ResourceID {var id as string;}
             data EntityType:ResourceID {}
             data Predicate:ResourceID {}
             data Advancement:ResourceID {}
@@ -104,13 +104,13 @@ class UnifiedValueContractTest {
         val dependencies = listOf(resources, entities)
         val declarations = """
             namespace fixture.selector_values;
-            func build(label as string,coordinate as int)->entity {
+            func build(label as string,coordinate as int):entity {
                 var selected=@e;
                 selected.tag(label);selected.x(coordinate);
                 label="inside";coordinate=88;
                 return selected;
             }
-            func relay(value as entity)->entity {
+            func relay(value as entity):entity {
                 var selected=value;
                 selected.tag("relayed");
                 return selected;
@@ -161,12 +161,12 @@ class UnifiedValueContractTest {
     fun compilerOnlyActualPayloadsKeepTheDeclaredOrdinaryOverloadContract() = isolated { output ->
         val declarations = """
             namespace fixture.formal_values;
-            data Base {position as pos3=1 0 0;}
-            data Child:Base {marker as int=2;}
-            func choose(value as Base)->int {return 1;}
-            func choose(value as Child)->int {return 2;}
-            func inspect(value as Base,count as int)->int {return choose(value)*10+count;}
-            func iterateClosed(early as bool)->int {
+            data Base {var position as pos3=1 0 0;}
+            data Child:Base {var marker as int=2;}
+            func choose(value as Base):int {return 1;}
+            func choose(value as Child):int {return 2;}
+            func inspect(value as Base,count as int):int {return choose(value)*10+count;}
+            func iterateClosed(early as bool):int {
                 var values as list<pos3> = [1 0 0,2 0 0,3 0 0];
                 var count=0;
                 for(value:values){
@@ -197,7 +197,7 @@ class UnifiedValueContractTest {
     @Test
     fun unknownIntegerRangeBoundsAreCapturedAndAllLoopExitsBalanceFrames() = isolated { output ->
         val body = """
-            func iterate(start as int,finish as int)->int {
+            func iterate(start as int,finish as int):int {
                 var bounds=start .. finish;
                 start=0;finish=0;
                 var sum=0;
@@ -208,17 +208,17 @@ class UnifiedValueContractTest {
                 }
                 return sum;
             }
-            func natural(start as int,finish as int)->int {
+            func natural(start as int,finish as int):int {
                 var bounds=start .. finish;
                 var sum=0;
                 for(index:bounds){const var term=index;sum+=term;bounds=1 .. 1;}
                 return sum;
             }
-            func early(start as int,finish as int)->int {
+            func early(start as int,finish as int):int {
                 for(index:start .. finish){if(index>=3){return index;};}
                 return 0;
             }
-            func nested(start as int,finish as int)->int {
+            func nested(start as int,finish as int):int {
                 var selected=0;
                 if(start==1){start=2;selected=10;}
                 else if(start==2){selected=20;}
@@ -228,10 +228,10 @@ class UnifiedValueContractTest {
                 }
                 return 0;
             }
-            func condition(static count as int,limit as int)->bool {
+            func condition(static count as int,limit as int):bool {
                 count+=1;return count<limit;
             }
-            func observe(limit as int)->int {
+            func observe(limit as int):int {
                 var count=0;var iterations=0;
                 while(condition(count,limit)){iterations+=1;}
                 return count*10+iterations;
@@ -274,14 +274,14 @@ class UnifiedValueContractTest {
     @Test
     fun nestedFloatTagsPreserveSignedZeroInReturnsDTOsAndIndependentCopies() = isolated { output ->
         val pack = """
-            func pack(value as float)->nbt {
+            func pack(value as float):nbt {
                 var values as list<float> = [value];
                 return {nested:{value:value,values:values}} as nbt;
             }
         """.trimIndent()
         val payload = """
             data Payload {
-                nested as dict<any>;
+                var nested as dict<any>;
                 constructor(value as float){
                     var nested as dict<any> = {};
                     nested["value"]=value;
@@ -323,7 +323,7 @@ class UnifiedValueContractTest {
 
     @Test
     fun vectorViewsShareTheirSourceAndOrdinaryReturnsHaveIndependentComponents() = isolated { output ->
-        val declarations = "namespace fixture.vector_values;\nfunc relay(value as vec3)->vec3{return value;}"
+        val declarations = "namespace fixture.vector_values;\nfunc relay(value as vec3):vec3{return value;}"
         val main = """
             func main(){
                 var values as list<int> = [1,2,3];

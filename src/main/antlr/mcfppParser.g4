@@ -39,7 +39,7 @@ compilationUnit
         (separator* typealiasDeclaration (separator | EOF))*
         (separator* topStatement)?
         (separator* typeDeclaration (separator | EOF))*
-        EOF
+        separator* EOF
     ;
 
 separator
@@ -52,7 +52,7 @@ topStatement
 
 //命名空间声明
 namespaceDeclaration
-    :   doc_comment? NAMESPACE namespacePath
+    :   doc_comment? NL* NAMESPACE namespacePath
     ;
 
 importDeclaration
@@ -87,11 +87,11 @@ declarations
     ;
 
 operationOverrideDeclaration
-    :   OPERATOR supportOperator NL* functionParams NL* (ARROW functionReturnType)? NL* curlBlock
+    :   OPERATOR supportOperator NL* functionParams NL* (COLON functionReturnType)? NL* curlBlock
     ;
 
 nativeOperationOverrideDeclaration
-    :   OPERATOR supportOperator NL* functionParams NL* (ARROW functionReturnType)? NL* ASSIGNMENT NL* javaRefer
+    :   OPERATOR supportOperator NL* functionParams NL* (COLON functionReturnType)? NL* ASSIGNMENT NL* javaRefer
     ;
 
 supportOperator
@@ -150,7 +150,7 @@ objectTemplateDeclaration
     ;
 
 templateBody
-    :   LCURL NL* (doc_comment? templateMemberDeclaration separator*)* RCURL
+    :   LCURL NL* (doc_comment? NL* templateMemberDeclaration separator*)* RCURL
     ;
 
 templateMemberDeclaration
@@ -167,7 +167,7 @@ templateMember
     ;
 
 functionDeclarationPart
-    :   FUNCTION NL* Identifier NL* functionParams (NL* ARROW NL* functionReturnType)?
+    :   FUNCTION NL* Identifier NL* functionParams (NL* COLON NL* functionReturnType)?
     ;
 
 templateFunctionDeclaration
@@ -175,7 +175,7 @@ templateFunctionDeclaration
     ;
 
 templateFieldDeclaration
-    :    CONST? VAR? NL* Identifier NL* (AS NL* templateType)? (NL* ASSIGNMENT expression)? NL* accessor?
+    :    CONST? NL* VAR NL* Identifier NL* (AS NL* templateType)? (NL* ASSIGNMENT expression)? NL* accessor?
     ;
 
 templateType
@@ -217,7 +217,7 @@ functionDeclaration
     ;
 
 extensionFunctionDeclaration
-    :   FUNCTION NL* (type DOT)? Identifier functionParams (NL* ARROW NL* functionReturnType)? NL* curlBlock
+    :   FUNCTION NL* (type DOT)? Identifier functionParams (NL* COLON NL* functionReturnType)? NL* curlBlock
     ;
 
 //枚举
@@ -663,5 +663,4 @@ multiLineStringExpression
 
 doc_comment
     :   DOC_COMMENT
-    |   SIMPLE_DOC_COMMENT
     ;

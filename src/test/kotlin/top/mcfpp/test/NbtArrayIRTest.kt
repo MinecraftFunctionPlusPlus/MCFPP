@@ -38,7 +38,7 @@ class NbtArrayIRTest {
 
     @Test fun copiesAndViewsPreserveArrayIdentityAndAliasing() = modes {
         val main = compile("""
-            func copy(value as any) -> any { return value; }
+            func copy(value as any): any { return value; }
             func main(){
                 var source = {values:[I;2,3]};
                 var view = source["values"] as IntArray;
@@ -53,9 +53,9 @@ class NbtArrayIRTest {
 
     @Test fun byteAndLongCopiesKeepExactPayloadsAcrossFrames() = modes {
         val main = compile("""
-            func putByte(values as ByteArray, index as int, value as byte) -> ByteArray { values[index] = value; return values; }
-            func putLong(values as LongArray, index as int, value as long) -> LongArray { values[index] = value; return values; }
-            func last(values as LongArray) -> long { return values[-1]; }
+            func putByte(values as ByteArray, index as int, value as byte): ByteArray { values[index] = value; return values; }
+            func putLong(values as LongArray, index as int, value as long): LongArray { values[index] = value; return values; }
+            func last(values as LongArray): long { return values[-1]; }
             func main(){
                 var bytes = [B;-128b,127b];
                 var longs = [L;9007199254740993l,9223372036854775807l];
@@ -77,7 +77,7 @@ class NbtArrayIRTest {
 
     @Test fun arrayIndexIsCapturedBeforeStaticRightHandSideEffects() = modes {
         val main = compile("""
-            func change(static index as int) -> int { index = 1; return 7; }
+            func change(static index as int): int { index = 1; return 7; }
             func put(static values as IntArray, index as int) { values[index] = change(index); }
             func main(){
                 var values = [I;2,3];
@@ -90,7 +90,7 @@ class NbtArrayIRTest {
 
     @Test fun recursiveFramesAndLoopsKeepTheirOwnArrays() = modes {
         val main = compile("""
-            func sum(values as IntArray, count as int) -> int {
+            func sum(values as IntArray, count as int): int {
                 if(count == 0){ return 0; }
                 return values[count-1] + sum(values,count-1);
             }
@@ -106,9 +106,9 @@ class NbtArrayIRTest {
 
     @Test fun emptyArraysRetainDistinctFormatsThroughCalls() = modes {
         val main = compile("""
-            func bytes(value as ByteArray) -> ByteArray { return value; }
-            func ints(value as IntArray) -> IntArray { return value; }
-            func longs(value as LongArray) -> LongArray { return value; }
+            func bytes(value as ByteArray): ByteArray { return value; }
+            func ints(value as IntArray): IntArray { return value; }
+            func longs(value as LongArray): LongArray { return value; }
             func main(){
                 var emptyBytes = [B;]; var emptyInts = [I;]; var emptyLongs = [L;];
                 var b = bytes(emptyBytes); var i = ints(emptyInts); var l = longs(emptyLongs);
@@ -126,7 +126,7 @@ class NbtArrayIRTest {
 
     @Test fun knownNegativeIndicesStillWorkOnTargetsWithoutMacros() {
         MCFPPStringTest.readFromString("""
-            func last(values as IntArray) -> int { return values[-1]; }
+            func last(values as IntArray): int { return values[-1]; }
             func main(){ dynamic var result = last([I;2,9]); }
         """.trimIndent(), version = "1.20.1")
         assertEquals(0, Project.errorCount)

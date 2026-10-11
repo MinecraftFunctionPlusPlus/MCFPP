@@ -3,26 +3,26 @@ import mcfpp.math:*;
 data ItemSubPredicate;
 
 data AttributeModifierPredicate: ItemSubPredicate {
-    modifiers as AttributeModifiers;
+    var modifiers as AttributeModifiers;
 }
 
 data AttributeModifiers {
-    contains as list<AttributePredicate>?;
-    size as (int | IntRange)?;
-    count as list<AttributeCountPredicate>?;
+    var contains as list<AttributePredicate>?;
+    var size as (int | IntRange)?;
+    var count as list<AttributeCountPredicate>?;
 }
 
 data AttributeCountPredicate {
-    test as AttributePredicate;
-    count as (int | IntRange);
+    var test as AttributePredicate;
+    var count as (int | IntRange);
 }
 
 data AttributePredicate {
-    attribute as (string | list<string>)?;
-    id as list<string>?;
-    amount as (float | DecimalRange)?;
-    operation as AttributeOperation?;
-    slot as AttributeSlot?;
+    var attribute as (string | list<string>)?;
+    var id as list<string>?;
+    var amount as (float | DecimalRange)?;
+    var operation as AttributeOperation?;
+    var slot as AttributeSlot?;
 }
 
 enum AttributeOperation {
@@ -44,47 +44,47 @@ enum AttributeSlot {
 }
 
 data BundleContentsPredicate: ItemSubPredicate {
-    items as ItemStackCompoundPredicate;
+    var items as ItemStackCompoundPredicate;
 }
 
 data ContainerPredicate: ItemSubPredicate {
-    items as ItemStackCompoundPredicate;
+    var items as ItemStackCompoundPredicate;
 }
 
 data ItemStackCompoundPredicate {
-    contains as list<ItemStackPredicate>;
-    size as (int | IntRange)?;
-    count as list<ItemStackCountPredicate>?;
+    var contains as list<ItemStackPredicate>;
+    var size as (int | IntRange)?;
+    var count as list<ItemStackCountPredicate>?;
 }
 
 data ItemStackPredicate {
-    components as dict<ItemComponent>?;
-    count as (int | IntRange)?;
-    items as (string | list<string>)?;
-    predicates as dict<nbt>?;
+    var components as dict<ItemComponent>?;
+    var count as (int | IntRange)?;
+    var items as (string | list<string>)?;
+    var predicates as dict<nbt>?;
 }
 
 data ItemStackCountPredicate {
-    test as ItemStackPredicate;
-    count as (int | IntRange);
+    var test as ItemStackPredicate;
+    var count as (int | IntRange);
 }
 
 data CustomDataPredicate {}
 
 data DamagePredicate: ItemSubPredicate {
-    damage as (int | IntRange)?;
-    durability as (int | IntRange)?;
+    var damage as (int | IntRange)?;
+    var durability as (int | IntRange)?;
 }
 
 data EnchantmentPredicate: ItemSubPredicate {
-    enchantments as (string | list<string>);
-    levels as (int | IntRange);
+    var enchantments as (string | list<string>);
+    var levels as (int | IntRange);
 }
 
 data FireworkExplosionPredicate: ItemSubPredicate {
-    shape as FireworkShape?;
-    hasTrail as bool?;
-    hasTwinkle as bool?;
+    var shape as FireworkShape?;
+    var hasTrail as bool?;
+    var hasTwinkle as bool?;
 }
 
 enum FireworkShape {
@@ -96,54 +96,54 @@ enum FireworkShape {
 }
 
 data FireworksPredicate {
-    explosions as FireworkExplosions;
-    flightDuration as (int | IntRange)?;
+    var explosions as FireworkExplosions;
+    var flightDuration as (int | IntRange)?;
 }
 
 data FireworkExplosions {
-    contains as list<FireworkExplosionPredicate>;
-    size as (int | IntRange)?;
-    count as list<FireworkExplosionCountPredicate>?;
+    var contains as list<FireworkExplosionPredicate>;
+    var size as (int | IntRange)?;
+    var count as list<FireworkExplosionCountPredicate>?;
 }
 
 data FireworkExplosionCountPredicate {
-    test as FireworkExplosionPredicate;
-    count as (int | IntRange);
+    var test as FireworkExplosionPredicate;
+    var count as (int | IntRange);
 }
 
 data JukeboxPlayablePredicate: ItemSubPredicate {
-    songs as (string | list<string>);
+    var songs as (string | list<string>);
 }
 
 data StoredEnchantments: ItemSubPredicate {
-    enchantments as (string | list<string>);
-    levels as (int | IntRange);
+    var enchantments as (string | list<string>);
+    var levels as (int | IntRange);
 }
 
 data TrimPredicate: ItemSubPredicate {
-    material as (string | list<string>);
-    pattern as (string | list<string>);
+    var material as (string | list<string>);
+    var pattern as (string | list<string>);
 }
 
 data WriteableBookContentPredicate: ItemSubPredicate {
-    pages as PagePredicate;
+    var pages as PagePredicate;
 }
 
 data WrittenBookContentPredicate: ItemSubPredicate {
-    pages as PagePredicate;
-    author as string;
-    title as string;
-    generation as (int | IntRange);
-    resolved as bool;
+    var pages as PagePredicate;
+    var author as string;
+    var title as string;
+    var generation as (int | IntRange);
+    var resolved as bool;
 }
 
 data PagePredicate {
-    contains as list<text>?;
-    size as (int | IntRange)?;
-    count as list<PageCountPredicate>?;
+    var contains as list<text>?;
+    var size as (int | IntRange)?;
+    var count as list<PageCountPredicate>?;
 }
 
 data PageCountPredicate {
-    test as text;
-    count as (int | IntRange);
+    var test as text;
+    var count as (int | IntRange);
 }

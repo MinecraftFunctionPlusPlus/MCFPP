@@ -131,8 +131,8 @@ class MCFPPFile : File {
         if(nameWithoutExtension.isEmpty()){
             useLines {
                 for (i in it){
-                    if(i.startsWith("#>")){
-                        val n = i.substring(2).trim()
+                    if(i.startsWith("//>")){
+                        val n = i.substring(3).trim()
                         val parse = dispatcher.parse(n, this)
                         try {
                             dispatcher.execute(parse)

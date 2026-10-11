@@ -94,8 +94,8 @@ class DictionaryIRTest {
 
     @Test fun memberReceiverRetainsItsIndexAcrossArgumentEffects() = modes {
         val main = compile("""
-            func identity(value as int) -> int { return value; }
-            func change(static index as int) -> dict<int> { index = 1; return {first:7}; }
+            func identity(value as int): int { return value; }
+            func change(static index as int): dict<int> { index = 1; return {first:7}; }
             func main(){
                 var values = [{first:2},{first:9}];
                 var index = identity(0);
@@ -110,7 +110,7 @@ class DictionaryIRTest {
         for (source in listOf(
             "func main(){ var values as dict<int> = {first:2}; values.remove(1); }",
             "func main(){ var values as dict<int> = {first:2}; values.merge({first:true}); }",
-            "func inspect(values as dict<int>, key as string) -> bool { return values.containsKey(key); }\nfunc main(){ var values as dict<int> = {first:2}; var found = inspect(values,\"first\"); }"
+            "func inspect(values as dict<int>, key as string): bool { return values.containsKey(key); }\nfunc main(){ var values as dict<int> = {first:2}; var found = inspect(values,\"first\"); }"
         )) {
             MCFPPStringTest.readFromString(source, version = "26.3")
             assertNotNull(function("main").typedIR)
@@ -138,31 +138,31 @@ class DictionaryIRTest {
         try {
             val declarations = """
                 namespace fixture.dictionary_composite;
-                data Node { value as int; next as Node?; constructor(value as int){this.value=value;} }
-                func readList(values as dict<list<int>>)->int{return values["key"][0];}
-                func readNode(values as dict<Node>)->int{return values["key"].value;}
-                func readNested(values as dict<dict<int>>)->int{return values["key"]["value"];}
-                func returnNode(values as dict<Node>)->Node{return values["key"];}
-                func sameNode(value as Node)->Node{return value;}
-                func readDeep(values as dict<Node>)->int{return values["key"].next.value;}
-                func copyDeep(values as dict<Node>)->int{
+                data Node { var value as int; var next as Node?; constructor(value as int){this.value=value;} }
+                func readList(values as dict<list<int>>):int{return values["key"][0];}
+                func readNode(values as dict<Node>):int{return values["key"].value;}
+                func readNested(values as dict<dict<int>>):int{return values["key"]["value"];}
+                func returnNode(values as dict<Node>):Node{return values["key"];}
+                func sameNode(value as Node):Node{return value;}
+                func readDeep(values as dict<Node>):int{return values["key"].next.value;}
+                func copyDeep(values as dict<Node>):int{
                     var copied=values["key"];var before=copied.next.value;
                     copied.next.value=99;return before;
                 }
-                func returnDeep(values as dict<Node>)->int{
+                func returnDeep(values as dict<Node>):int{
                     var returned=sameNode(returnNode(values));var before=returned.next.value;
                     returned.next.value=88;return before+returned.next.value-before;
                 }
-                func independentDeep(values as dict<Node>)->int{
+                func independentDeep(values as dict<Node>):int{
                     var original=values["key"];var copied=original;
                     copied.next.value=999;return copied.next.value;
                 }
-                func repeatDeep(values as dict<Node>)->int{
+                func repeatDeep(values as dict<Node>):int{
                     var first=returnNode(values);var second=first;
                     var third=sameNode(second);var fourth=sameNode(third);
                     return fourth.next.next.next.next.value;
                 }
-                func copyNode(values as dict<Node>)->int{
+                func copyNode(values as dict<Node>):int{
                     var original=values["key"];var copied=original;var returned=returnNode(values);
                     copied.value=99;
                     return original.value*10000+copied.value*100+returned.value;
@@ -287,7 +287,7 @@ class DictionaryIRTest {
 
     @Test fun compositeAccessDoesNotProveMissingFieldsOrErasedLayouts() {
         for (source in listOf(
-            "data Node { value as int; constructor(){} }\nfunc main(){var node=Node();dynamic var result=node.value;}",
+            "data Node { var value as int; constructor(){} }\nfunc main(){var node=Node();dynamic var result=node.value;}",
             "func reject(values as dict<any>){dynamic var result=values[\"key\"][0];}\nfunc main(){}",
             "func reject(values as dict<object>){dynamic var result=values[\"key\"][0];}\nfunc main(){}"
         )) {

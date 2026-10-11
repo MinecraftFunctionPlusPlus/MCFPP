@@ -1,5 +1,5 @@
 @MCFPPEntity
 data RabbitData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
-    @Name<"MoreCarrotTicks"> moreCarrotTicks as int;
-    @Name<"RabbitType"> rabbitType as int;
+    @Name<"MoreCarrotTicks"> var moreCarrotTicks as int;
+    @Name<"RabbitType"> var rabbitType as int;
 }

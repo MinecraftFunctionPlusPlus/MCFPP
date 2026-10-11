@@ -115,8 +115,8 @@ class TemplateInitializationTest {
             write("""
                 namespace fixture.defaults;
                 data Box {
-                    z as int = 4;
-                    a as int = this.z + 1;
+                    var z as int = 4;
+                    var a as int = this.z + 1;
                     $constructor
                 }
                 func main(){}
@@ -147,15 +147,15 @@ class TemplateInitializationTest {
     @Test fun restoredInitializersAndFreeFunctionsKeepTheirDeclarationNamespace() = withLibrary { output ->
         write("""
             namespace fixture.defaults;
-            func seed() -> int { return 4; }
-            func produce() -> int { return seed(); }
-            data Box { const value as int = produce(); }
+            func seed(): int { return 4; }
+            func produce(): int { return seed(); }
+            data Box { const var value as int = produce(); }
             func main(){}
         """, output)
         val original = GlobalScope.getTemplate("fixture.defaults", "Box")!!
         val main = consume("""
             import fixture.defaults:*;
-            func seed() -> int { return 9; }
+            func seed(): int { return 9; }
             func main(){
                 var box = Box();
                 dynamic var result = box.value * 10 + produce();
@@ -170,14 +170,14 @@ class TemplateInitializationTest {
     @Test fun restoredGenericSpecializationsKeepTheDeclarationFileForRuntimeArguments() = withLibrary { output ->
         write("""
             namespace fixture.defaults;
-            func seed() -> int { return 4; }
-            func add<T as type>(value as int) -> int { return seed() + value; }
+            func seed(): int { return 4; }
+            func add<T as type>(value as int): int { return seed() + value; }
             func main(){}
         """, output)
         val original = GlobalScope.localNamespaces.getValue("fixture.defaults").scope.functions.getValue("add").single()
         val main = consume("""
             import fixture.defaults:*;
-            func seed() -> int { return 9; }
+            func seed(): int { return 9; }
             func main(){
                 dynamic var first = add<int>(1);
                 dynamic var second = add<int>(2);
@@ -206,21 +206,21 @@ class TemplateInitializationTest {
         write("""
             namespace fixture.helper;
             typealias int as Seed;
-            func seed() -> int { return 4; }
+            func seed(): int { return 4; }
             func main(){}
         """, helper)
         write("""
             namespace fixture.defaults;
             import fixture.helper:*;
-            func produce() -> int { var value as Seed = seed(); return value; }
-            data Box { value as int = produce(); }
+            func produce(): int { var value as Seed = seed(); return value; }
+            data Box { var value as int = produce(); }
             func main(){}
         """, library, includes = listOf(helper))
         val original = GlobalScope.getTemplate("fixture.defaults", "Box")!!
         val main = consume("""
             import fixture.defaults:*;
             typealias bool as Seed;
-            func seed() -> int { return 9; }
+            func seed(): int { return 9; }
             func main(){ var box = Box(); dynamic var result = box.value; }
         """, library, includes = listOf(library, helper))
         val restored = GlobalScope.getTemplate("fixture.defaults", "Box")!!
@@ -233,10 +233,10 @@ class TemplateInitializationTest {
         write("""
             namespace fixture.members;
             data Box {
-                value as int;
+                var value as int;
                 constructor(value as int){ this.value = value; }
                 func setValue(value as int){ this.value = value; }
-                func add<T as type>(amount as int) -> int { return this.value + amount; }
+                func add<T as type>(amount as int): int { return this.value + amount; }
             }
             data Child : Box {
                 constructor(value as int){ this.value = value; }
@@ -280,9 +280,9 @@ class TemplateInitializationTest {
         write("""
             namespace fixture.members;
             object data Defaults {
-                value as int = 4;
+                var value as int = 4;
                 func setValue(value as int){ Defaults.value = value; }
-                func read() -> int { return value; }
+                func read(): int { return value; }
             }
             func main(){}
         """, output)
@@ -322,8 +322,8 @@ class TemplateInitializationTest {
         write("""
             namespace fixture.defaults;
             object data Defaults {
-                z as int = 4;
-                a as int = Defaults.z + 1;
+                var z as int = 4;
+                var a as int = Defaults.z + 1;
             }
             func main(){}
         """, output)

@@ -1,12 +1,12 @@
 data PotionEffectData {
-    ambient as bool?;
-    amplifier as bool?;
-    duration as bool?;
-    id as string;
+    var ambient as bool?;
+    var amplifier as bool?;
+    var duration as bool?;
+    var id as string;
 
     @Name<"show_icon">
-    showIcon as bool?;
+    var showIcon as bool?;
 
     @Name<"show_particles">
-    showParticles as bool?;
+    var showParticles as bool?;
 }

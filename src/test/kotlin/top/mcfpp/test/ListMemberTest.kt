@@ -59,7 +59,7 @@ class ListMemberTest {
 
     @Test fun appendingAnUnknownPrimitiveKeepsItsEncodingAndExistingElementFacts() {
         val main = compile("""
-            func append(value as int) -> int {
+            func append(value as int): int {
                 var values = [2,3];
                 values.add(value);
                 return values[0]*100 + values[1]*10 + values[2];
@@ -71,7 +71,7 @@ class ListMemberTest {
 
     @Test fun unknownInsertionAndRemovalIndicesUseCurrentValues() {
         val main = compile("""
-            func edit(index as int, value as int) -> int {
+            func edit(index as int, value as int): int {
                 var values = [2,4];
                 values.insert(index,value);
                 values.removeAt(-1);
@@ -84,7 +84,7 @@ class ListMemberTest {
 
     @Test fun runtimePrependAndPrependAllPreserveOrder() {
         val main = compile("""
-            func edit(extra as list<int>, value as int) -> int {
+            func edit(extra as list<int>, value as int): int {
                 var values = [4];
                 values.prepend(value);
                 values.prependAll(extra);
@@ -112,7 +112,7 @@ class ListMemberTest {
 
     @Test fun runtimeQueriesHaveIndependentResultsAndLeaveTheSourceIntact() {
         val main = compile("""
-            func find(values as list<int>, needle as int) -> int {
+            func find(values as list<int>, needle as int): int {
                 var first = values.indexOf(needle);
                 var last = values.lastIndexOf(needle);
                 var missing = values.indexOf(9);
@@ -125,11 +125,11 @@ class ListMemberTest {
 
     @Test fun runtimeContainsAndRemoveWorkWithoutReturnCommands() {
         val main = compile("""
-            func edit(values as list<int>, needle as int) -> int {
+            func edit(values as list<int>, needle as int): int {
                 values.remove(needle);
                 return values[0]*10 + values[1];
             }
-            func has(values as list<int>, needle as int) -> bool { return values.contains(needle); }
+            func has(values as list<int>, needle as int): bool { return values.contains(needle); }
             func main(){
                 var values = [2,4,2];
                 dynamic var result = edit(values,2);
@@ -176,7 +176,7 @@ class ListMemberTest {
 
     @Test fun aSpliceThroughAnErasedViewPreservesKnownSiblingTypesAndCopiesSubtrees() {
         val main = compile("""
-            func edit(value as int) -> int {
+            func edit(value as int): int {
                 var values as list<any> = [2 as any,3 as any];
                 var view = values as list<any>;
                 view.prepend(value);
@@ -190,7 +190,7 @@ class ListMemberTest {
 
     @Test fun runtimeSearchSeparatesBoolFromByteWithoutRuntimeTypeTags() {
         val main = compile("""
-            func find(needle as bool) -> int {
+            func find(needle as bool): int {
                 var values as list<any> = [toByte(1) as any,true as any,false as any];
                 return values.indexOf(needle);
             }
@@ -216,7 +216,7 @@ class ListMemberTest {
 
     @Test fun anErasedRuntimeListWithUnknownElementTypesRequiresAnExplicitViewForLookup() {
         MCFPPStringTest.readFromString("""
-            func find(values as list<any>, needle as int) -> int { return values.indexOf(needle); }
+            func find(values as list<any>, needle as int): int { return values.indexOf(needle); }
             func main(){ var values as list<any> = [2 as any]; find(values,2); }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0)
@@ -224,7 +224,7 @@ class ListMemberTest {
 
     @Test fun aDynamicSpliceKeepsAUniformErasedElementTypeWithoutKeepingOldConstants() {
         val main = compile("""
-            func edit(index as int, value as int) -> int {
+            func edit(index as int, value as int): int {
                 var values as list<any> = [2 as any,4 as any];
                 values.insert(index,value);
                 return values[0]*10 + values[1];
@@ -237,7 +237,7 @@ class ListMemberTest {
     @Test fun floatLookupUsesTheBackendEncodingForBothKnownAndUnknownNeedles() {
         for (version in listOf("26.3", "1.20.1")) {
             val main = compile("""
-                func find(needle as float) -> int {
+                func find(needle as float): int {
                     var values = [1.0,2.0,1.0];
                     return values.lastIndexOf(needle);
                 }
@@ -255,7 +255,7 @@ class ListMemberTest {
 
     @Test fun legacyFloatLookupDoesNotFoldFromBitsThatItsStorageEncodingCannotDistinguish() {
         val main = compile("""
-            func find(needle as float) -> int { var values = [0.0]; return values.indexOf(needle); }
+            func find(needle as float): int { var values = [0.0]; return values.indexOf(needle); }
             func main(){
                 var values = [0.0];
                 dynamic var known = values.indexOf(-0.0);
