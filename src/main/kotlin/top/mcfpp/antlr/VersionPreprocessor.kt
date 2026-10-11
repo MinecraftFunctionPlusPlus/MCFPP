@@ -24,7 +24,7 @@ object VersionPreprocessor {
 
     private enum class SourceState { CODE, SINGLE_STRING, DOUBLE_STRING, MULTILINE_STRING }
 
-    private val directive = Regex("^[ \\t]*#(if|elif|else|endif)(?=[ \\t\\r]|$)(.*)$")
+    private val directive = Regex("^[ \\t]*#(if|elif|else|endif)(?=[ \\t\\r]|$)(.*)\\r?$")
     private val condition = Regex("^MC[ \\t]+(==|!=|<=|>=|<|>)[ \\t]+([0-9]+(?:\\.[0-9]+)+)$")
     private val versionText = Regex("[0-9]+(?:\\.[0-9]+)+")
 

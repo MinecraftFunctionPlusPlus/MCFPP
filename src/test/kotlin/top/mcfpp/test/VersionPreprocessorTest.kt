@@ -90,6 +90,26 @@ class VersionPreprocessorTest {
     }
 
     @Test
+    fun preservesCrLfOffsetsAndUtf16CharactersInSkippedLines() {
+        val retained = "func retained(){ var message = \"汉字🙂\"; }"
+        val skipped = "invalid 汉字🙂 source {{{"
+        val source = listOf("#if MC >= 26.1", retained, "#else", skipped, "#endif").joinToString("\r\n")
+        val processed = VersionPreprocessor.process(source, "26.1")
+
+        assertEquals(source.length, processed.length)
+        for (index in source.indices) {
+            if (source[index] == '\r' || source[index] == '\n') {
+                assertEquals(source[index], processed[index], "Line ending at offset $index")
+            }
+        }
+        assertEquals(source.indexOf(retained), processed.indexOf(retained))
+        val skippedOffset = source.indexOf(skipped)
+        assertEquals(" ".repeat(skipped.length), processed.substring(skippedOffset, skippedOffset + skipped.length))
+        assertTrue(processed.endsWith(" ".repeat("#endif".length)))
+        parse(source, "26.1")
+    }
+
+    @Test
     fun selectsImportsAndCommandStatements() {
         val source = """
             #if MC >= 26.1
