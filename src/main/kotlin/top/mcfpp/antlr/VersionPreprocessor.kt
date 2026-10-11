@@ -55,7 +55,11 @@ object VersionPreprocessor {
         }
     }
 
-    private fun blank(text: String): String = text.map { if (it == '\r') it else ' ' }.joinToString("")
+    private fun StringBuilder.appendBlankLine(line: String) {
+        for (character in line) {
+            append(if (character == '\r') character else ' ')
+        }
+    }
 
     fun process(source: String, targetVersion: String): String {
         val target = parseVersion(targetVersion, 1)
@@ -100,12 +104,9 @@ object VersionPreprocessor {
                         branches.removeLast()
                     }
                 }
-                result.append(blank(line))
-            } else if (currentlyActive) {
-                result.append(line)
-                state = scanState(line, state)
+                result.appendBlankLine(line)
             } else {
-                result.append(blank(line))
+                if (currentlyActive) result.append(line) else result.appendBlankLine(line)
                 state = scanState(line, state)
             }
 
@@ -124,7 +125,11 @@ object VersionPreprocessor {
         while (i < line.length) {
             when (state) {
                 SourceState.CODE -> when {
-                    line.startsWith("\"\"\"", i) -> { state = SourceState.MULTILINE_STRING; i += 3; continue }
+                    line.startsWith("\"\"\"", i) -> {
+                        state = SourceState.MULTILINE_STRING
+                        i += 3
+                        continue
+                    }
                     line.startsWith("//", i) -> return SourceState.CODE
                     line[i] == '"' -> state = SourceState.DOUBLE_STRING
                     line[i] == '\'' -> state = SourceState.SINGLE_STRING
@@ -132,7 +137,9 @@ object VersionPreprocessor {
                 SourceState.SINGLE_STRING -> if (line[i] == '\'') state = SourceState.CODE
                 SourceState.DOUBLE_STRING -> if (line[i] == '"') state = SourceState.CODE
                 SourceState.MULTILINE_STRING -> if (line.startsWith("\"\"\"", i)) {
-                    state = SourceState.CODE; i += 3; continue
+                    state = SourceState.CODE
+                    i += 3
+                    continue
                 }
             }
             i++

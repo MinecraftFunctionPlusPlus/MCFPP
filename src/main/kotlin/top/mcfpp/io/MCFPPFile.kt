@@ -5,7 +5,6 @@ import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.string
 import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
-import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.tree.ParseTree
@@ -47,13 +46,14 @@ class MCFPPFile : File {
     var syntaxError = false
 
     constructor(path: String) : super(path) {
-        val n = Project.config.sourcePath!!.toAbsolutePath().relativize(this.toPath().toAbsolutePath().parent).toString()
-        val str = if(n.isEmpty()){
+        val relativePath = Project.config.sourcePath!!.toAbsolutePath()
+            .relativize(toPath().toAbsolutePath().parent).toString()
+        val namespaceName = if (relativePath.isEmpty()) {
             Project.config.rootNamespace
-        }else{
-            Project.config.rootNamespace + "." + n.pathToNamespace().toSnakeCase()
+        } else {
+            Project.config.rootNamespace + "." + relativePath.pathToNamespace().toSnakeCase()
         }
-        namespace = GlobalScope.getOrCreateNamespace(str)
+        namespace = GlobalScope.getOrCreateNamespace(namespaceName)
     }
 
     constructor(file: File) : this(file.absolutePath)
@@ -82,31 +82,22 @@ class MCFPPFile : File {
         namespace = GlobalScope.getOrCreateNamespace(str)
     }
 
-    fun token(): CommonTokenStream {
-        if(!Project.tokens.contains(this)){
-            val source = try {
-                VersionPreprocessor.process(readText(Charsets.UTF_8), Project.config.version)
-            } catch (e: VersionPreprocessor.Error) {
-                syntaxError = true
-                LogProcessor.error("Preprocessor error in $absolutePath:${e.line}: ${e.message}")
-                ""
-            }
-            val charStream: CharStream = CharStreams.fromString(source, absolutePath)
-            val tokens = CommonTokenStream(mcfppLexer(charStream))
-            Project.tokens[this] = tokens
+    fun token(): CommonTokenStream = Project.tokens.getOrPut(this) {
+        val source = try {
+            VersionPreprocessor.process(readText(Charsets.UTF_8), Project.config.version)
+        } catch (e: VersionPreprocessor.Error) {
+            syntaxError = true
+            LogProcessor.error("Preprocessor error in $absolutePath:${e.line}: ${e.message}")
+            ""
         }
-        return Project.tokens[this]!!
+        CommonTokenStream(mcfppLexer(CharStreams.fromString(source, absolutePath)))
     }
 
-    fun tree(): ParseTree {
-        if(!Project.trees.contains(this)){
-            val tokens = token()
-            val parser = mcfppParser(tokens)
-            parser.removeErrorListeners()
-            parser.addErrorListener(MCFPPErrorListener())
-            Project.trees[this] = parser.compilationUnit()
-        }
-        return Project.trees[this]!!
+    fun tree(): ParseTree = Project.trees.getOrPut(this) {
+        val parser = mcfppParser(token())
+        parser.removeErrorListeners()
+        parser.addErrorListener(MCFPPErrorListener())
+        parser.compilationUnit()
     }
 
     /**
@@ -128,20 +119,16 @@ class MCFPPFile : File {
     }
 
     fun runCommand() = withDeclarationContext {
-        if(nameWithoutExtension.isEmpty()){
-            useLines {
-                for (i in it){
-                    if(i.startsWith("//>")){
-                        val n = i.substring(3).trim()
-                        val parse = dispatcher.parse(n, this)
-                        try {
-                            dispatcher.execute(parse)
-                        }catch (e: Exception){
-                            LogProcessor.error("Failed to execute command: $n", e)
-                        }
-                    }else{
-                        return@useLines
-                    }
+        if (nameWithoutExtension.isNotEmpty()) return@withDeclarationContext
+        useLines { lines ->
+            for (line in lines) {
+                if (!line.startsWith("//>")) return@useLines
+                val command = line.substring(3).trim()
+                val parse = dispatcher.parse(command, this)
+                try {
+                    dispatcher.execute(parse)
+                } catch (e: Exception) {
+                    LogProcessor.error("Failed to execute command: $command", e)
                 }
             }
         }
@@ -164,31 +151,30 @@ class MCFPPFile : File {
     }
 
     internal fun resolveImports() {
-        //引用
-        for (n in unsolvedImports){
-            val qwq = GlobalScope.getUnsolvedImportNamespace(n.key)
-            if(qwq == null){
-                LogProcessor.error("Namespace '$n' not found")
+        for (entry in unsolvedImports) {
+            val importedNamespace = GlobalScope.getUnsolvedImportNamespace(entry.key)
+            if (importedNamespace == null) {
+                LogProcessor.error("Namespace '$entry' not found")
                 continue
             }
-            if(n.value == "*"){
-                field.importedNamespaceField[qwq.identifier] = qwq.scope
-            }else{
-                val owo = qwq.scope.getDeclaredType(n.value)
-                if(owo == null){
-                    LogProcessor.error("Declared type '${n.key}.${n.value}' not found")
-                    continue
+            if (entry.value == "*") {
+                field.importedNamespaceField[importedNamespace.identifier] = importedNamespace.scope
+                continue
+            }
+            val declaredType = importedNamespace.scope.getDeclaredType(entry.value)
+            if (declaredType == null) {
+                LogProcessor.error("Declared type '${entry.key}.${entry.value}' not found")
+                continue
+            }
+            val importScope = field.importField.getOrPut(declaredType.namespace) { NamespaceScope(declaredType.namespace) }
+            val added = importScope.addDeclaredType(declaredType)
+            if (declaredType is DataTemplate) {
+                declaredType.companionObject?.let {
+                    importScope.addObject(it.identifier, it)
                 }
-                val result = field.importField.getOrPut(owo.namespace) { NamespaceScope(owo.namespace) }
-                    .addDeclaredType(owo)
-                if(owo is DataTemplate){
-                    owo.companionObject?.let {
-                        field.importField[owo.namespace]!!.addObject(it.identifier, it)
-                    }
-                }
-                if(!result){
-                    LogProcessor.error("Already have import '${owo.namespaceID}")
-                }
+            }
+            if (!added) {
+                LogProcessor.error("Already have import '${declaredType.namespaceID}")
             }
         }
     }

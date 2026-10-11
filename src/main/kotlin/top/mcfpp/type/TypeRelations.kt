@@ -2,6 +2,10 @@ package top.mcfpp.type
 
 /** Pure language queries: these never build variables, emit commands, or mutate scopes. */
 object TypeRelations {
+    private val booleanOperators = setOf("&&", "||", "==", "!=")
+    private val comparisonOperators = setOf("<", ">", "<=", ">=", "==", "!=")
+    private val arithmeticOperators = setOf("+", "-", "*", "/", "%")
+
     fun arrayElementType(type: TypeId): MCFPPType? = when (type) {
         MCFPPNBTType.ByteArray.typeId -> MCFPPNBTType.Byte
         MCFPPNBTType.IntArray.typeId -> MCFPPBaseType.Int
@@ -68,19 +72,19 @@ object TypeRelations {
         val int = MCFPPBaseType.Int.typeId
         val float = MCFPPBaseType.Float.typeId
         val bool = MCFPPBaseType.Bool.typeId
-        if (left == bool && right == bool && operation in setOf("&&", "||", "==", "!=")) return bool
-        if (left !in setOf(int, float) || right !in setOf(int, float)) return null
-        if (operation in setOf("<", ">", "<=", ">=", "==", "!=")) return bool
-        if (operation !in setOf("+", "-", "*", "/", "%")) return null
+        if (left == bool && right == bool && operation in booleanOperators) return bool
+        if ((left != int && left != float) || (right != int && right != float)) return null
+        if (operation in comparisonOperators) return bool
+        if (operation !in arithmeticOperators) return null
         return if (left == float || right == float) float else int
     }
 
     /** Numeric NBT encodings have no daily arithmetic operators. */
     fun resolveNumericOperator(operation: String, left: MCFPPType, right: MCFPPType): MCFPPType? {
-        if (operation !in setOf("+", "-", "*", "/", "%", "<", ">", "<=", ">=", "==", "!=")) return null
-        val numeric = setOf(MCFPPBaseType.Int, MCFPPBaseType.Float)
-        if (left !in numeric || right !in numeric) return null
-        if (operation in setOf("<", ">", "<=", ">=", "==", "!=")) return MCFPPBaseType.Bool
+        if (operation !in arithmeticOperators && operation !in comparisonOperators) return null
+        if ((left != MCFPPBaseType.Int && left != MCFPPBaseType.Float) ||
+            (right != MCFPPBaseType.Int && right != MCFPPBaseType.Float)) return null
+        if (operation in comparisonOperators) return MCFPPBaseType.Bool
         return if (left == MCFPPBaseType.Float || right == MCFPPBaseType.Float) MCFPPBaseType.Float else MCFPPBaseType.Int
     }
 }
