@@ -1,5 +1,5 @@
 @MCFPPEntity
 data SkeletonHorseData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, GeneralHorseData {
-    @Name<"SkeletonTrap"> var skeletonTrap as bool;
-    @Name<"SkeletonTrapTime"> var skeletonTrapTime as int;
+    @Name<"SkeletonTrap"> var skeletonTrap: bool
+    @Name<"SkeletonTrapTime"> var skeletonTrapTime: int
 }

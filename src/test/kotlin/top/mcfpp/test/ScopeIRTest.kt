@@ -35,19 +35,19 @@ class ScopeIRTest {
 
     @Test fun siblingBlocksAndNestedDeclarationsKeepTheirOwnSymbols() = modes {
         val main = compile("""
-            func choose(flag as bool): int {
-                var result = 0;
+            func choose(flag: bool): int {
+                var result = 0
                 if(flag){ var value = 2; result = value; }
                 else { var value = 3; result = value; }
-                return result;
+                return result
             }
             func main(){
-                var value = 4;
-                var captured = 0;
+                var value = 4
+                var captured = 0
                 if(true){ var value = value + 1; captured = value; }
                 if(true){ var temporary = 1; }
-                var temporary = 9;
-                dynamic var result = choose(true)*1000 + choose(false)*100 + value*10 + captured;
+                var temporary = 9
+                dynamic result = choose(true)*1000 + choose(false)*100 + value*10 + captured
             }
         """)
         assertEquals(2345, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -57,16 +57,16 @@ class ScopeIRTest {
     @Test fun shadowedCollectionsAndViewsRetainTheCorrectSharedPlace() = modes {
         val main = compile("""
             func main(){
-                var source = [2,3];
-                var view = source as list<int>;
+                var source = [2,3]
+                var view = source as list<int>
                 if(true){
-                    var view = view as list<int>;
-                    var source = [7,8];
-                    view[0] = 5;
-                    source[0] = 9;
+                    var view = view as list<int>
+                    var source = [7,8]
+                    view[0] = 5
+                    source[0] = 9
                 }
                 if(true){ var source = [11,12]; source[1] = 13; }
-                dynamic var result = source[0]*10 + view[1];
+                dynamic result = source[0]*10 + view[1]
             }
         """, "1.20.2")
         assertEquals(53, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -74,21 +74,21 @@ class ScopeIRTest {
 
     @Test fun recursiveCallsAndRepeatedLoopScopesKeepLocalStorageSeparate() = modes {
         val main = compile("""
-            func recurse(value as int): int {
+            func recurse(value: int): int {
                 if(value == 0){ return 0; }
                 if(true){ var value = value + 1; return value + recurse(value-2); }
-                return 99;
+                return 99
             }
             func main(){
-                var value = 50;
-                var sum = 0;
+                var value = 50
+                var sum = 0
                 for(index : 1 .. 3){
-                    var value = index;
+                    var value = index
                     if(index > 1){ var value = value*10; sum += value; }
-                    sum += value;
+                    sum += value
                 }
-                do { var value = 2; sum += value; } while(false);
-                dynamic var result = recurse(3)*1000 + sum*10 + value;
+                do { var value = 2; sum += value; } while(false)
+                dynamic result = recurse(3)*1000 + sum*10 + value
             }
         """, "1.20.1")
         assertEquals(9630, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -109,10 +109,10 @@ class ScopeIRTest {
     @Test fun duplicatesAreRejectedWithinTheirOwnScope() {
         for (source in listOf(
             "func main(){ var value = 1; var value = 2; }",
-            "func duplicate(value as int){ var value = 2; }\nfunc main(){ duplicate(1); }",
+            "func duplicate(value: int){ var value = 2; }\nfunc main(){ duplicate(1); }",
             "func main(){ if(true){ var value = 1; var value = 2; }; }",
             "func main(){ for(value : 1 .. 2){ var value = 3; }; }",
-            "func main(){ if(true){ var inside = 1; }; dynamic var result = inside; }")) {
+            "func main(){ if(true){ var inside = 1; }; dynamic result = inside; }")) {
             MCFPPStringTest.readFromString(source, version = "26.3")
             assertTrue(Project.errorCount > 0, source)
         }

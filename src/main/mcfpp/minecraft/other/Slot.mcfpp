@@ -1,49 +1,49 @@
 data Slot{
-    var index as int?;
-    var type as SlotType;
+    var index: int?
+    var type: SlotType
 
-    constructor(index as int, type as SlotType){
-        this.index = index;
-        this.type = type;
+    constructor(index: int, type: SlotType){
+        this.index = index
+        this.type = type
     }
 
-    constructor(type as SlotType){
-        this.type = type;
+    constructor(type: SlotType){
+        this.type = type
     }
 }
 
 // 使用了通配符的槽位
 data SlotWithWildcard{
-    var type as SlotType;
-    private constructor(type as SlotType){
-        this.type = type;
+    var type: SlotType
+    private constructor(type: SlotType){
+        this.type = type
     }
 }
 
 object data Slot {
-    var contents = Slot(SlotType.contents);
-    var weapon = Slot(SlotType.weapon);
-    var weapon_mainhand = Slot(SlotType.weapon_mainhand);
-    var weapon_offhand = Slot(SlotType.weapon_offhand);
-    var armor = Slot(SlotType.armor);
-    var armor_head = Slot(SlotType.armor_head);
-    var armor_chest = Slot(SlotType.armor_chest);
-    var armor_legs = Slot(SlotType.armor_legs);
-    var armor_feet = Slot(SlotType.armor_feet);
-    var armor_body = Slot(SlotType.armor_body);
-    var saddle = Slot(SlotType.saddle);
-    var horse_chest = Slot(SlotType.horse_chest);
-    var player_cursor = Slot(SlotType.player_cursor);
+    var contents = Slot(SlotType.contents)
+    var weapon = Slot(SlotType.weapon)
+    var weapon_mainhand = Slot(SlotType.weapon_mainhand)
+    var weapon_offhand = Slot(SlotType.weapon_offhand)
+    var armor = Slot(SlotType.armor)
+    var armor_head = Slot(SlotType.armor_head)
+    var armor_chest = Slot(SlotType.armor_chest)
+    var armor_legs = Slot(SlotType.armor_legs)
+    var armor_feet = Slot(SlotType.armor_feet)
+    var armor_body = Slot(SlotType.armor_body)
+    var saddle = Slot(SlotType.saddle)
+    var horse_chest = Slot(SlotType.horse_chest)
+    var player_cursor = Slot(SlotType.player_cursor)
 }
 
 object data SlotWildcard {
-    var container = SlotWithWildcard(SlotType.container);
-    var hotbar = SlotWithWildcard(SlotType.hotbar);
-    var inventory = SlotWithWildcard(SlotType.inventory);
-    var enderchest = SlotWithWildcard(SlotType.enderchest);
-    var villager = SlotWithWildcard(SlotType.villager);
-    var horse = SlotWithWildcard(SlotType.horse);
-    var crafting = SlotWithWildcard(SlotType.player_crafting);
+    var container = SlotWithWildcard(SlotType.container)
+    var hotbar = SlotWithWildcard(SlotType.hotbar)
+    var inventory = SlotWithWildcard(SlotType.inventory)
+    var enderchest = SlotWithWildcard(SlotType.enderchest)
+    var villager = SlotWithWildcard(SlotType.villager)
+    var horse = SlotWithWildcard(SlotType.horse)
+    var crafting = SlotWithWildcard(SlotType.player_crafting)
 }
 
 enum SlotType{

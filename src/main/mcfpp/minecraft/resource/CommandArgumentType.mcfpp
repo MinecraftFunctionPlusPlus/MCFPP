@@ -1,5 +1,5 @@
 @From<"top.mcfpp.mni.resource.CommandArgumentTypeData">
-data CommandArgumentType: ResourceID;
+data CommandArgumentType: ResourceID
 
 @From<"top.mcfpp.mni.resource.CommandArgumentTypeObjectData">
-object data CommandArgumentType: ResourceID;
+object data CommandArgumentType: ResourceID

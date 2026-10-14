@@ -1,5 +1,5 @@
 @From<"top.mcfpp.mni.resource.RecipeSerializerData">
-data RecipeSerializer: ResourceID;
+data RecipeSerializer: ResourceID
 
 @From<"top.mcfpp.mni.resource.RecipeSerializerObjectData">
-object data RecipeSerializer: ResourceID;
+object data RecipeSerializer: ResourceID

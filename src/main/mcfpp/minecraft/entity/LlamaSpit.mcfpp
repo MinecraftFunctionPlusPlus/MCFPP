@@ -1,2 +1,2 @@
 @MCFPPEntity
-data LlamaSpitData: EntityData, ProjectileData;
+data LlamaSpitData: EntityData, ProjectileData

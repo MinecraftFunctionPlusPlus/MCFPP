@@ -1,2 +1,2 @@
 @MCFPPEntity
-data BoggedData: EntityData, CreatureData, AIMobData;
+data BoggedData: EntityData, CreatureData, AIMobData

@@ -10,9 +10,9 @@ class MNITest {
         val test =
             """
                 func main(){
-                    var qwq = 1;
-                    print(qwq::jvm.identifier);
-                    print(qwq::jvm.sbObject.toString());
+                    var qwq = 1
+                    print(qwq::jvm.identifier)
+                    print(qwq::jvm.sbObject.toString())
                     /say ${'$'}{qwq}
                     /say ${'$'}{qwq::jvm.toString()}
                     /say ${'$'}{qwq::jvm.identifier}

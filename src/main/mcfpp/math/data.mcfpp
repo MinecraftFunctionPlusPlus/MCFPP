@@ -1,9 +1,9 @@
 data DecimalRange {
-    var min as float?;
-    var max as float?;
+    var min: float?
+    var max: float?
 }
 
 data IntRange {
-    var min as int?;
-    var max as int?;
+    var min: int?
+    var max: int?
 }

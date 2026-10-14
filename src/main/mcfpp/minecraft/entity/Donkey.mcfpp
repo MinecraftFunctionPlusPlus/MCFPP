@@ -1,8 +1,8 @@
 @MCFPPEntity
 data DonkeyData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, GeneralHorseData {
     @Name<"ChestedHorse">
-    var chestedHorse as bool;
+    var chestedHorse: bool
 
     @Name<"Items">
-    var items as list<ItemData>;
+    var items: list<ItemData>
 }

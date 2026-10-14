@@ -1,7 +1,7 @@
 @MCFPPEntity
 data FrogData : EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"Variant">
-    var variant as FrogVariant;
+    var variant: FrogVariant
 }
 
 enum FrogVariant {

@@ -81,7 +81,7 @@ internal class DeclarationBinding(
                 is Parser.FunctionDeclarationPartContext -> declaration.functionParams().normalParams()
                 else -> null
             }
-            val text = params?.parameterList()?.parameter()?.firstOrNull { it.Identifier().text == name }?.type()?.text
+            val text = params?.parameterList()?.parameter()?.firstOrNull { it.Identifier()?.text == name }?.type()?.text
             return Bound(it.type, declaredTypeText = text ?: it.typeName)
         }
         if (name in readonly) lookupVariable(name)?.let { value ->

@@ -18,15 +18,15 @@ class StorageViewTest {
     @Test fun coordinateMemberWritesShareViewsButLeaveOrdinaryCopiesIndependent() {
         val main = compile("""
             func main(){
-                var position=1 2 3;
-                var alias=position as pos3;
-                var copy=position;
-                var replacement=9 8 7;
-                alias.x=replacement.x;
-                var pair=4 5;
-                var pairAlias=pair as pos2;
-                pairAlias.z=replacement.y;
-                var unset as pos3;
+                var position=1 2 3
+                var alias=position as pos3
+                var copy=position
+                var replacement=9 8 7
+                alias.x=replacement.x
+                var pair=4 5
+                var pairAlias=pair as pos2
+                pairAlias.z=replacement.y
+                var unset: pos3
             }
         """)
         val position = assertIs<Pos3Var>(main.scope.getVar("position"))
@@ -72,7 +72,7 @@ class StorageViewTest {
     }
 
     @Test fun coordinateSnapshotsRestoreCompilerOnlyValuesAndMemberDimensions() {
-        val main = compile("func main(){ var unset as pos3; }")
+        val main = compile("func main(){ var unset: pos3; }")
         val unset = assertNotNull(main.scope.getVar("unset"))
         assertEquals(ValueState.UNINITIALIZED, StorageAccess.ensure(unset).data.facts.read(StorageAccess.ensure(unset).place)!!.state)
         assertNull(StorageAccess.snapshot(unset))
@@ -211,17 +211,17 @@ class StorageViewTest {
 
     @Test fun templateViewsShareWritesAndPreserveSiblingFacts() {
         val main = compile("""
-            data Source { var value as int; var sibling as int; }
-            data Target { var value as int; var sibling as int; }
+            data Source { var value: int; var sibling: int; }
+            data Target { var value: int; var sibling: int; }
             func main(){
-                var source = {value:2, sibling:9} as Source;
-                source.sibling = 9;
-                var first = source as Target;
-                var second = source as Target;
-                dynamic var before = second.value;
-                first.value = 7;
-                dynamic var result = source.value + second.value;
-                dynamic var preserved = second.sibling;
+                var source = {value:2, sibling:9} as Source
+                source.sibling = 9
+                var first = source as Target
+                var second = source as Target
+                dynamic before = second.value
+                first.value = 7
+                dynamic result = source.value + second.value
+                dynamic preserved = second.sibling
             }
         """)
         val source = main.scope.getVar("source")!!
@@ -237,8 +237,8 @@ class StorageViewTest {
     @Test fun aViewNeverAddsMissingFieldsOrCallsATemplateConstructor() {
         val main = compile("""
             data Target {
-                var present as int;
-                var missing as int;
+                var present: int
+                var missing: int
                 constructor(){
                     /say constructor
                 }
@@ -254,14 +254,14 @@ class StorageViewTest {
 
     @Test fun ordinaryTemplateAssignmentCopiesThePayloadIntoAnIndependentPlace() {
         val main = compile("""
-            data Source { var value as int; var sibling as int; }
+            data Source { var value: int; var sibling: int; }
             func main(){
-                var source = {value:2, sibling:9} as Source;
-                var copied = source;
-                copied.value = 10;
-                dynamic var result = source.value + copied.value;
-                source.sibling = 4;
-                dynamic var preserved = copied.sibling;
+                var source = {value:2, sibling:9} as Source
+                var copied = source
+                copied.value = 10
+                dynamic result = source.value + copied.value
+                source.sibling = 4
+                dynamic preserved = copied.sibling
             }
         """)
         assertNotEquals(main.scope.getVar("source")!!.storageBinding!!.place,
@@ -272,7 +272,7 @@ class StorageViewTest {
     }
 
     @Test fun unprovenButAccessibleReinterpretationWarnsAndUsesSourceEncoding() {
-        val main = compile("func main(){ var value = 7; dynamic var view = value as bool; dynamic var result = view == true; }")
+        val main = compile("func main(){ var value = 7; dynamic view = value as bool; dynamic result = view == true; }")
         assertEquals(1, Project.warningCount)
         val commands = main.commands.analyzeAll().joinToString("\n")
         assertTrue(commands.contains("set value 7"), commands)
@@ -332,10 +332,10 @@ class StorageViewTest {
                 CompileSettings.foldIRConstants = enabled
                 val main = compile("""
                     func main(){
-                        dynamic var flag = true;
-                        var value as any = 1;
+                        dynamic flag = true
+                        var value: any = 1
                         if(flag){ value = 2; } else { value = ${if (sameType) "3" else "false"}; }
-                        dynamic var result = (value as int) + 5;
+                        dynamic result = (value as int) + 5
                     }
                 """)
                 assertNotNull(main.typedIR)
@@ -349,11 +349,11 @@ class StorageViewTest {
 
     @Test fun erasedParametersReturnsAndSequentialCallsKeepSeparatePayloads() {
         val main = compile("""
-            func identity(value as any): any { return value; }
+            func identity(value: any): any { return value; }
             func main(){
-                var first = identity(4);
-                var second = identity(9);
-                dynamic var result = first + second;
+                var first = identity(4)
+                var second = identity(9)
+                dynamic result = first + second
             }
         """)
         assertEquals(13, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -375,10 +375,10 @@ class StorageViewTest {
 
     @Test fun returnedTypeKnowledgeDoesNotEvaluateAnOrdinaryFunctionForConstantArguments() {
         val main = compile("""
-            func choose(flag as bool): any {
+            func choose(flag: bool): any {
                 if(flag){ return 2; } else { return false; }
             }
-            func main(){ var value = choose(true); dynamic var result = (value as int) + 4; }
+            func main(){ var value = choose(true); dynamic result = (value as int) + 4; }
         """)
         val value = main.scope.getVar("value") as MCAny
         assertEquals(setOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.Bool.typeId),
@@ -394,12 +394,12 @@ class StorageViewTest {
                 /data modify storage mcfpp:system stack_frame[1].value set value 8
             }
             func main(){
-                var value = 4;
-                var view = value as int;
-                pure();
-                dynamic var before = view;
-                change();
-                dynamic var result = value + 1;
+                var value = 4
+                var view = value as int
+                pure()
+                dynamic before = view
+                change()
+                dynamic result = value + 1
             }
         """)
         val functions = GlobalScope.localNamespaces.getValue("default.test").scope.functions
@@ -435,11 +435,11 @@ class StorageViewTest {
 
     @Test fun erasedStaticParametersWriteBackToTheCallingFrame() {
         val main = compile("""
-            func replace(static value as any){ value = 9; }
+            func replace(static value: any){ value = 9; }
             func main(){
-                var value as any = 4;
-                replace(value);
-                dynamic var result = (value as int) + 1;
+                var value: any = 4
+                replace(value)
+                dynamic result = (value as int) + 1
             }
         """)
         assertEquals(10, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -447,14 +447,14 @@ class StorageViewTest {
 
     @Test fun templateParametersAndReturnsCopyThePayloadAcrossFrames() {
         val main = compile("""
-            data Payload { var value as int; }
-            func adjust(value as Payload): Payload { value.value += 3; return value; }
+            data Payload { var value: int; }
+            func adjust(value: Payload): Payload { value.value += 3; return value; }
             func main(){
-                var source = {value:2} as Payload;
-                var first = adjust(source);
-                var second = adjust(source);
-                dynamic var result = first.value + second.value;
-                dynamic var preserved = source.value;
+                var source = {value:2} as Payload
+                var first = adjust(source)
+                var second = adjust(source)
+                dynamic result = first.value + second.value
+                dynamic preserved = source.value
             }
         """)
         val machine = execute(main)
@@ -465,24 +465,24 @@ class StorageViewTest {
 
     @Test fun recursiveCallsPreserveAnUnconsumedErasedReturn() {
         val main = compile("""
-            func identity(value as int): any { return value; }
-            func sum(value as int): int {
+            func identity(value: int): any { return value; }
+            func sum(value: int): int {
                 if(value <= 0){ return 0; }
-                return (identity(value) as int) + sum(value - 1);
+                return (identity(value) as int) + sum(value - 1)
             }
-            func main(){ dynamic var result = sum(4); }
+            func main(){ dynamic result = sum(4); }
         """)
         assertEquals(10, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun evaluatingALaterOperandKeepsTheEarlierValueAndTheCallsWriteBack() {
         val main = compile("""
-            func change(static value as int): int { value = 9; return 1; }
+            func change(static value: int): int { value = 9; return 1; }
             func main(){
-                var value = 4;
-                var view = value as int;
-                dynamic var result = value + change(value);
-                dynamic var after = value;
+                var value = 4
+                var view = value as int
+                dynamic result = value + change(value)
+                dynamic after = value
             }
         """)
         val machine = execute(main)
@@ -492,13 +492,13 @@ class StorageViewTest {
 
     @Test fun anEarlierArgumentSurvivesARecursiveCallInALaterArgument() {
         val main = compile("""
-            func identity(value as int): any { return value; }
-            func add(left as int, right as int): int { return left + right; }
-            func sum(value as int): int {
+            func identity(value: int): any { return value; }
+            func add(left: int, right: int): int { return left + right; }
+            func sum(value: int): int {
                 if(value <= 0){ return 0; }
-                return add(identity(value) as int, sum(value - 1));
+                return add(identity(value) as int, sum(value - 1))
             }
-            func main(){ dynamic var result = sum(4); }
+            func main(){ dynamic result = sum(4); }
         """)
         assertEquals(10, execute(main).read(main.scope.getVar("result") as MCInt))
     }
@@ -506,8 +506,8 @@ class StorageViewTest {
     @Test fun aNativeConcreteContainerMutationCommitsBeforeItsFactsAreInvalidated() {
         val main = compile("""
             func main(){
-                var values as list<int> = [1,2];
-                values.add(3);
+                var values: list<int> = [1,2]
+                values.add(3)
                 /data modify storage mcfpp:system temp.observed set from storage mcfpp:system stack_frame[0].values
             }
         """)

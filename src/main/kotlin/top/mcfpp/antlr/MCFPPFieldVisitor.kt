@@ -222,12 +222,12 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     
     override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? = withCompilationContext(ctx) {
         val nf = NativeFunction(ctx.functionDeclarationPart().Identifier().text, Project.currNamespace)
+        nf.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
         nf.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
             nf.parseDeclaredReturnType(ctx.functionDeclarationPart().functionReturnType().type())
         }else{
             MCFPPPrivateType.Void
         }
-        nf.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
         try {
             //根据JavaRefer找到类
             val refer = ctx.javaRefer().text

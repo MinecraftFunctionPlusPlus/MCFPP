@@ -35,18 +35,18 @@ class ListIRTest {
         for (version in listOf("26.3", "1.20.2", "1.20")) {
             val main = compile("""
                 func main(){
-                    var values = [2,9] as list<any>;
-                    values.prepend(1);
-                    values.insert(-1,7);
-                    values.removeAt(1);
-                    values.addAll([8,6]);
-                    values.prependAll([4,5]);
-                    var i = 0;
+                    var values = [2,9] as list<any>
+                    values.prepend(1)
+                    values.insert(-1,7)
+                    values.removeAt(1)
+                    values.addAll([8,6])
+                    values.prependAll([4,5])
+                    var i = 0
                     while(i < 2){ values.add(i); i += 1; }
-                    dynamic var result = values[0] + values[1] + values[2] + values[3] + values[4] + values[5] + values[6] + values[7] + values[8];
-                    values.clear();
-                    values.add(3);
-                    dynamic var cleared = values[0] + 0;
+                    dynamic result = values[0] + values[1] + values[2] + values[3] + values[4] + values[5] + values[6] + values[7] + values[8]
+                    values.clear()
+                    values.add(3)
+                    dynamic cleared = values[0] + 0
                 }
             """, version)
             val machine = execute(main)
@@ -58,14 +58,14 @@ class ListIRTest {
     @Test fun movingNestedElementsKeepsTheirShapesAndSelfAppendCopiesTheInput() = modes {
         val main = compile("""
             func main(){
-                var values = [[2],[9]];
-                values.prepend([7]);
-                values.removeAt(1);
-                values.addAll(values);
-                values[0][0] = 8;
-                var copied = values[2];
-                copied[-1] = 6;
-                dynamic var result = values[0][0] + values[1][-1] + values[2][-1] + copied[0];
+                var values = [[2],[9]]
+                values.prepend([7])
+                values.removeAt(1)
+                values.addAll(values)
+                values[0][0] = 8
+                var copied = values[2]
+                copied[-1] = 6
+                dynamic result = values[0][0] + values[1][-1] + values[2][-1] + copied[0]
             }
         """)
         assertEquals(30, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -77,14 +77,14 @@ class ListIRTest {
     @Test fun dynamicInsertionCapturesTheIndexValueBeforeLaterArguments() = modes {
         for (version in listOf("26.3", "1.20.2")) {
             val main = compile("""
-                func identity(value as int): int { return value; }
-                func change(static index as int): int { index = 0; return 7; }
+                func identity(value: int): int { return value; }
+                func change(static index: int): int { index = 0; return 7; }
                 func main(){
-                    var values = [2,9] as list<any>;
-                    var index = identity(-1);
-                    values.insert(index, change(index));
-                    values.removeAt(identity(0));
-                    dynamic var result = values[0] + values[1];
+                    var values = [2,9] as list<any>
+                    var index = identity(-1)
+                    values.insert(index, change(index))
+                    values.removeAt(identity(0))
+                    dynamic result = values[0] + values[1]
                 }
             """, version)
             assertEquals(16, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -93,13 +93,13 @@ class ListIRTest {
 
     @Test fun staticListMutationHasAReceiverEffectAndKeepsFramesIndependent() = modes {
         val main = compile("""
-            func append(static values as list<int>, count as int) {
+            func append(static values: list<int>, count: int) {
                 if(count > 0){ values.add(count); append(values, count - 1); }
             }
             func main(){
-                var values = [2];
-                append(values, 2);
-                dynamic var result = values[0] + values[1] + values[2];
+                var values = [2]
+                append(values, 2)
+                dynamic result = values[0] + values[1] + values[2]
             }
         """)
         assertEquals(5, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -115,7 +115,7 @@ class ListIRTest {
             "func main(){ var values = [2]; values.insert(2,7); }" to "26.3",
             "func main(){ var values = [] as list<int>; values.removeAt(-1); }" to "26.3",
             "func main(){ var values = [2] as ImmutableList<int>; values.clear(); }" to "26.3",
-            "func identity(value as int): int { return value; }\nfunc main(){ var values = [2]; values.insert(identity(0),7); }" to "1.20",
+            "func identity(value: int): int { return value; }\nfunc main(){ var values = [2]; values.insert(identity(0),7); }" to "1.20",
             "func main(){ var values = [2] as list<any>; var i = 0; while(i < 2){ var value = values[i] + 1; values.add(true); i += 1; }; }" to "26.3"
         )
         for ((source, version) in cases) {
@@ -126,12 +126,12 @@ class ListIRTest {
         }
         val main = compile("""
             func main(){
-                var values = [2] as list<any>;
-                var i = 0;
+                var values = [2] as list<any>
+                var i = 0
                 while(i < 2){ values.add(true); i += 1; }
-                values.prependAll([]);
-                values.addAll([]);
-                dynamic var result = values[0] + 1;
+                values.prependAll([])
+                values.addAll([])
+                dynamic result = values[0] + 1
             }
         """)
         assertEquals(3, execute(main).read(main.scope.getVar("result") as MCInt))

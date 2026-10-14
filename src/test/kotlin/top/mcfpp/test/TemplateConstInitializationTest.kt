@@ -54,18 +54,18 @@ class TemplateConstInitializationTest {
 
     @Test fun typedAndInferredObjectConstKeepRuntimeCallsAndRejectReassignment() {
         fun source(assignments: String) = """
-            func produce(value as int): int {
+            func produce(value: int): int {
                 /say produced
-                return value;
+                return value
             }
             object data Defaults {
-                const var typed as int = produce(4);
+                const typed: int = produce(4)
                 @DataOnly
-                const var inferred = produce(5);
+                const inferred = produce(5)
             }
             func main(){
                 $assignments
-                dynamic var result = Defaults.typed*10 + Defaults.inferred;
+                dynamic result = Defaults.typed*10 + Defaults.inferred
             }
         """
         for (assignments in listOf("", "Defaults.typed = 99; Defaults.inferred = 99;")) {
@@ -95,8 +95,8 @@ class TemplateConstInitializationTest {
     @Test fun declarationOrderSupportsEarlierFieldsAndRejectsPendingSelfOrForwardReads() {
         val main = compile("""
             object data Defaults {
-                const var first = 4;
-                const var second = Defaults.first + 1;
+                const first = 4
+                const second = Defaults.first + 1
             }
             func main(){}
         """)
@@ -106,7 +106,7 @@ class TemplateConstInitializationTest {
         for ((name, value) in listOf("first" to 4, "second" to 5)) {
             assertEquals(IntTag(value), machine.readNbt("mcfpp:system", defaults.nbtPath.memberIndex(name).pathToCommandPart().toString()))
         }
-        for (fields in listOf("const var first = Defaults.first + 1;", "const var first = Defaults.later + 1; const var later = 4;")) {
+        for (fields in listOf("const first = Defaults.first + 1;", "const first = Defaults.later + 1; const later = 4;")) {
             MCFPPStringTest.readFromString("object data Defaults {$fields}\nfunc main(){}", version = "26.3")
             assertTrue(Project.errorCount > 0)
             val failed = objectTemplate()
@@ -120,14 +120,14 @@ class TemplateConstInitializationTest {
         for (assignment in listOf("", "first.value = 99;")) {
             val main = compile("""
                 data Box {
-                    const var value as int = initial;
-                    constructor(initial as int){}
+                    const value: int = initial
+                    constructor(initial: int){}
                 }
                 func main(){
-                    var first = Box(1);
-                    var second = Box(2);
+                    var first = Box(1)
+                    var second = Box(2)
                     $assignment
-                    dynamic var result = first.value*10 + second.value;
+                    dynamic result = first.value*10 + second.value
                 }
             """, if (assignment.isEmpty()) 0 else 1)
             val box = GlobalScope.getTemplate("default.test", "Box")!!
@@ -140,11 +140,11 @@ class TemplateConstInitializationTest {
     @Test fun constFieldsAcceptLiteralAndRuntimeInitializers() {
         val main = compile("""
             object data Defaults {
-                const var required as int = 3;
-                const var mirrored = Defaults.required;
+                const required: int = 3
+                const mirrored = Defaults.required
             }
-            data Box { constructor(value as int){} }
-            func accept(value as int){ var accepted = Box(value); }
+            data Box { constructor(value: int){} }
+            func accept(value: int){ var accepted = Box(value); }
             func main(){ accept(3); }
         """)
         val defaults = objectTemplate()
@@ -154,12 +154,12 @@ class TemplateConstInitializationTest {
         assertEquals(IntTag(3), machine.readNbt("mcfpp:system", defaults.nbtPath.memberIndex("required").pathToCommandPart().toString()))
         assertEquals(IntTag(3), machine.readNbt("mcfpp:system", defaults.nbtPath.memberIndex("mirrored").pathToCommandPart().toString()))
         val runtimeMain = compile("""
-            func produce(value as int, valid as bool): int {
+            func produce(value: int, valid: bool): int {
                 /say produced
                 if(valid){ return value; }
-                return 0;
+                return 0
             }
-            object data Defaults { const var required as int = produce(4, true); }
+            object data Defaults { const required: int = produce(4, true); }
             func main(){}
         """)
         val runtimeDefaults = objectTemplate()

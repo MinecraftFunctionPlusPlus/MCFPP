@@ -86,7 +86,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             } else {
                 val qwq = GenericDataTemplate(ctx.templateBody(), id, Project.currNamespace)
                 qwq.readOnlyParams.addAll(ctx.compoundDeclaration().declarationName().readOnlyParams().parameterList().parameter().map {
-                    DataTemplateParam(it.type().text, it.Identifier().text, variance = when {
+                    DataTemplateParam(DeclarationSyntax.readonlyTypeName(it), DeclarationSyntax.parameterName(it, true, "p${qwq.readOnlyParams.size}"), variance = when {
                         it.OUT() != null -> top.mcfpp.model.compound.DeclarationVariance.OUT
                         it.IN() != null -> top.mcfpp.model.compound.DeclarationVariance.IN
                         else -> top.mcfpp.model.compound.DeclarationVariance.INVARIANT
@@ -132,7 +132,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             } else {
                 val qwq = GenericDataTemplate(ctx.templateBody(), id, Project.currNamespace)
                 qwq.readOnlyParams.addAll(ctx.compoundDeclaration().declarationName().readOnlyParams().parameterList().parameter().map {
-                    DataTemplateParam(it.type().text, it.Identifier().text, variance = when {
+                    DataTemplateParam(DeclarationSyntax.readonlyTypeName(it), DeclarationSyntax.parameterName(it, true, "p${qwq.readOnlyParams.size}"), variance = when {
                         it.OUT() != null -> top.mcfpp.model.compound.DeclarationVariance.OUT
                         it.IN() != null -> top.mcfpp.model.compound.DeclarationVariance.IN
                         else -> top.mcfpp.model.compound.DeclarationVariance.INVARIANT
@@ -164,7 +164,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         } else {
             val qwq = GenericObjectDataTemplate(ctx.templateBody(), id, Project.currNamespace)
             qwq.readOnlyParams.addAll(ctx.compoundDeclaration().declarationName().readOnlyParams().parameterList().parameter().map {
-                DataTemplateParam(it.type().text, it.Identifier().text, variance = when {
+                DataTemplateParam(DeclarationSyntax.readonlyTypeName(it), DeclarationSyntax.parameterName(it, true, "p${qwq.readOnlyParams.size}"), variance = when {
                         it.OUT() != null -> top.mcfpp.model.compound.DeclarationVariance.OUT
                         it.IN() != null -> top.mcfpp.model.compound.DeclarationVariance.IN
                         else -> top.mcfpp.model.compound.DeclarationVariance.INVARIANT

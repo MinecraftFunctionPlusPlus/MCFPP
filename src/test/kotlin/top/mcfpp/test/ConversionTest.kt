@@ -210,12 +210,12 @@ class ConversionTest {
     @Test fun standardLibraryConversionOverloadsWorkWithKnownAnyAndRejectUnknownAny() {
         MCFPPStringTest.readFromString("""
             func arithmetic(){
-                var encoded = 7b;
-                var result = toInt(encoded) + 2;
-                var wide = toLong(result);
-                var payload = toNBT(encoded);
-                dynamic var erased as any = 9;
-                var promoted = toFloat(erased);
+                var encoded = 7b
+                var result = toInt(encoded) + 2
+                var wide = toLong(result)
+                var payload = toNBT(encoded)
+                dynamic erased: any = 9
+                var promoted = toFloat(erased)
             }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
@@ -223,7 +223,7 @@ class ConversionTest {
         assertEquals(9L, integral(assertNotNull(function.scope.getVar("result"))))
         assertEquals(MCFPPNBTType.Long, function.scope.getVar("wide")!!.type)
         assertEquals(MCFPPBaseType.Float, function.scope.getVar("promoted")!!.type)
-        MCFPPStringTest.readFromString("func arithmetic(){ var erased as any; var result = toInt(erased); }", version = "26.3")
+        MCFPPStringTest.readFromString("func arithmetic(){ var erased: any; var result = toInt(erased); }", version = "26.3")
         assertTrue(Project.errorCount > 0)
     }
 }

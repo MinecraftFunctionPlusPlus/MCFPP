@@ -31,10 +31,10 @@ class NbtArrayTest {
     @Test fun literalsKeepArrayIdentityAndReadTheirActualElements() {
         val main = compile("""
             func main(){
-                var bytes = [B;1b,2b];
-                var ints = [I;3,4];
-                var longs = [L;5l,6l];
-                dynamic var result = toInt(bytes[-1])*100 + ints[0]*10 + toInt(longs[-1]);
+                var bytes = [B;1b,2b]
+                var ints = [I;3,4]
+                var longs = [L;5l,6l]
+                dynamic result = toInt(bytes[-1])*100 + ints[0]*10 + toInt(longs[-1])
             }
         """)
         assertEquals(MCFPPNBTType.ByteArray.typeId, main.scope.getVar("bytes")!!.type.typeId)
@@ -46,12 +46,12 @@ class NbtArrayTest {
     @Test fun ordinaryArrayCopiesAreIndependentAndViewsShareWrites() {
         val main = compile("""
             func main(){
-                var values = [I;2,3];
-                var view = values as IntArray;
-                var copied = values;
-                view[0] = 7;
-                copied[-1] = 9;
-                dynamic var result = values[0]*100 + values[1]*10 + copied[0];
+                var values = [I;2,3]
+                var view = values as IntArray
+                var copied = values
+                view[0] = 7
+                copied[-1] = 9
+                dynamic result = values[0]*100 + values[1]*10 + copied[0]
             }
         """)
         assertEquals(732, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -59,11 +59,11 @@ class NbtArrayTest {
 
     @Test fun runtimeArrayParametersIndicesAndReturnsKeepTheirEncoding() {
         val main = compile("""
-            func put(values as IntArray, index as int, value as int): IntArray { values[index] = value; return values; }
+            func put(values: IntArray, index: int, value: int): IntArray { values[index] = value; return values; }
             func main(){
-                var values = [I;2,3];
-                var result = put(values,1,7);
-                dynamic var number = values[1]*100 + result[0]*10 + result[1];
+                var values = [I;2,3]
+                var result = put(values,1,7)
+                dynamic number = values[1]*100 + result[0]*10 + result[1]
             }
         """)
         assertEquals(MCFPPNBTType.IntArray.typeId, main.scope.getVar("result")!!.type.typeId)
@@ -72,14 +72,14 @@ class NbtArrayTest {
 
     @Test fun byteAndLongArrayElementsKeepTheirLanguageTypesAcrossRuntimeCalls() {
         val main = compile("""
-            func putByte(values as ByteArray, index as int, value as byte): ByteArray { values[index] = value; return values; }
-            func putLong(values as LongArray, index as int, value as long): LongArray { values[index] = value; return values; }
+            func putByte(values: ByteArray, index: int, value: byte): ByteArray { values[index] = value; return values; }
+            func putLong(values: LongArray, index: int, value: long): LongArray { values[index] = value; return values; }
             func main(){
-                var bytes = [B;2b,3b];
-                var longs = [L;4l,5l];
-                var changedBytes = putByte(bytes,0,7b);
-                var changedLongs = putLong(longs,1,8l);
-                dynamic var number = toInt(changedBytes[0])*10 + toInt(changedLongs[-1]);
+                var bytes = [B;2b,3b]
+                var longs = [L;4l,5l]
+                var changedBytes = putByte(bytes,0,7b)
+                var changedLongs = putLong(longs,1,8l)
+                dynamic number = toInt(changedBytes[0])*10 + toInt(changedLongs[-1])
             }
         """)
         assertEquals(78, execute(main).read(main.scope.getVar("number") as MCInt))
@@ -87,11 +87,11 @@ class NbtArrayTest {
 
     @Test fun arrayWriteCapturesTheIndexBeforeRightHandCalls() {
         val main = compile("""
-            func change(static index as int): int { index = 1; return 7; }
-            func put(values as IntArray, index as int): IntArray { values[index] = change(index); return values; }
+            func change(static index: int): int { index = 1; return 7; }
+            func put(values: IntArray, index: int): IntArray { values[index] = change(index); return values; }
             func main(){
-                var result = put([I;2,3],0);
-                dynamic var number = result[0]*10 + result[1];
+                var result = put([I;2,3],0)
+                dynamic number = result[0]*10 + result[1]
             }
         """)
         assertEquals(73, execute(main).read(main.scope.getVar("number") as MCInt))
@@ -99,14 +99,14 @@ class NbtArrayTest {
 
     @Test fun multipleUnknownIndicesUseIndependentReadsAndAliasCachesReload() {
         val main = compile("""
-            func read(values as IntArray, left as int, right as int): int { return values[left] + values[right]; }
+            func read(values: IntArray, left: int, right: int): int { return values[left] + values[right]; }
             func main(){
-                var values = [I;2,3];
-                var view = values as IntArray;
-                dynamic var before = view[0] + 0;
-                values[-2] = 7;
-                dynamic var after = view[0] + 0;
-                dynamic var result = read(values,0,1);
+                var values = [I;2,3]
+                var view = values as IntArray
+                dynamic before = view[0] + 0
+                values[-2] = 7
+                dynamic after = view[0] + 0
+                dynamic result = read(values,0,1)
             }
         """)
         val machine = execute(main)
@@ -145,13 +145,13 @@ class NbtArrayTest {
 
     @Test fun emptyArraysKeepTheirFormatAcrossRuntimeParametersAndReturns() {
         val main = compile("""
-            func bytes(value as ByteArray): ByteArray { return value; }
-            func ints(value as IntArray): IntArray { return value; }
-            func longs(value as LongArray): LongArray { return value; }
+            func bytes(value: ByteArray): ByteArray { return value; }
+            func ints(value: IntArray): IntArray { return value; }
+            func longs(value: LongArray): LongArray { return value; }
             func main(){
-                var bytesResult = bytes([B;]);
-                var intsResult = ints([I;]);
-                var longsResult = longs([L;]);
+                var bytesResult = bytes([B;])
+                var intsResult = ints([I;])
+                var longsResult = longs([L;])
                 /data modify storage mcfpp:system temp.bytesResult set from storage mcfpp:system stack_frame[0].bytesResult
                 /data modify storage mcfpp:system temp.intsResult set from storage mcfpp:system stack_frame[0].intsResult
                 /data modify storage mcfpp:system temp.longsResult set from storage mcfpp:system stack_frame[0].longsResult
@@ -165,15 +165,15 @@ class NbtArrayTest {
 
     @Test fun nestedAndErasedCopiesKeepArrayElementsAndIndependentPayloads() {
         val main = compile("""
-            func copy(value as any): any { return value; }
+            func copy(value: any): any { return value; }
             func main(){
-                var source = {values:[I;2,3]};
-                var copied = source;
-                copied["values"][0] = 9;
-                var erased = copy(source["values"]) as IntArray;
-                erased[1] = 7;
-                dynamic var result = source["values"][0]*100 + source["values"][1]*10 + copied["values"][0];
-                dynamic var returned = erased[0]*10 + erased[1];
+                var source = {values:[I;2,3]}
+                var copied = source
+                copied["values"][0] = 9
+                var erased = copy(source["values"]) as IntArray
+                erased[1] = 7
+                dynamic result = source["values"][0]*100 + source["values"][1]*10 + copied["values"][0]
+                dynamic returned = erased[0]*10 + erased[1]
             }
         """)
         val machine = execute(main)
@@ -194,7 +194,7 @@ class NbtArrayTest {
 
     @Test fun targetsWithoutMacrosRejectUnknownArrayIndices() {
         MCFPPStringTest.readFromString("""
-            func put(values as IntArray, index as int) { values[index] = 7; }
+            func put(values: IntArray, index: int) { values[index] = 7; }
             func main(){ put([I;2,3],0); }
         """.trimIndent(), version = "1.20.1")
         assertTrue(Project.errorCount > 0)

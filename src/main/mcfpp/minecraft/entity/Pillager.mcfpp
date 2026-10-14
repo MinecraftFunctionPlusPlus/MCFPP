@@ -1,5 +1,5 @@
 @MCFPPEntity
 data PillagerData: EntityData, CreatureData, AIMobData, RaiderData {
     @Name<"Inventory">
-    var inventory as list<ItemData>;
+    var inventory: list<ItemData>
 }

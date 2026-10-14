@@ -9,16 +9,16 @@ class DataTemplateTest {
         val test =
             """
                 data Test{
-                    var qwq as int;
+                    var qwq: int
                     func test(){}
                 }
                 
                 func main(){
-                    var t = {qwq:1} as Test;
-                    print(t.qwq);
-                    print(t);
-                    t.qwq = 6;
-                    print(t.qwq);
+                    var t = {qwq:1} as Test
+                    print(t.qwq)
+                    print(t)
+                    t.qwq = 6
+                    print(t.qwq)
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test)
@@ -29,20 +29,20 @@ class DataTemplateTest {
         val test =
             """
                 data Test{
-                    var qwq as (int|string);
+                    var qwq: (int|string)
                 }
                 
                 func main(){
-                    var t = Test();
-                    print(t.qwq as int);
-                    print(t.qwq as string);
-                    print(t);
-                    t.qwq = 6;
-                    print(t.qwq as int);
-                    print(t);
-                    t.qwq = "test";
-                    print(t.qwq as string);
-                    print(t);
+                    var t = Test()
+                    print(t.qwq as int)
+                    print(t.qwq as string)
+                    print(t)
+                    t.qwq = 6
+                    print(t.qwq as int)
+                    print(t)
+                    t.qwq = "test"
+                    print(t.qwq as string)
+                    print(t)
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test, arrayOf("debug"))
@@ -53,24 +53,24 @@ class DataTemplateTest {
         val test =
             """
                 data Test{
-                    var qwq as int;
+                    var qwq: int
                 }
                 
                 data Test2: Test{
-                    var qwq2 as string;
+                    var qwq2: string
                 }
                 
                 func main(){
-                    var t = {qwq:1,qwq2:"test"} as Test2;
-                    print(t.qwq);
-                    print(t.qwq2);
-                    print(t);
-                    t.qwq = 6;
-                    print(t.qwq);
-                    print(t);
-                    t.qwq2 = "test2";
-                    print(t.qwq2);
-                    print(t);
+                    var t = {qwq:1,qwq2:"test"} as Test2
+                    print(t.qwq)
+                    print(t.qwq2)
+                    print(t)
+                    t.qwq = 6
+                    print(t.qwq)
+                    print(t)
+                    t.qwq2 = "test2"
+                    print(t.qwq2)
+                    print(t)
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test)
@@ -81,18 +81,18 @@ class DataTemplateTest {
         val test =
             """
                 data Test1 {
-                    var qwq as int;
+                    var qwq: int
                 }
                 
                 data Test2 {
-                    var qwq2 as string;
+                    var qwq2: string
                 }
                 
                 func main(){
-                    var t as (Test1&Test2) = {qwq:1, qwq2: "qwq"};
-                    print(t);
-                    print(t.qwq);
-                    print(t.qwq2);
+                    var t: (Test1&Test2) = {qwq:1, qwq2: "qwq"}
+                    print(t)
+                    print(t.qwq)
+                    print(t.qwq2)
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test)

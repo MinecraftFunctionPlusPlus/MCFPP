@@ -1,8 +1,8 @@
 data RaiderData {
-    @Name<"CanJoinRaid"> var canJoinRaid as bool;
-    @Name<"patrol_target"> var patrolTarget as IntArray;
-    @Name<"PatrolLeader"> var patrolLeader as bool;
-    @Name<"Patrolling"> var patrolling as bool;
-    @Name<"RaidID"> var raidID as int;
-    @Name<"Wave"> var wave as int;
+    @Name<"CanJoinRaid"> var canJoinRaid: bool
+    @Name<"patrol_target"> var patrolTarget: IntArray
+    @Name<"PatrolLeader"> var patrolLeader: bool
+    @Name<"Patrolling"> var patrolling: bool
+    @Name<"RaidID"> var raidID: int
+    @Name<"Wave"> var wave: int
 }

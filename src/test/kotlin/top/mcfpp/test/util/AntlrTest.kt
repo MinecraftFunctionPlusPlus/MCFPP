@@ -13,7 +13,7 @@ class AntlrTest {
         /scoreboard players qwq
             qwq
             qwq/
-        var i = 1;
+        var i = 1
     """.trimIndent()
 
         val inputStream = ANTLRInputStream(input)

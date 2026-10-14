@@ -68,7 +68,7 @@ class ArithmeticSyntaxTest {
                     3
                 /say hello
                 x +=
-                    2;
+                    2
             }
         """.trimIndent()
         val parser = mcfppParser(CommonTokenStream(mcfppLexer(CharStreams.fromString(source))))
@@ -84,10 +84,10 @@ class ArithmeticSyntaxTest {
     fun unaryMinusAndEveryCompoundAssignmentParse() {
         parse("""
             func test(){
-                var a = 10;
-                a += 1; a -= 1; a *= 2; a /= 2; a %= 3;
-                var b = -a;
-                var c = -(a + 1);
+                var a = 10
+                a += 1; a -= 1; a *= 2; a /= 2; a %= 3
+                var b = -a
+                var c = -(a + 1)
             }
         """.trimIndent())
     }
@@ -96,16 +96,16 @@ class ArithmeticSyntaxTest {
     fun constantArithmeticHasExpectedValues() {
         MCFPPStringTest.readFromString("""
             func arithmetic(){
-                var a = 20;
-                a += 3;
-                a -= 5;
-                a *= 2;
-                a /= 3;
-                a %= 5;
-                var b = -a;
-                var c = -(2 + 3);
-                var g = 1.5;
-                var h = -g;
+                var a = 20
+                a += 3
+                a -= 5
+                a *= 2
+                a /= 3
+                a %= 5
+                var b = -a
+                var c = -(2 + 3)
+                var g = 1.5
+                var h = -g
             }
         """.trimIndent())
         assertEquals(0, Project.errorCount)
@@ -124,13 +124,13 @@ class ArithmeticSyntaxTest {
     fun dynamicAssignmentWritesCalculatedValue() {
         MCFPPStringTest.readFromString("""
             func arithmetic(){
-                dynamic var a as int = 4;
-                a += 2;
-                a -= 1;
-                a *= 3;
-                a /= 3;
-                a %= 4;
-                var b = -a;
+                dynamic a: int = 4
+                a += 2
+                a -= 1
+                a *= 3
+                a /= 3
+                a %= 4
+                var b = -a
             }
         """.trimIndent())
         assertEquals(0, Project.errorCount)
@@ -151,9 +151,9 @@ class ArithmeticSyntaxTest {
     fun dynamicFloatCanUseCompoundAssignmentAndUnaryMinus() {
         MCFPPStringTest.readFromString("""
             func arithmetic(){
-                dynamic var f as float = 1.5;
-                f += 0.5;
-                var negated = -f;
+                dynamic f: float = 1.5
+                f += 0.5
+                var negated = -f
             }
         """.trimIndent())
         assertEquals(0, Project.errorCount)
@@ -171,8 +171,8 @@ class ArithmeticSyntaxTest {
     fun nestedDynamicFloatExpressionCompiles() {
         MCFPPStringTest.readFromString("""
             func arithmetic(){
-                dynamic var f as float = 1.5;
-                var expressionNegated = -(f + 0.5);
+                dynamic f: float = 1.5
+                var expressionNegated = -(f + 0.5)
             }
         """.trimIndent())
         assertEquals(0, Project.errorCount)
@@ -190,10 +190,10 @@ class ArithmeticSyntaxTest {
     fun invalidCompoundAssignmentsProduceDiagnostics() {
         MCFPPStringTest.readFromString("""
             func invalid(){
-                const var count = 1;
-                count += 1;
-                var flag = true;
-                flag += true;
+                const count = 1
+                count += 1
+                var flag = true
+                flag += true
             }
         """.trimIndent())
         assertTrue(Project.errorCount >= 2)
@@ -206,10 +206,10 @@ class ArithmeticSyntaxTest {
     fun indexedAssignmentWritesBackThroughProperty() {
         MCFPPStringTest.readFromString("""
             func arithmetic(){
-                var values = [1, 2];
-                values[0] += 3;
-                dynamic var updated = values[0];
-                dynamic var preserved = values[1];
+                var values = [1, 2]
+                values[0] += 3
+                dynamic updated = values[0]
+                dynamic preserved = values[1]
             }
         """.trimIndent())
         assertEquals(0, Project.errorCount)

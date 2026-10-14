@@ -1,5 +1,5 @@
 @MCFPPEntity
 data CamelData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, GeneralHorseData {
     @Name<"LastPoseTick">
-    var lastPoseTick as long;
+    var lastPoseTick: long
 }

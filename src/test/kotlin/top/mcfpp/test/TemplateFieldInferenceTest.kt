@@ -45,19 +45,19 @@ class TemplateFieldInferenceTest {
         val main = compile("""
             data Box {
                 @DataOnly
-                const var value = produce(initial);
-                var next = this.value + 1;
-                constructor(initial as int){}
+                const value = produce(initial)
+                var next = this.value + 1
+                constructor(initial: int){}
             }
-            func produce(value as int): int {
+            func produce(value: int): int {
                 /say produced
-                return value;
+                return value
             }
-            func inspect(box as Box): int { return box.next; }
+            func inspect(box: Box): int { return box.next; }
             func main(){
-                var first = Box(3);
-                var second = Box(6);
-                dynamic var result = inspect(first)*10 + inspect(second);
+                var first = Box(3)
+                var second = Box(6)
+                dynamic result = inspect(first)*10 + inspect(second)
             }
         """)
         val box = template()
@@ -72,15 +72,15 @@ class TemplateFieldInferenceTest {
     @Test fun erasedReturnEvidenceAndOrdinaryConstructorValuesDoNotChangeFieldConstraints() {
         val main = compile("""
             data Box {
-                var erased as any = produce(initial);
-                const var value = (this.erased as int) + 1;
-                constructor(initial as int){}
+                var erased: any = produce(initial)
+                const value = (this.erased as int) + 1
+                constructor(initial: int){}
             }
-            func produce(value as int): any { return value; }
+            func produce(value: int): any { return value; }
             func main(){
-                var first = Box(3);
-                var second = Box(6);
-                dynamic var result = first.value*10 + second.value;
+                var first = Box(3)
+                var second = Box(6)
+                dynamic result = first.value*10 + second.value
             }
         """)
         val value = template().scope.getVar("value")!!
@@ -92,9 +92,9 @@ class TemplateFieldInferenceTest {
     @Test fun inconsistentConstructorsAndPendingReadsDiagnoseWithoutChoosingTheFirstCall() {
         compile("""
             data Box {
-                const var value = initial;
-                constructor(initial as int){}
-                constructor(initial as bool){}
+                const value = initial
+                constructor(initial: int){}
+                constructor(initial: bool){}
             }
             func main(){}
         """, errors = 1)
@@ -109,8 +109,8 @@ class TemplateFieldInferenceTest {
         compile("""
             data Parent { var value = 4; }
             data Child: Parent {}
-            func inspect(child as Child): int { return child.value; }
-            func copy(child as Child): Child { return child; }
+            func inspect(child: Child): int { return child.value; }
+            func copy(child: Child): Child { return child; }
             func main(){}
         """)
         assertEquals(MCFPPBaseType.Int.typeId, template("Child").scope.getVar("value")!!.type.typeId)
@@ -120,7 +120,7 @@ class TemplateFieldInferenceTest {
 
     @Test fun anonymousTemplateSignaturesAlsoWaitForForwardFunctionDeclarations() {
         compile("""
-            func inspect(box as data { const var value = produce(); }) : int { return box.value; }
+            func inspect(box: data { const value = produce(); }) : int { return box.value; }
             func produce(): int { return 4; }
             func main(){}
         """)
@@ -134,10 +134,10 @@ class TemplateFieldInferenceTest {
         compile("""
             @DataOnly
             data Box { var value = 4; }
-            data Parent { var value as int = 1; }
+            data Parent { var value: int = 1; }
             data Child: Parent {
                 @DataOnly
-                const var value = 8;
+                const value = 8
             }
             func main(){}
         """)

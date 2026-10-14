@@ -1,10 +1,10 @@
 @MCFPPEntity
 data WardenData: EntityData, CreatureData, AIMobData {
-    @Name<"Anger"> var anger as data {
-        var offers as list<data {
-            var anger as int;
-            var uuid as IntArray;
-        }>;
-    };
-    var listener as Listener;
+    @Name<"Anger"> var anger: data {
+        var offers: list<data {
+            var anger: int
+            var uuid: IntArray
+        }>
+    }
+    var listener: Listener
 }

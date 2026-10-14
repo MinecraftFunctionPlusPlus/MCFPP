@@ -1,7 +1,7 @@
 @MCFPPEntity
 data SalmonData: EntityData, CreatureData, AIMobData {
-    @Name<"FromBucket"> var fromBucket as bool;
-    @Name<"Type"> var type as SalmonType;
+    @Name<"FromBucket"> var fromBucket: bool
+    @Name<"Type"> var type: SalmonType
 }
 
 enum SalmonType {

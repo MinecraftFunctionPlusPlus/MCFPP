@@ -1,20 +1,20 @@
 @MCFPPEntity
 data ItemData: EntityData {
     @Name<"Age">
-    var age as short;
+    var age: short
 
     @Name<"Health">
-    var health as short;
+    var health: short
 
     @Name<"Item">
-    var item as list<ItemData>;
+    var item: list<ItemData>
 
     @Name<"Owner">
-    var owner as IntArray;
+    var owner: IntArray
 
     @Name<"PickupDelay">
-    var pickupDelay as short;
+    var pickupDelay: short
 
     @Name<"Thrower">
-    var thrower as IntArray;
+    var thrower: IntArray
 }

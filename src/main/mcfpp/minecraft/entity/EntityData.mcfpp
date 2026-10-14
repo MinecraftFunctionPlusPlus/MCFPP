@@ -1,5 +1,5 @@
-import mcfpp.minecraft.std:*;
-import mcfpp.minecraft.other:*;
+import mcfpp.minecraft.std:*
+import mcfpp.minecraft.other:*
 
 @From<"top.mcfpp.mni.minecraft.EntityTagData">
 @From<"top.mcfpp.mni.minecraft.EntityTeamData">
@@ -13,60 +13,60 @@ import mcfpp.minecraft.other:*;
 @From<"top.mcfpp.mni.minecraft.EntityAttributeData">
 data EntityData {
     @Name<"Air">
-    var air as short;
+    var air: short
 
     @Name<"CustomName">
-    var customName as string;
+    var customName: string
 
     @Name<"CustomNameVisible">
-    var customNameVisible as bool;
+    var customNameVisible: bool
 
     @Name<"FallDistance", "1.21.5">
     @Name<"fall_distance">
-    var fallDistance as float;
+    var fallDistance: float
 
     @Name<"Fire">
-    var fire as short;
+    var fire: short
 
     @Name<"Glowing">
-    var glowing as bool;
+    var glowing: bool
 
     @Name<"HasVisualFire">
-    var hasVisualFire as bool;
+    var hasVisualFire: bool
 
     @Name<"Invulnerable">
-    var invulnerable as bool;
+    var invulnerable: bool
 
     @Name<"Motion">
-    var motion as list<double>;
+    var motion: list<double>
 
     @Name<"NoGravity">
-    var noGravity as bool;
+    var noGravity: bool
 
     @Name<"onGround">
-    var onGround as bool;
+    var onGround: bool
 
     @Name<"Passengers">
-    var passengers as list<EntityData>;
+    var passengers: list<EntityData>
 
     @Name<"PortalCooldown">
-    var portalCooldown as int;
+    var portalCooldown: int
 
     @Name<"Pos">
-    var pos as list<double>;
+    var pos: list<double>
 
     @Name<"Rotation">
-    var rotation as list<float>;
+    var rotation: list<float>
 
     @Name<"Silent">
-    var silent as bool;
+    var silent: bool
 
     @Name<"Tags">
-    var tags as list<string>;
+    var tags: list<string>
 
     @Name<"TicksFrozen">
-    var ticksFrozen as int;
+    var ticksFrozen: int
 
     @Name<"UUID">
-    var uuid as IntArray;
+    var uuid: IntArray
 }

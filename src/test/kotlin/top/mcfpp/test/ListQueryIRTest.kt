@@ -35,19 +35,19 @@ class ListQueryIRTest {
     @Test fun runtimeQueriesArePureIndependentAndKeepTheirSource() = modes {
         for (version in listOf("26.3", "1.20.2", "1.20")) {
             val main = compile("""
-                func find(values as list<int>, needle as int): int {
-                    var first = values.indexOf(needle);
-                    var last = values.lastIndexOf(needle);
-                    var missing = values.indexOf(9);
-                    return first*1000 + last*100 + missing*10 + values[0];
+                func find(values: list<int>, needle: int): int {
+                    var first = values.indexOf(needle)
+                    var last = values.lastIndexOf(needle)
+                    var missing = values.indexOf(9)
+                    return first*1000 + last*100 + missing*10 + values[0]
                 }
                 func main(){
-                    var values = [2,4,2];
-                    dynamic var result = find(values,2);
-                    dynamic var found = values.contains(4);
-                    dynamic var unchanged = values[0] + values[1] + values[2];
-                    var empty as list<int> = [];
-                    dynamic var missing = empty.indexOf(2);
+                    var values = [2,4,2]
+                    dynamic result = find(values,2)
+                    dynamic found = values.contains(4)
+                    dynamic unchanged = values[0] + values[1] + values[2]
+                    var empty: list<int> = []
+                    dynamic missing = empty.indexOf(2)
                 }
             """, version)
             val machine = execute(main)
@@ -63,14 +63,14 @@ class ListQueryIRTest {
     @Test fun recursiveRemovalDeletesTheFirstMatchAndPreservesNoMatchInputs() = modes {
         for (version in listOf("26.3", "1.20")) {
             val main = compile("""
-                func erase(static values as list<int>, needle as int) {
+                func erase(static values: list<int>, needle: int) {
                     if(values.contains(needle)){ values.remove(needle); erase(values,needle); }
                 }
                 func main(){
-                    var values = [2,4,2,6];
-                    erase(values,2);
-                    values.remove(9);
-                    dynamic var result = values[0]*10 + values[1];
+                    var values = [2,4,2,6]
+                    erase(values,2)
+                    values.remove(9)
+                    dynamic result = values[0]*10 + values[1]
                 }
             """, version)
             assertEquals(46, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -84,14 +84,14 @@ class ListQueryIRTest {
 
     @Test fun erasedSearchesUseProvenElementIdentitiesAndKnownRemovalKeepsShape() = modes {
         val main = compile("""
-            func identity(value as int): int { return value; }
+            func identity(value: int): int { return value; }
             func main(){
-                var values = [true,1,true] as list<any>;
-                dynamic var first = values.indexOf(true);
-                dynamic var last = values.lastIndexOf(true);
-                dynamic var integer = values.indexOf(identity(1));
-                values.remove(1);
-                dynamic var result = values[0] == values[1];
+                var values = [true,1,true] as list<any>
+                dynamic first = values.indexOf(true)
+                dynamic last = values.lastIndexOf(true)
+                dynamic integer = values.indexOf(identity(1))
+                values.remove(1)
+                dynamic result = values[0] == values[1]
             }
         """)
         val machine = execute(main)
@@ -105,15 +105,15 @@ class ListQueryIRTest {
 
     @Test fun dynamicReceiversAndReadonlyQueriesRetainTheirSelectedLocation() = modes {
         val main = compile("""
-            func identity(value as int): int { return value; }
-            func change(static index as int): int { index = 1; return 2; }
+            func identity(value: int): int { return value; }
+            func change(static index: int): int { index = 1; return 2; }
             func main(){
-                var values = [[2,9],[2,8]];
-                var index = identity(0);
-                values[index].remove(change(index));
-                var readonly = values[1] as ImmutableList<int>;
-                dynamic var found = readonly.contains(2);
-                dynamic var result = values[0][0] + values[1][0] + readonly.indexOf(8);
+                var values = [[2,9],[2,8]]
+                var index = identity(0)
+                values[index].remove(change(index))
+                var readonly = values[1] as ImmutableList<int>
+                dynamic found = readonly.contains(2)
+                dynamic result = values[0][0] + values[1][0] + readonly.indexOf(8)
             }
         """)
         val machine = execute(main)
@@ -123,19 +123,19 @@ class ListQueryIRTest {
 
     @Test fun unknownErasedElementsRequireAViewAndUniformLoopGrowthRemainsSearchable() = modes {
         MCFPPStringTest.readFromString("""
-            func find(values as list<any>, needle as int): int { return values.indexOf(needle); }
+            func find(values: list<any>, needle: int): int { return values.indexOf(needle); }
             func main(){ var values = [2,4] as list<any>; var result = find(values,2); }
         """.trimIndent(), version = "26.3")
         assertNotNull(function("find").typedIR)
         assertTrue(Project.errorCount > 0)
         val main = compile("""
-            func find(values as list<any>, needle as int): int { return (values as list<int>).indexOf(needle); }
+            func find(values: list<any>, needle: int): int { return (values as list<int>).indexOf(needle); }
             func main(){
-                var values = [2] as list<any>;
-                var i = 0;
+                var values = [2] as list<any>
+                var i = 0
                 while(i < 2){ values.add(i); i += 1; }
-                dynamic var direct = values.indexOf(1);
-                dynamic var result = find(values,0);
+                dynamic direct = values.indexOf(1)
+                dynamic result = find(values,0)
             }
         """)
         val machine = execute(main)

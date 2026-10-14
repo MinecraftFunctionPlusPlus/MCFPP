@@ -39,14 +39,14 @@ class ConstructorExecutionTest {
         try {
             val main = compile("""
                 data Box {
-                    var value as int;
-                    constructor(value as int){ this.value = value; }
+                    var value: int
+                    constructor(value: int){ this.value = value; }
                 }
                 func main(){
-                    var first = Box(1);
-                    var second = Box(2);
-                    first.value = 9;
-                    dynamic var result = first.value*10 + second.value;
+                    var first = Box(1)
+                    var second = Box(2)
+                    first.value = 9
+                    dynamic result = first.value*10 + second.value
                 }
             """, output)
             val constructor = template().constructors.single()
@@ -62,12 +62,12 @@ class ConstructorExecutionTest {
     @Test fun fieldInitializersRunForExplicitAndImplicitConstructors() {
         for (constructor in listOf("", "constructor(){}")) {
             val main = compile("""
-                data Box { var value as int = 4; $constructor }
+                data Box { var value: int = 4; $constructor }
                 func main(){
-                    var first = Box();
-                    first.value = 9;
-                    var second = Box();
-                    dynamic var result = first.value*10 + second.value;
+                    var first = Box()
+                    first.value = 9
+                    var second = Box()
+                    dynamic result = first.value*10 + second.value
                 }
             """)
             assertEquals(94, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -77,7 +77,7 @@ class ConstructorExecutionTest {
         val output = Files.createTempDirectory("mcfpp-object-initializer-")
         try {
             compile("""
-                object data Defaults { var value as int = 4; }
+                object data Defaults { var value: int = 4; }
                 func main(){}
             """, output)
             val defaults = GlobalScope.localNamespaces.getValue("default.test").scope.objects
@@ -104,14 +104,14 @@ class ConstructorExecutionTest {
         try {
             val main = compile("""
                 data Box {
-                    var value as int;
-                    constructor(kind as int, value as int){ this.value = kind + value; }
+                    var value: int
+                    constructor(kind: int, value: int){ this.value = kind + value; }
                 }
                 func main(){
-                    var first = Box(1,1);
-                    var second = Box(1,2);
-                    var third = Box(2,3);
-                    dynamic var result = first.value*100 + second.value*10 + third.value;
+                    var first = Box(1,1)
+                    var second = Box(1,2)
+                    var third = Box(2,3)
+                    dynamic result = first.value*100 + second.value*10 + third.value
                 }
             """, output)
             val constructor = template().constructors.single()
@@ -126,18 +126,18 @@ class ConstructorExecutionTest {
 
     @Test fun nestedCallsPreserveTheConstructorReceiver() {
         val main = compile("""
-            func bump(value as int): int { return value + 1; }
+            func bump(value: int): int { return value + 1; }
             data Box {
-                var value as int;
-                constructor(value as int){
-                    this.value = value;
-                    this.value += bump(value);
+                var value: int
+                constructor(value: int){
+                    this.value = value
+                    this.value += bump(value)
                 }
             }
             func main(){
-                var first = Box(1);
-                var second = Box(2);
-                dynamic var result = first.value*10 + second.value;
+                var first = Box(1)
+                var second = Box(2)
+                dynamic result = first.value*10 + second.value
             }
         """)
         assertEquals(35, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -146,15 +146,15 @@ class ConstructorExecutionTest {
     @Test fun memberCallsWriteBackOnlyTheirOwnReceiver() {
         val main = compile("""
             data Box {
-                var value as int;
-                constructor(value as int){ this.value = value; }
-                func setValue(value as int){ this.value = value; }
+                var value: int
+                constructor(value: int){ this.value = value; }
+                func setValue(value: int){ this.value = value; }
             }
             func main(){
-                var first = Box(1);
-                var second = Box(2);
-                first.setValue(9);
-                dynamic var result = first.value*10 + second.value;
+                var first = Box(1)
+                var second = Box(2)
+                first.setValue(9)
+                dynamic result = first.value*10 + second.value
             }
         """)
         assertEquals(92, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -163,25 +163,25 @@ class ConstructorExecutionTest {
 
     @Test fun calledDynamicBranchesLeaveTheirFramesForWritebackAndEntryReturnsPopOnce() {
         val main = compile("""
-            func choose(value as int): int {
-                var ignored = 6/2;
+            func choose(value: int): int {
+                var ignored = 6/2
                 if(value > 0){ return value + 1; }
-                return 0;
+                return 0
             }
             data Box {
-                var value as int;
-                constructor(value as int){
+                var value: int
+                constructor(value: int){
                     if(value > 0){ this.value = value; }
                     else{ this.value = 0; }
                 }
             }
             func main(){
-                var ignored = 6/2;
-                var first = Box(1);
-                var second = Box(0);
-                dynamic var result = choose(2)*100 + first.value*10 + second.value;
+                var ignored = 6/2
+                var first = Box(1)
+                var second = Box(0)
+                dynamic result = choose(2)*100 + first.value*10 + second.value
                 /say done
-                return;
+                return
                 /say unreachable
             }
         """)
@@ -196,19 +196,19 @@ class ConstructorExecutionTest {
     @Test fun aViewReceiverSharesWritesWithoutChangingSourceTypeOrItsIndependentCopy() {
         val main = compile("""
             data Source {
-                var value as int;
-                constructor(value as int){ this.value = value; }
+                var value: int
+                constructor(value: int){ this.value = value; }
             }
             data Target {
-                var value as int;
-                func setValue(value as int){ this.value = value; }
+                var value: int
+                func setValue(value: int){ this.value = value; }
             }
             func main(){
-                var source = Source(2);
-                var copied = source;
-                var view = source as Target;
-                view.setValue(9);
-                dynamic var result = source.value*10 + copied.value;
+                var source = Source(2)
+                var copied = source
+                var view = source as Target
+                view.setValue(9)
+                dynamic result = source.value*10 + copied.value
             }
         """)
         val source = main.scope.getVar("source")!!

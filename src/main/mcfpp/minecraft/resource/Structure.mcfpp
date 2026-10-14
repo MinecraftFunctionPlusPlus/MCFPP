@@ -1,5 +1,5 @@
 @From<"top.mcfpp.mni.resource.StructureData">
-data Structure: ResourceID;
+data Structure: ResourceID
 
 @From<"top.mcfpp.mni.resource.StructureObjectData">
-object data Structure: ResourceID;
+object data Structure: ResourceID

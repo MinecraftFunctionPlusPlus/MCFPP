@@ -1,2 +1,2 @@
 @MCFPPEntity
-data SquidData: EntityData, CreatureData, AIMobData, GrowableData;
+data SquidData: EntityData, CreatureData, AIMobData, GrowableData

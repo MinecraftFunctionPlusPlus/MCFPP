@@ -23,19 +23,19 @@ import kotlin.test.Test
 class GenericDeclarationContractTest {
     @Test fun declarationVariancePersistsAndChecksNestedMemberPositions() = isolated { output ->
         compile("""
-            namespace fixture.variance;
+            namespace fixture.variance
             data Base {}
             data Child:Base {}
-            data abstract Producer<out T as type> { abstract func read():T; }
-            data abstract Consumer<in T as type> { abstract func accept(value as T); }
-            data abstract Nested<out T as type> { abstract func read():Producer<T>; }
-            data Invariant<T as type> {}
+            data abstract Producer<out T> { abstract func read():T; }
+            data abstract Consumer<in T> { abstract func accept(value: T); }
+            data abstract Nested<out T> { abstract func read():Producer<T>; }
+            data Invariant<T> {}
         """, output)
         assertEquals(0, Project.errorCount)
         val original = GlobalScope.getTemplate("fixture.variance", "Producer") as GenericDataTemplate
         Project.config.includes = arrayListOf(output.toString())
         compile("""
-            import fixture.variance:*;
+            import fixture.variance:*
             func main() {}
         """)
         assertEquals(0, Project.errorCount)
@@ -51,14 +51,14 @@ class GenericDeclarationContractTest {
         assertTrue(specialize("Consumer", base).isSubOf(specialize("Consumer", child)))
         assertFalse(specialize("Invariant", child).isSubOf(specialize("Invariant", base)))
         for (source in listOf(
-            "data abstract Bad<out T as type>{abstract func accept(value as T);}",
-            "data abstract Bad<in T as type>{abstract func read():T;}",
-            "data Invariant<T as type>{}\ndata abstract Bad<out T as type>{abstract func read():Invariant<T>;}",
-            "data Invariant<T as type>{}\ndata Bad<out T as type>:Invariant<T>{}",
-            "data Bad<out N as int>{}",
-            "data Bad<T as type>{}\nfunc main(){var item as Bad<*>;}",
-            "data Duplicate<T as type>{}\ndata Duplicate<N as int>{}",
-            "object data Duplicate<T as type>{}\nobject data Duplicate<N as int>{}"
+            "data abstract Bad<out T>{abstract func accept(value: T);}",
+            "data abstract Bad<in T>{abstract func read():T;}",
+            "data Invariant<T>{}\ndata abstract Bad<out T>{abstract func read():Invariant<T>;}",
+            "data Invariant<T>{}\ndata Bad<out T>:Invariant<T>{}",
+            "data Bad<out N: int>{}",
+            "data Bad<T>{}\nfunc main(){var item: Bad<*>;}",
+            "data Duplicate<T>{}\ndata Duplicate<N: int>{}",
+            "object data Duplicate<T>{}\nobject data Duplicate<N: int>{}"
         )) {
             Project.config.includes = arrayListOf()
             compile(source)
@@ -68,44 +68,44 @@ class GenericDeclarationContractTest {
 
     @Test fun companionsPairActualArgumentsAndKeepPrivateOwnersAndIndependentState() = isolated { output ->
         val declarations = """
-            namespace fixture.companions;
-            data Box<N as int> {
-                private var value as int;
-                constructor(value as int){this.value=value;}
+            namespace fixture.companions
+            data Box<N: int> {
+                private var value: int
+                constructor(value: int){this.value=value;}
                 func read():int{return this.value;}
                 func companionRead():int{return Box<N>.read();}
             }
-            object data Box<N as int> {
-                private var value as int;
+            object data Box<N: int> {
+                private var value: int
                 constructor(){}
-                func setValue(value as int){Box<N>.value=value;}
+                func setValue(value: int){Box<N>.value=value;}
                 private func read():int{return Box<N>.value;}
-                func inspect(item as Box<N>):int{return item.value;}
+                func inspect(item: Box<N>):int{return item.value;}
             }
-            data Shared<N as int>{func read():int{return Shared.read();}}
+            data Shared<N: int>{func read():int{return Shared.read();}}
             object data Shared {
-                private var value as int;
+                private var value: int
                 constructor(){}
-                func setValue(value as int){Shared.value=value;}
+                func setValue(value: int){Shared.value=value;}
                 private func read():int{return Shared.value;}
             }
         """
         val main = """
             func main(){
-                var local as int;
-                local=3;
-                local+=2;
-                dynamic var localResult=local;
-                var first=Box<4>(4);var second=Box<9>(9);var third=Box<4>(8);
-                Box<4>.setValue(4);Box<9>.setValue(9);
-                dynamic var firstResult=first.companionRead();
-                dynamic var secondResult=second.companionRead();
-                dynamic var firstOwn=Box<4>.inspect(first);
-                dynamic var secondOwn=Box<9>.inspect(second);
-                dynamic var thirdResult=third.read();
-                Shared.setValue(7);
-                var shared=Shared<2>();var otherShared=Shared<3>();
-                dynamic var sharedResult=shared.read();dynamic var otherSharedResult=otherShared.read();
+                var local: int
+                local=3
+                local+=2
+                dynamic localResult=local
+                var first=Box<4>(4);var second=Box<9>(9);var third=Box<4>(8)
+                Box<4>.setValue(4);Box<9>.setValue(9)
+                dynamic firstResult=first.companionRead()
+                dynamic secondResult=second.companionRead()
+                dynamic firstOwn=Box<4>.inspect(first)
+                dynamic secondOwn=Box<9>.inspect(second)
+                dynamic thirdResult=third.read()
+                Shared.setValue(7)
+                var shared=Shared<2>();var otherShared=Shared<3>()
+                dynamic sharedResult=shared.read();dynamic otherSharedResult=otherShared.read()
             }
         """
         compile("$declarations\n$main", output)
@@ -158,8 +158,8 @@ class GenericDeclarationContractTest {
         for (source in listOf(
             "import fixture.companions:*;\nfunc main(){Box<4>.value;}",
             "import fixture.companions:*;\nfunc main(){var item=Box<9>(9);Box<4>.inspect(item);}",
-            "data Bad<T as type>{}\nobject data Bad<N as int>{}",
-            "data Bad<T as type>{}\nobject data Bad<T as type,N as int>{}"
+            "data Bad<T>{}\nobject data Bad<N: int>{}",
+            "data Bad<T>{}\nobject data Bad<T,N: int>{}"
         )) {
             compile(source)
             assertTrue(Project.errorCount > 0, source)

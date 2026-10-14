@@ -1,11 +1,11 @@
 @MCFPPEntity
 data HoglinData : EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"CannotBeHunted">
-    var cannotBehunted as bool;
+    var cannotBehunted: bool
 
     @Name<"IsImmuneToZombification">
-    var isImmuneToZombification as bool;
+    var isImmuneToZombification: bool
 
     @Name<"TimeInOverworld">
-    var timeInOverworld as int;
+    var timeInOverworld: int
 }

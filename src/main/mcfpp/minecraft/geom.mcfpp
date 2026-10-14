@@ -1,9 +1,9 @@
 data Area{
-    var start as pos3;
-    var end as pos3;
+    var start: pos3
+    var end: pos3
 
-    constructor(start as pos3, end as pos3){
-        this.start = start;
-        this.end = end;
+    constructor(start: pos3, end: pos3){
+        this.start = start
+        this.end = end
     }
 }

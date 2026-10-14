@@ -1,5 +1,5 @@
 @From<"top.mcfpp.mni.resource.SoundData">
-data Sound: ResourceID;
+data Sound: ResourceID
 
 @From<"top.mcfpp.mni.resource.SoundObjectData">
-object data Sound: ResourceID;
+object data Sound: ResourceID

@@ -82,13 +82,15 @@ class CompoundParam(
             //解析只读参数
             params.readOnlyParams()?.let {
                 for (param in it.parameterList()?.parameter()?: emptyList()) {
-                    val type = MCFPPType.parseFromString(param.type().text, typeScope)?: run {
-                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(param.type().text))
+                    val typeName = top.mcfpp.antlr.DeclarationSyntax.readonlyTypeName(param)
+                    val type = MCFPPType.parseFromString(typeName, typeScope)?: run {
+                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(typeName))
                         MCFPPBaseType.Any
                     }
                     r.add(type)
                     if(type == MCFPPConcreteType.Type){
-                        typeScope.putType(param.Identifier().text, MCFPPGenericParamType(param.Identifier().text, arrayListOf(MCFPPBaseType.Any)))
+                        val name = top.mcfpp.antlr.DeclarationSyntax.parameterName(param, true, "p${r.size - 1}")
+                        typeScope.putType(name, MCFPPGenericParamType(name, arrayListOf(MCFPPBaseType.Any)))
                     }
                 }
             }

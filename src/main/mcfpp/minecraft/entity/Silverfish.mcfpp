@@ -1,2 +1,2 @@
 @MCFPPEntity
-data SilverfishData: EntityData, CreatureData, AIMobData;
+data SilverfishData: EntityData, CreatureData, AIMobData

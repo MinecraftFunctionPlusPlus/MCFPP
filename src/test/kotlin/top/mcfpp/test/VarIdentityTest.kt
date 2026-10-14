@@ -109,12 +109,12 @@ class VarIdentityTest {
 
     @Test fun legacyRecursiveExpressionsPreserveBothPendingValuesAcrossCalls() {
         val main = compile("""
-            func sum(value as int): int {
-                var ignored = 6/2;
+            func sum(value: int): int {
+                var ignored = 6/2
                 if(value <= 0){ return 0; }
-                return value + ((value + 1) + sum(value - 1));
+                return value + ((value + 1) + sum(value - 1))
             }
-            func main(){ dynamic var result = sum(4); }
+            func main(){ dynamic result = sum(4); }
         """)
         val sum = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("sum").single()
         assertNull(sum.typedIR)

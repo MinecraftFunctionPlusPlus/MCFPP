@@ -1,7 +1,7 @@
 data GrowableData {
     @Name<"Age">
-    var age as int;
+    var age: int
 
     @Name<"ForcedAge">
-    var forcedAge as int;
+    var forcedAge: int
 }

@@ -1,5 +1,5 @@
 @From<"top.mcfpp.mni.resource.PaintingVariantData">
-data PaintingVariant: ResourceID;
+data PaintingVariant: ResourceID
 
 @From<"top.mcfpp.mni.resource.PaintingVariantObjectData">
-object data PaintingVariant: ResourceID;
+object data PaintingVariant: ResourceID

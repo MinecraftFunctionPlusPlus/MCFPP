@@ -229,6 +229,8 @@ class NativeFunction : Function, Native {
             val (p,v) = parseParam(param, isReadOnly = true)
             readOnlyParams.add(p)
             scope.putVar(p.identifier, v)
+            if (p.type == top.mcfpp.type.MCFPPConcreteType.Type)
+                scope.putType(p.identifier, top.mcfpp.type.MCFPPGenericParamType(p.identifier, arrayListOf()))
         }
         hasDefaultValue = false
         for (param in n?.parameter().orEmpty()) {

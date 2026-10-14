@@ -1,2 +1,2 @@
 @MCFPPEntity
-data PotionData: EntityData, ProjectileData, MissileData ;
+data PotionData: EntityData, ProjectileData, MissileData

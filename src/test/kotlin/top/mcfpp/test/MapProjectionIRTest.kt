@@ -37,17 +37,17 @@ class MapProjectionIRTest {
     @Test fun projectionsKeepActualTypesNestedShapeAndIndependentStorage() = modes {
         val main = compile("""
             func main(){
-                var values = {entries:[{key:"numbers",value:[2,3]},{key:"flag",value:true}]} as map<any>;
-                var projected = values.keyValueSet;
-                var keys = values.keys;
-                projected["numbers"][0] = 7;
-                keys[0] = "changed";
-                var number = 0;
+                var values = {entries:[{key:"numbers",value:[2,3]},{key:"flag",value:true}]} as map<any>
+                var projected = values.keyValueSet
+                var keys = values.keys
+                projected["numbers"][0] = 7
+                keys[0] = "changed"
+                var number = 0
                 if(projected["flag"]){ number = projected["numbers"][-1]; }
-                dynamic var result = values["numbers"][0]*100 + projected["numbers"][0]*10 + number;
-                dynamic var first = values.keys.indexOf("numbers");
-                dynamic var direct = values.keyValueSet["numbers"][1] + 0;
-                dynamic var changed = values.keys.contains("changed");
+                dynamic result = values["numbers"][0]*100 + projected["numbers"][0]*10 + number
+                dynamic first = values.keys.indexOf("numbers")
+                dynamic direct = values.keyValueSet["numbers"][1] + 0
+                dynamic changed = values.keys.contains("changed")
             }
         """)
         val machine = execute(main)
@@ -59,19 +59,19 @@ class MapProjectionIRTest {
 
     @Test fun runtimeKeyListsSupportRecursiveReturnsAndTargetsWithoutMacros() = modes {
         val main = compile("""
-            func names(values as map<int>, depth as int): list<string> {
+            func names(values: map<int>, depth: int): list<string> {
                 if(depth == 0){ return values.keys; }
-                return names(values,depth-1);
+                return names(values,depth-1)
             }
-            func first(values as map<int>): string { return values.keys[0]; }
+            func first(values: map<int>): string { return values.keys[0]; }
             func main(){
-                var values = {entries:[{key:"",value:2},{key:"q\".[]\\end",value:3}]} as map<int>;
-                var keys = names(values,2);
-                var key = first(values);
-                values.clear();
-                dynamic var found = keys.contains("q\".[]\\end");
-                dynamic var captured = keys.contains(key);
-                dynamic var empty = values.keys.contains("q\".[]\\end");
+                var values = {entries:[{key:"",value:2},{key:"q\".[]\\end",value:3}]} as map<int>
+                var keys = names(values,2)
+                var key = first(values)
+                values.clear()
+                dynamic found = keys.contains("q\".[]\\end")
+                dynamic captured = keys.contains(key)
+                dynamic empty = values.keys.contains("q\".[]\\end")
             }
         """, "1.20.1")
         val machine = execute(main)
@@ -84,12 +84,12 @@ class MapProjectionIRTest {
 
     @Test fun projectionArgumentsRetainTheirValuesBeforeLaterStaticCalls() = modes {
         val main = compile("""
-            func clear(static values as map<list<int>>): int { values.clear(); return 1; }
-            func take(value as dict<list<int>>, ignored as int): int { return value["first"][0]; }
+            func clear(static values: map<list<int>>): int { values.clear(); return 1; }
+            func take(value: dict<list<int>>, ignored: int): int { return value["first"][0]; }
             func main(){
-                var values = {entries:[{key:"first",value:[2,3]}]} as map<list<int>>;
-                dynamic var result = take(values.keyValueSet,clear(values));
-                dynamic var empty = values.isEmpty();
+                var values = {entries:[{key:"first",value:[2,3]}]} as map<list<int>>
+                dynamic result = take(values.keyValueSet,clear(values))
+                dynamic empty = values.isEmpty()
             }
         """)
         val machine = execute(main)
@@ -100,16 +100,16 @@ class MapProjectionIRTest {
     @Test fun dictionaryProjectionRebuildsCurrentFieldsOnLoopBackedges() = modes {
         val main = compile("""
             func main(){
-                var values = {entries:[{key:"first",value:2}]} as map<int>;
-                var count = 0;
-                var sum = 0;
+                var values = {entries:[{key:"first",value:2}]} as map<int>
+                var count = 0
+                var sum = 0
                 while(count < 3){
-                    var copied = values.keyValueSet;
-                    sum += copied["first"];
-                    values["first"] += 1;
-                    count += 1;
+                    var copied = values.keyValueSet
+                    sum += copied["first"]
+                    values["first"] += 1
+                    count += 1
                 }
-                dynamic var result = sum;
+                dynamic result = sum
             }
         """, "1.20.2")
         assertEquals(9, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -117,7 +117,7 @@ class MapProjectionIRTest {
 
     @Test fun dictionaryProjectionRejectsUnprovenKeysEmptyNamesAndOldLayouts() {
         for (source in listOf(
-            "func project(values as map<int>): dict<int> { return values.keyValueSet; }\nfunc main(){ var values = {entries:[{key:\"a\",value:2}]} as map<int>; var result = project(values); }",
+            "func project(values: map<int>): dict<int> { return values.keyValueSet; }\nfunc main(){ var values = {entries:[{key:\"a\",value:2}]} as map<int>; var result = project(values); }",
             "func main(){ var values = {entries:[{key:\"\",value:2}]} as map<int>; var result = values.keyValueSet; }",
             "func main(){ var values = {keys:[],values:{}} as map<int>; var result = values.keys; }")) {
             MCFPPStringTest.readFromString(source, version = "26.3")

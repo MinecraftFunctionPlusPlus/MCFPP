@@ -1,10 +1,10 @@
 @MCFPPEntity
 data PandaData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"HiddenGene">
-    var hiddenGene as PandaGene;
+    var hiddenGene: PandaGene
 
     @Name<"MainGene">
-    var mainGene as PandaGene;
+    var mainGene: PandaGene
 }
 
 

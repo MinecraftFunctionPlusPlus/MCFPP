@@ -1,14 +1,14 @@
-func print(int) = top.mcfpp.mni.System.printInt;
-func print(bool) = top.mcfpp.mni.System.printBool;
-func print(string) = top.mcfpp.mni.System.printString;
-func print(nbt) = top.mcfpp.mni.System.printNbt;
-func print(any) = top.mcfpp.mni.System.printAny;
-func print(DataObject) = top.mcfpp.mni.System.printObject;
-func print(text) = top.mcfpp.mni.System.printText;
+func print(int) = top.mcfpp.mni.System.printInt
+func print(bool) = top.mcfpp.mni.System.printBool
+func print(string) = top.mcfpp.mni.System.printString
+func print(nbt) = top.mcfpp.mni.System.printNbt
+func print(any) = top.mcfpp.mni.System.printAny
+func print(DataObject) = top.mcfpp.mni.System.printObject
+func print(text) = top.mcfpp.mni.System.printText
 
 // func insert(string) = top.mcfpp.mni.System.insert;
-func debug() = top.mcfpp.mni.System.debug;
+func debug() = top.mcfpp.mni.System.debug
 
-func info(string) = top.mcfpp.mni.System.info;
-func warn(string) = top.mcfpp.mni.System.warn;
-func error(string) = top.mcfpp.mni.System.error;
+func info(string) = top.mcfpp.mni.System.info
+func warn(string) = top.mcfpp.mni.System.warn
+func error(string) = top.mcfpp.mni.System.error

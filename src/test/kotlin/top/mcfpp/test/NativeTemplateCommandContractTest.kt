@@ -95,8 +95,8 @@ class NativeTemplateCommandContractTest {
 
             captured.clear()
             MCFPPStringTest.readFromString("""
-                func rejected() = top.mcfpp.test.NativeRegistrationContractHelper.legacyFree;
-                func accepted() = top.mcfpp.test.NativeRegistrationContractHelper.valid;
+                func rejected() = top.mcfpp.test.NativeRegistrationContractHelper.legacyFree
+                func accepted() = top.mcfpp.test.NativeRegistrationContractHelper.valid
                 func main(){}
             """.trimIndent())
             val declarationDiagnostics = captured.joinToString("\n")
@@ -138,33 +138,33 @@ class NativeTemplateCommandContractTest {
             assertFalse(commands.any { "store success" in it && "run $operation" in it })
         }
         reject("""
-            import mcfpp.minecraft:*;import mcfpp.minecraft.other:*;import mcfpp.minecraft.std:*;
-            func main(){var area as Area;var result=clone(area,0 0 0,CloneMaskMode.replace,CloneOperation.normal);}
+            import mcfpp.minecraft:*;import mcfpp.minecraft.other:*;import mcfpp.minecraft.std:*
+            func main(){var area: Area;var result=clone(area,0 0 0,CloneMaskMode.replace,CloneOperation.normal);}
         """, operation = "clone")
         reject("""
-            import mcfpp.minecraft:*;import mcfpp.minecraft.other:*;import mcfpp.minecraft.std:*;
+            import mcfpp.minecraft:*;import mcfpp.minecraft.other:*;import mcfpp.minecraft.std:*
             func main(){var area=Area(^ ^ ^,1 2 3);var result=clone(area,0 0 0,CloneMaskMode.replace,CloneOperation.normal);}
         """, operation = "clone")
         reject("""
-            import mcfpp.minecraft.other:*;import mcfpp.minecraft.resource:*;import mcfpp.minecraft.std:*;
-            func main(){dynamic var index=3;var slot=Slot(index,SlotType.container);
+            import mcfpp.minecraft.other:*;import mcfpp.minecraft.resource:*;import mcfpp.minecraft.std:*
+            func main(){dynamic index=3;var slot=Slot(index,SlotType.container)
                 var loot=LootTable();loot.id="fixture:loot";var result=lootReplace(0 0 0,slot,loot);}
         """, version = "1.19.4", operation = "loot")
     }
 
     @Test fun predicateFactoryCopiesNormalIdAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){var box=Box();dynamic var result=box.observe(\"fixture:original\");}"
+        val mainSource = "func main(){var box=Box();dynamic result=box.observe(\"fixture:original\");}"
         write("""
-            namespace fixture.contracts;
-            import mcfpp.minecraft.resource:*;
+            namespace fixture.contracts
+            import mcfpp.minecraft.resource:*
             data Box {
-                func observe(id as string):int {
-                    var original=Predicate.of(id);
-                    var copied=original;
-                    id="fixture:changed";
+                func observe(id: string):int {
+                    var original=Predicate.of(id)
+                    var copied=original
+                    id="fixture:changed"
                     /data modify storage fixture:observed original set from storage mcfpp:system stack_frame[0].original.id
                     /data modify storage fixture:observed copied set from storage mcfpp:system stack_frame[0].copied.id
-                    return 7;
+                    return 7
                 }
             }
             $mainSource
@@ -187,51 +187,51 @@ class NativeTemplateCommandContractTest {
     }
 
     @Test fun nominalAreaAndSlotsUseActualFieldsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){var box=Box();dynamic var result=box.observe(3,SlotType.container,\"fixture:loot\",true);}"
+        val mainSource = "func main(){var box=Box();dynamic result=box.observe(3,SlotType.container,\"fixture:loot\",true);}"
         write("""
-            namespace fixture.contracts;
-            import mcfpp.minecraft:*;
-            import mcfpp.minecraft.other:*;
-            import mcfpp.minecraft.resource:*;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.contracts
+            import mcfpp.minecraft:*
+            import mcfpp.minecraft.other:*
+            import mcfpp.minecraft.resource:*
+            import mcfpp.minecraft.std:*
             data ConditionalArea:Area {
-                constructor(flag as bool) {
-                    this.start=1 2 3;
-                    this.end=4 5 6;
+                constructor(flag: bool) {
+                    this.start=1 2 3
+                    this.end=4 5 6
                     if(flag){
                         /say constructed-area
                     }
                 }
             }
             data DifferentArea:Area {
-                constructor(flag as bool) {
-                    this.start=1 2 3;
+                constructor(flag: bool) {
+                    this.start=1 2 3
                     if(flag){this.end=4 5 6;}
                     else{this.end=10 11 12;}
                 }
             }
             data Box {
-                func reject(flag as bool) {
-                    var area=DifferentArea(flag);
-                    clone(area,7 8 9,CloneMaskMode.replace,CloneOperation.normal);
+                func reject(flag: bool) {
+                    var area=DifferentArea(flag)
+                    clone(area,7 8 9,CloneMaskMode.replace,CloneOperation.normal)
                 }
-                func observe(index as int,kind as SlotType,id as string,flag as bool):int {
-                    var area=Area(1 2 3,4 5 6);
-                    var areaCopy=area;
-                    area.end=10 11 12;
-                    clone(areaCopy,7 8 9,CloneMaskMode.replace,CloneOperation.normal);
-                    clone(area,7 8 9,CloneMaskMode.replace,CloneOperation.normal);
-                    var conditional=ConditionalArea(flag);
-                    clone(conditional,7 8 9,CloneMaskMode.replace,CloneOperation.normal);
-                    var indexed=Slot(index,kind);
-                    var copied=indexed;
-                    indexed.index=index+1;
-                    var unindexed=Slot(SlotType.weapon_mainhand);
-                    var loot=LootTable();loot.id=id;
-                    var first=lootReplace(0 0 0,copied,loot);
-                    var second=lootReplace(0 0 0,unindexed,loot);
-                    var third=lootReplace(0 0 0,indexed,loot);
-                    return 7;
+                func observe(index: int,kind: SlotType,id: string,flag: bool):int {
+                    var area=Area(1 2 3,4 5 6)
+                    var areaCopy=area
+                    area.end=10 11 12
+                    clone(areaCopy,7 8 9,CloneMaskMode.replace,CloneOperation.normal)
+                    clone(area,7 8 9,CloneMaskMode.replace,CloneOperation.normal)
+                    var conditional=ConditionalArea(flag)
+                    clone(conditional,7 8 9,CloneMaskMode.replace,CloneOperation.normal)
+                    var indexed=Slot(index,kind)
+                    var copied=indexed
+                    indexed.index=index+1
+                    var unindexed=Slot(SlotType.weapon_mainhand)
+                    var loot=LootTable();loot.id=id
+                    var first=lootReplace(0 0 0,copied,loot)
+                    var second=lootReplace(0 0 0,unindexed,loot)
+                    var third=lootReplace(0 0 0,indexed,loot)
+                    return 7
                 }
             }
             $mainSource
@@ -278,26 +278,26 @@ class NativeTemplateCommandContractTest {
         check(consume("import mcfpp.minecraft.other:*;\n$mainSource", output), output.resolve("fresh"))
         Project.config.includes = arrayListOf(output.toString())
         MCFPPStringTest.readFromString("""
-            import fixture.contracts:*;
+            import fixture.contracts:*
             func main(){var box=Box();box.reject(true);}
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0, "Different coordinates on unknown constructor paths require a capability diagnostic")
     }
 
     @Test fun nativeBossbarPropertiesPublishUnknownResultsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){var box=Box();dynamic var result=box.observe(\"fixture:bar\",11,true);}"
+        val mainSource = "func main(){var box=Box();dynamic result=box.observe(\"fixture:bar\",11,true);}"
         write("""
-            namespace fixture.contracts;
-            import mcfpp.minecraft.resource:*;
+            namespace fixture.contracts
+            import mcfpp.minecraft.resource:*
             data Box {
-                func observe(id as string,number as int,flag as bool):int {
-                    var bar=BossBar(id);
-                    bar.max=number;bar.value=number;bar.visible=flag;
-                    dynamic var maximum=bar.max;
-                    dynamic var current=bar.value;
-                    dynamic var visible=bar.visible;
-                    number+=1;flag=false;
-                    return number;
+                func observe(id: string,number: int,flag: bool):int {
+                    var bar=BossBar(id)
+                    bar.max=number;bar.value=number;bar.visible=flag
+                    dynamic maximum=bar.max
+                    dynamic current=bar.value
+                    dynamic visible=bar.visible
+                    number+=1;flag=false
+                    return number
                 }
             }
             $mainSource

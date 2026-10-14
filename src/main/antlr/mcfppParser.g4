@@ -175,7 +175,7 @@ templateFunctionDeclaration
     ;
 
 templateFieldDeclaration
-    :    CONST? NL* VAR NL* Identifier NL* (AS NL* templateType)? (NL* ASSIGNMENT expression)? NL* accessor?
+    :   (VAR | CONST) NL* Identifier NL* (COLON NL* templateType)? (NL* ASSIGNMENT expression)? NL* accessor?
     ;
 
 templateType
@@ -267,10 +267,10 @@ templateConstructorDeclaration
 
 //变量声明
 fieldDeclaration
-    :   fieldModifier? NL* VAR NL* Identifier NL* (AS NL* type)? NL* (ASSIGNMENT NL* expression)?
+    :   (VAR | fieldModifier) NL* Identifier NL* (COLON NL* type)? NL* (ASSIGNMENT NL* expression)?
     ;
 
-fieldModifier : CONST|DYNAMIC|IMPORT;
+fieldModifier : CONST | DYNAMIC | IMPORT NL* VAR;
 
 functionParams
     :   readOnlyParams? NL* normalParams
@@ -291,7 +291,7 @@ parameterList
 
 //参数
 parameter
-    :   (OUT | IN)? NL* STATIC? NL* VAR? NL* (Identifier NL* AS NL*)? type (NL* ASSIGNMENT NL* value)?
+    :   (OUT | IN)? NL* STATIC? NL* (Identifier NL* COLON NL*)? type (NL* ASSIGNMENT NL* value)?
     ;
 
 //能作为语句的表达式
@@ -475,11 +475,11 @@ controlStatement
     ;
 
 ifStatement
-    :   IF NL* bucketExpression NL* block (NL* elseIfStatement)* (NL* elseStatement)?
+    :   IF NL* expression NL* block (NL* elseIfStatement)* (NL* elseStatement)?
     ;
 
 elseIfStatement
-    :   ELSE NL* IF NL* bucketExpression NL* block
+    :   ELSE NL* IF NL* expression NL* block
     ;
 
 elseStatement
@@ -487,11 +487,11 @@ elseStatement
     ;
 
 whileStatement
-    :   WHILE NL* bucketExpression NL* block
+    :   WHILE NL* expression NL* block
     ;
 
 doWhileStatement
-    :   DO NL* block NL* WHILE NL* bucketExpression
+    :   DO NL* block NL* WHILE NL* expression
     ;
 
 tryStoreStatement
@@ -503,7 +503,7 @@ returnStatement
     ;
 
 curlBlock
-    :   LCURL NL* (statement (separator statement)* separator)? NL* RCURL
+    :   LCURL NL* (statement (separator statement)* separator?)? NL* RCURL
     ;
 
 block
@@ -526,7 +526,7 @@ typeBody
     |   ENTITY NL* LANGLE NL* nbtInt NL* RANGLE
     |   ENTITY NL* LANGLE NL* LineString (NL* COMMA NL* LineString)* NL* RANGLE
     |   ENTITY NL* LANGLE NL* nbtInt NL* COMMA NL* LineString (NL* COMMA NL* LineString)* NL* RANGLE
-    |   className NL* readOnlyArgs?
+    |   className (NL* readOnlyArgs)?
     |   Identifier
     |   unionType
     |   unionTemplateType

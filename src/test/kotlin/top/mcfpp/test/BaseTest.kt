@@ -15,9 +15,9 @@ class BaseTest {
         val test =
             """
                 func base(){
-                    var i = 0;
-                    import var p as int;
-                    i = i + p;
+                    var i = 0
+                    import var p: int
+                    i = i + p
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test, arrayOf("-debug"))
@@ -28,7 +28,7 @@ class BaseTest {
         val test =
             """
                 func hello(){
-                    print("Hello World");
+                    print("Hello World")
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test)
@@ -39,13 +39,13 @@ class BaseTest {
         val test =
             """
                 func main(){
-                    dynamic var qwq as int;
-                    test(qwq);
+                    dynamic qwq: int
+                    test(qwq)
                 }
                 
-                func test(qwq as int){
-                    var a = qwq + 1;
-                    print(a);
+                func test(qwq: int){
+                    var a = qwq + 1
+                    print(a)
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test, arrayOf("-debug"))
@@ -55,15 +55,15 @@ class BaseTest {
     fun functionReturnTest(){
         val test =
             """
-                func test<i as int>():int{
-                     var p = i + 1;
-                     return p;
+                func test<i: int>():int{
+                     var p = i + 1
+                     return p
                 }
 
                 func main(){
-                    var q = test<2>();
-                    print(q);
-                    print(test<6>());
+                    var q = test<2>()
+                    print(q)
+                    print(test<6>())
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test)
@@ -73,16 +73,16 @@ class BaseTest {
     fun funcDefaultValueTest(){
         val test =
             """
-                func test(i as int = 1): int{
-                     var p = i + 1;
-                     return p;
+                func test(i: int = 1): int{
+                     var p = i + 1
+                     return p
                 }
 
                 func main(){
-                    var a = test(10);
-                    print(a);
-                    var b = test();
-                    print(b);
+                    var a = test(10)
+                    print(a)
+                    var b = test()
+                    print(b)
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test, arrayOf("-debug"))
@@ -92,10 +92,10 @@ class BaseTest {
     fun topStatementTest(){
         val test =
             """
-                var i = 0;
-                dynamic var qwq = 1;
-                print(i);
-                print(qwq);
+                var i = 0
+                dynamic qwq = 1
+                print(i)
+                print(qwq)
             """.trimIndent()
         MCFPPStringTest.readFromString(test)
         assertEquals(0, Project.errorCount)
@@ -110,8 +110,8 @@ class BaseTest {
         val test =
             """
                 func test(): int{
-                    dynamic var a = 1;
-                    return a;
+                    dynamic a = 1
+                    return a
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test)

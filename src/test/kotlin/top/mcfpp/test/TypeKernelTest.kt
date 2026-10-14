@@ -25,9 +25,9 @@ class TypeKernelTest {
     @Test fun hostInteropCannotCreateOrdinaryLanguageValues() {
         MCFPPStringTest.readFromString("""
             func main(){
-                dynamic var input as int = 1;
-                var erased as any = input::jvm;
-                print(erased);
+                dynamic input: int = 1
+                var erased: any = input::jvm
+                print(erased)
             }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0, "Host descriptors cannot be exposed by language expressions")
@@ -41,11 +41,11 @@ class TypeKernelTest {
     @Test fun branchMaterializationKeepsTheIdentityOfNbtScoreMappings() {
         MCFPPStringTest.readFromString("""
             func arithmetic(){
-                var small = 7b;
-                var wider = 300s;
-                dynamic var condition = true;
+                var small = 7b
+                var wider = 300s
+                dynamic condition = true
                 if(condition){ small = 8b; } else { small = 9b; }
-                var result = toInt(small) + toInt(wider);
+                var result = toInt(small) + toInt(wider)
             }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
@@ -57,9 +57,9 @@ class TypeKernelTest {
     @Test fun anyWithARuntimePredicateKeepsBoolTypeWithoutClaimingAConstant() {
         MCFPPStringTest.readFromString("""
             func arithmetic(){
-                dynamic var input as bool = true;
-                var erased as any = !input;
-                var result = erased == true;
+                dynamic input: bool = true
+                var erased: any = !input
+                var result = erased == true
             }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
@@ -94,10 +94,10 @@ class TypeKernelTest {
     }
     @Test fun aliasesResolveTransparentlyIncludingForwardChainsAndContainerArguments() {
         MCFPPStringTest.readFromString("""
-            typealias Number as Count;
-            typealias int as Number;
-            typealias list<Count> as Counts;
-            func consume(value as Count, values as Counts) {}
+            typealias Number as Count
+            typealias int as Number
+            typealias list<Count> as Counts
+            func consume(value: Count, values: Counts) {}
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
         val scope = GlobalScope.localNamespaces["default.test"]!!.scope
@@ -111,9 +111,9 @@ class TypeKernelTest {
 
     @Test fun cyclicAliasesReportAnErrorWithoutRecursingIndefinitely() {
         MCFPPStringTest.readFromString("""
-            typealias Second as First;
-            typealias First as Second;
-            func consume(value as First) {}
+            typealias Second as First
+            typealias First as Second
+            func consume(value: First) {}
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0)
         assertNull(GlobalScope.localNamespaces["default.test"]!!.scope.getType("First"))
@@ -183,7 +183,7 @@ class TypeKernelTest {
             MCFPPStringTest.readFromString("func arithmetic(){ var encoded = $literal; var result = encoded + encoded; }", version = "26.3")
             assertTrue(Project.errorCount > 0, literal)
         }
-        MCFPPStringTest.readFromString("func arithmetic(){ var encoded = 1b; var result as int = encoded; }", version = "26.3")
+        MCFPPStringTest.readFromString("func arithmetic(){ var encoded = 1b; var result: int = encoded; }", version = "26.3")
         assertTrue(Project.errorCount > 0)
     }
 
@@ -271,7 +271,7 @@ class TypeKernelTest {
 
     @Test fun parserAcceptsObjectAndMismatchOnSingleOverloadIsRejected() {
         MCFPPStringTest.readFromString("""
-            func consume(value as object) {}
+            func consume(value: object) {}
             func arithmetic(){ consume(1); }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
@@ -282,9 +282,9 @@ class TypeKernelTest {
     @Test fun anyKeepsActualTypeWhileForcingRuntimeValueAndPromotesThroughItsSourceType() {
         MCFPPStringTest.readFromString("""
             func arithmetic(){
-                dynamic var value as any = 3;
-                var result = value + 2;
-                var promoted as float = value;
+                dynamic value: any = 3
+                var result = value + 2
+                var promoted: float = value
             }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
@@ -296,9 +296,9 @@ class TypeKernelTest {
     }
 
     @Test fun unknownAnyRequiresAsAndObjectDoesNotExposeConcreteMembers() {
-        MCFPPStringTest.readFromString("func arithmetic(){ var value as any; var result = value + 2; }", version = "26.3")
+        MCFPPStringTest.readFromString("func arithmetic(){ var value: any; var result = value + 2; }", version = "26.3")
         assertTrue(Project.errorCount > 0)
-        MCFPPStringTest.readFromString("func arithmetic(){ var value as object = 3; value.toText(); }", version = "26.3")
+        MCFPPStringTest.readFromString("func arithmetic(){ var value: object = 3; value.toText(); }", version = "26.3")
         assertTrue(Project.errorCount > 0)
         assertTrue(ParameterMatcher.accepts(MCInt("runtime"), MCFPPBaseType.Int))
         assertTrue(ParameterMatcher.accepts(MCInt(1), MCFPPBaseType.Int))

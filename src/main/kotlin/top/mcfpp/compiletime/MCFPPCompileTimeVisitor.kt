@@ -42,14 +42,14 @@ class MCFPPCompileTimeVisitor(
     }
 
     override fun visitIfStatement(ctx: mcfppParser.IfStatementContext): Any? {
-        val condtion= exprVisitor.visit(ctx.bucketExpression().expression())
+        val condtion= exprVisitor.visit(ctx.expression())
         if(closedCondition(condtion) ?: return null){
             visit(ctx.block())
         }
         else{
             var elseIfBool = false
             for(elseIfStatementContext in ctx.elseIfStatement()){
-                val elseIfCondition = exprVisitor.visit(elseIfStatementContext.bucketExpression().expression())
+                val elseIfCondition = exprVisitor.visit(elseIfStatementContext.expression())
                 if(closedCondition(elseIfCondition) ?: return null){
                     visit(elseIfStatementContext.block())
                     elseIfBool = true
@@ -73,7 +73,7 @@ class MCFPPCompileTimeVisitor(
 
     override fun visitWhileStatement(ctx: mcfppParser.WhileStatementContext): Any? {
         while(true){
-            val condition = exprVisitor.visit(ctx.bucketExpression().expression())
+            val condition = exprVisitor.visit(ctx.expression())
             if(closedCondition(condition) ?: return null){
                 visit(ctx.block())
                 if(curBreak||curReturn){
@@ -95,7 +95,7 @@ class MCFPPCompileTimeVisitor(
         visit(ctx.block())
         if(!curBreak||!curReturn||!curContinue){
             while(true){
-                val condition = exprVisitor.visit(ctx.bucketExpression().expression())
+                val condition = exprVisitor.visit(ctx.expression())
                 if(closedCondition(condition) ?: return null){
                     visit(ctx.block())
                     if(curBreak||curReturn){

@@ -48,17 +48,17 @@ import kotlin.test.Test
 class LibFieldAccessTest {
     @Test fun restoredFieldsKeepDeclarationOwnersThroughInheritanceAndNestedBodies() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             data Base {
-                private var hidden as int;
-                protected var shared as int;
+                private var hidden: int
+                protected var shared: int
                 constructor(){ this.hidden=4; }
                 func read():int {
                     if(true){
-                        dynamic var counter=0;
+                        dynamic counter=0
                         while(counter<1){ this.hidden=this.hidden+1; counter=counter+1; }
                     }
-                    return this.hidden;
+                    return this.hidden
                 }
             }
             data Child:Base {
@@ -66,16 +66,16 @@ class LibFieldAccessTest {
                 func readProtected():int { return this.shared; }
             }
             func main(){
-                var base=Base(); var child=Child();
-                dynamic var first=base.read(); dynamic var second=child.readProtected();
+                var base=Base(); var child=Child()
+                dynamic first=base.read(); dynamic second=child.readProtected()
             }
         """, output)
         val original = GlobalScope.localNamespaces.getValue("fixture.fields").scope.getTemplate("Base")!!
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var base=Base(); var child=Child();
-                dynamic var first=base.read(); dynamic var second=child.readProtected();
+                var base=Base(); var child=Child()
+                dynamic first=base.read(); dynamic second=child.readProtected()
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -114,18 +114,18 @@ class LibFieldAccessTest {
 
     @Test fun restoredObjectFieldsAllowLexicalStaticAccessAndRejectExternalReads() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             object data Defaults {
-                private var value as int=4;
-                func setValue(v as int){ Defaults.value=v; }
+                private var value: int=4
+                func setValue(v: int){ Defaults.value=v; }
                 func read():int { return Defaults.value; }
             }
-            func main(){ Defaults.setValue(7); dynamic var result=Defaults.read(); }
+            func main(){ Defaults.setValue(7); dynamic result=Defaults.read(); }
         """, output)
         val original = GlobalScope.localNamespaces.getValue("fixture.fields").scope.getObject("Defaults")!!
         val main = consume("""
-            import fixture.fields:*;
-            func main(){ Defaults.setValue(7); dynamic var result=Defaults.read(); }
+            import fixture.fields:*
+            func main(){ Defaults.setValue(7); dynamic result=Defaults.read(); }
         """, output)
         assertEquals(0, Project.errorCount)
         val restored = GlobalScope.getObject("fixture.fields", "Defaults") as ObjectDataTemplate
@@ -145,7 +145,7 @@ class LibFieldAccessTest {
         val machine = execute(main, output)
         assertEquals(7, machine.read(main.scope.getVar("result") as MCInt))
         consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){ Defaults.value; }
         """, output)
         assertTrue(Project.errorCount > 0, "The object's private static field must reject external reads")
@@ -153,9 +153,9 @@ class LibFieldAccessTest {
 
     @Test fun unqualifiedFieldAccessChecksDeclarationsWithoutRejectingLocalShadows() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             data Base {
-                private var hidden as int;
+                private var hidden: int
                 constructor(){ this.hidden=4; }
                 func read():int { return this.hidden; }
             }
@@ -163,25 +163,25 @@ class LibFieldAccessTest {
                 func shadow():int { var hidden=8; return hidden; }
             }
             object data Defaults {
-                private var value as int=4;
-                func setValue(v as int){ Defaults.value=v; }
+                private var value: int=4
+                func setValue(v: int){ Defaults.value=v; }
                 func read():int { return value; }
             }
             func main(){
-                var base=Base(); var child=Intruder();
-                Defaults.setValue(7);
-                dynamic var result=Defaults.read();
-                dynamic var shadow=child.shadow(); dynamic var qualified=base.read();
+                var base=Base(); var child=Intruder()
+                Defaults.setValue(7)
+                dynamic result=Defaults.read()
+                dynamic shadow=child.shadow(); dynamic qualified=base.read()
             }
         """, output)
         val original = GlobalScope.localNamespaces.getValue("fixture.fields").scope.getObject("Defaults")!!
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var base=Base(); var child=Intruder();
-                Defaults.setValue(7);
-                dynamic var result=Defaults.read();
-                dynamic var shadow=child.shadow(); dynamic var qualified=base.read();
+                var base=Base(); var child=Intruder()
+                Defaults.setValue(7)
+                dynamic result=Defaults.read()
+                dynamic shadow=child.shadow(); dynamic qualified=base.read()
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -200,7 +200,7 @@ class LibFieldAccessTest {
         assertEquals(8, machine.read(main.scope.getVar("shadow") as MCInt))
         assertEquals(4, machine.read(main.scope.getVar("qualified") as MCInt))
         consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             data IntruderLeak:Base {
                 func leak():int { return hidden; }
             }
@@ -211,17 +211,17 @@ class LibFieldAccessTest {
 
     @Test fun unqualifiedInstanceFieldsUseTheCurrentReceiverInNestedBodies() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             data Base {
-                private var hidden as int;
-                protected var shared as int;
-                constructor(v as int){ hidden=v; }
+                private var hidden: int
+                protected var shared: int
+                constructor(v: int){ hidden=v; }
                 func increment():int {
                     if(true){
-                        dynamic var counter=0;
+                        dynamic counter=0
                         while(counter<1){ hidden=hidden+1; counter=counter+1; }
                     }
-                    return hidden;
+                    return hidden
                 }
                 func read():int { return hidden; }
                 func shadow():int { var hidden=8; return hidden; }
@@ -231,22 +231,22 @@ class LibFieldAccessTest {
                 func readProtected():int { return shared; }
             }
             func main(){
-                var first=Base(4); var second=Base(9); var child=Child();
-                dynamic var incremented=first.increment();
-                dynamic var unchanged=second.read();
-                dynamic var shadowed=first.shadow();
-                dynamic var inherited=child.readProtected();
+                var first=Base(4); var second=Base(9); var child=Child()
+                dynamic incremented=first.increment()
+                dynamic unchanged=second.read()
+                dynamic shadowed=first.shadow()
+                dynamic inherited=child.readProtected()
             }
         """, output)
         val original = GlobalScope.localNamespaces.getValue("fixture.fields").scope.getTemplate("Base")!!
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var first=Base(4); var second=Base(9); var child=Child();
-                dynamic var incremented=first.increment();
-                dynamic var unchanged=second.read();
-                dynamic var shadowed=first.shadow();
-                dynamic var inherited=child.readProtected();
+                var first=Base(4); var second=Base(9); var child=Child()
+                dynamic incremented=first.increment()
+                dynamic unchanged=second.read()
+                dynamic shadowed=first.shadow()
+                dynamic inherited=child.readProtected()
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -260,23 +260,23 @@ class LibFieldAccessTest {
 
     @Test fun genericTemplateRoundTripKeepsReadonlyArgumentsAndPrivateOwners() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
-            data Box<N as int> {
-                private var value as int;
-                constructor(v as int){ this.value=v; }
+            namespace fixture.fields
+            data Box<N: int> {
+                private var value: int
+                constructor(v: int){ this.value=v; }
                 private func secret():int { return this.value; }
                 func read():int { return this.secret(); }
                 func readArgument():int { return N; }
             }
             func main(){
-                dynamic var n=3;
-                var first=Box<n>(4); var second=Box<3>(9);
-                n=5;
-                var third=Box<n>(6);
-                dynamic var firstResult=first.read();
-                dynamic var secondResult=second.read();
-                dynamic var thirdResult=third.read();
-                dynamic var firstArgument=first.readArgument(); dynamic var thirdArgument=third.readArgument();
+                dynamic n=3
+                var first=Box<n>(4); var second=Box<3>(9)
+                n=5
+                var third=Box<n>(6)
+                dynamic firstResult=first.read()
+                dynamic secondResult=second.read()
+                dynamic thirdResult=third.read()
+                dynamic firstArgument=first.readArgument(); dynamic thirdArgument=third.readArgument()
             }
         """, output)
         val original = assertIs<GenericDataTemplate>(
@@ -296,14 +296,14 @@ class LibFieldAccessTest {
         val thirdTypeId = thirdSource.getType().typeId
         assertNotEquals(firstTypeId, thirdTypeId)
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var third=Box<5>(6);
-                var first=Box<3>(4); var second=Box<3>(9);
-                dynamic var firstResult=first.read();
-                dynamic var secondResult=second.read();
-                dynamic var thirdResult=third.read();
-                dynamic var firstArgument=first.readArgument(); dynamic var thirdArgument=third.readArgument();
+                var third=Box<5>(6)
+                var first=Box<3>(4); var second=Box<3>(9)
+                dynamic firstResult=first.read()
+                dynamic secondResult=second.read()
+                dynamic thirdResult=third.read()
+                dynamic firstArgument=first.readArgument(); dynamic thirdArgument=third.readArgument()
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -338,16 +338,16 @@ class LibFieldAccessTest {
         assertEquals(3, machine.read(main.scope.getVar("firstArgument") as MCInt))
         assertEquals(5, machine.read(main.scope.getVar("thirdArgument") as MCInt))
         consume("""
-            import fixture.fields:*;
-            func make(n as int):int {
-                var item=Box<n>(1);
-                return item.read();
+            import fixture.fields:*
+            func make(n: int):int {
+                var item=Box<n>(1)
+                return item.read()
             }
             func main(){ make(3); }
         """, output)
         assertTrue(Project.errorCount > 0, "A runtime parameter must not supply a readonly template argument")
         consume("""
-            data Plain { constructor(v as int){} }
+            data Plain { constructor(v: int){} }
             func main(){ var item=Plain<3>(1); }
         """, output)
         assertTrue(Project.errorCount > 0, "An ordinary template must reject readonly template arguments")
@@ -355,16 +355,16 @@ class LibFieldAccessTest {
 
     @Test fun genericTemplateTypeArgumentsBindFieldsConstructorsAndReturnsAfterRoundTrip() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
-            data Cell<T as type> {
-                private var value as T;
-                constructor(v as T){ this.value=v; }
+            namespace fixture.fields
+            data Cell<T> {
+                private var value: T
+                constructor(v: T){ this.value=v; }
                 func read():T { return this.value; }
             }
             func main(){
-                var first=Cell<int>(4); var second=Cell<int>(9); var flag=Cell<bool>(true);
-                dynamic var firstResult=first.read(); dynamic var secondResult=second.read();
-                dynamic var flagResult=flag.read();
+                var first=Cell<int>(4); var second=Cell<int>(9); var flag=Cell<bool>(true)
+                dynamic firstResult=first.read(); dynamic secondResult=second.read()
+                dynamic flagResult=flag.read()
                 /scoreboard players set #generic_bool result 0
                 if(flagResult){
                     /scoreboard players set #generic_bool result 1
@@ -396,12 +396,12 @@ class LibFieldAccessTest {
         val boolTypeId = sourceTemplates[2].getType().typeId
         assertNotEquals(intTypeId, boolTypeId)
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var flag=Cell<bool>(true);
-                var first=Cell<int>(4); var second=Cell<int>(9);
-                dynamic var firstResult=first.read(); dynamic var secondResult=second.read();
-                dynamic var flagResult=flag.read();
+                var flag=Cell<bool>(true)
+                var first=Cell<int>(4); var second=Cell<int>(9)
+                dynamic firstResult=first.read(); dynamic secondResult=second.read()
+                dynamic flagResult=flag.read()
                 /scoreboard players set #generic_bool result 0
                 if(flagResult){
                     /scoreboard players set #generic_bool result 1
@@ -439,25 +439,25 @@ class LibFieldAccessTest {
 
     @Test fun explicitGenericTypesShareCanonicalSpecializationsAcrossSignaturesAndInheritance() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
-            func readCell(value as Cell<int>):int { return value.read(); }
-            func readFlag(value as Cell<bool>):bool { return value.read(); }
-            func read(value as Cell<bool>):bool { return readFlag(value); }
-            func read(value as Cell<int>):int { return readCell(value); }
-            data Cell<T as type>:Base {
-                private var value as T;
-                constructor(v as T){ this.base=2; this.value=v; }
+            namespace fixture.fields
+            func readCell(value: Cell<int>):int { return value.read(); }
+            func readFlag(value: Cell<bool>):bool { return value.read(); }
+            func read(value: Cell<bool>):bool { return readFlag(value); }
+            func read(value: Cell<int>):int { return readCell(value); }
+            data Cell<T>:Base {
+                private var value: T
+                constructor(v: T){ this.base=2; this.value=v; }
                 func read():T { return this.value; }
                 func readBase():int { return this.base; }
             }
             data Base {
-                protected var base as int;
+                protected var base: int
             }
             func main(){
-                var first as Cell<int> = Cell<int>(4); var second as Cell<int> = Cell<int>(9);
-                var flag as Cell<bool> = Cell<bool>(true);
-                dynamic var firstResult=read(first); dynamic var secondResult=read(second);
-                dynamic var baseResult=first.readBase(); dynamic var flagResult=read(flag);
+                var first: Cell<int> = Cell<int>(4); var second: Cell<int> = Cell<int>(9)
+                var flag: Cell<bool> = Cell<bool>(true)
+                dynamic firstResult=read(first); dynamic secondResult=read(second)
+                dynamic baseResult=first.readBase(); dynamic flagResult=read(flag)
                 /scoreboard players set #generic_bool result 0
                 if(flagResult){
                     /scoreboard players set #generic_bool result 1
@@ -486,12 +486,12 @@ class LibFieldAccessTest {
         val sourceIntIdentifier = sourceFirst.identifier
         val sourceBoolIdentifier = sourceFlag.identifier
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var flag as Cell<bool> = Cell<bool>(true);
-                var first as Cell<int> = Cell<int>(4); var second as Cell<int> = Cell<int>(9);
-                dynamic var firstResult=read(first); dynamic var secondResult=read(second);
-                dynamic var baseResult=first.readBase(); dynamic var flagResult=read(flag);
+                var flag: Cell<bool> = Cell<bool>(true)
+                var first: Cell<int> = Cell<int>(4); var second: Cell<int> = Cell<int>(9)
+                dynamic firstResult=read(first); dynamic secondResult=read(second)
+                dynamic baseResult=first.readBase(); dynamic flagResult=read(flag)
                 /scoreboard players set #generic_bool result 0
                 if(flagResult){
                     /scoreboard players set #generic_bool result 1
@@ -536,44 +536,44 @@ class LibFieldAccessTest {
     @Test fun explicitTemplateTypesRejectUnexpectedOrMissingReadonlyArguments() = withLibrary {
         MCFPPStringTest.readFromString("""
             data Plain {}
-            func main(){ var item as Plain<3>; }
+            func main(){ var item: Plain<3>; }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0, "An ordinary template type must reject unexpected readonly arguments")
         MCFPPStringTest.readFromString("""
-            data Cell<T as type> {}
-            func main(){ var item as Cell; }
+            data Cell<T> {}
+            func main(){ var item: Cell; }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0, "A generic template type must require its readonly arguments")
     }
 
     @Test fun genericTypeExpressionsUseBoundDeclarationScopeAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
-            data Cell<T as type> {
-                private var value as T;
-                constructor(v as T){ this.value=v; }
+            namespace fixture.fields
+            data Cell<T> {
+                private var value: T
+                constructor(v: T){ this.value=v; }
                 func read():T { return this.value; }
             }
-            data Sized<N as int> {
-                private var value as int;
-                constructor(v as int){ this.value=v+N; }
+            data Sized<N: int> {
+                private var value: int
+                constructor(v: int){ this.value=v+N; }
                 func read():int { return this.value; }
             }
-            data Envelope<T as type,N as int> {
-                private var cell as Cell<(T)>;
-                private var sized as Sized<(N+1)>;
-                constructor(supplied as Cell<(T)>){ this.cell=supplied; this.sized=Sized<N+1>(3); }
-                func passCell(item as Cell<(T)>):Cell<(T)> { return item; }
-                func passSized(item as Sized<(N+1)>):Sized<(N+1)> { return item; }
+            data Envelope<T,N: int> {
+                private var cell: Cell<(T)>
+                private var sized: Sized<(N+1)>
+                constructor(supplied: Cell<(T)>){ this.cell=supplied; this.sized=Sized<N+1>(3); }
+                func passCell(item: Cell<(T)>):Cell<(T)> { return item; }
+                func passSized(item: Sized<(N+1)>):Sized<(N+1)> { return item; }
                 func read():T { return this.passCell(this.cell).read(); }
                 func amount():int { return this.passSized(this.sized).read(); }
             }
             func main(){
-                var T=true; var N=90;
-                var intCell=Cell<int>(4); var first=Envelope<int,2>(intCell);
-                var flagCell=Cell<bool>(true); var flag=Envelope<bool,4>(flagCell);
-                dynamic var intResult=first.read(); dynamic var intAmount=first.amount();
-                dynamic var flagAmount=flag.amount(); dynamic var flagResult=flag.read();
+                var T=true; var N=90
+                var intCell=Cell<int>(4); var first=Envelope<int,2>(intCell)
+                var flagCell=Cell<bool>(true); var flag=Envelope<bool,4>(flagCell)
+                dynamic intResult=first.read(); dynamic intAmount=first.amount()
+                dynamic flagAmount=flag.amount(); dynamic flagResult=flag.read()
                 /scoreboard players set #generic_bool result 0
                 if(flagResult){
                     /scoreboard players set #generic_bool result 1
@@ -612,13 +612,13 @@ class LibFieldAccessTest {
             }
         }
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var T=true; var N=90;
-                var flagCell=Cell<bool>(true); var flag=Envelope<bool,4>(flagCell);
-                var intCell=Cell<int>(4); var first=Envelope<int,2>(intCell);
-                dynamic var intResult=first.read(); dynamic var intAmount=first.amount();
-                dynamic var flagAmount=flag.amount(); dynamic var flagResult=flag.read();
+                var T=true; var N=90
+                var flagCell=Cell<bool>(true); var flag=Envelope<bool,4>(flagCell)
+                var intCell=Cell<int>(4); var first=Envelope<int,2>(intCell)
+                dynamic intResult=first.read(); dynamic intAmount=first.amount()
+                dynamic flagAmount=flag.amount(); dynamic flagResult=flag.read()
                 /scoreboard players set #generic_bool result 0
                 if(flagResult){
                     /scoreboard players set #generic_bool result 1
@@ -667,26 +667,26 @@ class LibFieldAccessTest {
 
     @Test fun frozenDeclarationAndContainerTypeArgumentsRestoreCanonicalTypes() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
-            typealias Leaf as LeafAlias;
-            func readLeaf(arg as Holder<LeafAlias>):int { return arg.read().read(); }
-            func readList(arg as Holder<list<int>>):int { var values=arg.read(); return values[0]; }
+            namespace fixture.fields
+            typealias Leaf as LeafAlias
+            func readLeaf(arg: Holder<LeafAlias>):int { return arg.read().read(); }
+            func readList(arg: Holder<list<int>>):int { var values=arg.read(); return values[0]; }
             data Leaf {
-                private var value as int;
-                constructor(v as int){ this.value=v; }
+                private var value: int
+                constructor(v: int){ this.value=v; }
                 func read():int { return this.value; }
             }
-            data Holder<T as type> {
-                private var value as T;
-                constructor(v as T){ this.value=v; }
+            data Holder<T> {
+                private var value: T
+                constructor(v: T){ this.value=v; }
                 func read():T { return this.value; }
             }
             func main(){
-                var first=Holder<LeafAlias>(Leaf(4));
-                var second=Holder<Leaf>(Leaf(9));
-                var listed=Holder<list<int>>([7]);
-                dynamic var firstResult=readLeaf(first); dynamic var secondResult=readLeaf(second);
-                dynamic var listResult=readList(listed);
+                var first=Holder<LeafAlias>(Leaf(4))
+                var second=Holder<Leaf>(Leaf(9))
+                var listed=Holder<list<int>>([7])
+                dynamic firstResult=readLeaf(first); dynamic secondResult=readLeaf(second)
+                dynamic listResult=readList(listed)
             }
         """, output)
         val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
@@ -718,13 +718,13 @@ class LibFieldAccessTest {
         val sourceLeafHolderId = sourceFirst.getType().typeId
         val sourceListHolderId = sourceListed.getType().typeId
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var listed=Holder<list<int>>([7]);
-                var second=Holder<Leaf>(Leaf(9));
-                var first=Holder<LeafAlias>(Leaf(4));
-                dynamic var firstResult=readLeaf(first); dynamic var secondResult=readLeaf(second);
-                dynamic var listResult=readList(listed);
+                var listed=Holder<list<int>>([7])
+                var second=Holder<Leaf>(Leaf(9))
+                var first=Holder<LeafAlias>(Leaf(4))
+                dynamic firstResult=readLeaf(first); dynamic secondResult=readLeaf(second)
+                dynamic listResult=readList(listed)
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -766,28 +766,28 @@ class LibFieldAccessTest {
 
     @Test fun frozenTypeCollectionsShareCanonicalSpecializationsAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
-            func readBundle(arg as Bundle<[Leaf]>):int { return arg.read(); }
+            namespace fixture.fields
+            func readBundle(arg: Bundle<[Leaf]>):int { return arg.read(); }
             data Leaf {
-                private var value as int;
-                constructor(v as int){ this.value=v; }
+                private var value: int
+                constructor(v: int){ this.value=v; }
                 func read():int { return this.value; }
             }
-            data Cell<T as type> {
-                private var value as T;
-                constructor(v as T){ this.value=v; }
+            data Cell<T> {
+                private var value: T
+                constructor(v: T){ this.value=v; }
                 func read():T { return this.value; }
             }
-            data Bundle<Types as list<type>> {
-                private var cell as Cell<(Types[0])>;
-                constructor(v as Cell<(Types[0])>){ this.cell=v; }
+            data Bundle<Types: list<type>> {
+                private var cell: Cell<(Types[0])>
+                constructor(v: Cell<(Types[0])>){ this.cell=v; }
                 func read():int { return this.cell.read().read(); }
             }
             func main(){
-                var first=Bundle<[Leaf]>(Cell<Leaf>(Leaf(4)));
-                var second=Bundle<[Leaf]>(Cell<Leaf>(Leaf(9)));
-                dynamic var firstResult=readBundle(first);
-                dynamic var secondResult=readBundle(second);
+                var first=Bundle<[Leaf]>(Cell<Leaf>(Leaf(4)))
+                var second=Bundle<[Leaf]>(Cell<Leaf>(Leaf(9)))
+                dynamic firstResult=readBundle(first)
+                dynamic secondResult=readBundle(second)
             }
         """, output)
 
@@ -825,12 +825,12 @@ class LibFieldAccessTest {
         val sourceCellId = sourceCell.getType().typeId
 
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var second=Bundle<[Leaf]>(Cell<Leaf>(Leaf(9)));
-                var first=Bundle<[Leaf]>(Cell<Leaf>(Leaf(4)));
-                dynamic var firstResult=readBundle(first);
-                dynamic var secondResult=readBundle(second);
+                var second=Bundle<[Leaf]>(Cell<Leaf>(Leaf(9)))
+                var first=Bundle<[Leaf]>(Cell<Leaf>(Leaf(4)))
+                dynamic firstResult=readBundle(first)
+                dynamic secondResult=readBundle(second)
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -860,23 +860,23 @@ class LibFieldAccessTest {
 
     @Test fun frozenSpecializedTypeArgumentsRestoreCanonicalTypesAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
-            func readNested(arg as Holder<Cell<int>>):int { return arg.read().read(); }
-            data Cell<T as type> {
-                private var value as T;
-                constructor(v as T){ this.value=v; }
+            namespace fixture.fields
+            func readNested(arg: Holder<Cell<int>>):int { return arg.read().read(); }
+            data Cell<T> {
+                private var value: T
+                constructor(v: T){ this.value=v; }
                 func read():T { return this.value; }
             }
-            data Holder<T as type> {
-                private var value as T;
-                constructor(v as T){ this.value=v; }
+            data Holder<T> {
+                private var value: T
+                constructor(v: T){ this.value=v; }
                 func read():T { return this.value; }
             }
             func main(){
-                var first=Holder<Cell<int>>(Cell<int>(4));
-                var second=Holder<Cell<int>>(Cell<int>(9));
-                dynamic var firstResult=readNested(first);
-                dynamic var secondResult=readNested(second);
+                var first=Holder<Cell<int>>(Cell<int>(4))
+                var second=Holder<Cell<int>>(Cell<int>(9))
+                dynamic firstResult=readNested(first)
+                dynamic secondResult=readNested(second)
             }
         """, output)
 
@@ -916,12 +916,12 @@ class LibFieldAccessTest {
         val sourceCellSnapshot = assertNotNull(top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(sourceCell.scope.getVar("T"))))
 
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var second=Holder<Cell<int>>(Cell<int>(9));
-                var first=Holder<Cell<int>>(Cell<int>(4));
-                dynamic var firstResult=readNested(first);
-                dynamic var secondResult=readNested(second);
+                var second=Holder<Cell<int>>(Cell<int>(9))
+                var first=Holder<Cell<int>>(Cell<int>(4))
+                dynamic firstResult=readNested(first)
+                dynamic secondResult=readNested(second)
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -949,20 +949,20 @@ class LibFieldAccessTest {
 
     @Test fun frozenUnionTypeArgumentsNormalizeAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
-            typealias (int|string) as Scalar;
-            typealias (string|int|int) as ReorderedScalar;
-            func readBox(arg as Box<Scalar>):int { return arg.read(); }
-            data Box<T as type> {
-                private var value as int;
-                constructor(v as int){ this.value=v; }
+            namespace fixture.fields
+            typealias (int|string) as Scalar
+            typealias (string|int|int) as ReorderedScalar
+            func readBox(arg: Box<Scalar>):int { return arg.read(); }
+            data Box<T> {
+                private var value: int
+                constructor(v: int){ this.value=v; }
                 func read():int { return this.value; }
             }
             func main(){
-                var first=Box<Scalar>(4);
-                var second=Box<ReorderedScalar>(9);
-                dynamic var firstResult=readBox(first);
-                dynamic var secondResult=readBox(second);
+                var first=Box<Scalar>(4)
+                var second=Box<ReorderedScalar>(9)
+                dynamic firstResult=readBox(first)
+                dynamic secondResult=readBox(second)
             }
         """, output)
         val expectedAlternatives = setOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.String.typeId)
@@ -988,12 +988,12 @@ class LibFieldAccessTest {
         val sourceBoxId = sourceFirst.getType().typeId
 
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var second=Box<ReorderedScalar>(9);
-                var first=Box<Scalar>(4);
-                dynamic var firstResult=readBox(first);
-                dynamic var secondResult=readBox(second);
+                var second=Box<ReorderedScalar>(9)
+                var first=Box<Scalar>(4)
+                dynamic firstResult=readBox(first)
+                dynamic secondResult=readBox(second)
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -1029,18 +1029,18 @@ class LibFieldAccessTest {
 
     @Test fun frozenVectorTypeArgumentsRestoreDimensionsAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
-            func readTwo(arg as Box<vec2>):int { return arg.read(); }
-            func readThree(arg as Box<vec3>):int { return arg.read(); }
-            data Box<T as type> {
-                private var value as int;
-                constructor(v as int){ this.value=v; }
+            namespace fixture.fields
+            func readTwo(arg: Box<vec2>):int { return arg.read(); }
+            func readThree(arg: Box<vec3>):int { return arg.read(); }
+            data Box<T> {
+                private var value: int
+                constructor(v: int){ this.value=v; }
                 func read():int { return this.value; }
             }
             func main(){
-                var two=Box<vec2>(4); var three=Box<vec3>(9);
-                dynamic var twoResult=readTwo(two);
-                dynamic var threeResult=readThree(three);
+                var two=Box<vec2>(4); var three=Box<vec3>(9)
+                dynamic twoResult=readTwo(two)
+                dynamic threeResult=readThree(three)
             }
         """, output)
         val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
@@ -1063,11 +1063,11 @@ class LibFieldAccessTest {
         assertNotEquals(sourceTwoSnapshot, sourceThreeSnapshot)
 
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var three=Box<vec3>(9); var two=Box<vec2>(4);
-                dynamic var twoResult=readTwo(two);
-                dynamic var threeResult=readThree(three);
+                var three=Box<vec3>(9); var two=Box<vec2>(4)
+                dynamic twoResult=readTwo(two)
+                dynamic threeResult=readThree(three)
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -1097,19 +1097,19 @@ class LibFieldAccessTest {
 
     @Test fun frozenSelectorTypeArgumentsPreserveFiltersAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
-            typealias entity<2,"minecraft:pig","!minecraft:cow"> as Selection;
-            func readSelection(arg as Box<Selection>):int { return arg.read(); }
-            func readAnyEntity(arg as Box<entity>):int { return arg.read(); }
-            data Box<T as type> {
-                private var value as int;
-                constructor(v as int){ this.value=v; }
+            namespace fixture.fields
+            typealias entity<2,"minecraft:pig","!minecraft:cow"> as Selection
+            func readSelection(arg: Box<Selection>):int { return arg.read(); }
+            func readAnyEntity(arg: Box<entity>):int { return arg.read(); }
+            data Box<T> {
+                private var value: int
+                constructor(v: int){ this.value=v; }
                 func read():int { return this.value; }
             }
             func main(){
-                var selected=Box<Selection>(4); var anyEntity=Box<entity>(9);
-                dynamic var selectedResult=readSelection(selected);
-                dynamic var anyResult=readAnyEntity(anyEntity);
+                var selected=Box<Selection>(4); var anyEntity=Box<entity>(9)
+                dynamic selectedResult=readSelection(selected)
+                dynamic anyResult=readAnyEntity(anyEntity)
             }
         """, output)
         val filters = listOf("\"minecraft:pig\"", "\"!minecraft:cow\"")
@@ -1139,11 +1139,11 @@ class LibFieldAccessTest {
         assertNotEquals(sourceSnapshots[0], sourceSnapshots[1])
 
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var anyEntity=Box<entity>(9); var selected=Box<Selection>(4);
-                dynamic var selectedResult=readSelection(selected);
-                dynamic var anyResult=readAnyEntity(anyEntity);
+                var anyEntity=Box<entity>(9); var selected=Box<Selection>(4)
+                dynamic selectedResult=readSelection(selected)
+                dynamic anyResult=readAnyEntity(anyEntity)
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -1173,19 +1173,19 @@ class LibFieldAccessTest {
 
     @Test fun unionTypeExpressionsShareCanonicalSpecializationsAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
-            typealias (int|string) as Scalar;
-            func readBox(arg as Box<(int|string)>):int { return arg.read(); }
-            data Box<T as type> {
-                private var value as int;
-                constructor(v as int){ this.value=v; }
+            namespace fixture.fields
+            typealias (int|string) as Scalar
+            func readBox(arg: Box<(int|string)>):int { return arg.read(); }
+            data Box<T> {
+                private var value: int
+                constructor(v: int){ this.value=v; }
                 func read():int { return this.value; }
             }
             func main(){
-                var first=Box<int|string>(4);
-                var second=Box<(string|int|int)>(9);
-                dynamic var firstResult=readBox(first);
-                dynamic var secondResult=readBox(second);
+                var first=Box<int|string>(4)
+                var second=Box<(string|int|int)>(9)
+                dynamic firstResult=readBox(first)
+                dynamic secondResult=readBox(second)
             }
         """, output)
         val expectedId = TypeId.Union(setOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.String.typeId))
@@ -1206,12 +1206,12 @@ class LibFieldAccessTest {
         val sourceBoxId = sourceFirst.getType().typeId
 
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var second=Box<string|int>(9);
-                var first=Box<(string|int)>(4);
-                dynamic var firstResult=readBox(first);
-                dynamic var secondResult=readBox(second);
+                var second=Box<string|int>(9)
+                var first=Box<(string|int)>(4)
+                dynamic firstResult=readBox(first)
+                dynamic secondResult=readBox(second)
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -1240,23 +1240,23 @@ class LibFieldAccessTest {
     @Test fun frozenAnonymousAliasTypeArgumentsRestoreCanonicalTypesAcrossLibraryRoundTrip() = withLibrary { output ->
         val namedIdentifier = "data_${TempPool.anonymousTemplateCount}"
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             typealias data {
                 @DataOnly
-                var value as int;
-            } as X;
-            typealias X as Y;
-            data $namedIdentifier { var value as int; }
-            func readBox(arg as Box<X>):int { return arg.read(); }
-            data Box<T as type> {
-                private var value as int;
-                constructor(v as int){ this.value=v; }
+                var value: int
+            } as X
+            typealias X as Y
+            data $namedIdentifier { var value: int; }
+            func readBox(arg: Box<X>):int { return arg.read(); }
+            data Box<T> {
+                private var value: int
+                constructor(v: int){ this.value=v; }
                 func read():int { return this.value; }
             }
             func main(){
-                var first=Box<X>(4); var second=Box<Y>(9);
-                dynamic var firstResult=readBox(first);
-                dynamic var secondResult=readBox(second);
+                var first=Box<X>(4); var second=Box<Y>(9)
+                dynamic firstResult=readBox(first)
+                dynamic secondResult=readBox(second)
             }
         """, output)
         val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
@@ -1283,11 +1283,11 @@ class LibFieldAccessTest {
         val sourceBoxId = sourceFirst.getType().typeId
 
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var second=Box<Y>(9); var first=Box<X>(4);
-                dynamic var firstResult=readBox(first);
-                dynamic var secondResult=readBox(second);
+                var second=Box<Y>(9); var first=Box<X>(4)
+                dynamic firstResult=readBox(first)
+                dynamic secondResult=readBox(second)
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -1324,22 +1324,22 @@ class LibFieldAccessTest {
 
     @Test fun genericFunctionDependentTypesBindBeforeRuntimeArgumentsAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
-            data Box<T as type> {
-                private var value as int;
-                constructor(v as int){ this.value=v; }
+            namespace fixture.fields
+            data Box<T> {
+                private var value: int
+                constructor(v: int){ this.value=v; }
                 func read():int { return this.value; }
             }
-            func relay<T as type>(arg as Box<(T)>):Box<(T)> { return arg; }
+            func relay<T>(arg: Box<(T)>):Box<(T)> { return arg; }
             func main(){
-                var T="caller";
-                dynamic var firstInput=4; dynamic var secondInput=9; dynamic var thirdInput=7;
-                var first=relay<int>(Box<int>(firstInput));
-                var second=relay<int>(Box<int>(secondInput));
-                var third=relay<bool>(Box<bool>(thirdInput));
-                dynamic var firstResult=first.read();
-                dynamic var secondResult=second.read();
-                dynamic var thirdResult=third.read();
+                var T="caller"
+                dynamic firstInput=4; dynamic secondInput=9; dynamic thirdInput=7
+                var first=relay<int>(Box<int>(firstInput))
+                var second=relay<int>(Box<int>(secondInput))
+                var third=relay<bool>(Box<bool>(thirdInput))
+                dynamic firstResult=first.read()
+                dynamic secondResult=second.read()
+                dynamic thirdResult=third.read()
             }
         """, output)
 
@@ -1381,16 +1381,16 @@ class LibFieldAccessTest {
         }.toMap()
 
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var T="caller";
-                dynamic var thirdInput=7; dynamic var secondInput=9; dynamic var firstInput=4;
-                var third=relay<bool>(Box<bool>(thirdInput));
-                var second=relay<int>(Box<int>(secondInput));
-                var first=relay<int>(Box<int>(firstInput));
-                dynamic var firstResult=first.read();
-                dynamic var secondResult=second.read();
-                dynamic var thirdResult=third.read();
+                var T="caller"
+                dynamic thirdInput=7; dynamic secondInput=9; dynamic firstInput=4
+                var third=relay<bool>(Box<bool>(thirdInput))
+                var second=relay<int>(Box<int>(secondInput))
+                var first=relay<int>(Box<int>(firstInput))
+                dynamic firstResult=first.read()
+                dynamic secondResult=second.read()
+                dynamic thirdResult=third.read()
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -1418,14 +1418,14 @@ class LibFieldAccessTest {
 
     @Test fun genericObjectReadonlyValuesShareCanonicalSpecializationsAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
-            object data Settings<N as int> {
+            namespace fixture.fields
+            object data Settings<N: int> {
                 func read():int { return N; }
             }
             func main(){
-                dynamic var firstResult=(Settings<4>).read();
-                dynamic var secondResult=(Settings<9>).read();
-                dynamic var repeatedResult=(Settings<4>).read();
+                dynamic firstResult=(Settings<4>).read()
+                dynamic secondResult=(Settings<9>).read()
+                dynamic repeatedResult=(Settings<4>).read()
             }
         """, output)
 
@@ -1468,11 +1468,11 @@ class LibFieldAccessTest {
         val sourceIds = sourceObjects.mapValues { it.value.getType().typeId }
         val sourceSnapshots = sourceObjects.mapValues { assertNotNull(top.mcfpp.analysis.StorageAccess.snapshot(it.value.scope.getVar("N")!!)) }
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                dynamic var secondResult=(Settings<9>).read();
-                dynamic var firstResult=(Settings<4>).read();
-                dynamic var repeatedResult=(Settings<4>).read();
+                dynamic secondResult=(Settings<9>).read()
+                dynamic firstResult=(Settings<4>).read()
+                dynamic repeatedResult=(Settings<4>).read()
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -1495,23 +1495,23 @@ class LibFieldAccessTest {
 
     @Test fun frozenGenericInterfaceTypeArgumentsRestoreBoundSignaturesAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
-            func readIntBox(arg as Box<(Contract<int>)>):int { return arg.read(); }
-            func readBoolBox(arg as Box<(Contract<bool>)>):int { return arg.read(); }
-            interface Contract<T as type> {
-                abstract func exchange(value as T):T;
+            namespace fixture.fields
+            func readIntBox(arg: Box<(Contract<int>)>):int { return arg.read(); }
+            func readBoolBox(arg: Box<(Contract<bool>)>):int { return arg.read(); }
+            interface Contract<T> {
+                abstract func exchange(value: T):T
             }
-            data Box<T as type> {
-                private var value as int;
-                constructor(v as int){ this.value=v; }
+            data Box<T> {
+                private var value: int
+                constructor(v: int){ this.value=v; }
                 func read():int { return this.value; }
             }
             func main(){
-                dynamic var firstInput=4; dynamic var secondInput=9;
-                var first=Box<(Contract<int>)>(firstInput);
-                var second=Box<(Contract<bool>)>(secondInput);
-                dynamic var firstResult=readIntBox(first);
-                dynamic var secondResult=readBoolBox(second);
+                dynamic firstInput=4; dynamic secondInput=9
+                var first=Box<(Contract<int>)>(firstInput)
+                var second=Box<(Contract<bool>)>(secondInput)
+                dynamic firstResult=readIntBox(first)
+                dynamic secondResult=readBoolBox(second)
             }
         """, output)
 
@@ -1574,13 +1574,13 @@ class LibFieldAccessTest {
         val sourceBoxes = checkBindings(sourceContract, sourceBox, sourceScope.functions.getValue("main").single(),
             listOf(sourceScope.functions.getValue("readIntBox").single(), sourceScope.functions.getValue("readBoolBox").single()))
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                dynamic var secondInput=9; dynamic var firstInput=4;
-                var second=Box<(Contract<bool>)>(secondInput);
-                var first=Box<(Contract<int>)>(firstInput);
-                dynamic var firstResult=readIntBox(first);
-                dynamic var secondResult=readBoolBox(second);
+                dynamic secondInput=9; dynamic firstInput=4
+                var second=Box<(Contract<bool>)>(secondInput)
+                var first=Box<(Contract<int>)>(firstInput)
+                dynamic firstResult=readIntBox(first)
+                dynamic secondResult=readBoolBox(second)
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -1610,23 +1610,23 @@ class LibFieldAccessTest {
 
     @Test fun sourceGenericSpecializationsExportAllRuntimeTargetsToDisk() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
-            data Box<T as type> {
-                private var value as int;
-                constructor(v as int){ this.value=v; }
+            namespace fixture.fields
+            data Box<T> {
+                private var value: int
+                constructor(v: int){ this.value=v; }
                 func read():int { return this.value; }
             }
-            func relay<T as type>(arg as Box<(T)>):int { return arg.read(); }
-            object data Settings<N as int> {
+            func relay<T>(arg: Box<(T)>):int { return arg.read(); }
+            object data Settings<N: int> {
                 func read():int { return N; }
             }
             func main(){
-                dynamic var firstInput=4; dynamic var secondInput=9;
-                var first=Box<int>(firstInput); var second=Box<int>(secondInput);
-                dynamic var firstResult=relay<int>(first);
-                dynamic var secondResult=relay<int>(second);
-                dynamic var firstStatic=(Settings<4>).read();
-                dynamic var secondStatic=(Settings<9>).read();
+                dynamic firstInput=4; dynamic secondInput=9
+                var first=Box<int>(firstInput); var second=Box<int>(secondInput)
+                dynamic firstResult=relay<int>(first)
+                dynamic secondResult=relay<int>(second)
+                dynamic firstStatic=(Settings<4>).read()
+                dynamic secondStatic=(Settings<9>).read()
             }
         """, output)
         val scope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
@@ -1656,21 +1656,21 @@ class LibFieldAccessTest {
 
     @Test fun generatedSpecializationNamesDoNotOverwriteLegalSourceDeclarations() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
-            object data Settings<N as int> {
+            namespace fixture.fields
+            object data Settings<N: int> {
                 func read():int { return N; }
             }
             object data Settings_int_0 {
                 func read():int { return 9; }
             }
-            func relay<T as type>(arg as int):int { return arg; }
-            func relay_0(arg as int):int { return arg+5; }
+            func relay<T>(arg: int):int { return arg; }
+            func relay_0(arg: int):int { return arg+5; }
             func main(){
-                dynamic var input=4;
-                dynamic var generatedObject=(Settings<4>).read();
-                dynamic var declaredObject=Settings_int_0.read();
-                dynamic var generatedFunction=relay<int>(input);
-                dynamic var declaredFunction=relay_0(input);
+                dynamic input=4
+                dynamic generatedObject=(Settings<4>).read()
+                dynamic declaredObject=Settings_int_0.read()
+                dynamic generatedFunction=relay<int>(input)
+                dynamic declaredFunction=relay_0(input)
             }
         """, output)
         val scope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
@@ -1698,17 +1698,17 @@ class LibFieldAccessTest {
 
     @Test fun genericObjectStaticFieldsInitializeIndependentlyAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
-            object data Settings<N as int> {
-                var value as int=N;
+            namespace fixture.fields
+            object data Settings<N: int> {
+                var value: int=N
                 constructor(){}
                 func read():int { return value; }
             }
             func main(){
-                dynamic var readFirst=(Settings<4>).read();
-                dynamic var readSecond=(Settings<9>).read();
-                dynamic var directFirst=(Settings<4>).value;
-                dynamic var directSecond=(Settings<9>).value;
+                dynamic readFirst=(Settings<4>).read()
+                dynamic readSecond=(Settings<9>).read()
+                dynamic directFirst=(Settings<4>).value
+                dynamic directSecond=(Settings<9>).value
             }
         """, output)
 
@@ -1750,12 +1750,12 @@ class LibFieldAccessTest {
             assertEquals(expected, sourceMachine.read(sourceMain.scope.getVar(name) as MCInt))
 
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                dynamic var readFirst=(Settings<9>).read();
-                dynamic var readSecond=(Settings<4>).read();
-                dynamic var directFirst=(Settings<9>).value;
-                dynamic var directSecond=(Settings<4>).value;
+                dynamic readFirst=(Settings<9>).read()
+                dynamic readSecond=(Settings<4>).read()
+                dynamic directFirst=(Settings<9>).value
+                dynamic directSecond=(Settings<4>).value
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -1772,33 +1772,33 @@ class LibFieldAccessTest {
 
     @Test fun templateModifiersSurviveLibraryRoundTrip() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             data abstract Base { abstract func read():int; }
             data Child : Base {
-                private var value as int;
-                constructor(v as int){this.value=v;}
+                private var value: int
+                constructor(v: int){this.value=v;}
                 override func read():int{return this.value;}
             }
-            data abstract Contract<T as type> { abstract func exchange(value as T):T; }
-            data Box<T as type> {
-                private var value as int;
-                constructor(v as int){this.value=v;}
+            data abstract Contract<T> { abstract func exchange(value: T):T; }
+            data Box<T> {
+                private var value: int
+                constructor(v: int){this.value=v;}
                 func read():int{return this.value;}
             }
             final data Closed {}
-            final data GenericClosed<T as type> {}
+            final data GenericClosed<T> {}
             final object data ClosedObject {}
-            final object data GenericClosedObject<N as int> { func read():int{return N;} }
-            func acceptClosed(value as Closed):int{return 0;}
+            final object data GenericClosedObject<N: int> { func read():int{return N;} }
+            func acceptClosed(value: Closed):int{return 0;}
             func main(){
-                var first=Child(4);
-                var second=Child(9);
-                var box=Box<(Contract<int>)>(4);
-                var closed=GenericClosed<int>();
-                dynamic var firstResult=first.read();
-                dynamic var secondResult=second.read();
-                dynamic var boxResult=box.read();
-                dynamic var objectResult=(GenericClosedObject<4>).read();
+                var first=Child(4)
+                var second=Child(9)
+                var box=Box<(Contract<int>)>(4)
+                var closed=GenericClosed<int>()
+                dynamic firstResult=first.read()
+                dynamic secondResult=second.read()
+                dynamic boxResult=box.read()
+                dynamic objectResult=(GenericClosedObject<4>).read()
             }
         """, output)
         fun check(namespace: top.mcfpp.model.Namespace): List<DataTemplate> {
@@ -1836,16 +1836,16 @@ class LibFieldAccessTest {
         for ((name, expected) in listOf("firstResult" to 4, "secondResult" to 9, "boxResult" to 4, "objectResult" to 4))
             assertEquals(expected, sourceMachine.read(sourceMain.scope.getVar(name) as MCInt))
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var second=Child(9);
-                var first=Child(4);
-                var box=Box<(Contract<int>)>(4);
-                var closed=GenericClosed<int>();
-                dynamic var firstResult=first.read();
-                dynamic var secondResult=second.read();
-                dynamic var boxResult=box.read();
-                dynamic var objectResult=(GenericClosedObject<4>).read();
+                var second=Child(9)
+                var first=Child(4)
+                var box=Box<(Contract<int>)>(4)
+                var closed=GenericClosed<int>()
+                dynamic firstResult=first.read()
+                dynamic secondResult=second.read()
+                dynamic boxResult=box.read()
+                dynamic objectResult=(GenericClosedObject<4>).read()
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -1863,7 +1863,7 @@ class LibFieldAccessTest {
         """.trimIndent()
         write("namespace fixture.fields;\n$declarations\nfunc main(){}", output)
         for ((child, parentName) in listOf("data Child : Closed {}" to "Closed",
-            "data Child<T as type> : Closed {}" to "Closed", "data Child : ClosedObject {}" to "ClosedObject")) {
+            "data Child<T> : Closed {}" to "Closed", "data Child : ClosedObject {}" to "ClosedObject")) {
             Project.config.includes = arrayListOf()
             MCFPPStringTest.readFromString("namespace fixture.fields;\n$declarations\n$child\nfunc main(){}", version = "26.3")
             assertTrue(Project.errorCount > 0, "Source must reject final parent: $child")
@@ -1882,24 +1882,24 @@ class LibFieldAccessTest {
 
     @Test fun genericParentArgumentsBindCanonicalMembersAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             interface BaseMarker {}
             interface DerivedMarker : BaseMarker {}
-            data Parent<T as type> {
-                protected var value as T;
-                constructor(v as T){this.value=v;}
+            data Parent<T> {
+                protected var value: T
+                constructor(v: T){this.value=v;}
                 func read():T{return this.value;}
             }
-            data IntChild : Parent<int> { constructor(v as int){this.value=v;} }
-            data Child<T as type> : Parent<(T)> { constructor(v as T){this.value=v;} }
-            data Offset<N as int> { func number():int{return N;} }
-            data Shift<N as int> : Offset<(N+1)> {}
+            data IntChild : Parent<int> { constructor(v: int){this.value=v;} }
+            data Child<T> : Parent<(T)> { constructor(v: T){this.value=v;} }
+            data Offset<N: int> { func number():int{return N;} }
+            data Shift<N: int> : Offset<(N+1)> {}
             func main(){
-                dynamic var input4=4; dynamic var input9=9;
-                var first=IntChild(input4); var second=Child<int>(input9); var flag=Child<bool>(true);
-                var shifted=Shift<4>();
-                dynamic var firstResult=first.read(); dynamic var secondResult=second.read();
-                dynamic var flagResult=flag.read(); dynamic var numberResult=shifted.number();
+                dynamic input4=4; dynamic input9=9
+                var first=IntChild(input4); var second=Child<int>(input9); var flag=Child<bool>(true)
+                var shifted=Shift<4>()
+                dynamic firstResult=first.read(); dynamic secondResult=second.read()
+                dynamic flagResult=flag.read(); dynamic numberResult=shifted.number()
                 /scoreboard players set #parent_bool result 0
                 if(flagResult){
                     /scoreboard players set #parent_bool result 1
@@ -1954,14 +1954,14 @@ class LibFieldAccessTest {
         assertEquals(1, sourceMachine.values.getValue("#parent_bool result"))
         assertEquals(5, sourceMachine.read(sourceMain.scope.getVar("numberResult") as MCInt))
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             data Parent {}
             func main(){
-                dynamic var input4=4; dynamic var input9=9;
-                var flag=Child<bool>(true); var second=Child<int>(input9); var first=IntChild(input4);
-                var shifted=Shift<9>();
-                dynamic var firstResult=first.read(); dynamic var secondResult=second.read();
-                dynamic var flagResult=flag.read(); dynamic var numberResult=shifted.number();
+                dynamic input4=4; dynamic input9=9
+                var flag=Child<bool>(true); var second=Child<int>(input9); var first=IntChild(input4)
+                var shifted=Shift<9>()
+                dynamic firstResult=first.read(); dynamic secondResult=second.read()
+                dynamic flagResult=flag.read(); dynamic numberResult=shifted.number()
                 /scoreboard players set #parent_bool result 0
                 if(flagResult){
                     /scoreboard players set #parent_bool result 1
@@ -1982,29 +1982,29 @@ class LibFieldAccessTest {
     @Test
     fun nativeListClearUsesExplicitReceiverContextAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             data Box {
-                var items as list<int>;
+                var items: list<int>
                 constructor(){this.items=[2,3];}
                 func reset():int {
-                    this.items.clear();
-                    this.items.add(7);
-                    return this.items[0];
+                    this.items.clear()
+                    this.items.add(7)
+                    return this.items[0]
                 }
             }
             func main(){
-                var box=Box();
-                dynamic var result=box.reset();
+                var box=Box()
+                dynamic result=box.reset()
             }
         """, output)
         val sourceMain = GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single()
         val sourceMachine = execute(sourceMain, output)
         assertEquals(7, sourceMachine.read(sourceMain.scope.getVar("result") as MCInt))
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var box=Box();
-                dynamic var result=box.reset();
+                var box=Box()
+                dynamic result=box.reset()
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -2016,36 +2016,36 @@ class LibFieldAccessTest {
     fun nativeListMethodsUseArgumentAndResultReferencesAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
             func main(){
-                dynamic var index=2;
-                dynamic var two=2; dynamic var three=3; dynamic var absent=9;
-                var mutationBox=Box(); var bulkBox=Box(); var queryBox=Box();
-                dynamic var mutationResult=mutationBox.mutation(index);
-                dynamic var bulkResult=bulkBox.bulk();
-                dynamic var sourceResult=bulkBox.extra[0];
-                dynamic var firstQuery=queryBox.query(two);
-                dynamic var secondQuery=queryBox.query(three);
-                dynamic var absentQuery=queryBox.query(absent);
+                dynamic index=2
+                dynamic two=2; dynamic three=3; dynamic absent=9
+                var mutationBox=Box(); var bulkBox=Box(); var queryBox=Box()
+                dynamic mutationResult=mutationBox.mutation(index)
+                dynamic bulkResult=bulkBox.bulk()
+                dynamic sourceResult=bulkBox.extra[0]
+                dynamic firstQuery=queryBox.query(two)
+                dynamic secondQuery=queryBox.query(three)
+                dynamic absentQuery=queryBox.query(absent)
             }
         """
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             data Box {
-                var items as list<int>; var extra as list<int>;
+                var items: list<int>; var extra: list<int>
                 constructor(){this.items=[2,3,2];this.extra=[4,5];}
-                func mutation(index as int):int {
-                    this.items.prepend(1); this.items.add(4);
-                    this.items.insert(index,8); this.items.removeAt(-1); this.items.remove(8);
-                    return this.items[2];
+                func mutation(index: int):int {
+                    this.items.prepend(1); this.items.add(4)
+                    this.items.insert(index,8); this.items.removeAt(-1); this.items.remove(8)
+                    return this.items[2]
                 }
                 func bulk():int {
-                    this.items.addAll(this.extra); this.items.prependAll(this.extra);
-                    return this.items[0]+this.items[6];
+                    this.items.addAll(this.extra); this.items.prependAll(this.extra)
+                    return this.items[0]+this.items[6]
                 }
-                func query(needle as int):int {
-                    var first=this.items.indexOf(needle);
-                    var last=this.items.lastIndexOf(needle);
+                func query(needle: int):int {
+                    var first=this.items.indexOf(needle)
+                    var last=this.items.lastIndexOf(needle)
                     if(this.items.contains(needle)){return first*10+last;}
-                    return -1;
+                    return -1
                 }
             }
             $mainSource
@@ -2067,60 +2067,60 @@ class LibFieldAccessTest {
     fun nativeCollectionMethodsUseExplicitContextAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
             func main(){
-                var box=Box();
-                dynamic var key="first";
-                dynamic var two=2; dynamic var three=3; dynamic var absent=9;
-                dynamic var dictionaryResult=box.dictionary();
-                dynamic var dictionarySource=box.dictionaryExtra["added"];
-                dynamic var mapResult=box.mapEdit(key);
-                dynamic var mapSource=box.mapExtra["third"];
-                dynamic var firstQuery=box.query(two);
-                dynamic var secondQuery=box.query(three);
-                dynamic var absentQuery=box.query(absent);
+                var box=Box()
+                dynamic key="first"
+                dynamic two=2; dynamic three=3; dynamic absent=9
+                dynamic dictionaryResult=box.dictionary()
+                dynamic dictionarySource=box.dictionaryExtra["added"]
+                dynamic mapResult=box.mapEdit(key)
+                dynamic mapSource=box.mapExtra["third"]
+                dynamic firstQuery=box.query(two)
+                dynamic secondQuery=box.query(three)
+                dynamic absentQuery=box.query(absent)
             }
         """
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             data Box {
-                var dictionaryItems as dict<int>; var dictionaryExtra as dict<int>;
-                var mapItems as map<int>; var mapExtra as map<int>;
-                var readOnlyItems as ImmutableList<int>;
+                var dictionaryItems: dict<int>; var dictionaryExtra: dict<int>
+                var mapItems: map<int>; var mapExtra: map<int>
+                var readOnlyItems: ImmutableList<int>
                 constructor(){
-                    this.dictionaryItems={gone:2,kept:3} as dict<int>; this.dictionaryExtra={added:5} as dict<int>;
-                    this.mapItems={entries:[{key:"first",value:2},{key:"second",value:3}]} as map<int>;
-                    this.mapExtra={entries:[{key:"third",value:7}]} as map<int>;
-                    this.readOnlyItems=[2,3,2] as ImmutableList<int>;
+                    this.dictionaryItems={gone:2,kept:3} as dict<int>; this.dictionaryExtra={added:5} as dict<int>
+                    this.mapItems={entries:[{key:"first",value:2},{key:"second",value:3}]} as map<int>
+                    this.mapExtra={entries:[{key:"third",value:7}]} as map<int>
+                    this.readOnlyItems=[2,3,2] as ImmutableList<int>
                 }
                 func dictionary():int {
-                    var before=this.dictionaryItems.containsKey("gone");
-                    this.dictionaryItems.remove("gone");
-                    var gone=this.dictionaryItems.containsKey("gone");
-                    this.dictionaryItems.merge(this.dictionaryExtra);
-                    var merged=this.dictionaryItems.containsKey("added");
-                    var copied=this.dictionaryItems["added"];
-                    this.dictionaryItems.clear();
-                    var cleared=this.dictionaryItems.containsKey("added");
+                    var before=this.dictionaryItems.containsKey("gone")
+                    this.dictionaryItems.remove("gone")
+                    var gone=this.dictionaryItems.containsKey("gone")
+                    this.dictionaryItems.merge(this.dictionaryExtra)
+                    var merged=this.dictionaryItems.containsKey("added")
+                    var copied=this.dictionaryItems["added"]
+                    this.dictionaryItems.clear()
+                    var cleared=this.dictionaryItems.containsKey("added")
                     if(before&&!gone&&merged&&!cleared){return copied+this.dictionaryExtra["added"];}
-                    return -1;
+                    return -1
                 }
-                func mapEdit(key as string):int {
-                    var firstSize=this.mapItems.size();
-                    var found=this.mapItems.containsKey(key);
-                    this.mapItems.remove(key); this.mapItems.merge(this.mapExtra);
-                    var afterSize=this.mapItems.size();
-                    var present=this.mapItems.containsKey("third");
-                    var copied=this.mapItems["third"];
-                    this.mapItems.clear();
-                    var empty=this.mapItems.isEmpty();
-                    var clearedSize=this.mapItems.size();
+                func mapEdit(key: string):int {
+                    var firstSize=this.mapItems.size()
+                    var found=this.mapItems.containsKey(key)
+                    this.mapItems.remove(key); this.mapItems.merge(this.mapExtra)
+                    var afterSize=this.mapItems.size()
+                    var present=this.mapItems.containsKey("third")
+                    var copied=this.mapItems["third"]
+                    this.mapItems.clear()
+                    var empty=this.mapItems.isEmpty()
+                    var clearedSize=this.mapItems.size()
                     if(found&&present&&empty){return firstSize*100+afterSize*10+copied+clearedSize;}
-                    return -1;
+                    return -1
                 }
-                func query(needle as int):int {
-                    var first=this.readOnlyItems.indexOf(needle);
-                    var last=this.readOnlyItems.lastIndexOf(needle);
+                func query(needle: int):int {
+                    var first=this.readOnlyItems.indexOf(needle)
+                    var last=this.readOnlyItems.lastIndexOf(needle)
                     if(this.readOnlyItems.contains(needle)){return first*10+last;}
-                    return -1;
+                    return -1
                 }
             }
             $mainSource
@@ -2143,46 +2143,46 @@ class LibFieldAccessTest {
     fun nativePrimitiveOperatorsUseExplicitContextAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
             func main(){
-                var box=Box();
-                dynamic var a=17; dynamic var b=5; dynamic var outside=27;
-                dynamic var x as float=7.5; dynamic var y as float=2.0;
-                dynamic var yes=true; dynamic var no=false;
-                dynamic var integerResult=box.integer(a,b);
-                dynamic var floatingResult=box.floating(x,y);
-                dynamic var insideResult=box.ranged(a);
-                dynamic var outsideResult=box.ranged(outside);
-                dynamic var firstLogical=box.logical(yes,no);
-                dynamic var secondLogical=box.logical(no,yes);
-                dynamic var thirdLogical=box.logical(yes,yes);
+                var box=Box()
+                dynamic a=17; dynamic b=5; dynamic outside=27
+                dynamic x: float=7.5; dynamic y: float=2.0
+                dynamic yes=true; dynamic no=false
+                dynamic integerResult=box.integer(a,b)
+                dynamic floatingResult=box.floating(x,y)
+                dynamic insideResult=box.ranged(a)
+                dynamic outsideResult=box.ranged(outside)
+                dynamic firstLogical=box.logical(yes,no)
+                dynamic secondLogical=box.logical(no,yes)
+                dynamic thirdLogical=box.logical(yes,yes)
             }
         """
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             data Box {
-                func integer(a as int,b as int):int {
+                func integer(a: int,b: int):int {
                     if(a+b!=22){return -1;}
                     if(a-b!=12){return -2;}
                     if(a*b!=85){return -3;}
                     if(a/b!=3){return -4;}
                     if(a%b!=2){return -5;}
                     if(a>b&&b<a&&a>=b&&b<=a&&a!=b&&a==a){return 1;}
-                    return 0;
+                    return 0
                 }
-                func floating(a as float,b as float):int {
+                func floating(a: float,b: float):int {
                     if(a+b!=9.5){return -1;}
                     if(a-b!=5.5){return -2;}
                     if(a*b!=15.0){return -3;}
                     if(a/b!=3.75){return -4;}
                     if(a%b!=1.5){return -5;}
                     if(a>b&&b<a&&a>=b&&b<=a&&a!=b&&a==a){return 1;}
-                    return 0;
+                    return 0
                 }
-                func ranged(value as int):int {
+                func ranged(value: int):int {
                     if(value~=10..20){return 1;}
-                    return 0;
+                    return 0
                 }
-                func logical(a as bool,b as bool):bool {
-                    return (a!=b)&&!(a==b)&&(a||b)&&!(a&&b)&&!(!a);
+                func logical(a: bool,b: bool):bool {
+                    return (a!=b)&&!(a==b)&&(a||b)&&!(a&&b)&&!(!a)
                 }
             }
             $mainSource
@@ -2207,29 +2207,29 @@ class LibFieldAccessTest {
     fun nativeStaticConversionsUseArgumentContextAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
             func main(){
-                var box=Box();
-                dynamic var narrowInput=255; dynamic var promoteInput=17;
-                dynamic var flag=true; dynamic var stringInput="hello";
-                dynamic var payload as nbt={value:7} as nbt;
-                dynamic var narrowed=box.narrow(narrowInput);
-                dynamic var promoted=box.promote(promoteInput);
-                dynamic var booleanPayload=box.boolPayload(flag);
-                dynamic var stringPayload=box.stringPayload(stringInput);
-                dynamic var nbtPayload=box.nbtPayload(payload);
+                var box=Box()
+                dynamic narrowInput=255; dynamic promoteInput=17
+                dynamic flag=true; dynamic stringInput="hello"
+                dynamic payload: nbt={value:7} as nbt
+                dynamic narrowed=box.narrow(narrowInput)
+                dynamic promoted=box.promote(promoteInput)
+                dynamic booleanPayload=box.boolPayload(flag)
+                dynamic stringPayload=box.stringPayload(stringInput)
+                dynamic nbtPayload=box.nbtPayload(payload)
                 /data modify storage mcfpp:system temp.native_conversion_bool set from storage mcfpp:system stack_frame[0].booleanPayload
                 /data modify storage mcfpp:system temp.native_conversion_string set from storage mcfpp:system stack_frame[0].stringPayload
                 /data modify storage mcfpp:system temp.native_conversion_nbt set from storage mcfpp:system stack_frame[0].nbtPayload
             }
         """
         write("""
-            namespace fixture.fields;
-            func decodeByte(value as byte):int = top.mcfpp.mni.ConversionData.toIntFromByte;
+            namespace fixture.fields
+            func decodeByte(value: byte):int = top.mcfpp.mni.ConversionData.toIntFromByte
             data Box {
-                func narrow(value as int):int {return decodeByte(toByte(value));}
-                func promote(value as int):int {return toInt(toFloat(value));}
-                func boolPayload(value as bool):nbt {return toNBT(value);}
-                func stringPayload(value as string):nbt {return toNBT(value);}
-                func nbtPayload(value as nbt):nbt {return toNBT(value);}
+                func narrow(value: int):int {return decodeByte(toByte(value));}
+                func promote(value: int):int {return toInt(toFloat(value));}
+                func boolPayload(value: bool):nbt {return toNBT(value);}
+                func stringPayload(value: string):nbt {return toNBT(value);}
+                func nbtPayload(value: nbt):nbt {return toNBT(value);}
             }
             $mainSource
         """, output)
@@ -2251,29 +2251,29 @@ class LibFieldAccessTest {
     fun nativeTextMethodsUseReceiverContextAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
             func main(){
-                var box=Box();
-                dynamic var integerInput=7; dynamic var stringInput="live";
-                dynamic var nbtInput as nbt={value:9} as nbt;
-                dynamic var result=box.observe(integerInput,stringInput,nbtInput);
+                var box=Box()
+                dynamic integerInput=7; dynamic stringInput="live"
+                dynamic nbtInput: nbt={value:9} as nbt
+                dynamic result=box.observe(integerInput,stringInput,nbtInput)
             }
         """
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             data Box {
-                func observe(v as int,s as string,n as nbt):int {
-                    dynamic var runtimeInt=v.toText();
-                    dynamic var constantInt=(4).toText();
-                    dynamic var runtimeString=s.toText();
-                    dynamic var constantString=("fixed").toText();
-                    dynamic var runtimeNbt=n.toText();
-                    dynamic var constantNbt=toNBT(3).toText();
+                func observe(v: int,s: string,n: nbt):int {
+                    dynamic runtimeInt=v.toText()
+                    dynamic constantInt=(4).toText()
+                    dynamic runtimeString=s.toText()
+                    dynamic constantString=("fixed").toText()
+                    dynamic runtimeNbt=n.toText()
+                    dynamic constantNbt=toNBT(3).toText()
                     /data modify storage fixture:observed runtimeInt set from storage mcfpp:system stack_frame[0].runtimeInt
                     /data modify storage fixture:observed constantInt set from storage mcfpp:system stack_frame[0].constantInt
                     /data modify storage fixture:observed runtimeString set from storage mcfpp:system stack_frame[0].runtimeString
                     /data modify storage fixture:observed constantString set from storage mcfpp:system stack_frame[0].constantString
                     /data modify storage fixture:observed runtimeNbt set from storage mcfpp:system stack_frame[0].runtimeNbt
                     /data modify storage fixture:observed constantNbt set from storage mcfpp:system stack_frame[0].constantNbt
-                    return 7;
+                    return 7
                 }
             }
             $mainSource
@@ -2310,26 +2310,26 @@ class LibFieldAccessTest {
         }
         val mainSource = """
             func main(){
-                var box=Box();
-                dynamic var leftInput as text=("L").toText();
-                dynamic var rightInput as text=("R").toText();
-                dynamic var result=box.observe(leftInput,rightInput);
+                var box=Box()
+                dynamic leftInput: text=("L").toText()
+                dynamic rightInput: text=("R").toText()
+                dynamic result=box.observe(leftInput,rightInput)
             }
         """
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             data Box {
-                func observe(left as text,right as text):int {
-                    dynamic var leftCopy=left; dynamic var rightCopy=right;
-                    var constantLeft=("A").toText(); var constantRight=("B").toText();
-                    dynamic var constantLeftCopy=constantLeft; dynamic var constantRightCopy=constantRight;
-                    dynamic var joinedRuntime=left+right;
-                    dynamic var suffixedRuntime=left+"S";
-                    dynamic var joinedConstant=("A").toText()+("B").toText();
-                    dynamic var suffixedConstant=("A").toText()+"S";
-                    dynamic var originalA=constantLeft; dynamic var originalB=constantRight;
+                func observe(left: text,right: text):int {
+                    dynamic leftCopy=left; dynamic rightCopy=right
+                    var constantLeft=("A").toText(); var constantRight=("B").toText()
+                    dynamic constantLeftCopy=constantLeft; dynamic constantRightCopy=constantRight
+                    dynamic joinedRuntime=left+right
+                    dynamic suffixedRuntime=left+"S"
+                    dynamic joinedConstant=("A").toText()+("B").toText()
+                    dynamic suffixedConstant=("A").toText()+"S"
+                    dynamic originalA=constantLeft; dynamic originalB=constantRight
                     $copies
-                    return 7;
+                    return 7
                 }
             }
             $mainSource
@@ -2358,23 +2358,23 @@ class LibFieldAccessTest {
     fun textCopiesAndConcatenationPreservePayloadsAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
             func main(){
-                var box=Box();
-                dynamic var result=box.observe();
+                var box=Box()
+                dynamic result=box.observe()
             }
         """
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             data Box {
                 func observe():int {
-                    var original as text = ("A").toText();
-                    var copied as text = original;
-                    var joined as text = ("A").toText()+("B").toText();
-                    var suffixed as text = ("A").toText()+"S";
+                    var original: text = ("A").toText()
+                    var copied: text = original
+                    var joined: text = ("A").toText()+("B").toText()
+                    var suffixed: text = ("A").toText()+"S"
                     /data modify storage fixture:observed original set from storage mcfpp:system stack_frame[0].original
                     /data modify storage fixture:observed copied set from storage mcfpp:system stack_frame[0].copied
                     /data modify storage fixture:observed joined set from storage mcfpp:system stack_frame[0].joined
                     /data modify storage fixture:observed suffixed set from storage mcfpp:system stack_frame[0].suffixed
-                    return 7;
+                    return 7
                 }
             }
             $mainSource
@@ -2403,23 +2403,23 @@ class LibFieldAccessTest {
     fun nativeTemplateTextUsesReceiverContextAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
             func main(){
-                var box=Box();
-                dynamic var payload=Payload(7);
-                dynamic var result=box.observe(payload);
+                var box=Box()
+                dynamic payload=Payload(7)
+                dynamic result=box.observe(payload)
             }
         """
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             data Payload {
-                var value as int;
-                constructor(initial as int){this.value=initial;}
+                var value: int
+                constructor(initial: int){this.value=initial;}
             }
             data Box {
-                func observe(payload as Payload):int {
-                    dynamic var payloadText=payload.toText();
+                func observe(payload: Payload):int {
+                    dynamic payloadText=payload.toText()
                     /data modify storage fixture:observed payloadText set from storage mcfpp:system stack_frame[0].payloadText
                     /data modify storage fixture:observed payloadValue set from storage mcfpp:system stack_frame[0].payload.value
-                    return 7;
+                    return 7
                 }
             }
             $mainSource
@@ -2441,23 +2441,23 @@ class LibFieldAccessTest {
     fun plainTextEscapingSurvivesSnapshotsAndLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
             func main(){
-                var box=Box();
-                dynamic var result=box.observe();
+                var box=Box()
+                dynamic result=box.observe()
             }
         """
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             data Box {
                 func observe():int {
-                    var original as text = ("quote \" slash \\").toText();
-                    var copied as text = original;
-                    var joined as text = ("quote \" slash \\").toText()+" tail";
-                    var nbtText as text = toNBT("x").toText();
+                    var original: text = ("quote \" slash \\").toText()
+                    var copied: text = original
+                    var joined: text = ("quote \" slash \\").toText()+" tail"
+                    var nbtText: text = toNBT("x").toText()
                     /data modify storage fixture:observed original set from storage mcfpp:system stack_frame[0].original
                     /data modify storage fixture:observed copied set from storage mcfpp:system stack_frame[0].copied
                     /data modify storage fixture:observed joined set from storage mcfpp:system stack_frame[0].joined
                     /data modify storage fixture:observed nbtText set from storage mcfpp:system stack_frame[0].nbtText
-                    return 7;
+                    return 7
                 }
             }
             $mainSource
@@ -2487,18 +2487,18 @@ class LibFieldAccessTest {
     fun nativePredicateMethodsCaptureBooleanResultsAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
             func main(){
-                var box=Box();
-                dynamic var result=box.observe();
+                var box=Box()
+                dynamic result=box.observe()
             }
         """
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.resource:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.resource:*
             data Box {
                 func observe():int {
-                    dynamic var passed=Predicate.of("fixture:allowed").pass();
-                    dynamic var failed=Predicate.of("fixture:allowed").fail();
-                    return 7;
+                    dynamic passed=Predicate.of("fixture:allowed").pass()
+                    dynamic failed=Predicate.of("fixture:allowed").fail()
+                    return 7
                 }
             }
             $mainSource
@@ -2529,21 +2529,21 @@ class LibFieldAccessTest {
     fun nativeVoidCommandsEmitMacrosOnceAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
             func main(){
-                var box=Box();
-                dynamic var result=box.observe("fixture:dynamic");
+                var box=Box()
+                dynamic result=box.observe("fixture:dynamic")
             }
         """
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.resource:*;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.resource:*
+            import mcfpp.minecraft.std:*
             data Box {
-                func observe(target as string):int {
-                    var pool=TemplatePool();
-                    pool.id=target;
-                    place(pool,"fixture:constant",2);
-                    place(pool,target,2);
-                    return 7;
+                func observe(target: string):int {
+                    var pool=TemplatePool()
+                    pool.id=target
+                    place(pool,"fixture:constant",2)
+                    place(pool,target,2)
+                    return 7
                 }
             }
             $mainSource
@@ -2599,21 +2599,21 @@ class LibFieldAccessTest {
     fun nativeDamageCommandsUseFloatArgumentsAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
             func main(){
-                var box=Box();
-                dynamic var result=box.observe(3.5);
+                var box=Box()
+                dynamic result=box.observe(3.5)
             }
         """
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.resource:*;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.resource:*
+            import mcfpp.minecraft.std:*
             data Box {
-                func observe(amount as float):int {
-                    var kind=DamageType();
-                    kind.id="minecraft:generic";
-                    damage(@p,amount,kind);
-                    damage(@e,2.0,kind);
-                    return 7;
+                func observe(amount: float):int {
+                    var kind=DamageType()
+                    kind.id="minecraft:generic"
+                    damage(@p,amount,kind)
+                    damage(@e,2.0,kind)
+                    return 7
                 }
             }
             $mainSource
@@ -2687,22 +2687,22 @@ class LibFieldAccessTest {
     fun nativePrintCommandsUseEncodedValuesAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
             func main(){
-                var box=Box();
-                dynamic var integerInput=7; dynamic var boolInput=true;
-                dynamic var stringInput="live"; dynamic var nbtInput as nbt={value:9} as nbt;
-                dynamic var anyInput as any=42; dynamic var payload=Payload(7);
-                dynamic var result=box.observe(integerInput,boolInput,stringInput,nbtInput,anyInput,payload);
+                var box=Box()
+                dynamic integerInput=7; dynamic boolInput=true
+                dynamic stringInput="live"; dynamic nbtInput: nbt={value:9} as nbt
+                dynamic anyInput: any=42; dynamic payload=Payload(7)
+                dynamic result=box.observe(integerInput,boolInput,stringInput,nbtInput,anyInput,payload)
             }
         """
         write("""
-            namespace fixture.fields;
-            data Payload {var value as int;constructor(initial as int){this.value=initial;}}
+            namespace fixture.fields
+            data Payload {var value: int;constructor(initial: int){this.value=initial;}}
             data Box {
-                func observe(i as int,b as bool,s as string,n as nbt,erased as any,payload as Payload):int {
-                    print(i); print(b); print(s); print(n); print(erased); print(payload);
-                    print(("styled").toText()); print([2,3]); print({value:4});
-                    print("quote \" slash \\");
-                    return 7;
+                func observe(i: int,b: bool,s: string,n: nbt,erased: any,payload: Payload):int {
+                    print(i); print(b); print(s); print(n); print(erased); print(payload)
+                    print(("styled").toText()); print([2,3]); print({value:4})
+                    print("quote \" slash \\")
+                    return 7
                 }
             }
             $mainSource
@@ -2793,23 +2793,23 @@ class LibFieldAccessTest {
     fun delegatedIntegerTemplatesCopyAndShareViewsAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
             func main(){
-                var box=Box();
-                dynamic var result=box.observe(4);
+                var box=Box()
+                dynamic result=box.observe(4)
             }
         """
         write("""
-            namespace fixture.fields;
-            data Seconds as int;
+            namespace fixture.fields
+            data Seconds as int
             data Box {
-                func observe(initial as int):int {
-                    var original=Seconds(initial);
-                    var copied=original;
-                    var view=copied as int;
-                    dynamic var before=view;
-                    view=9;
-                    dynamic var after=copied as int;
-                    dynamic var untouched=original as int;
-                    return before*100+after*10+untouched;
+                func observe(initial: int):int {
+                    var original=Seconds(initial)
+                    var copied=original
+                    var view=copied as int
+                    dynamic before=view
+                    view=9
+                    dynamic after=copied as int
+                    dynamic untouched=original as int
+                    return before*100+after*10+untouched
                 }
             }
             $mainSource
@@ -2838,26 +2838,26 @@ class LibFieldAccessTest {
     @Test
     fun nativeTimeMethodsUseDeclaredReturnTypesAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
-            func main(){ var box=Box(); dynamic var result=box.observe(4,2); }
+            func main(){ var box=Box(); dynamic result=box.observe(4,2); }
         """
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft:*;
+            namespace fixture.fields
+            import mcfpp.minecraft:*
             data Box {
-                func observe(initial as int,offset as int):int {
-                    var ticks=Time.tick(initial); var seconds=Time.second(initial);
-                    var minutes=Time.min(initial); var hours=Time.hour(initial);
-                    var days=Time.day(initial); var gameDays=Time.gameDay(initial);
-                    var factoryTotal=(ticks as int)+(seconds as int)+(minutes as int)+(hours as int)+(days as int)+(gameDays as int);
-                    var original=Time.tick(initial); var right=Time.tick(offset);
-                    var sum=original+right; var difference=original-right; var product=original*right;
-                    var quotient=original/right; var remainder=original%right;
-                    var arithmeticCode=(sum as int)*10000+(difference as int)*1000+(product as int)*100+(quotient as int)*10+(remainder as int);
+                func observe(initial: int,offset: int):int {
+                    var ticks=Time.tick(initial); var seconds=Time.second(initial)
+                    var minutes=Time.min(initial); var hours=Time.hour(initial)
+                    var days=Time.day(initial); var gameDays=Time.gameDay(initial)
+                    var factoryTotal=(ticks as int)+(seconds as int)+(minutes as int)+(hours as int)+(days as int)+(gameDays as int)
+                    var original=Time.tick(initial); var right=Time.tick(offset)
+                    var sum=original+right; var difference=original-right; var product=original*right
+                    var quotient=original/right; var remainder=original%right
+                    var arithmeticCode=(sum as int)*10000+(difference as int)*1000+(product as int)*100+(quotient as int)*10+(remainder as int)
                     var flags=toInt((original>right) as byte)+toInt((original<right) as byte)*2+
                         toInt((original>=right) as byte)*4+toInt((original<=right) as byte)*8+
                         toInt((original==right) as byte)*16+toInt((original!=right) as byte)*32+
-                        toInt((original~=2..5) as byte)*64;
-                    return factoryTotal+arithmeticCode+flags+(original as int);
+                        toInt((original~=2..5) as byte)*64
+                    return factoryTotal+arithmeticCode+flags+(original as int)
                 }
             }
             $mainSource
@@ -2889,19 +2889,19 @@ class LibFieldAccessTest {
     fun branchFunctionsLoadTheirOwnRegistersAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
             func main(){
-                var box=Box();
-                dynamic var positive=box.observe(2);
-                dynamic var zero=box.observe(0);
+                var box=Box()
+                dynamic positive=box.observe(2)
+                dynamic zero=box.observe(0)
             }
         """
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             data Box {
-                func observe(value as int):int {
-                    dynamic var total=7;
+                func observe(value: int):int {
+                    dynamic total=7
                     if(value>0){ total=total+1; }
                     if(value>1){ total=total+2; }
-                    return total;
+                    return total
                 }
             }
             $mainSource
@@ -2923,18 +2923,18 @@ class LibFieldAccessTest {
     fun compilerDiagnosticsUseContextAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
             func main(){
-                var box=Box(); dynamic var message="fixture-message";
-                dynamic var result=box.observe(message);
+                var box=Box(); dynamic message="fixture-message"
+                dynamic result=box.observe(message)
             }
         """
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             data Box {
-                func observe(message as string):int {
-                    debug();
-                    info("fixture-info"); info(message);
-                    warn("fixture-warn"); warn(message);
-                    return 7;
+                func observe(message: string):int {
+                    debug()
+                    info("fixture-info"); info(message)
+                    warn("fixture-warn"); warn(message)
+                    return 7
                 }
             }
             $mainSource
@@ -2962,17 +2962,17 @@ class LibFieldAccessTest {
     @Test
     fun nativeSeedCapturesOneNominalCommandResultAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
-            func main(){ var box=Box(); dynamic var result=box.observe(); }
+            func main(){ var box=Box(); dynamic result=box.observe(); }
         """
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.std:*
             data Box {
                 func observe():int {
-                    var answer=seed();
-                    var first=answer.result; var passed=answer.success;
-                    var again=answer.result; var passedAgain=answer.success;
-                    return first+again;
+                    var answer=seed()
+                    var first=answer.result; var passed=answer.success
+                    var again=answer.result; var passedAgain=answer.success
+                    return first+again
                 }
             }
             $mainSource
@@ -3034,16 +3034,16 @@ class LibFieldAccessTest {
         assertEquals(3, methods.count { (_, annotation) -> annotation.identifier == "locate" })
         assertTrue(methods.single { it.first.name == "kick" }.second.normalParams.contains("string = \"\""))
         val mainSource = """
-            func main(){ var box=Box(); dynamic var result=box.observe("fixture:message"); }
+            func main(){ var box=Box(); dynamic result=box.observe("fixture:message"); }
         """
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.std:*
             data Box {
-                func observe(message as string):int {
-                    var seeded=seed(); var helped=help(); var spoken=say(message);
-                    var seedValue=seeded.result; var helpSuccess=helped.success; var sayValue=spoken.result;
-                    return 7;
+                func observe(message: string):int {
+                    var seeded=seed(); var helped=help(); var spoken=say(message)
+                    var seedValue=seeded.result; var helpSuccess=helped.success; var sayValue=spoken.result
+                    return 7
                 }
             }
             $mainSource
@@ -3112,22 +3112,22 @@ class LibFieldAccessTest {
             assertEquals("mcfpp.minecraft.std:CommandResult", assertNotNull(method.getAnnotation(top.mcfpp.annotations.MNIFunction::class.java)).returnType)
         }
         val mainSource = """
-            func main(){ var box=Box(); dynamic var result=box.observe("fixture:pack"); }
+            func main(){ var box=Box(); dynamic result=box.observe("fixture:pack"); }
         """
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.std:*
             @From<"top.mcfpp.mni.minecraft.DatapackData">
-            object data Packs;
-            func profileStart():CommandResult = top.mcfpp.mni.minecraft.DebugData.start;
-            func profileStop():CommandResult = top.mcfpp.mni.minecraft.DebugData.stop;
+            object data Packs
+            func profileStart():CommandResult = top.mcfpp.mni.minecraft.DebugData.start
+            func profileStop():CommandResult = top.mcfpp.mni.minecraft.DebugData.stop
             data Box {
-                func observe(name as string):int {
-                    var started=profileStart(); var listed=Packs.listAll();
-                    var enabled=Packs.enable(name); var stopped=profileStop();
-                    var startValue=started.result; var listSuccess=listed.success;
-                    var enableValue=enabled.result; var stopSuccess=stopped.success;
-                    return 7;
+                func observe(name: string):int {
+                    var started=profileStart(); var listed=Packs.listAll()
+                    var enabled=Packs.enable(name); var stopped=profileStop()
+                    var startValue=started.result; var listSuccess=listed.success
+                    var enableValue=enabled.result; var stopSuccess=stopped.success
+                    return 7
                 }
             }
             $mainSource
@@ -3196,18 +3196,18 @@ class LibFieldAccessTest {
             assertEquals("mcfpp.minecraft.std:CommandResult", annotation.returnType)
         }
         val mainSource = """
-            func main(){ var box=Box(); dynamic var result=box.observe("fixture:team"); }
+            func main(){ var box=Box(); dynamic result=box.observe("fixture:team"); }
         """
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft:*;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.fields
+            import mcfpp.minecraft:*
+            import mcfpp.minecraft.std:*
             data Box {
-                func observe(name as string):int {
-                    var team=Team(name,("Label").toText());
-                    var registered=team.register(); var emptied=team.clear(); var removed=team.unregister();
-                    var registerValue=registered.result; var clearSuccess=emptied.success; var removeValue=removed.result;
-                    return 7;
+                func observe(name: string):int {
+                    var team=Team(name,("Label").toText())
+                    var registered=team.register(); var emptied=team.clear(); var removed=team.unregister()
+                    var registerValue=registered.result; var clearSuccess=emptied.success; var removeValue=removed.result
+                    return 7
                 }
             }
             $mainSource
@@ -3283,24 +3283,24 @@ class LibFieldAccessTest {
     @Test
     fun nativePlayerCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
-            func main(){ var box=Box(); dynamic var result=box.observe("fixture:recipe"); }
+            func main(){ var box=Box(); dynamic result=box.observe("fixture:recipe"); }
         """
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.std:*;
-            import mcfpp.minecraft.resource:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.std:*
+            import mcfpp.minecraft.resource:*
             @From<"top.mcfpp.mni.minecraft.OpData">
-            object data Operators;
+            object data Operators
             data Box {
-                func observe(name as string):int {
-                    var granted=Operators.op(@a); var revoked=Operators.deop(@a);
-                    var allGiven=Recipe.giveAll(@a); var allTaken=Recipe.takeAll(@a);
-                    var recipe=Recipe(); recipe.id=name;
-                    var given=recipe.give(@a); var taken=recipe.take(@a);
-                    var grantValue=granted.result; var revokeSuccess=revoked.success;
-                    var allGiveValue=allGiven.result; var allTakeSuccess=allTaken.success;
-                    var giveValue=given.result; var takeSuccess=taken.success;
-                    return 7;
+                func observe(name: string):int {
+                    var granted=Operators.op(@a); var revoked=Operators.deop(@a)
+                    var allGiven=Recipe.giveAll(@a); var allTaken=Recipe.takeAll(@a)
+                    var recipe=Recipe(); recipe.id=name
+                    var given=recipe.give(@a); var taken=recipe.take(@a)
+                    var grantValue=granted.result; var revokeSuccess=revoked.success
+                    var allGiveValue=allGiven.result; var allTakeSuccess=allTaken.success
+                    var giveValue=given.result; var takeSuccess=taken.success
+                    return 7
                 }
             }
             $mainSource
@@ -3377,8 +3377,8 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         check(main)
         val rejected = consume("""
-            import fixture.fields:*;
-            import mcfpp.minecraft.resource:*;
+            import fixture.fields:*
+            import mcfpp.minecraft.resource:*
             func main(){ Operators.op(@e); Operators.deop(@s); Recipe.giveAll(@e); Recipe.takeAll(@s); }
         """, output)
         assertEquals(4, Project.errorCount)
@@ -3397,21 +3397,21 @@ class LibFieldAccessTest {
             assertEquals("mcfpp.minecraft.std:CommandResult", annotation.returnType)
         }
         val mainSource = """
-            func main(){ var box=Box(); dynamic var result=box.observe(2.5,4); }
+            func main(){ var box=Box(); dynamic result=box.observe(2.5,4); }
         """
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.std:*
             @From<"top.mcfpp.mni.minecraft.WorldborderData">
-            object data Border;
+            object data Border
             data Box {
-                func observe(amount as float,ticks as int):int {
-                    var added=Border.add(amount,ticks); var centered=Border.setCenter(1 2);
-                    var damaged=Border.setDamageAmount(amount); var buffered=Border.setDamageBuffer(amount);
-                    var sized=Border.setSize(amount,ticks); var distance=Border.setWarningDistance(ticks); var time=Border.setWarningTime(ticks);
-                    var addValue=added.result; var centerSuccess=centered.success; var damageValue=damaged.result;
-                    var bufferSuccess=buffered.success; var sizeValue=sized.result; var distanceSuccess=distance.success; var timeValue=time.result;
-                    return 7;
+                func observe(amount: float,ticks: int):int {
+                    var added=Border.add(amount,ticks); var centered=Border.setCenter(1 2)
+                    var damaged=Border.setDamageAmount(amount); var buffered=Border.setDamageBuffer(amount)
+                    var sized=Border.setSize(amount,ticks); var distance=Border.setWarningDistance(ticks); var time=Border.setWarningTime(ticks)
+                    var addValue=added.result; var centerSuccess=centered.success; var damageValue=damaged.result
+                    var bufferSuccess=buffered.success; var sizeValue=sized.result; var distanceSuccess=distance.success; var timeValue=time.result
+                    return 7
                 }
             }
             $mainSource
@@ -3507,21 +3507,21 @@ class LibFieldAccessTest {
     @Test
     fun nativeBossbarCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
-            func main(){ var box=Box(); dynamic var result=box.observe("fixture:bar"); }
+            func main(){ var box=Box(); dynamic result=box.observe("fixture:bar"); }
         """
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.std:*;
-            import mcfpp.minecraft.resource:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.std:*
+            import mcfpp.minecraft.resource:*
             data Box {
-                func observe(name as string):int {
-                    var first=BossBar(name); var bar=BossBar(name,("Label").toText());
-                    var added=bar.add(); var removed=bar.remove(); var listed=bar.listAll();
-                    var colored=bar.setColor(BossBarColor.RED); var named=bar.setName(("NewLabel").toText());
-                    var players=bar.setVisiblePlayers(@a); var styled=bar.setStyle(BossBarStyle.PROGRESS);
-                    var addValue=added.result; var removeSuccess=removed.success; var listValue=listed.result;
-                    var colorSuccess=colored.success; var nameValue=named.result; var playerSuccess=players.success; var styleValue=styled.result;
-                    return 7;
+                func observe(name: string):int {
+                    var first=BossBar(name); var bar=BossBar(name,("Label").toText())
+                    var added=bar.add(); var removed=bar.remove(); var listed=bar.listAll()
+                    var colored=bar.setColor(BossBarColor.RED); var named=bar.setName(("NewLabel").toText())
+                    var players=bar.setVisiblePlayers(@a); var styled=bar.setStyle(BossBarStyle.PROGRESS)
+                    var addValue=added.result; var removeSuccess=removed.success; var listValue=listed.result
+                    var colorSuccess=colored.success; var nameValue=named.result; var playerSuccess=players.success; var styleValue=styled.result
+                    return 7
                 }
             }
             $mainSource
@@ -3618,9 +3618,9 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         check(main)
         val rejected = consume("""
-            import mcfpp.minecraft.resource:*;
-            func reject(color as BossBarColor,style as BossBarStyle){
-                var bar=BossBar("fixture:bad",("Label").toText()); bar.setColor(color); bar.setStyle(style);
+            import mcfpp.minecraft.resource:*
+            func reject(color: BossBarColor,style: BossBarStyle){
+                var bar=BossBar("fixture:bad",("Label").toText()); bar.setColor(color); bar.setStyle(style)
             }
             func main(){}
         """, output)
@@ -3632,20 +3632,20 @@ class LibFieldAccessTest {
     @Test
     fun nativeWorldCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
-            func main(){ var box=Box(); dynamic var result=box.observe(4); }
+            func main(){ var box=Box(); dynamic result=box.observe(4); }
         """
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.std:*;
-            import mcfpp.minecraft.other:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.std:*
+            import mcfpp.minecraft.other:*
             @From<"top.mcfpp.mni.minecraft.WorldObjectData">
-            object data FixtureWorld;
+            object data FixtureWorld
             data Box {
-                func observe(duration as int):int {
-                    var difficulty=FixtureWorld.setDifficulty(Difficulty.hard);
-                    var weather=FixtureWorld.setWeather(Weather.rain,duration);
-                    var difficultyValue=difficulty.result; var weatherSuccess=weather.success;
-                    return 7;
+                func observe(duration: int):int {
+                    var difficulty=FixtureWorld.setDifficulty(Difficulty.hard)
+                    var weather=FixtureWorld.setWeather(Weather.rain,duration)
+                    var difficultyValue=difficulty.result; var weatherSuccess=weather.success
+                    return 7
                 }
             }
             $mainSource
@@ -3711,10 +3711,10 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         check(main)
         val rejected = consume("""
-            import fixture.fields:*;
-            import mcfpp.minecraft.other:*;
-            func reject(difficulty as Difficulty,weather as Weather){
-                FixtureWorld.setDifficulty(difficulty); FixtureWorld.setWeather(weather,4);
+            import fixture.fields:*
+            import mcfpp.minecraft.other:*
+            func reject(difficulty: Difficulty,weather: Weather){
+                FixtureWorld.setDifficulty(difficulty); FixtureWorld.setWeather(weather,4)
             }
             func main(){}
         """, output)
@@ -3726,21 +3726,21 @@ class LibFieldAccessTest {
     @Test
     fun nativeRandomCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
-            func main(){ var box=Box(); dynamic var result=box.observe(4); }
+            func main(){ var box=Box(); dynamic result=box.observe(4); }
         """
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft:*;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.fields
+            import mcfpp.minecraft:*
+            import mcfpp.minecraft.std:*
             data Box {
-                func observe(seed as int):int {
-                    var sequence=Random("fixture:sequence");
-                    var own=sequence.reset<true,false>(seed);
-                    var all=Random.reset<false,true>(seed); var cleared=Random.resetAll();
-                    var ownValue=own.result; var allSuccess=all.success; var clearedValue=cleared.result;
-                    var staticValue=Random.rand(1 .. 6); var staticRoll=Random.roll(2 .. 7);
-                    var sequenceValue=sequence.rand(3 .. 8); var sequenceRoll=sequence.roll(4 .. 9);
-                    return 7;
+                func observe(seed: int):int {
+                    var sequence=Random("fixture:sequence")
+                    var own=sequence.reset<true,false>(seed)
+                    var all=Random.reset<false,true>(seed); var cleared=Random.resetAll()
+                    var ownValue=own.result; var allSuccess=all.success; var clearedValue=cleared.result
+                    var staticValue=Random.rand(1 .. 6); var staticRoll=Random.roll(2 .. 7)
+                    var sequenceValue=sequence.rand(3 .. 8); var sequenceRoll=sequence.roll(4 .. 9)
+                    return 7
                 }
             }
             $mainSource
@@ -3875,8 +3875,8 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         check(main)
         val rejected = consume("""
-            import mcfpp.minecraft:*;
-            func reject(flag as bool){ Random.reset<flag,true>(4); }
+            import mcfpp.minecraft:*
+            func reject(flag: bool){ Random.reset<flag,true>(4); }
             func main(){}
         """, output)
         // The unresolved readonly argument produces one primary diagnostic.
@@ -3884,8 +3884,8 @@ class LibFieldAccessTest {
         val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("random reset ") })
         val badRanges = consume("""
-            import mcfpp.minecraft:*;
-            func reject(bounds as range){ Random.rand(1 ..); Random.roll(1.0 .. 2.0); Random.rand(bounds); }
+            import mcfpp.minecraft:*
+            func reject(bounds: range){ Random.rand(1 ..); Random.roll(1.0 .. 2.0); Random.rand(bounds); }
             func main(){}
         """, output)
         assertEquals(3, Project.errorCount)
@@ -3896,17 +3896,17 @@ class LibFieldAccessTest {
 
     @Test
     fun nativeEntityTagCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){ var box=Box(); dynamic var result=box.observe(\"fixture:tag\"); }"
+        val mainSource = "func main(){ var box=Box(); dynamic result=box.observe(\"fixture:tag\"); }"
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.entity:*;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.entity:*
+            import mcfpp.minecraft.std:*
             data Box {
-                func observe(tag as string):int {
-                    var target=@e;
-                    var added=target.addTag(tag); var removed=target.removeTag(tag); var listed=target.listTag();
-                    var addedValue=added.result; var removedSuccess=removed.success; var listedValue=listed.result;
-                    return 7;
+                func observe(tag: string):int {
+                    var target=@e
+                    var added=target.addTag(tag); var removed=target.removeTag(tag); var listed=target.listTag()
+                    var addedValue=added.result; var removedSuccess=removed.success; var listedValue=listed.result
+                    return 7
                 }
             }
             $mainSource
@@ -3981,7 +3981,7 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         check(main)
         val rejected = consume("""
-            import mcfpp.minecraft.entity:*;
+            import mcfpp.minecraft.entity:*
             func reject(){ var value=EntityData(); value.listTag(); }
             func main(){}
         """, output)
@@ -3992,17 +3992,17 @@ class LibFieldAccessTest {
 
     @Test
     fun nativeEntityTeamCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){ var box=Box(); dynamic var result=box.observe(\"fixture:team\"); }"
+        val mainSource = "func main(){ var box=Box(); dynamic result=box.observe(\"fixture:team\"); }"
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft:*;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.fields
+            import mcfpp.minecraft:*
+            import mcfpp.minecraft.std:*
             data Box {
-                func observe(teamId as string):int {
-                    var team=Team(teamId,("Label").toText()); var target=@a;
-                    var joined=target.joinTeam(team); var left=target.leaveTeam();
-                    var joinedValue=joined.result; var leftSuccess=left.success;
-                    return 7;
+                func observe(teamId: string):int {
+                    var team=Team(teamId,("Label").toText()); var target=@a
+                    var joined=target.joinTeam(team); var left=target.leaveTeam()
+                    var joinedValue=joined.result; var leftSuccess=left.success
+                    return 7
                 }
             }
             $mainSource
@@ -4074,7 +4074,7 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         check(main)
         val rejected = consume("""
-            import mcfpp.minecraft.entity:*;
+            import mcfpp.minecraft.entity:*
             func reject(){ var value=EntityData(); value.leaveTeam(); }
             func main(){}
         """, output)
@@ -4085,17 +4085,17 @@ class LibFieldAccessTest {
 
     @Test
     fun nativeEntityEffectCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){ var box=Box(); dynamic var result=box.observe(\"minecraft:speed\"); }"
+        val mainSource = "func main(){ var box=Box(); dynamic result=box.observe(\"minecraft:speed\"); }"
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.resource:*;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.resource:*
+            import mcfpp.minecraft.std:*
             data Box {
-                func observe(effectId as string):int {
-                    var effect=Effect(); effect.id=effectId; var target=@e;
-                    var specific=target.clearEffect(effect); var all=target.clearAllEffects();
-                    var specificValue=specific.result; var allSuccess=all.success;
-                    return 7;
+                func observe(effectId: string):int {
+                    var effect=Effect(); effect.id=effectId; var target=@e
+                    var specific=target.clearEffect(effect); var all=target.clearAllEffects()
+                    var specificValue=specific.result; var allSuccess=all.success
+                    return 7
                 }
             }
             $mainSource
@@ -4165,7 +4165,7 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         check(main)
         val rejected = consume("""
-            import mcfpp.minecraft.entity:*;
+            import mcfpp.minecraft.entity:*
             func reject(){ var value=EntityData(); value.clearAllEffects(); }
             func main(){}
         """, output)
@@ -4176,24 +4176,24 @@ class LibFieldAccessTest {
 
     @Test
     fun nativeEntityEffectGiveCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){ constants(); var box=Box(); dynamic var result=box.observe(\"minecraft:speed\",30,2,true); }"
+        val mainSource = "func main(){ constants(); var box=Box(); dynamic result=box.observe(\"minecraft:speed\",30,2,true); }"
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.resource:*;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.resource:*
+            import mcfpp.minecraft.std:*
             data Box {
-                func observe(effectId as string,seconds as int,amplifier as int,hide as bool):int {
-                    var effect=Effect(); effect.id=effectId; var target=@e;
-                    var timed=target.effect(effect,seconds,amplifier,hide);
-                    var infinite=target.effectInfinite(effect,amplifier,hide);
-                    var timedValue=timed.result; var infiniteSuccess=infinite.success;
-                    return 7;
+                func observe(effectId: string,seconds: int,amplifier: int,hide: bool):int {
+                    var effect=Effect(); effect.id=effectId; var target=@e
+                    var timed=target.effect(effect,seconds,amplifier,hide)
+                    var infinite=target.effectInfinite(effect,amplifier,hide)
+                    var timedValue=timed.result; var infiniteSuccess=infinite.success
+                    return 7
                 }
             }
             func constants(){
-                var effect=Effect(); effect.id="minecraft:speed"; var target=@e;
-                var timed=target.effect(effect,30,2,true);
-                var infinite=target.effectInfinite(effect,2,false);
+                var effect=Effect(); effect.id="minecraft:speed"; var target=@e
+                var timed=target.effect(effect,30,2,true)
+                var infinite=target.effectInfinite(effect,2,false)
             }
             $mainSource
         """, output)
@@ -4292,8 +4292,8 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         check(main)
         val rejected = consume("""
-            import mcfpp.minecraft.entity:*;
-            import mcfpp.minecraft.resource:*;
+            import mcfpp.minecraft.entity:*
+            import mcfpp.minecraft.resource:*
             func reject(){ var value=EntityData(); var effect=Effect(); value.effect(effect,30,2,true); }
             func main(){}
         """, output)
@@ -4304,16 +4304,16 @@ class LibFieldAccessTest {
 
     @Test
     fun nativeEntityStopRideCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){ var box=Box(); dynamic var result=box.observe(); }"
+        val mainSource = "func main(){ var box=Box(); dynamic result=box.observe(); }"
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.std:*
             data Box {
                 func observe():int {
-                    var target=@s;
-                    var first=target.stopRide(); var second=target.stopRide();
-                    var firstValue=first.result; var secondSuccess=second.success;
-                    return 7;
+                    var target=@s
+                    var first=target.stopRide(); var second=target.stopRide()
+                    var firstValue=first.result; var secondSuccess=second.success
+                    return 7
                 }
             }
             $mainSource
@@ -4359,7 +4359,7 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         check(main)
         val rejected = consume("""
-            import mcfpp.minecraft.entity:*;
+            import mcfpp.minecraft.entity:*
             func reject(){ var multiple=@a; multiple.stopRide(); var value=EntityData(); value.stopRide(); }
             func main(){}
         """, output)
@@ -4370,20 +4370,20 @@ class LibFieldAccessTest {
 
     @Test
     fun nativePlayerXpCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){ var box=Box(); dynamic var result=box.observe(4); }"
+        val mainSource = "func main(){ var box=Box(); dynamic result=box.observe(4); }"
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.std:*
             data Box {
-                func observe(amount as int):int {
-                    var targets=@a; var one=@p;
-                    var addedPoints=targets.addXpPoints(amount); var addedLevels=targets.addXpLevels(amount);
-                    var setPoints=targets.setXpPoints(amount); var setLevels=targets.setXpLevels(amount);
-                    var queryPoints=one.queryXpPoints(); var queryLevels=one.queryXpLevels();
-                    var ap=addedPoints.result; var al=addedLevels.success;
-                    var sp=setPoints.result; var sl=setLevels.success;
-                    var qp=queryPoints.result; var ql=queryLevels.success;
-                    return 7;
+                func observe(amount: int):int {
+                    var targets=@a; var one=@p
+                    var addedPoints=targets.addXpPoints(amount); var addedLevels=targets.addXpLevels(amount)
+                    var setPoints=targets.setXpPoints(amount); var setLevels=targets.setXpLevels(amount)
+                    var queryPoints=one.queryXpPoints(); var queryLevels=one.queryXpLevels()
+                    var ap=addedPoints.result; var al=addedLevels.success
+                    var sp=setPoints.result; var sl=setLevels.success
+                    var qp=queryPoints.result; var ql=queryLevels.success
+                    return 7
                 }
             }
             $mainSource
@@ -4461,7 +4461,7 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         check(main)
         val rejected = consume("""
-            import mcfpp.minecraft.entity:*;
+            import mcfpp.minecraft.entity:*
             func reject(){ var multiple=@a; multiple.queryXpPoints(); var nonPlayers=@e; nonPlayers.addXpPoints(1); var value=EntityData(); value.setXpPoints(1); }
             func main(){}
         """, output)
@@ -4472,21 +4472,21 @@ class LibFieldAccessTest {
 
     @Test
     fun nativePlayerAdvancementCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){ var box=Box(); dynamic var result=box.observe(\"fixture:progress\"); }"
+        val mainSource = "func main(){ var box=Box(); dynamic result=box.observe(\"fixture:progress\"); }"
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.resource:*;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.resource:*
+            import mcfpp.minecraft.std:*
             data Box {
-                func observe(advancementId as string):int {
-                    var advancement=Advancement(); advancement.id=advancementId; var target=@a;
-                    var grant=target.grant(advancement); var grantAll=target.grantAll();
-                    var grantFrom=target.grantFrom(advancement); var grantThrough=target.grantThrough(advancement); var grantUntil=target.grantUntil(advancement);
-                    var revoke=target.revoke(advancement); var revokeAll=target.revokeAll();
-                    var revokeFrom=target.revokeFrom(advancement); var revokeThrough=target.revokeThrough(advancement); var revokeUntil=target.revokeUntil(advancement);
-                    var a=grant.result; var b=grantAll.success; var c=grantFrom.result; var d=grantThrough.success; var e=grantUntil.result;
-                    var f=revoke.success; var g=revokeAll.result; var h=revokeFrom.success; var i=revokeThrough.result; var j=revokeUntil.success;
-                    return 7;
+                func observe(advancementId: string):int {
+                    var advancement=Advancement(); advancement.id=advancementId; var target=@a
+                    var grant=target.grant(advancement); var grantAll=target.grantAll()
+                    var grantFrom=target.grantFrom(advancement); var grantThrough=target.grantThrough(advancement); var grantUntil=target.grantUntil(advancement)
+                    var revoke=target.revoke(advancement); var revokeAll=target.revokeAll()
+                    var revokeFrom=target.revokeFrom(advancement); var revokeThrough=target.revokeThrough(advancement); var revokeUntil=target.revokeUntil(advancement)
+                    var a=grant.result; var b=grantAll.success; var c=grantFrom.result; var d=grantThrough.success; var e=grantUntil.result
+                    var f=revoke.success; var g=revokeAll.result; var h=revokeFrom.success; var i=revokeThrough.result; var j=revokeUntil.success
+                    return 7
                 }
             }
             $mainSource
@@ -4565,7 +4565,7 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         check(main)
         val rejected = consume("""
-            import mcfpp.minecraft.entity:*;
+            import mcfpp.minecraft.entity:*
             func reject(){ var nonPlayers=@e; nonPlayers.grantAll(); var value=EntityData(); value.revokeAll(); }
             func main(){}
         """, output)
@@ -4576,18 +4576,18 @@ class LibFieldAccessTest {
 
     @Test
     fun nativePlayerStateAndRideCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){ var box=Box(); dynamic var result=box.observe(\"minecraft:stone\",2); }"
+        val mainSource = "func main(){ var box=Box(); dynamic result=box.observe(\"minecraft:stone\",2); }"
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.std:*;
-            import mcfpp.minecraft.other:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.std:*
+            import mcfpp.minecraft.other:*
             data Box {
-                func observe(itemId as string,count as int):int {
-                    var players=@a; var rider=@s; var mount=@p;
-                    var cleared=players.clear(); var items=players.clear(itemId,count);
-                    var mode=players.setGamemode(Gamemode.creative); var riding=rider.ride(mount);
-                    var a=cleared.result; var b=items.success; var c=mode.result; var d=riding.success;
-                    return 7;
+                func observe(itemId: string,count: int):int {
+                    var players=@a; var rider=@s; var mount=@p
+                    var cleared=players.clear(); var items=players.clear(itemId,count)
+                    var mode=players.setGamemode(Gamemode.creative); var riding=rider.ride(mount)
+                    var a=cleared.result; var b=items.success; var c=mode.result; var d=riding.success
+                    return 7
                 }
             }
             $mainSource
@@ -4666,12 +4666,12 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         check(main)
         val rejected = consume("""
-            import mcfpp.minecraft.entity:*;
-            import mcfpp.minecraft.other:*;
-            func reject(mode as Gamemode){
-                var nonPlayers=@e; nonPlayers.clear(); var value=EntityData(); value.setGamemode(Gamemode.creative);
-                var players=@a; players.setGamemode(mode); var rider=@s; var mount=@p;
-                players.ride(mount); rider.ride(players); value.ride(mount);
+            import mcfpp.minecraft.entity:*
+            import mcfpp.minecraft.other:*
+            func reject(mode: Gamemode){
+                var nonPlayers=@e; nonPlayers.clear(); var value=EntityData(); value.setGamemode(Gamemode.creative)
+                var players=@a; players.setGamemode(mode); var rider=@s; var mount=@p
+                players.ride(mount); rider.ride(players); value.ride(mount)
             }
             func main(){}
         """, output)
@@ -4682,16 +4682,16 @@ class LibFieldAccessTest {
 
     @Test
     fun nativeEntityTeleportCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){ var box=Box(); dynamic var result=box.observe(); }"
+        val mainSource = "func main(){ var box=Box(); dynamic result=box.observe(); }"
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.std:*
             data Box {
                 func observe():int {
-                    var targets=@a; var destination=@p;
-                    var first=targets.tp(destination); var second=targets.tp(destination);
-                    var firstValue=first.result; var secondSuccess=second.success;
-                    return 7;
+                    var targets=@a; var destination=@p
+                    var first=targets.tp(destination); var second=targets.tp(destination)
+                    var firstValue=first.result; var secondSuccess=second.success
+                    return 7
                 }
             }
             $mainSource
@@ -4742,7 +4742,7 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         check(main)
         val rejected = consume("""
-            import mcfpp.minecraft.entity:*;
+            import mcfpp.minecraft.entity:*
             func reject(){ var targets=@a; var multiple=@a; targets.tp(multiple); var value=EntityData(); var one=@p; value.tp(one); }
             func main(){}
         """, output)
@@ -4753,16 +4753,16 @@ class LibFieldAccessTest {
 
     @Test
     fun nativePlayerMessageCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){ var box=Box(); dynamic var result=box.observe(\"fixture:message\"); }"
+        val mainSource = "func main(){ var box=Box(); dynamic result=box.observe(\"fixture:message\"); }"
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.std:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.std:*
             data Box {
-                func observe(message as string):int {
-                    var sender=@p; var targets=@a;
-                    var told=sender.tell(targets,message); var whispered=sender.w(targets,message);
-                    var toldValue=told.result; var whisperedSuccess=whispered.success;
-                    return 7;
+                func observe(message: string):int {
+                    var sender=@p; var targets=@a
+                    var told=sender.tell(targets,message); var whispered=sender.w(targets,message)
+                    var toldValue=told.result; var whisperedSuccess=whispered.success
+                    return 7
                 }
             }
             $mainSource
@@ -4823,7 +4823,7 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         check(main)
         val rejected = consume("""
-            import mcfpp.minecraft.entity:*;
+            import mcfpp.minecraft.entity:*
             func reject(){ var sender=@e; var players=@a; sender.tell(players,"x"); var one=@p; var entities=@e; one.w(entities,"x"); var value=EntityData(); value.tell(players,"x"); }
             func main(){}
         """, output)
@@ -4834,21 +4834,21 @@ class LibFieldAccessTest {
 
     @Test
     fun nativeEntityAttributeCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){ var box=Box(); var modifier=AttributeModifier(); modifier.id=\"fixture:modifier\"; dynamic var result=box.observe(\"fixture:attribute\",modifier); }"
+        val mainSource = "func main(){ var box=Box(); var modifier=AttributeModifier(); modifier.id=\"fixture:modifier\"; dynamic result=box.observe(\"fixture:attribute\",modifier); }"
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.std:*;
-            import mcfpp.minecraft.other:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.std:*
+            import mcfpp.minecraft.other:*
             data Box {
-                func observe(attributeId as string,modifier as AttributeModifier):int {
-                    var target=@p;
-                    var base=target.getAttributeBase(attributeId,1.0);
-                    var total=target.getAttribute(attributeId,1.0);
-                    var removed=target.removeAttributeModifier(attributeId,modifier);
-                    var modified=target.getAttributeModifier(attributeId,modifier,1.0);
-                    var baseValue=base.result; var totalSuccess=total.success;
-                    var removedValue=removed.result; var modifiedSuccess=modified.success;
-                    return 7;
+                func observe(attributeId: string,modifier: AttributeModifier):int {
+                    var target=@p
+                    var base=target.getAttributeBase(attributeId,1.0)
+                    var total=target.getAttribute(attributeId,1.0)
+                    var removed=target.removeAttributeModifier(attributeId,modifier)
+                    var modified=target.getAttributeModifier(attributeId,modifier,1.0)
+                    var baseValue=base.result; var totalSuccess=total.success
+                    var removedValue=removed.result; var modifiedSuccess=modified.success
+                    return 7
                 }
             }
             $mainSource
@@ -4916,9 +4916,9 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         check(main)
         val rejected = consume("""
-            import mcfpp.minecraft.entity:*;
-            import mcfpp.minecraft.other:*;
-            func reject(modifier as AttributeModifier){ var multiple=@a; multiple.getAttribute("fixture:attribute",1.0); var value=EntityData(); value.removeAttributeModifier("fixture:attribute",modifier); }
+            import mcfpp.minecraft.entity:*
+            import mcfpp.minecraft.other:*
+            func reject(modifier: AttributeModifier){ var multiple=@a; multiple.getAttribute("fixture:attribute",1.0); var value=EntityData(); value.removeAttributeModifier("fixture:attribute",modifier); }
             func main(){}
         """, output)
         assertEquals(2, Project.errorCount)
@@ -4929,16 +4929,16 @@ class LibFieldAccessTest {
     @Test
     fun frozenEnumArgumentsRestoreNominalMembersAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
-            namespace fixture.fields;
+            namespace fixture.fields
             enum Choice { One="fixture:payload", Two={label:"x"} }
-            data Box<E as Choice> {
-                private var value as int;
-                constructor(v as int){ this.value=v; }
+            data Box<E: Choice> {
+                private var value: int
+                constructor(v: int){ this.value=v; }
                 func read():int { return this.value; }
             }
             func main(){
-                var first=Box<Choice.One>(4); var second=Box<Choice.Two>(9);
-                dynamic var firstResult=first.read(); dynamic var secondResult=second.read();
+                var first=Box<Choice.One>(4); var second=Box<Choice.Two>(9)
+                dynamic firstResult=first.read(); dynamic secondResult=second.read()
             }
         """, output)
         fun check(main: Function): List<Pair<top.mcfpp.type.TypeId, top.mcfpp.analysis.CompilerValue>> {
@@ -4966,10 +4966,10 @@ class LibFieldAccessTest {
         val sourceModels = listOf("first", "second").map { (sourceMain.scope.getVar(it) as DataTemplateObject).templateType }
         val source = check(sourceMain)
         val main = consume("""
-            import fixture.fields:*;
+            import fixture.fields:*
             func main(){
-                var second=Box<Choice.Two>(9); var first=Box<Choice.One>(4);
-                dynamic var firstResult=first.read(); dynamic var secondResult=second.read();
+                var second=Box<Choice.Two>(9); var first=Box<Choice.One>(4)
+                dynamic firstResult=first.read(); dynamic secondResult=second.read()
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -4979,22 +4979,22 @@ class LibFieldAccessTest {
 
     @Test
     fun nativeEntityAttributeWriteCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){ var box=Box(); var modifier=AttributeModifier(); modifier.id=\"fixture:modifier\"; modifier.amount=2.345678901234d; dynamic var result=box.observe(\"fixture:attribute\",3.456789012345d,modifier); }"
+        val mainSource = "func main(){ var box=Box(); var modifier=AttributeModifier(); modifier.id=\"fixture:modifier\"; modifier.amount=2.345678901234d; dynamic result=box.observe(\"fixture:attribute\",3.456789012345d,modifier); }"
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.std:*;
-            import mcfpp.minecraft.other:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.std:*
+            import mcfpp.minecraft.other:*
             data Box {
-                func observe(attributeId as string,amount as double,modifier as AttributeModifier):int {
-                    var target=@p;
-                    var dynamicSet=target.setAttributeBase(attributeId,amount);
-                    var preciseSet=target.setAttributeBase(attributeId,1.234567890123d);
-                    var added=target.addAttributeModifier<AttributeModifierType.add_value>(attributeId,modifier);
-                    var baseAdded=target.addAttributeModifier<AttributeModifierType.add_multiplied_base>(attributeId,modifier);
-                    var totalAdded=target.addAttributeModifier<AttributeModifierType.add_multiplied_total>(attributeId,modifier);
-                    var first=dynamicSet.result; var second=preciseSet.success;
-                    var third=added.result; var fourth=baseAdded.success; var fifth=totalAdded.result;
-                    return 7;
+                func observe(attributeId: string,amount: double,modifier: AttributeModifier):int {
+                    var target=@p
+                    var dynamicSet=target.setAttributeBase(attributeId,amount)
+                    var preciseSet=target.setAttributeBase(attributeId,1.234567890123d)
+                    var added=target.addAttributeModifier<AttributeModifierType.add_value>(attributeId,modifier)
+                    var baseAdded=target.addAttributeModifier<AttributeModifierType.add_multiplied_base>(attributeId,modifier)
+                    var totalAdded=target.addAttributeModifier<AttributeModifierType.add_multiplied_total>(attributeId,modifier)
+                    var first=dynamicSet.result; var second=preciseSet.success
+                    var third=added.result; var fourth=baseAdded.success; var fifth=totalAdded.result
+                    return 7
                 }
             }
             $mainSource
@@ -5086,12 +5086,12 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         check(main)
         val rejected = consume("""
-            import mcfpp.minecraft.entity:*;
-            import mcfpp.minecraft.other:*;
-            func reject(mode as AttributeModifierType,modifier as AttributeModifier){
-                var multiple=@a; multiple.setAttributeBase("fixture:attribute",1.0d);
-                var value=EntityData(); value.addAttributeModifier<AttributeModifierType.add_value>("fixture:attribute",modifier);
-                var one=@p; one.addAttributeModifier<mode>("fixture:attribute",modifier);
+            import mcfpp.minecraft.entity:*
+            import mcfpp.minecraft.other:*
+            func reject(mode: AttributeModifierType,modifier: AttributeModifier){
+                var multiple=@a; multiple.setAttributeBase("fixture:attribute",1.0d)
+                var value=EntityData(); value.addAttributeModifier<AttributeModifierType.add_value>("fixture:attribute",modifier)
+                var one=@p; one.addAttributeModifier<mode>("fixture:attribute",modifier)
             }
             func main(){}
         """, output)
@@ -5102,23 +5102,23 @@ class LibFieldAccessTest {
 
     @Test
     fun nativeCoordinateTeleportCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){var box=Box();dynamic var result=box.observe();}"
+        val mainSource = "func main(){var box=Box();dynamic result=box.observe();}"
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.std:*;
-            import mcfpp.minecraft.other:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.std:*
+            import mcfpp.minecraft.other:*
             data Box {
                 func observe():int {
-                    var targets=@a; var destination=@p;
-                    var position=1 2 3; var alias=position as pos3; var replacement=9 8 7;
-                    alias.x=replacement.x;
-                    var first=targets.tp(position);
-                    var second=targets.tp(~ ~ ~,90 0);
-                    var third=targets.tp(^ ^ ^1,~ ~1 ~);
-                    var fourth=targets.tp(0 0 0,destination,Anchor.eyes);
-                    var firstValue=first.result; var secondValue=second.success;
-                    var thirdValue=third.result; var fourthValue=fourth.success;
-                    return 7;
+                    var targets=@a; var destination=@p
+                    var position=1 2 3; var alias=position as pos3; var replacement=9 8 7
+                    alias.x=replacement.x
+                    var first=targets.tp(position)
+                    var second=targets.tp(~ ~ ~,90 0)
+                    var third=targets.tp(^ ^ ^1,~ ~1 ~)
+                    var fourth=targets.tp(0 0 0,destination,Anchor.eyes)
+                    var firstValue=first.result; var secondValue=second.success
+                    var thirdValue=third.result; var fourthValue=fourth.success
+                    return 7
                 }
             }
             $mainSource
@@ -5161,14 +5161,14 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         check(main)
         val rejected = consume("""
-            import mcfpp.minecraft.entity:*;
-            import mcfpp.minecraft.other:*;
+            import mcfpp.minecraft.entity:*
+            import mcfpp.minecraft.other:*
             func reject(){
-                var position as pos3; var anchor as Anchor;
-                var target=@a; var destination=@p; var dto=EntityData();
-                dto.tp(1 2 3); target.tp(1 2 3,target,Anchor.eyes);
-                target.tp(position); target.tp(1 2 3,destination,anchor);
-                target.tp(^ 0 ^); target.tp(1 2 3,^ ^);
+                var position: pos3; var anchor: Anchor
+                var target=@a; var destination=@p; var dto=EntityData()
+                dto.tp(1 2 3); target.tp(1 2 3,target,Anchor.eyes)
+                target.tp(position); target.tp(1 2 3,destination,anchor)
+                target.tp(^ 0 ^); target.tp(1 2 3,^ ^)
             }
             func main(){}
         """, output)
@@ -5180,17 +5180,17 @@ class LibFieldAccessTest {
 
     @Test
     fun nativeItemPredicatePartsCopyBothOperandsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){var box=Box();dynamic var result=box.observe(4,9);}"
+        val mainSource = "func main(){var box=Box();dynamic result=box.observe(4,9);}"
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.item:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.item:*
             data Box {
-                func observe(first as int,second as int):int {
-                    var left=CountMatchPart(); var right=CountMatchPart();
-                    left.count=first; right.count=second;
-                    var joined=left|right; var copy=joined;
-                    left.count=91; right.count=92;
-                    return 7;
+                func observe(first: int,second: int):int {
+                    var left=CountMatchPart(); var right=CountMatchPart()
+                    left.count=first; right.count=second
+                    var joined=left|right; var copy=joined
+                    left.count=91; right.count=92
+                    return 7
                 }
             }
             $mainSource
@@ -5234,25 +5234,25 @@ class LibFieldAccessTest {
 
     @Test
     fun nativeItemPredicateBuildersCaptureFieldsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){var box=Box();dynamic var result=box.observe(\"fixture:component\",4,({value:7} as nbt));}"
+        val mainSource = "func main(){var box=Box();dynamic result=box.observe(\"fixture:component\",4,({value:7} as nbt));}"
         write("""
-            namespace fixture.fields;
-            import mcfpp.minecraft.item:*;
+            namespace fixture.fields
+            import mcfpp.minecraft.item:*
             data Box {
-                func observe(id as string,count as int,payload as nbt):int {
-                    var damage=DamagePredicate(); damage.damage=2;
-                    var contained=ItemPredicate.hasComponent(id);
-                    var matched=ItemPredicate.componentMatches(id,payload);
-                    var nested=ItemPredicate.subPredicate(id,damage);
-                    var counted=ItemPredicate.hasCount();
-                    var exact=ItemPredicate.count(count);
-                    var ranged=ItemPredicate.count(1 .. 3);
-                    var predicate=ItemPredicate();
-                    predicate.hasComponent(id); predicate.componentMatches(id,payload);
-                    predicate.subPredicate(id,damage); predicate.hasCount(); predicate.count(count);
-                    var copied=predicate.count(1 .. 3);
-                    predicate.hasCount(); damage.damage=99;
-                    return 7;
+                func observe(id: string,count: int,payload: nbt):int {
+                    var damage=DamagePredicate(); damage.damage=2
+                    var contained=ItemPredicate.hasComponent(id)
+                    var matched=ItemPredicate.componentMatches(id,payload)
+                    var nested=ItemPredicate.subPredicate(id,damage)
+                    var counted=ItemPredicate.hasCount()
+                    var exact=ItemPredicate.count(count)
+                    var ranged=ItemPredicate.count(1 .. 3)
+                    var predicate=ItemPredicate()
+                    predicate.hasComponent(id); predicate.componentMatches(id,payload)
+                    predicate.subPredicate(id,damage); predicate.hasCount(); predicate.count(count)
+                    var copied=predicate.count(1 .. 3)
+                    predicate.hasCount(); damage.damage=99
+                    return 7
                 }
             }
             $mainSource

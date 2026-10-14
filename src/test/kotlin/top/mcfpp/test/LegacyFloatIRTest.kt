@@ -59,13 +59,13 @@ class LegacyFloatIRTest {
         for (version in listOf("1.20.1", "1.20.3")) {
             val main = compile("""
                 func main(){
-                    var quotient = 1.0000025 / 1.0000024;
-                    var value = quotient + 0.5;
-                    value *= 2;
-                    value -= 0.5;
+                    var quotient = 1.0000025 / 1.0000024
+                    var value = quotient + 0.5
+                    value *= 2
+                    value -= 0.5
                     while(value < 4.0){ value += 0.5; }
-                    var negative = -value;
-                    dynamic var result = 0;
+                    var negative = -value
+                    dynamic result = 0
                     if(quotient == 1.0 && value >= 4.0 && value <= 4.0 && negative < 0.0 &&
                         value > negative && negative != value){ result = 1; }
                     /data modify storage mcfpp:system temp.decimal set from storage mcfpp:system stack_frame[0].value
@@ -80,14 +80,14 @@ class LegacyFloatIRTest {
 
     @Test fun promotionAndExplicitConversionKeepEightDecimalDigitsInsteadOfHostFloatPrecision() = modes {
         val main = compile("""
-            func promote(value as int): float { return value; }
+            func promote(value: int): float { return value; }
             func main(){
-                var promoted as float = 16777217;
-                var returned = promote(16777217);
-                var maximum = toFloat(2147483647);
-                var small = toFloat(-7s);
-                var encoded = toNBT(promoted);
-                dynamic var result = 0;
+                var promoted: float = 16777217
+                var returned = promote(16777217)
+                var maximum = toFloat(2147483647)
+                var small = toFloat(-7s)
+                var encoded = toNBT(promoted)
+                dynamic result = 0
                 if(toInt(promoted) == 16777217 && toInt(returned) == 16777217 &&
                     toInt(maximum) == 2147483600 && toInt(small) == -7){ result = 1; }
                 /data modify storage mcfpp:system temp.promoted set from storage mcfpp:system stack_frame[0].promoted
@@ -105,17 +105,17 @@ class LegacyFloatIRTest {
 
     @Test fun recursiveCallsCaptureEarlierArgumentsAndStaticWritebackSeparately() = modes {
         val main = compile("""
-            func sum(value as float, depth as int): float {
+            func sum(value: float, depth: int): float {
                 if(depth <= 0){ return value; }
-                return value + sum(value + 0.5, depth - 1);
+                return value + sum(value + 0.5, depth - 1)
             }
-            func change(static value as float): float { value = 10.0; return 0.5; }
-            func forward(value as float, ignored as float): any { return value; }
+            func change(static value: float): float { value = 10.0; return 0.5; }
+            func forward(value: float, ignored: float): any { return value; }
             func main(){
-                var value = 1.25;
-                var earlier = forward(value, change(value));
-                var total = sum(earlier, 2) + value;
-                dynamic var result = 0;
+                var value = 1.25
+                var earlier = forward(value, change(value))
+                var total = sum(earlier, 2) + value
+                dynamic result = 0
                 if(total == 15.25 && value == 10.0 && earlier == 1.25){ result = 1; }
             }
         """)
@@ -126,16 +126,16 @@ class LegacyFloatIRTest {
     @Test fun legacyAndIRCallersKeepMultipleFloatParametersAndConsecutiveReturnsIndependent() = modes {
         for (legacy in listOf(true, false)) {
             val main = compile("""
-                func identity(value as float): float { return value; }
+                func identity(value: float): float { return value; }
                 func literal(): float { return 1.25; }
-                func mix(left as float, right as float = 0.75): float { return left * 10.0 + right; }
+                func mix(left: float, right: float = 0.75): float { return left * 10.0 + right; }
                 func main(){
                     ${if (legacy) "var ignored = 6 / 2;" else ""}
-                    var left = 1.25;
-                    var right = 2.5;
-                    var first = mix(literal(), identity(right));
-                    var second = mix(identity(4.0));
-                    dynamic var result = toInt(first + second);
+                    var left = 1.25
+                    var right = 2.5
+                    var first = mix(literal(), identity(right))
+                    var second = mix(identity(4.0))
+                    dynamic result = toInt(first + second)
                 }
             """, ir = !legacy)
             assertNotNull(function("identity").typedIR)
@@ -147,19 +147,19 @@ class LegacyFloatIRTest {
 
     @Test fun IRCallerReadsLegacyReturnsAndStaticParametersFromTheSameCompoundABI() = modes {
         val main = compile("""
-            func oldMix(left as float, right as float): float {
-                var ignored = 6 / 2;
-                return left * 10.0 + right;
+            func oldMix(left: float, right: float): float {
+                var ignored = 6 / 2
+                return left * 10.0 + right
             }
-            func oldChange(static value as float): float {
-                var ignored = 6 / 2;
-                value += 1.25;
-                return value;
+            func oldChange(static value: float): float {
+                var ignored = 6 / 2
+                value += 1.25
+                return value
             }
             func main(){
-                var value = 2.0;
-                var total = oldMix(value, oldChange(value));
-                dynamic var result = toInt(total * 10.0 + value);
+                var value = 2.0
+                var total = oldMix(value, oldChange(value))
+                dynamic result = toInt(total * 10.0 + value)
             }
         """)
         assertNull(function("oldMix").typedIR)
@@ -170,10 +170,10 @@ class LegacyFloatIRTest {
     @Test fun zeroDivisionAndMultiplicationRemainCanonicalWithoutHostFolding() = modes {
         val main = compile("""
             func main(){
-                var quotient = 1.0 / 0.0;
-                var both = 0.0 / 0.0;
-                var product = 999.0 * 0.0;
-                dynamic var result = 0;
+                var quotient = 1.0 / 0.0
+                var both = 0.0 / 0.0
+                var product = 999.0 * 0.0
+                dynamic result = 0
                 if(quotient == 0.0 && both == 0.0 && product == 0.0){ result = 1; }
                 /data modify storage mcfpp:system temp.zero set from storage mcfpp:system stack_frame[0].quotient
             }
@@ -199,15 +199,15 @@ class LegacyFloatIRTest {
 
     @Test fun erasedAndUnknownFloatViewsShareThePayloadWithoutRuntimeTypeChecks() = modes {
         val main = compile("""
-            func expose(value as float): any { return value; }
+            func expose(value: float): any { return value; }
             func main(){
-                var source as any = expose(1.25);
-                var view = source as float;
-                view += 0.5;
+                var source: any = expose(1.25)
+                var view = source as float
+                view += 0.5
                 /say barrier
-                var unknown = source as float;
-                unknown += 0.25;
-                dynamic var result = toInt(unknown);
+                var unknown = source as float
+                unknown += 0.25
+                dynamic result = toInt(unknown)
                 /data modify storage mcfpp:system temp.view set from storage mcfpp:system stack_frame[0].source
             }
         """)
@@ -217,10 +217,10 @@ class LegacyFloatIRTest {
     }
 
     @Test fun scalarFloatViewsKeepTheExistingUnusedAndReadLayoutBoundary() {
-        compile("func main(){ var source as any = 1; var unused = source as float; }", ir = false)
+        compile("func main(){ var source: any = 1; var unused = source as float; }", ir = false)
         for (source in listOf(
-            "func main(){ var source as any = 1; var view = source as float; var result = toInt(view); }",
-            "func main(){ var source as any = 1.25; var view = source as float; source = 2; var result = toInt(view); }")) {
+            "func main(){ var source: any = 1; var view = source as float; var result = toInt(view); }",
+            "func main(){ var source: any = 1.25; var view = source as float; source = 2; var result = toInt(view); }")) {
             MCFPPStringTest.readFromString(source, version = "1.20.1")
             assertTrue(Project.errorCount > 0, source)
         }

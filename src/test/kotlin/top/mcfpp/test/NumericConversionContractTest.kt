@@ -50,11 +50,11 @@ class NumericConversionContractTest {
         for (version in listOf("26.3", "1.20.2", "1.20.1")) {
             val library = output.resolve("numeric-$version.mclib")
             fun body(known: Boolean): String = numericBody(known,version)
-            val parameters = sources.joinToString { "${it.name}Input as ${it.name}" }
+            val parameters = sources.joinToString { "${it.name}Input: ${it.name}" }
             val arguments = sources.joinToString { it.literal }
-            val main = "func main(){var box=Box();dynamic var result=box.observe($arguments);dynamic var knownResult=box.known();}"
+            val main = "func main(){var box=Box();dynamic result=box.observe($arguments);dynamic knownResult=box.known();}"
             val source = """
-                namespace fixture.numeric;
+                namespace fixture.numeric
                 data Box {
                     func observe($parameters):int {
                         ${body(false)}
@@ -102,11 +102,11 @@ class NumericConversionContractTest {
             for(version in listOf("26.3","1.20.2","1.20.1")) for(fold in listOf(false,true)) {
                 CompileSettings.foldIRConstants=fold
                 val library=output.resolve("ir-$version-$fold.mclib")
-                val parameters=sources.joinToString {"${it.name}Input as ${it.name}"}
+                val parameters=sources.joinToString {"${it.name}Input: ${it.name}"}
                 val arguments=sources.joinToString {it.literal}
-                val main="func main(){dynamic var result=observe($arguments);dynamic var knownResult=known();}"
+                val main="func main(){dynamic result=observe($arguments);dynamic knownResult=known();}"
                 val source="""
-                    namespace fixture.numeric;
+                    namespace fixture.numeric
                     func observe($parameters):int {
                         ${numericBody(false,version)}
                     }
@@ -173,7 +173,7 @@ class NumericConversionContractTest {
                     if(fresh)appendLine("import fixture.numeric:*;")
                     if(!ir)appendLine("data Reject {")
                     for((source,target)in pairs)for(known in listOf(false,true)) {
-                        appendLine("func reject_${source.name}_${target}_$known(${if(known)"" else "value as ${source.name}"}):int {")
+                        appendLine("func reject_${source.name}_${target}_$known(${if(known)"" else "value: ${source.name}"}):int {")
                         appendLine("var result=${conversion(target)}(${if(known)source.literal else "value"});return 7;")
                         appendLine("}")
                     }
@@ -213,21 +213,21 @@ class NumericConversionContractTest {
         val library = output.resolve("payloads.mclib")
         val main = """
             func main(){
-                var box=Box(); var payload=Payload(9);
-                dynamic var result=box.observe(true,"quote \" slash \\",( {value:7} as nbt),payload,[B;1b,-2b],[I;3,-4],[L;5L,-6L]);
-                dynamic var knownResult=box.known();
+                var box=Box(); var payload=Payload(9)
+                dynamic result=box.observe(true,"quote \" slash \\",( {value:7} as nbt),payload,[B;1b,-2b],[I;3,-4],[L;5L,-6L])
+                dynamic knownResult=box.known()
             }
         """.trimIndent()
         val source = """
-            namespace fixture.payloads;
-            data Payload { var value as int; constructor(value as int){this.value=value;} }
+            namespace fixture.payloads
+            data Payload { var value: int; constructor(value: int){this.value=value;} }
             data Box {
-                func observe(flag as bool,label as string,payload as nbt,objectValue as Payload,bytes as ByteArray,ints as IntArray,longs as LongArray):int {
+                func observe(flag: bool,label: string,payload: nbt,objectValue: Payload,bytes: ByteArray,ints: IntArray,longs: LongArray):int {
                     /data modify storage fixture:payloads runtime set value {}
-                    var booleanValue=toNBT(flag);var stringValue=toNBT(label);var nbtValue=toNBT(payload);
-                    var dataValue=toNBT(objectValue);var bytesValue=toNBT(bytes);var intsValue=toNBT(ints);var longsValue=toNBT(longs);
-                    flag=false;label="changed";payload={value:0} as nbt;objectValue.value=0;
-                    bytes[0]=0b;ints[0]=0;longs[0]=0L;
+                    var booleanValue=toNBT(flag);var stringValue=toNBT(label);var nbtValue=toNBT(payload)
+                    var dataValue=toNBT(objectValue);var bytesValue=toNBT(bytes);var intsValue=toNBT(ints);var longsValue=toNBT(longs)
+                    flag=false;label="changed";payload={value:0} as nbt;objectValue.value=0
+                    bytes[0]=0b;ints[0]=0;longs[0]=0L
                     /data modify storage fixture:payloads runtime.booleanValue set from storage mcfpp:system stack_frame[0].booleanValue
                     /data modify storage fixture:payloads runtime.stringValue set from storage mcfpp:system stack_frame[0].stringValue
                     /data modify storage fixture:payloads runtime.nbtValue set from storage mcfpp:system stack_frame[0].nbtValue
@@ -235,12 +235,12 @@ class NumericConversionContractTest {
                     /data modify storage fixture:payloads runtime.bytesValue set from storage mcfpp:system stack_frame[0].bytesValue
                     /data modify storage fixture:payloads runtime.intsValue set from storage mcfpp:system stack_frame[0].intsValue
                     /data modify storage fixture:payloads runtime.longsValue set from storage mcfpp:system stack_frame[0].longsValue
-                    return 7;
+                    return 7
                 }
                 func known():int {
                     /data modify storage fixture:payloads known set value {}
-                    var booleanValue=toNBT(true);var stringValue=toNBT("quote \" slash \\");var nbtValue=toNBT({value:7} as nbt);
-                    var dataValue=toNBT(Payload(9));var bytesValue=toNBT([B;1b,-2b]);var intsValue=toNBT([I;3,-4]);var longsValue=toNBT([L;5L,-6L]);
+                    var booleanValue=toNBT(true);var stringValue=toNBT("quote \" slash \\");var nbtValue=toNBT({value:7} as nbt)
+                    var dataValue=toNBT(Payload(9));var bytesValue=toNBT([B;1b,-2b]);var intsValue=toNBT([I;3,-4]);var longsValue=toNBT([L;5L,-6L])
                     /data modify storage fixture:payloads known.booleanValue set from storage mcfpp:system stack_frame[0].booleanValue
                     /data modify storage fixture:payloads known.stringValue set from storage mcfpp:system stack_frame[0].stringValue
                     /data modify storage fixture:payloads known.nbtValue set from storage mcfpp:system stack_frame[0].nbtValue
@@ -248,7 +248,7 @@ class NumericConversionContractTest {
                     /data modify storage fixture:payloads known.bytesValue set from storage mcfpp:system stack_frame[0].bytesValue
                     /data modify storage fixture:payloads known.intsValue set from storage mcfpp:system stack_frame[0].intsValue
                     /data modify storage fixture:payloads known.longsValue set from storage mcfpp:system stack_frame[0].longsValue
-                    return 7;
+                    return 7
                 }
             }
             $main
@@ -280,32 +280,32 @@ class NumericConversionContractTest {
             fun observe(name:String)= "/data modify storage fixture:boundaries $name set from storage mcfpp:system stack_frame[0].$name"
             val known=buildString {
                 integerCases.forEachIndexed { i,value ->
-                    appendLine("dynamic var byte$i=toByte($value);dynamic var short$i=toShort($value);")
+                    appendLine("dynamic byte$i=toByte($value);dynamic short$i=toShort($value);")
                     appendLine(observe("byte$i"));appendLine(observe("short$i"))
                 }
                 wideCases.forEachIndexed {i,pair ->
-                    appendLine("dynamic var longInt$i=toInt(${pair.first});dynamic var doubleInt$i=toInt(${pair.second});")
+                    appendLine("dynamic longInt$i=toInt(${pair.first});dynamic doubleInt$i=toInt(${pair.second});")
                     appendLine(observe("longInt$i"));appendLine(observe("doubleInt$i"))
-                    if(version!="1.20.1") {appendLine("dynamic var rounded$i=toDouble(${pair.first});");appendLine(observe("rounded$i"))}
+                    if(version!="1.20.1") {appendLine("dynamic rounded$i=toDouble(${pair.first});");appendLine(observe("rounded$i"))}
                     if(version=="26.3") {
-                        appendLine("dynamic var longFloat$i=toFloat(${pair.first});dynamic var doubleFloat$i=toFloat(${pair.second});")
+                        appendLine("dynamic longFloat$i=toFloat(${pair.first});dynamic doubleFloat$i=toFloat(${pair.second});")
                         appendLine(observe("longFloat$i"));appendLine(observe("doubleFloat$i"))
                     }
                 }
                 appendLine("return 7;")
             }
             val wideBody=buildString {
-                appendLine("dynamic var longInt=toInt(wide);dynamic var doubleInt=toInt(precise);")
+                appendLine("dynamic longInt=toInt(wide);dynamic doubleInt=toInt(precise);")
                 appendLine(observe("longInt"));appendLine(observe("doubleInt"))
-                if(version!="1.20.1") {appendLine("dynamic var rounded=toDouble(wide);");appendLine(observe("rounded"))}
+                if(version!="1.20.1") {appendLine("dynamic rounded=toDouble(wide);");appendLine(observe("rounded"))}
                 if(version=="26.3") {
-                    appendLine("dynamic var longFloat=toFloat(wide);dynamic var doubleFloat=toFloat(precise);")
+                    appendLine("dynamic longFloat=toFloat(wide);dynamic doubleFloat=toFloat(precise);")
                     appendLine(observe("longFloat"));appendLine(observe("doubleFloat"))
                 }
                 appendLine("return 7;")
             }
             val main=buildString {
-                appendLine("func main(){var box=Box();dynamic var knownResult=box.known();")
+                appendLine("func main(){var box=Box();dynamic knownResult=box.known();")
                 integerCases.forEachIndexed {i,value ->
                     appendLine("box.narrow($value);")
                     appendLine("/data modify storage fixture:boundaries runtimeByte$i set from storage fixture:boundaries small")
@@ -320,14 +320,14 @@ class NumericConversionContractTest {
                 appendLine("}")
             }
             val source="""
-                namespace fixture.boundaries;
+                namespace fixture.boundaries
                 data Box {
-                    func narrow(value as int):int {dynamic var small=toByte(value);dynamic var medium=toShort(value);
+                    func narrow(value: int):int {dynamic small=toByte(value);dynamic medium=toShort(value)
                         ${observe("small")}
                         ${observe("medium")}
-                        return 7;
+                        return 7
                     }
-                    func wide(wide as long,precise as double):int {
+                    func wide(wide: long,precise: double):int {
                         $wideBody
                     }
                     func known():int {
@@ -369,8 +369,8 @@ class NumericConversionContractTest {
         val library=output.resolve("compiler-only.mclib")
         val main="func main(){var hidden=Hidden();}"
         val source="""
-            namespace fixture.compileronly;
-            data Hidden {var point as pos3;constructor(){this.point=1 2 3;} }
+            namespace fixture.compileronly
+            data Hidden {var point: pos3;constructor(){this.point=1 2 3;} }
             $main
         """.trimIndent()
         for(fresh in listOf(false,true)) {
@@ -412,14 +412,14 @@ class NumericConversionContractTest {
             appendLine("}")
         }
         val source="""
-            namespace fixture.floatbounds;
+            namespace fixture.floatbounds
             ${if(ir) "" else "data Box {"}
-                func observe(value as float):int {
-                    dynamic var integer=toInt(value);dynamic var small=toByte(value);dynamic var medium=toShort(value);
+                func observe(value: float):int {
+                    dynamic integer=toInt(value);dynamic small=toByte(value);dynamic medium=toShort(value)
                     /data modify storage fixture:floatbounds integer set from storage mcfpp:system stack_frame[0].integer
                     /data modify storage fixture:floatbounds small set from storage mcfpp:system stack_frame[0].small
                     /data modify storage fixture:floatbounds medium set from storage mcfpp:system stack_frame[0].medium
-                    return 7;
+                    return 7
                 }
             ${if(ir) "" else "}"}
             $main
@@ -450,9 +450,9 @@ class NumericConversionContractTest {
                 MCFPPStringTest.readFromString("""
                     ${if(ir) "" else "data Reject {"}
                     func known():int {
-                        var positive=to$target(1.0e30);
-                        var negative=to$target(-1.0e30);
-                        return 7;
+                        var positive=to$target(1.0e30)
+                        var negative=to$target(-1.0e30)
+                        return 7
                     }
                     ${if(ir) "" else "}"}
                     func main(){${if(ir) "known();" else "var rejected=Reject();rejected.known();"}}
@@ -480,14 +480,14 @@ class NumericConversionContractTest {
                 val library=output.resolve("legacy-bounds-$version-$fold.mclib")
                 val declarations=buildString {
                     appendLine("namespace fixture.legacybounds;")
-                    appendLine("func runtime(value as float):int{return toInt(value);}")
+                    appendLine("func runtime(value: float):int{return toInt(value);}")
                     for((index,value)in values.withIndex()) appendLine("func known_$index():int{return toInt(${value.first});}")
                 }
                 val main=buildString {
                     appendLine("func main(){")
                     for((index,value)in values.withIndex()) {
-                        appendLine("dynamic var runtime_$index=runtime(${value.first});")
-                        appendLine("dynamic var known_$index=known_$index();")
+                        appendLine("dynamic runtime_$index=runtime(${value.first});")
+                        appendLine("dynamic known_$index=known_$index();")
                     }
                     appendLine("}")
                 }
@@ -516,18 +516,18 @@ class NumericConversionContractTest {
     @Test
     fun rawIRObserversMaterializeAssignedScalarsAndReadActualSubsequentScoreWrites() = isolated { output ->
         MCFPPStringTest.readFromString("""
-            namespace fixture.rawobserve;
+            namespace fixture.rawobserve
             func main(){
-                var a=3;
-                var b=4;
-                var flag=true;
-                var unset as int;
+                var a=3
+                var b=4
+                var flag=true
+                var unset: int
                 /data modify storage fixture:rawobserve observed set value {}
                 /data modify storage fixture:rawobserve observed.first set from storage mcfpp:system stack_frame[0].a
                 /data modify storage fixture:rawobserve observed.other set from storage mcfpp:system stack_frame[0].b
                 /data modify storage fixture:rawobserve observed.flag set from storage mcfpp:system stack_frame[0].flag
                 /scoreboard players set fixture.rawobserve_func_main_a mcfpp_default 9
-                dynamic var after=a+b;
+                dynamic after=a+b
                 /data modify storage fixture:rawobserve observed.second set from storage mcfpp:system stack_frame[0].a
             }
         """.trimIndent(),version="26.3")

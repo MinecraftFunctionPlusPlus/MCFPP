@@ -62,8 +62,8 @@ internal object GenericDeclarationContract {
         fun signature(params: mcfppParser.FunctionParamsContext, result: mcfppParser.FunctionReturnTypeContext?) {
             var shadowed = emptySet<String>()
             params.readOnlyParams()?.parameterList()?.parameter()?.forEach {
-                visit(it.type(), -1, shadowed)
-                shadowed = shadowed + it.Identifier().text
+                if (!top.mcfpp.antlr.DeclarationSyntax.isBareTypeParameter(it)) visit(it.type(), -1, shadowed)
+                shadowed = shadowed + top.mcfpp.antlr.DeclarationSyntax.parameterName(it, true, "")
             }
             params.normalParams().parameterList()?.parameter()?.forEach { visit(it.type(), -1, shadowed) }
             result?.type()?.let { visit(it, 1, shadowed) }

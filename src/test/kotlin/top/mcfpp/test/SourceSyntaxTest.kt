@@ -29,11 +29,11 @@ class SourceSyntaxTest {
     @Test fun acceptsColonForEveryFunctionKindAndRequiresExplicitFields() {
         val source = """
             /// # Syntax
-            namespace syntax;
-            func identity(value as int): int { return value; }
+            namespace syntax
+            func identity(value: int): int { return value; }
             inline func inlineValue(): int { return 1; }
             const func constantValue(): int { return 1; }
-            func nativeValue(): int = example.Native.value;
+            func nativeValue(): int = example.Native.value
             func int.extension(): int { return this; }
             data Box {
                 /// **Value** with a [link](https://example.com).
@@ -41,15 +41,15 @@ class SourceSyntaxTest {
                 /// ```mcfpp
                 /// var value = 1;
                 /// ```
-                public var value as int;
-                const var fixed as int = 1;
-                var inferred = 2;
+                public var value: int
+                const fixed: int = 1
+                var inferred = 2
                 func getValue(): int { return this.value; }
-                operator +(other as Box): int { return this.value; }
-                operator -(other as Box): int = example.Native.subtract;
+                operator +(other: Box): int { return this.value; }
+                operator -(other: Box): int = example.Native.subtract
             }
-            object data Defaults { var value as int = 1; }
-            interface Readable { var value as int; abstract func read(): int; }
+            object data Defaults { var value: int = 1; }
+            interface Readable { var value: int; abstract func read(): int; }
         """.trimIndent()
         assertEquals(emptyList(), errors(source))
         assertEquals(emptyList(), errors("// Comment-only file\n\n"))
@@ -60,10 +60,10 @@ class SourceSyntaxTest {
             // Ordinary comment
             func sample(): int {
                 // /say ignored
-                var value = 8 / 2; // inline comment
-                var url = "https://example.com/#heading";
+                var value = 8 / 2 // inline comment
+                var url = "https://example.com/#heading"
                 /say // still command text #tag
-                return value;
+                return value
             }
             /// Documentation at EOF
             func documented(){}
@@ -82,7 +82,7 @@ class SourceSyntaxTest {
             "# ordinary comment\nfunc sample(){}",
             "#{ old documentation }#\nfunc sample(){}",
             "data Box { value as int; }",
-            "data Box { const value = 1; }",
+            "data Box { const var value = 1; }",
             "data Box { value = 1; }",
             "object data Box { value as int; }",
             "func sample(){ var box as data { value as int; }; }"

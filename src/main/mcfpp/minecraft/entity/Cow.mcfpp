@@ -1,2 +1,2 @@
 @MCFPPEntity
-data CowData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData;
+data CowData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData

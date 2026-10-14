@@ -40,10 +40,10 @@ class CallShapeIRTest {
     @Test fun returnedNestedShapesKeepTypesAndLengthsButNoConstantValues() = modes {
         val main = compile("""
             func make(): dict<any> { return {row:[2,9]} as dict<any>; }
-            func forward(value as dict<any>): dict<any> { return value; }
+            func forward(value: dict<any>): dict<any> { return value; }
             func main(){
-                var values = forward(make());
-                dynamic var result = values["row"][-1] + values["row"][0];
+                var values = forward(make())
+                dynamic result = values["row"][-1] + values["row"][0]
             }
         """, "1.20.1")
         assertEquals(11, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -56,13 +56,13 @@ class CallShapeIRTest {
 
     @Test fun argumentsUseCapturedShapesBeforeLaterCallsReplaceTheirSource() = modes {
         val main = compile("""
-            func replace(static value as list<any>): int { value = [false,false] as list<any>; return 0; }
-            func forward(value as list<any>, ignored as int): list<any> { return value; }
+            func replace(static value: list<any>): int { value = [false,false] as list<any>; return 0; }
+            func forward(value: list<any>, ignored: int): list<any> { return value; }
             func main(){
-                var values = [2,9] as list<any>;
-                var copied = forward(values, replace(values));
-                copied[0] = 5;
-                dynamic var result = copied[-1] + copied[0];
+                var values = [2,9] as list<any>
+                var copied = forward(values, replace(values))
+                copied[0] = 5
+                dynamic result = copied[-1] + copied[0]
             }
         """)
         assertEquals(14, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -72,13 +72,13 @@ class CallShapeIRTest {
 
     @Test fun staticWholeReplacementCopiesNestedShapesAndForgetsObsoleteChildren() = modes {
         val main = compile("""
-            func replace(static value as dict<any>, source as dict<any>) { value = source; }
+            func replace(static value: dict<any>, source: dict<any>) { value = source; }
             func main(){
-                var values = {row:[false,false,false]} as dict<any>;
-                var source = {row:[7,8]} as dict<any>;
-                replace(values,source);
-                source["row"][0] = 99;
-                dynamic var result = values["row"][-1] + values["row"][0];
+                var values = {row:[false,false,false]} as dict<any>
+                var source = {row:[7,8]} as dict<any>
+                replace(values,source)
+                source["row"][0] = 99
+                dynamic result = values["row"][-1] + values["row"][0]
             }
         """)
         assertEquals(15, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -89,11 +89,11 @@ class CallShapeIRTest {
 
     @Test fun branchingReturnsKeepOnlyCommonTypesAndShapes() = modes {
         val main = compile("""
-            func choose(flag as bool): list<any> {
+            func choose(flag: bool): list<any> {
                 if(flag){ return [2,9] as list<any>; }
-                return [7] as list<any>;
+                return [7] as list<any>
             }
-            func main(){ var values = choose(true); dynamic var result = values[0] + 1; }
+            func main(){ var values = choose(true); dynamic result = values[0] + 1; }
         """)
         assertEquals(3, execute(main).read(main.scope.getVar("result") as MCInt))
         val binding = main.scope.getVar("values")!!.storageBinding!!
@@ -104,20 +104,20 @@ class CallShapeIRTest {
     @Test fun arrayReturnsPreserveLengthsAcrossOrdinaryCalls() = modes {
         val main = compile("""
             func make(): IntArray { return [I; 2,9]; }
-            func main(){ var values = make(); dynamic var result = values[-1]; }
+            func main(){ var values = make(); dynamic result = values[-1]; }
         """, "1.20.1")
         assertEquals(9, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun ordinaryArgumentsDoNotSelectReturnOrStaticWriteBranches() = modes {
         for (source in listOf("""
-            func choose(flag as bool): list<any> {
+            func choose(flag: bool): list<any> {
                 if(flag){ return [2] as list<any>; }
-                return [false] as list<any>;
+                return [false] as list<any>
             }
             func main(){ var values = choose(true); var result = values[0] + 1; }
         """, """
-            func change(static value as list<any>, flag as bool) {
+            func change(static value: list<any>, flag: bool) {
                 if(flag){ value = [false] as list<any>; }
             }
             func main(){ var values = [2] as list<any>; change(values,false); var result = values[0] + 1; }
@@ -130,11 +130,11 @@ class CallShapeIRTest {
 
     @Test fun recursiveErasedReturnsPreserveNestedShapeWithoutEvaluatingArguments() = modes {
         val main = compile("""
-            func relay(depth as int): any {
+            func relay(depth: int): any {
                 if(depth <= 0){ return {row:[2,9]} as dict<any>; }
-                return relay(depth - 1);
+                return relay(depth - 1)
             }
-            func main(){ var values = relay(3); dynamic var result = values["row"][-1] + values["row"][0]; }
+            func main(){ var values = relay(3); dynamic result = values["row"][-1] + values["row"][0]; }
         """, "1.20.1")
         assertEquals(11, execute(main).read(main.scope.getVar("result") as MCInt))
         val binding = main.scope.getVar("values")!!.storageBinding!!
@@ -143,16 +143,16 @@ class CallShapeIRTest {
 
     @Test fun mutualRecursionPreservesRangeEndpointEvidence() = modes {
         val main = compile("""
-            func left(depth as int): any {
+            func left(depth: int): any {
                 if(depth <= 0){ return 16777217 .. 16777218; }
-                return right(depth - 1);
+                return right(depth - 1)
             }
-            func right(depth as int): any { return left(depth - 1); }
+            func right(depth: int): any { return left(depth - 1); }
             func main(){
-                var bounds = left(3);
-                var sum = 0;
+                var bounds = left(3)
+                var sum = 0
                 for(index : bounds){ sum += index - 16777216; }
-                dynamic var result = sum;
+                dynamic result = sum
             }
         """, "1.20.1")
         assertEquals(3, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -160,14 +160,14 @@ class CallShapeIRTest {
 
     @Test fun recursiveStaticReplacementPreservesOutputShape() = modes {
         val main = compile("""
-            func replace(static value as list<any>, depth as int){
+            func replace(static value: list<any>, depth: int){
                 if(depth <= 0){ value = [7,8] as list<any>; return; }
-                replace(value,depth - 1);
+                replace(value,depth - 1)
             }
             func main(){
-                var values = [false,false] as list<any>;
-                replace(values,3);
-                dynamic var result = values[-1] + values[0];
+                var values = [false,false] as list<any>
+                replace(values,3)
+                dynamic result = values[-1] + values[0]
             }
         """, "1.20.1")
         assertEquals(15, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -175,18 +175,18 @@ class CallShapeIRTest {
 
     @Test fun recursiveAlternativesAndChangedInputShapesDoNotInventProofs() = modes {
         for (source in listOf("""
-            func choose(depth as int, flag as bool): any {
+            func choose(depth: int, flag: bool): any {
                 if(depth <= 0){
                     if(flag){ return [2] as list<any>; }
-                    return [false] as list<any>;
+                    return [false] as list<any>
                 }
-                return choose(depth - 1,flag);
+                return choose(depth - 1,flag)
             }
             func main(){ var values = choose(2,true); var result = values[0] + 1; }
         """, """
-            func change(value as any, depth as int): any {
+            func change(value: any, depth: int): any {
                 if(depth <= 0){ return value; }
-                return change(false,depth - 1);
+                return change(false,depth - 1)
             }
             func main(){ var value = change(2,1); var result = value + 1; }
         """)) {
@@ -215,11 +215,11 @@ class CallShapeIRTest {
 
     @Test fun recursivelyNestedOutputKeepsOnlyTheCommonFiniteShape() = modes {
         val main = compile("""
-            func nest(depth as int): dict<any> {
+            func nest(depth: int): dict<any> {
                 if(depth <= 0){ return {value:2} as dict<any>; }
-                return {value:nest(depth - 1)} as dict<any>;
+                return {value:nest(depth - 1)} as dict<any>
             }
-            func main(){ var value = nest(2); dynamic var result = 1; }
+            func main(){ var value = nest(2); dynamic result = 1; }
         """)
         assertEquals(1, execute(main).read(main.scope.getVar("result") as MCInt))
         val binding = main.scope.getVar("value")!!.storageBinding!!

@@ -47,11 +47,11 @@ class ListMemberTest {
     @Test fun prependAllKeepsSourceOrderAndInsertAndRemoveAcceptNegativeIndices() {
         val main = compile("""
             func main(){
-                var values = [3,4];
-                values.prependAll([1,2]);
-                values.insert(-1,5);
-                values.removeAt(-2);
-                dynamic var result = values[0]*1000 + values[1]*100 + values[2]*10 + values[3];
+                var values = [3,4]
+                values.prependAll([1,2])
+                values.insert(-1,5)
+                values.removeAt(-2)
+                dynamic result = values[0]*1000 + values[1]*100 + values[2]*10 + values[3]
             }
         """)
         assertEquals(1235, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -59,38 +59,38 @@ class ListMemberTest {
 
     @Test fun appendingAnUnknownPrimitiveKeepsItsEncodingAndExistingElementFacts() {
         val main = compile("""
-            func append(value as int): int {
-                var values = [2,3];
-                values.add(value);
-                return values[0]*100 + values[1]*10 + values[2];
+            func append(value: int): int {
+                var values = [2,3]
+                values.add(value)
+                return values[0]*100 + values[1]*10 + values[2]
             }
-            func main(){ dynamic var result = append(7); }
+            func main(){ dynamic result = append(7); }
         """)
         assertEquals(237, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun unknownInsertionAndRemovalIndicesUseCurrentValues() {
         val main = compile("""
-            func edit(index as int, value as int): int {
-                var values = [2,4];
-                values.insert(index,value);
-                values.removeAt(-1);
-                return values[0]*10 + values[1];
+            func edit(index: int, value: int): int {
+                var values = [2,4]
+                values.insert(index,value)
+                values.removeAt(-1)
+                return values[0]*10 + values[1]
             }
-            func main(){ dynamic var result = edit(1,3); }
+            func main(){ dynamic result = edit(1,3); }
         """)
         assertEquals(23, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun runtimePrependAndPrependAllPreserveOrder() {
         val main = compile("""
-            func edit(extra as list<int>, value as int): int {
-                var values = [4];
-                values.prepend(value);
-                values.prependAll(extra);
-                return values[0]*1000 + values[1]*100 + values[2]*10 + values[3];
+            func edit(extra: list<int>, value: int): int {
+                var values = [4]
+                values.prepend(value)
+                values.prependAll(extra)
+                return values[0]*1000 + values[1]*100 + values[2]*10 + values[3]
             }
-            func main(){ var extra = [1,2]; dynamic var result = edit(extra,3); }
+            func main(){ var extra = [1,2]; dynamic result = edit(extra,3); }
         """)
         assertEquals(1234, execute(main).read(main.scope.getVar("result") as MCInt))
     }
@@ -98,12 +98,12 @@ class ListMemberTest {
     @Test fun constantQueriesAndRemovalUseValuesInsteadOfAdapterIdentity() {
         val main = compile("""
             func main(){
-                var values = [2,4,2];
-                var first = values.indexOf(2);
-                var last = values.lastIndexOf(2);
-                var found = values.contains(4);
-                values.remove(2);
-                dynamic var result = first*100 + last*10 + values[0];
+                var values = [2,4,2]
+                var first = values.indexOf(2)
+                var last = values.lastIndexOf(2)
+                var found = values.contains(4)
+                values.remove(2)
+                dynamic result = first*100 + last*10 + values[0]
             }
         """)
         assertEquals(24, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -112,28 +112,28 @@ class ListMemberTest {
 
     @Test fun runtimeQueriesHaveIndependentResultsAndLeaveTheSourceIntact() {
         val main = compile("""
-            func find(values as list<int>, needle as int): int {
-                var first = values.indexOf(needle);
-                var last = values.lastIndexOf(needle);
-                var missing = values.indexOf(9);
-                return first*1000 + last*100 + missing*10 + values[0];
+            func find(values: list<int>, needle: int): int {
+                var first = values.indexOf(needle)
+                var last = values.lastIndexOf(needle)
+                var missing = values.indexOf(9)
+                return first*1000 + last*100 + missing*10 + values[0]
             }
-            func main(){ var values = [2,4,2]; dynamic var result = find(values,2); }
+            func main(){ var values = [2,4,2]; dynamic result = find(values,2); }
         """)
         assertEquals(192, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun runtimeContainsAndRemoveWorkWithoutReturnCommands() {
         val main = compile("""
-            func edit(values as list<int>, needle as int): int {
-                values.remove(needle);
-                return values[0]*10 + values[1];
+            func edit(values: list<int>, needle: int): int {
+                values.remove(needle)
+                return values[0]*10 + values[1]
             }
-            func has(values as list<int>, needle as int): bool { return values.contains(needle); }
+            func has(values: list<int>, needle: int): bool { return values.contains(needle); }
             func main(){
-                var values = [2,4,2];
-                dynamic var result = edit(values,2);
-                dynamic var found = has(values,4);
+                var values = [2,4,2]
+                dynamic result = edit(values,2)
+                dynamic found = has(values,4)
             }
         """, "1.20.1")
         val machine = execute(main)
@@ -142,7 +142,7 @@ class ListMemberTest {
     }
 
     @Test fun runtimeListsRejectCompilerOnlyElementsBeforeEmittingAppendCommands() {
-        val main = compile("func main(){ dynamic var values as list<any> = [2 as any]; }")
+        val main = compile("func main(){ dynamic values: list<any> = [2 as any]; }")
         val values = main.scope.getVar("values") as NBTList
         val before = StorageAccess.ensure(values).data.facts.fork()
         val commands = main.commands.analyzeAll().filterNot { it.startsWith("#") }
@@ -154,7 +154,7 @@ class ListMemberTest {
     }
 
     @Test fun legacyTargetsRejectMixedElementEncodingsBeforeChangingTheList() {
-        val main = compile("func main(){ var values as list<any> = [2 as any]; }", "1.20.1")
+        val main = compile("func main(){ var values: list<any> = [2 as any]; }", "1.20.1")
         val values = main.scope.getVar("values") as NBTList
         val before = StorageAccess.ensure(values).data.facts.fork()
         val commands = main.commands.analyzeAll().filterNot { it.startsWith("#") }
@@ -167,7 +167,7 @@ class ListMemberTest {
 
     @Test fun legacyTargetsDiagnoseUnknownIndicesBeforeWriting() {
         MCFPPStringTest.readFromString("""
-            func edit(index as int){ var values = [2]; values.insert(index,3); }
+            func edit(index: int){ var values = [2]; values.insert(index,3); }
             func main(){ edit(0); }
         """.trimIndent(), version = "1.20.1")
         assertTrue(Project.errorCount > 0)
@@ -176,25 +176,25 @@ class ListMemberTest {
 
     @Test fun aSpliceThroughAnErasedViewPreservesKnownSiblingTypesAndCopiesSubtrees() {
         val main = compile("""
-            func edit(value as int): int {
-                var values as list<any> = [2 as any,3 as any];
-                var view = values as list<any>;
-                view.prepend(value);
-                view.removeAt(1);
-                return (values[0] as int)*10 + (values[1] as int);
+            func edit(value: int): int {
+                var values: list<any> = [2 as any,3 as any]
+                var view = values as list<any>
+                view.prepend(value)
+                view.removeAt(1)
+                return (values[0] as int)*10 + (values[1] as int)
             }
-            func main(){ dynamic var result = edit(7); }
+            func main(){ dynamic result = edit(7); }
         """)
         assertEquals(73, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun runtimeSearchSeparatesBoolFromByteWithoutRuntimeTypeTags() {
         val main = compile("""
-            func find(needle as bool): int {
-                var values as list<any> = [toByte(1) as any,true as any,false as any];
-                return values.indexOf(needle);
+            func find(needle: bool): int {
+                var values: list<any> = [toByte(1) as any,true as any,false as any]
+                return values.indexOf(needle)
             }
-            func main(){ dynamic var result = find(true); }
+            func main(){ dynamic result = find(true); }
         """)
         assertEquals(1, execute(main).read(main.scope.getVar("result") as MCInt))
     }
@@ -202,13 +202,13 @@ class ListMemberTest {
     @Test fun queriesAfterClearAndSelfAppendUseTheCurrentShape() {
         val main = compile("""
             func main(){
-                var values = [2,4];
-                values.addAll(values);
-                var last = values.lastIndexOf(4);
-                values.clear();
-                values.add(7);
-                var missing = values.indexOf(4);
-                dynamic var result = last*100 + missing*10 + values[0];
+                var values = [2,4]
+                values.addAll(values)
+                var last = values.lastIndexOf(4)
+                values.clear()
+                values.add(7)
+                var missing = values.indexOf(4)
+                dynamic result = last*100 + missing*10 + values[0]
             }
         """)
         assertEquals(297, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -216,20 +216,20 @@ class ListMemberTest {
 
     @Test fun anErasedRuntimeListWithUnknownElementTypesRequiresAnExplicitViewForLookup() {
         MCFPPStringTest.readFromString("""
-            func find(values as list<any>, needle as int): int { return values.indexOf(needle); }
-            func main(){ var values as list<any> = [2 as any]; find(values,2); }
+            func find(values: list<any>, needle: int): int { return values.indexOf(needle); }
+            func main(){ var values: list<any> = [2 as any]; find(values,2); }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0)
     }
 
     @Test fun aDynamicSpliceKeepsAUniformErasedElementTypeWithoutKeepingOldConstants() {
         val main = compile("""
-            func edit(index as int, value as int): int {
-                var values as list<any> = [2 as any,4 as any];
-                values.insert(index,value);
-                return values[0]*10 + values[1];
+            func edit(index: int, value: int): int {
+                var values: list<any> = [2 as any,4 as any]
+                values.insert(index,value)
+                return values[0]*10 + values[1]
             }
-            func main(){ dynamic var result = edit(0,7); }
+            func main(){ dynamic result = edit(0,7); }
         """)
         assertEquals(72, execute(main).read(main.scope.getVar("result") as MCInt))
     }
@@ -237,14 +237,14 @@ class ListMemberTest {
     @Test fun floatLookupUsesTheBackendEncodingForBothKnownAndUnknownNeedles() {
         for (version in listOf("26.3", "1.20.1")) {
             val main = compile("""
-                func find(needle as float): int {
-                    var values = [1.0,2.0,1.0];
-                    return values.lastIndexOf(needle);
+                func find(needle: float): int {
+                    var values = [1.0,2.0,1.0]
+                    return values.lastIndexOf(needle)
                 }
                 func main(){
-                    var values = [1.0,2.0,1.0];
-                    dynamic var known = values.indexOf(2.0);
-                    dynamic var unknown = find(2.0);
+                    var values = [1.0,2.0,1.0]
+                    dynamic known = values.indexOf(2.0)
+                    dynamic unknown = find(2.0)
                 }
             """, version)
             val machine = execute(main)
@@ -255,11 +255,11 @@ class ListMemberTest {
 
     @Test fun legacyFloatLookupDoesNotFoldFromBitsThatItsStorageEncodingCannotDistinguish() {
         val main = compile("""
-            func find(needle as float): int { var values = [0.0]; return values.indexOf(needle); }
+            func find(needle: float): int { var values = [0.0]; return values.indexOf(needle); }
             func main(){
-                var values = [0.0];
-                dynamic var known = values.indexOf(-0.0);
-                dynamic var unknown = find(-0.0);
+                var values = [0.0]
+                dynamic known = values.indexOf(-0.0)
+                dynamic unknown = find(-0.0)
             }
         """, "1.20.1")
         val machine = execute(main)

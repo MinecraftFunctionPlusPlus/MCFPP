@@ -14,13 +14,13 @@ import kotlin.test.Test
 class TypeSuffixSyntaxTest {
     @Test fun removedSuffixesRejectSourceBeforeDeclarationsOrCommandsRun() {
         val programs = listOf(
-            "func main(){ var value as int! = 1; }",
-            "data Invalid { var value as int!; } func main(){}",
-            "func invalid(value as int!){} func main(){}",
+            "func main(){ var value: int! = 1; }",
+            "data Invalid { var value: int!; } func main(){}",
+            "func invalid(value: int!){} func main(){}",
             "func invalid():int! { return 1; } func main(){}",
-            "data Invalid<T as type> { var value as T!; } func main(){}",
-            "func main(){ var value as list<int!> = [1]; }",
-            "data Invalid<T as type>{} func main(){ var value=Invalid<int!>(); }",
+            "data Invalid<T> { var value: T!; } func main(){}",
+            "func main(){ var value: list<int!> = [1]; }",
+            "data Invalid<T>{} func main(){ var value=Invalid<int!>(); }",
             "func main(){ var value=1 as int!; }",
             "typealias int! as Invalid; func main(){}"
         )
@@ -47,13 +47,13 @@ class TypeSuffixSyntaxTest {
     @Test fun constReadonlyGenericsAndLogicalOperatorsRemainLegal() {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString("""
-            data Box<T as type> { var value as T; }
+            data Box<T> { var value: T; }
             func main(){
-                const var immutable as int=4;
-                var ordinary as int=7;
-                dynamic var negated=!false;
-                dynamic var unequal=4!=7;
-                var box=Box<int>();
+                const immutable: int=4
+                var ordinary: int=7
+                dynamic negated=!false
+                dynamic unequal=4!=7
+                var box=Box<int>()
             }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
@@ -67,7 +67,7 @@ class TypeSuffixSyntaxTest {
 
     @Test fun ordinaryTypeValuesRemainForbidden() {
         Project.config.includes = arrayListOf()
-        MCFPPStringTest.readFromString("func main(){ var invalid as type=int; }", version = "26.3")
+        MCFPPStringTest.readFromString("func main(){ var invalid: type=int; }", version = "26.3")
         assertEquals(1, Project.errorCount)
         val main = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
         assertNull(main.scope.getVar("invalid"))

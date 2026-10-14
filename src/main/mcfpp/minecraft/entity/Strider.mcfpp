@@ -1,5 +1,5 @@
 @MCFPPEntity
 data StriderData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData{
     @Name<"Saddle">
-    var saddle as bool;
+    var saddle: bool
 }

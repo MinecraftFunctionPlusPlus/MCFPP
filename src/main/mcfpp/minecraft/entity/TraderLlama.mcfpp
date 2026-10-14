@@ -1,4 +1,4 @@
 @MCFPPEntity
 data TraderLlamaData: LlamaData {
-    @Name<"DespawnDelay"> var despawnDelay as int;
+    @Name<"DespawnDelay"> var despawnDelay: int
 }

@@ -1,65 +1,65 @@
-import mcfpp.minecraft.other:*;
-import mcfpp.minecraft.item:ItemStackData;
+import mcfpp.minecraft.other:*
+import mcfpp.minecraft.item:ItemStackData
 
 @MCFPPEntity
 data PlayerData: EntityData, CreatureData {
-    @Name<"DataVersion"> var dataVersion as int;
-    @Name<"Abilities"> var abilities as data {
-        @Name<"Flying"> var flying as bool;
-        @Name<"FlySpeed"> var flySpeed as float;
-        @Name<"Instabuild"> var instabuild as bool;
-        @Name<"Invulnerable"> var invulnerable as bool;
-        @Name<"MayBuild"> var mayBuild as bool;
-        @Name<"MayFly"> var mayFly as bool;
-        @Name<"WalkSpeed"> var walkSpeed as float;
-    };
-    @Name<"current_explosion_impact_pos"> var currentExplosionImpactPos as list<double>;
-    @Name<"current_impulse_context_reset_grace_time"> var currentImpulseContextResetGraceTime as int;
-    @Name<"Dimension"> var dimension as string;
-    @Name<"ender_pearls"> var enderPearls as list<data: EnderPearlData {
-        @Name<"ender_pearl_dimension"> var enderPearlDimension as string;
-    }>;
-    @Name<"EnderItems"> var enderItems as list<ItemData>;
-    var enteredNetherPosition as list<double>;
-    var foodExhaustionLevel as float;
-    var foodLevel as int;
-    var foodSaturationLevel as float;
-    var foodTickTimer as int;
-    @Name<"ignore_fall_damage_from_current_explosion"> var ignoreFallDamageFromCurrentExplosion as bool;
-    @Name<"Inventory"> var inventory as list<ItemData>;
-    @Name<"LastDeathLocation"> var lastDeathLocation as data {
-        var dimension as string;
-        var pos as IntArray;
-    };
-    var playerGameType as int;
-    var previousplayerGameType as int;
-    @Name<"raid_omen_position"> var raidOmenPosition as IntArray;
-    @Name<"RecipeBook"> var recipeBook as list<RecipeBook>;
-    @Name<"RootVehicle"> var rootVehicle as data {
-        @Name<"Attach"> var attach as IntArray;
-        @Name<"Entity"> var _entity as EntityData;
-    };
-    @Name<"Score"> var score as int;
-    var seenCredits as byte;
-    @Name<"SelectedItem"> var selectedItem as ItemStackData;
-    @Name<"SelectedItemSlot"> var selectedItemSlot as int;
-    @Name<"ShoulderEntityLeft"> var shoulderEntityLeft as EntityData;
-    @Name<"ShoulderEntityRight"> var shoulderEntityRight as EntityData;
-    @Name<"SleepTimer"> var sleepTimer as short;
-    @Name<"spawn_extra_particles_on_fall"> var spawnExtraParticlesOnFall as bool;
-    @Name<"SpawnAngle"> var spawnAngle as float;
-    @Name<"SpawnDimension"> var spawnDimension as string;
-    @Name<"SpawnForced"> var spawnForced as bool;
-    @Name<"SpawnX"> var spawnX as int;
-    @Name<"SpawnY"> var spawnY as int;
-    @Name<"SpawnZ"> var spawnZ as int;
-    @Name<"warden_spawn_tracker"> var wardenSpawnTracker as data {
-        @Name<"cooldown_ticks"> var cooldownTicks as int;
-        @Name<"ticks_since_last_warning"> var ticksSinceLastWarning as int;
-        @Name<"warning_level"> var warningLevel as int;
-    };
-    @Name<"XpLevel"> var xpLevel as int;
-    @Name<"XpP"> var xpP as float;
-    @Name<"XpSeed"> var xpSeed as int;
-    @Name<"XpTotal"> var xpTotal as int;
+    @Name<"DataVersion"> var dataVersion: int
+    @Name<"Abilities"> var abilities: data {
+        @Name<"Flying"> var flying: bool
+        @Name<"FlySpeed"> var flySpeed: float
+        @Name<"Instabuild"> var instabuild: bool
+        @Name<"Invulnerable"> var invulnerable: bool
+        @Name<"MayBuild"> var mayBuild: bool
+        @Name<"MayFly"> var mayFly: bool
+        @Name<"WalkSpeed"> var walkSpeed: float
+    }
+    @Name<"current_explosion_impact_pos"> var currentExplosionImpactPos: list<double>
+    @Name<"current_impulse_context_reset_grace_time"> var currentImpulseContextResetGraceTime: int
+    @Name<"Dimension"> var dimension: string
+    @Name<"ender_pearls"> var enderPearls: list<data: EnderPearlData {
+        @Name<"ender_pearl_dimension"> var enderPearlDimension: string
+    }>
+    @Name<"EnderItems"> var enderItems: list<ItemData>
+    var enteredNetherPosition: list<double>
+    var foodExhaustionLevel: float
+    var foodLevel: int
+    var foodSaturationLevel: float
+    var foodTickTimer: int
+    @Name<"ignore_fall_damage_from_current_explosion"> var ignoreFallDamageFromCurrentExplosion: bool
+    @Name<"Inventory"> var inventory: list<ItemData>
+    @Name<"LastDeathLocation"> var lastDeathLocation: data {
+        var dimension: string
+        var pos: IntArray
+    }
+    var playerGameType: int
+    var previousplayerGameType: int
+    @Name<"raid_omen_position"> var raidOmenPosition: IntArray
+    @Name<"RecipeBook"> var recipeBook: list<RecipeBook>
+    @Name<"RootVehicle"> var rootVehicle: data {
+        @Name<"Attach"> var attach: IntArray
+        @Name<"Entity"> var _entity: EntityData
+    }
+    @Name<"Score"> var score: int
+    var seenCredits: byte
+    @Name<"SelectedItem"> var selectedItem: ItemStackData
+    @Name<"SelectedItemSlot"> var selectedItemSlot: int
+    @Name<"ShoulderEntityLeft"> var shoulderEntityLeft: EntityData
+    @Name<"ShoulderEntityRight"> var shoulderEntityRight: EntityData
+    @Name<"SleepTimer"> var sleepTimer: short
+    @Name<"spawn_extra_particles_on_fall"> var spawnExtraParticlesOnFall: bool
+    @Name<"SpawnAngle"> var spawnAngle: float
+    @Name<"SpawnDimension"> var spawnDimension: string
+    @Name<"SpawnForced"> var spawnForced: bool
+    @Name<"SpawnX"> var spawnX: int
+    @Name<"SpawnY"> var spawnY: int
+    @Name<"SpawnZ"> var spawnZ: int
+    @Name<"warden_spawn_tracker"> var wardenSpawnTracker: data {
+        @Name<"cooldown_ticks"> var cooldownTicks: int
+        @Name<"ticks_since_last_warning"> var ticksSinceLastWarning: int
+        @Name<"warning_level"> var warningLevel: int
+    }
+    @Name<"XpLevel"> var xpLevel: int
+    @Name<"XpP"> var xpP: float
+    @Name<"XpSeed"> var xpSeed: int
+    @Name<"XpTotal"> var xpTotal: int
 }

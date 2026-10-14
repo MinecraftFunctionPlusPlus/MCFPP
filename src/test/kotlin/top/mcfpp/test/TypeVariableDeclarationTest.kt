@@ -15,26 +15,26 @@ import kotlin.test.Test
 class TypeVariableDeclarationTest {
     @Test fun ordinaryContainerElementSlotsRejectMetaTypesWithoutNeedingValueSnapshots() {
         for (source in listOf(
-            "func main(){var invalid as list<type>;}",
-            "func main(){var invalid as list<type>=[];}",
-            "data Holder{var values as dict<list<type>>;}\nfunc main(){}",
-            "func invalid(values as list<type>){}\nfunc main(){}",
+            "func main(){var invalid: list<type>;}",
+            "func main(){var invalid: list<type>=[];}",
+            "data Holder{var values: dict<list<type>>;}\nfunc main(){}",
+            "func invalid(values: list<type>){}\nfunc main(){}",
             "func invalid():list<type>{return [];}\nfunc main(){}",
-            "data Box<T as type>{var values as list<T>;}\nfunc main(){var invalid=Box<type>();}")) {
+            "data Box<T>{var values: list<T>;}\nfunc main(){var invalid=Box<type>();}")) {
             MCFPPStringTest.readFromString(source.replace(">=", "> = "),version="26.3")
             assertTrue(Project.errorCount>0,source)
         }
-        MCFPPStringTest.readFromString("data Bundle<Types as list<type>>{constructor(){}}\nfunc main(){var legal=Bundle<[int,bool]>();}",version="26.3")
+        MCFPPStringTest.readFromString("data Bundle<Types: list<type>>{constructor(){}}\nfunc main(){var legal=Bundle<[int,bool]>();}",version="26.3")
         assertEquals(0,Project.errorCount)
     }
     @Test fun ordinaryTypeLocalsAreRejectedWithoutRegisteringNames() {
         MCFPPStringTest.readFromString("""
             func main(){
-                var typed as type=int;
-                var inferred=float;
-                const var fixed=bool;
-                const var forced as type=int;
-                var union=int|string;
+                var typed: type=int
+                var inferred=float
+                const fixed=bool
+                const forced: type=int
+                var union=int|string
             }
         """.trimIndent(), version = "26.3")
         assertEquals(5, Project.errorCount)
@@ -45,12 +45,12 @@ class TypeVariableDeclarationTest {
     @Test fun ordinaryTemplateAndObjectTypeFieldsAreRejected() {
         MCFPPStringTest.readFromString("""
             data Holder {
-                var typed as type=int;
-                var inferred=int;
+                var typed: type=int
+                var inferred=int
             }
             object data Defaults {
-                var typed as type=int;
-                var inferred=int;
+                var typed: type=int
+                var inferred=int
                 constructor(){}
             }
             func main(){}
@@ -66,7 +66,7 @@ class TypeVariableDeclarationTest {
     }
 
     @Test fun ordinaryFunctionTypeParametersAndReturnsAreRejected() {
-        for (source in listOf("func invalid(value as type):int{return 1;}\nfunc main(){}",
+        for (source in listOf("func invalid(value: type):int{return 1;}\nfunc main(){}",
             "func invalid():type{return int;}\nfunc main(){}")) {
             MCFPPStringTest.readFromString(source, version = "26.3")
             assertTrue(Project.errorCount > 0, source)
@@ -80,15 +80,15 @@ class TypeVariableDeclarationTest {
 
     @Test fun templateReadonlyTypeParametersAndAliasesRemainLegal() {
         MCFPPStringTest.readFromString("""
-            typealias int as Number;
-            data Box<T as type> {
-                private var value as T;
-                constructor(v as T){this.value=v;}
+            typealias int as Number
+            data Box<T> {
+                private var value: T
+                constructor(v: T){this.value=v;}
                 func read():T{return this.value;}
             }
             func main(){
-                var integer=Box<Number>(4);
-                var boolean=Box<bool>(true);
+                var integer=Box<Number>(4)
+                var boolean=Box<bool>(true)
             }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
@@ -106,10 +106,10 @@ class TypeVariableDeclarationTest {
     @Test fun erasedAndCollectionLocalsCannotHideTypeValues() {
         MCFPPStringTest.readFromString("""
             func main(){
-                var boxed as object=int;
-                var erased as any=bool;
-                var sequence=[int,bool];
-                var record={kind:int};
+                var boxed: object=int
+                var erased: any=bool
+                var sequence=[int,bool]
+                var record={kind:int}
             }
         """.trimIndent(), version = "26.3")
         assertEquals(4, Project.errorCount)
@@ -119,11 +119,11 @@ class TypeVariableDeclarationTest {
 
     @Test fun erasedAssignmentCallAndReturnCannotStoreTypeValues() {
         MCFPPStringTest.readFromString("""
-            func accept(value as object){}
+            func accept(value: object){}
             func main(){
-                var dst as object=1;
-                dst=int;
-                accept(float);
+                var dst: object=1
+                dst=int
+                accept(float)
             }
         """.trimIndent(), version = "26.3")
         assertEquals(2, Project.errorCount)
@@ -145,10 +145,10 @@ class TypeVariableDeclarationTest {
 
     @Test fun dependentNormalSignaturesCannotBindMetaSlots() {
         for (source in listOf("""
-            func bad<T as type>(value as T):int{return 1;}
+            func bad<T>(value: T):int{return 1;}
             func main(){bad<type>(1);}
         """, """
-            func bad<T as type>():T{return 1;}
+            func bad<T>():T{return 1;}
             func main(){bad<type>();}
         """)) {
             MCFPPStringTest.readFromString(source.trimIndent(), version = "26.3")
@@ -160,9 +160,9 @@ class TypeVariableDeclarationTest {
 
     @Test fun metaAliasesCannotDeclareOrdinarySlots() {
         MCFPPStringTest.readFromString("""
-            typealias type as Meta;
+            typealias type as Meta
             func main(){
-                var aliased as Meta=1;
+                var aliased: Meta=1
             }
         """.trimIndent(), version = "26.3")
         assertEquals(1, Project.errorCount)
@@ -172,9 +172,9 @@ class TypeVariableDeclarationTest {
 
     @Test fun templateReadonlyTypesCannotBeCopiedIntoOrdinaryFields() {
         MCFPPStringTest.readFromString("""
-            data Holder<T as type> {
-                var selected as type=T;
-                const var mirrored=T;
+            data Holder<T> {
+                var selected: type=T
+                const mirrored=T
             }
             func main(){var holder=Holder<int>();}
         """.trimIndent(), version = "26.3")

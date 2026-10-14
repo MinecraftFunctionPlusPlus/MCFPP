@@ -1,6 +1,6 @@
 data GeneralZombieData {
-    @Name<"CanBreakDoors"> var canBreakDoors as bool;
-    @Name<"DrownedConversionTime"> var drownedConversionTime as int;
-    @Name<"InWaterTime"> var inWaterTime as int;
-    @Name<"IsBaby"> var isBaby as bool;
+    @Name<"CanBreakDoors"> var canBreakDoors: bool
+    @Name<"DrownedConversionTime"> var drownedConversionTime: int
+    @Name<"InWaterTime"> var inWaterTime: int
+    @Name<"IsBaby"> var isBaby: bool
 }

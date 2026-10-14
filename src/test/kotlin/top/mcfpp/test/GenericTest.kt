@@ -9,14 +9,14 @@ class GenericTest {
     fun genericFunctionTest(){
         val test =
             """
-                func test<i as int>(p as int){
-                     print(i);
-                     print(p);
+                func test<i: int>(p: int){
+                     print(i)
+                     print(p)
                 }
 
                 func main(){
-                    dynamic var qwq as int;
-                    test<2>(qwq);
+                    dynamic qwq: int
+                    test<2>(qwq)
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test)
@@ -27,12 +27,12 @@ class GenericTest {
         val test =
             """
                 func main(){
-                    test<int>();
+                    test<int>()
                 }
                 
-                func test<T as type>(){
-                    var i as T = 5;
-                    print(i);
+                func test<T>(){
+                    var i: T = 5
+                    print(i)
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test, arrayOf("debug"))

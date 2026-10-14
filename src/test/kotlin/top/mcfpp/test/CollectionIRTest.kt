@@ -38,10 +38,10 @@ class CollectionIRTest {
         for (version in listOf("26.3", "1.20.2", "1.20")) {
             val main = compile("""
                 func main(){
-                    var values = [1,9] as list<any>;
-                    var i = 0;
+                    var values = [1,9] as list<any>
+                    var i = 0
                     while(i < 3){ values[0] = values[0] + 1; i += 1; }
-                    dynamic var result = values[0] + values[1];
+                    dynamic result = values[0] + values[1]
                 }
             """, version)
             assertEquals(13, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -54,10 +54,10 @@ class CollectionIRTest {
     @Test fun dictionaryBranchesJoinElementTypesWithoutLosingUnchangedFields() = modes {
         val main = compile("""
             func main(){
-                var values = {first:2, second:9} as dict<any>;
-                dynamic var condition = true;
+                var values = {first:2, second:9} as dict<any>
+                dynamic condition = true
                 if(condition){ values["first"] = 3; } else { values["first"] = 5; }
-                dynamic var result = values["first"] + values["second"];
+                dynamic result = values["first"] + values["second"]
             }
         """)
         assertEquals(12, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -69,8 +69,8 @@ class CollectionIRTest {
     @Test fun loopBackedgesPreventOperationsFromUsingTheInitialElementType() = modes {
         MCFPPStringTest.readFromString("""
             func main(){
-                var values = [2] as list<any>;
-                var i = 0;
+                var values = [2] as list<any>
+                var i = 0
                 while(i < 2){ var result = values[0] + 1; values[0] = false; i += 1; }
             }
         """.trimIndent(), version = "26.3")
@@ -81,13 +81,13 @@ class CollectionIRTest {
     @Test fun nestedViewsSharePlacesWhileCopiesKeepTheirOwnElementFacts() = modes {
         val main = compile("""
             func main(){
-                var values = {field:[2,9]};
-                var view = values as dict<list<int>>;
-                var copied = view;
-                var i = 0;
+                var values = {field:[2,9]}
+                var view = values as dict<list<int>>
+                var copied = view
+                var i = 0
                 while(i < 2){ view["field"][0] += 1; i += 1; }
-                copied["field"][0] = 7;
-                dynamic var result = values["field"][0] + copied["field"][0] + copied["field"][1];
+                copied["field"][0] = 7
+                dynamic result = values["field"][0] + copied["field"][0] + copied["field"][1]
             }
         """)
         assertEquals(20, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -97,13 +97,13 @@ class CollectionIRTest {
 
     @Test fun staticFieldEffectsPreserveOtherFieldsAndOrdinaryParameterCopies() {
         val main = compile("""
-            func put(static value as dict<int>) { value["first"] = 7; }
-            func privateChange(value as dict<int>): int { value["first"] = 4; return value["first"]; }
+            func put(static value: dict<int>) { value["first"] = 7; }
+            func privateChange(value: dict<int>): int { value["first"] = 4; return value["first"]; }
             func main(){
-                var values = {first:2, second:9};
-                var changed = privateChange(values);
-                put(values);
-                dynamic var result = values["first"] + values["second"] + changed;
+                var values = {first:2, second:9}
+                var changed = privateChange(values)
+                put(values)
+                dynamic result = values["first"] + values["second"] + changed
             }
         """)
         assertEquals(20, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -116,16 +116,16 @@ class CollectionIRTest {
 
     @Test fun recursiveCollectionParametersAndReturnsPreserveIndependentPayloads() = modes {
         val main = compile("""
-            func change(value as list<int>, count as int): list<int> {
+            func change(value: list<int>, count: int): list<int> {
                 if(count <= 0){ return value; }
-                value[0] += 1;
-                return change(value, count - 1);
+                value[0] += 1
+                return change(value, count - 1)
             }
             func main(){
-                var original = [2,9];
-                var copied = change(original, 3);
-                original[0] = 7;
-                dynamic var result = copied[0] + original[0] + copied[1];
+                var original = [2,9]
+                var copied = change(original, 3)
+                original[0] = 7
+                dynamic result = copied[0] + original[0] + copied[1]
             }
         """)
         assertEquals(21, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -135,12 +135,12 @@ class CollectionIRTest {
 
     @Test fun collectionLiteralOperandsAreCapturedBeforeLaterCalls() {
         val main = compile("""
-            func change(static value as int): int { value = 7; return 5; }
+            func change(static value: int): int { value = 7; return 5; }
             func main(){
-                var value = 2;
-                var values = [value,change(value)];
-                var fields = {first:value, second:change(value)};
-                dynamic var result = values[0]*100 + values[1]*10 + fields["first"] + fields["second"];
+                var value = 2
+                var values = [value,change(value)]
+                var fields = {first:value, second:change(value)}
+                dynamic result = values[0]*100 + values[1]*10 + fields["first"] + fields["second"]
             }
         """)
         assertEquals(262, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -149,12 +149,12 @@ class CollectionIRTest {
     @Test fun negativeAndConstantVariableIndicesUseJoinedLengthsAndPreserveCopyShapes() = modes {
         val main = compile("""
             func main(){
-                var values = [2,9] as list<any>;
-                var copied = values;
-                var index = 0;
-                values[index] = 7;
-                var sum = values[-1] + copied[0];
-                dynamic var result = sum;
+                var values = [2,9] as list<any>
+                var copied = values
+                var index = 0
+                values[index] = 7
+                var sum = values[-1] + copied[0]
+                dynamic result = sum
             }
         """)
         assertEquals(11, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -172,9 +172,9 @@ class CollectionIRTest {
     @Test fun erasedSourcesAndCollectionViewsExportOneSharedStorageRecord() {
         val main = compile("""
             func main(){
-                var values as any = [2,9];
-                var view = values as list<any>;
-                dynamic var result = view[0] + view[1];
+                var values: any = [2,9]
+                var view = values as list<any>
+                dynamic result = view[0] + view[1]
             }
         """)
         val source = main.scope.getVar("values")!!.storageBinding!!
@@ -191,11 +191,11 @@ class CollectionIRTest {
 
     @Test fun staticElementWritesReplaceOldActualTypesAndKeepOtherFieldsKnown() = modes {
         val main = compile("""
-            func change(static value as dict<any>) { value["first"] = false; }
+            func change(static value: dict<any>) { value["first"] = false; }
             func main(){
-                var values = {first:2, second:9} as dict<any>;
-                change(values);
-                dynamic var result = values["first"] == false;
+                var values = {first:2, second:9} as dict<any>
+                change(values)
+                dynamic result = values["first"] == false
             }
         """)
         assertEquals(1, execute(main).read(main.scope.getVar("result") as top.mcfpp.core.lang.bool.ScoreBool))
@@ -204,7 +204,7 @@ class CollectionIRTest {
         assertEquals(TypeKnowledge.Exact(top.mcfpp.type.MCFPPDictType(MCFPPBaseType.Int).typeId), binding.data.facts.read(binding.place)!!.type)
         assertIs<ValueKnowledge.Constant>(binding.data.facts.read(binding.place.field("second"))!!.value)
         MCFPPStringTest.readFromString("""
-            func change(static value as list<any>) { value[0] = false; }
+            func change(static value: list<any>) { value[0] = false; }
             func main(){ var values = [2] as list<any>; change(values); var result = values[0] + 1; }
         """.trimIndent(), version = "26.3")
         assertNotNull(function("main").typedIR)
@@ -213,13 +213,13 @@ class CollectionIRTest {
 
     @Test fun conditionalStaticElementWritesCannotBorrowTheUntouchedInputType() = modes {
         MCFPPStringTest.readFromString("""
-            func change(static value as dict<any>, condition as bool) {
+            func change(static value: dict<any>, condition: bool) {
                 if(condition){ value["first"] = false; }
             }
             func main(){
-                var values = {first:2, second:9} as dict<any>;
-                change(values, true);
-                var result = values["first"] + 1;
+                var values = {first:2, second:9} as dict<any>
+                change(values, true)
+                var result = values["first"] + 1
             }
         """.trimIndent(), version = "26.3")
         assertNotNull(function("main").typedIR)
@@ -230,14 +230,14 @@ class CollectionIRTest {
 
     @Test fun nestedLiteralShapesBelongToCapturedOperandsBeforeLaterStaticCalls() = modes {
         val main = compile("""
-            func replace(static value as list<any>): list<any> {
-                value = [false,false] as list<any>;
-                return [7] as list<any>;
+            func replace(static value: list<any>): list<any> {
+                value = [false,false] as list<any>
+                return [7] as list<any>
             }
             func main(){
-                var values = [2] as list<any>;
-                var nested = [values,replace(values)];
-                dynamic var result = nested[0][-1] + (nested[1][0] as int);
+                var values = [2] as list<any>
+                var nested = [values,replace(values)]
+                dynamic result = nested[0][-1] + (nested[1][0] as int)
             }
         """)
         assertEquals(9, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -248,7 +248,7 @@ class CollectionIRTest {
 
     @Test fun emptyDictionaryLiteralsKeepRuntimeIdentityAndAcceptNewFields() {
         val main = compile("""
-            func main(){ var values = {}; values["first"] = 2; dynamic var result = values["first"] + 1; }
+            func main(){ var values = {}; values["first"] = 2; dynamic result = values["first"] + 1; }
         """)
         val values = main.scope.getVar("values")!!
         assertEquals(top.mcfpp.type.MCFPPDictType(MCFPPBaseType.Any).typeId, values.type.typeId)
@@ -259,11 +259,11 @@ class CollectionIRTest {
     @Test fun readOnlyCollectionViewsAllowNestedMutableValuesButRejectSlotReplacement() = modes {
         val main = compile("""
             func main(){
-                var values = [[2]];
-                var view = values as ImmutableList<list<int>>;
-                var copied = view;
-                view[0][0] = 7;
-                dynamic var result = values[0][0] + copied[0][0];
+                var values = [[2]]
+                var view = values as ImmutableList<list<int>>
+                var copied = view
+                view[0][0] = 7
+                dynamic result = values[0][0] + copied[0][0]
             }
         """)
         assertEquals(9, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -277,10 +277,10 @@ class CollectionIRTest {
     @Test fun wholeCollectionReplacementInLoopsWithdrawsOldChildrenAndUnequalLengths() = modes {
         val main = compile("""
             func main(){
-                var values = [2,9] as list<any>;
-                var i = 0;
+                var values = [2,9] as list<any>
+                var i = 0
                 while(i < 2){ values = [4] as list<any>; i += 1; }
-                dynamic var result = values[0] + 1;
+                dynamic result = values[0] + 1
             }
         """)
         assertEquals(5, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -305,11 +305,11 @@ class CollectionIRTest {
 
     @Test fun contextualLiteralsDoNotMakeOrdinaryMutableCollectionAssignmentsCovariant() {
         val main = compile("""
-            func main(){ var values as list<any> = [2]; values[0] = false; dynamic var result = values[0] == false; }
+            func main(){ var values: list<any> = [2]; values[0] = false; dynamic result = values[0] == false; }
         """)
         assertEquals(1, execute(main).read(main.scope.getVar("result") as top.mcfpp.core.lang.bool.ScoreBool))
         MCFPPStringTest.readFromString("""
-            func main(){ var values = [2]; var copied as list<any> = values; }
+            func main(){ var values = [2]; var copied: list<any> = values; }
         """.trimIndent(), version = "26.3")
         assertNotNull(function("main").typedIR)
         assertTrue(Project.errorCount > 0)

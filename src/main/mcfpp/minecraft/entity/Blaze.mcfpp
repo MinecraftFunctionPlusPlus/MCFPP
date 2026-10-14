@@ -1,2 +1,2 @@
 @MCFPPEntity
-data BlazeData: EntityData, CreatureData, AIMobData;
+data BlazeData: EntityData, CreatureData, AIMobData

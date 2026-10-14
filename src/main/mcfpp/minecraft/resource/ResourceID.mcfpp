@@ -1,6 +1,6 @@
 data ResourceID {
-    var id as string;
+    var id: string
 }
 
 @From<"top.mcfpp.mni.resource.ResourceIDObjectData">
-object data ResourceID;
+object data ResourceID

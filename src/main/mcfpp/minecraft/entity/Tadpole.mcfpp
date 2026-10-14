@@ -1,5 +1,5 @@
 @MCFPPEntity
 data TadpoleData: EntityData, CreatureData, AIMobData {
-    @Name<"Age"> var age as int;
-    @Name<"FromBucket"> var fromBucket as bool;
+    @Name<"Age"> var age: int
+    @Name<"FromBucket"> var fromBucket: bool
 }

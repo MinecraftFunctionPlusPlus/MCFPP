@@ -1,4 +1,4 @@
 data CommandResult {
-    const var result as int=0;
-    const var success as bool=false;
+    const result: int=0
+    const success: bool=false
 }

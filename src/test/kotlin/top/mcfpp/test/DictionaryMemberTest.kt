@@ -64,8 +64,8 @@ class DictionaryMemberTest {
     @Test fun mergeRejectsCompilerOnlyFieldsBeforeWritingARuntimeReceiver() {
         MCFPPStringTest.readFromString("""
             func main(){
-                dynamic var values as dict<any> = {first:2};
-                values.merge({kind:int});
+                dynamic values: dict<any> = {first:2}
+                values.merge({kind:int})
             }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0)
@@ -78,12 +78,12 @@ class DictionaryMemberTest {
     @Test fun removingAQuotedKeyPreservesUnrelatedElementKnowledge() {
         val main = compile("""
             func main(){
-                var source as dict<any> = {kept:2};
-                source["a.b"] = 9;
-                var view = source as dict<any>;
-                view.remove("a.b");
-                dynamic var kept = source["kept"] + 0;
-                dynamic var absent = source.containsKey("a.b");
+                var source: dict<any> = {kept:2}
+                source["a.b"] = 9
+                var view = source as dict<any>
+                view.remove("a.b")
+                dynamic kept = source["kept"] + 0
+                dynamic absent = source.containsKey("a.b")
             }
         """)
         val machine = execute(main)
@@ -93,14 +93,14 @@ class DictionaryMemberTest {
 
     @Test fun mergingKnownFieldsIntoAPartialReceiverPreservesKnownSiblings() {
         val main = compile("""
-            func update(source as dict<any>, runtime as int): int {
-                source["runtime"] = runtime;
-                source.merge({added:7});
-                return source["added"] + (source["runtime"] as int);
+            func update(source: dict<any>, runtime: int): int {
+                source["runtime"] = runtime
+                source.merge({added:7})
+                return source["added"] + (source["runtime"] as int)
             }
             func main(){
-                var source as dict<any> = {kept:2};
-                dynamic var result = update(source,5);
+                var source: dict<any> = {kept:2}
+                dynamic result = update(source,5)
             }
         """)
         assertEquals(12, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -109,8 +109,8 @@ class DictionaryMemberTest {
     @Test fun unknownStringMemberKeysHaveTheSameExplicitBackendDiagnosticAsIndexing() {
         for (operation in listOf("containsKey", "remove")) {
             MCFPPStringTest.readFromString("""
-                func use(source as dict<any>, key as string){ source.$operation(key); }
-                func main(){ var source as dict<any> = {first:2}; use(source,"first"); }
+                func use(source: dict<any>, key: string){ source.$operation(key); }
+                func main(){ var source: dict<any> = {first:2}; use(source,"first"); }
             """.trimIndent(), version = "26.3")
             assertTrue(Project.errorCount > 0, operation)
             assertTrue(Project.macroFunction.isEmpty(), operation)
@@ -128,11 +128,11 @@ class DictionaryMemberTest {
 
     @Test fun genericDictionaryParametersAndReturnsKeepTheirLayoutAndLanguageType() {
         val main = compile("""
-            func copy(source as dict<int>): dict<int> { return source; }
+            func copy(source: dict<int>): dict<int> { return source; }
             func main(){
-                var source = {value:4} as dict<int>;
-                var copied = copy(source);
-                dynamic var result = copied["value"] + 1;
+                var source = {value:4} as dict<int>
+                var copied = copy(source)
+                dynamic result = copied["value"] + 1
             }
         """)
         assertEquals(MCFPPDictType(MCFPPBaseType.Int).typeId, main.scope.getVar("copied")!!.type.typeId)
@@ -141,13 +141,13 @@ class DictionaryMemberTest {
 
     @Test fun aLegacyVisitorBooleanParameterReadsItsIncomingFrameAndKeepsBoolIdentity() {
         val main = compile("""
-            func put(source as dict<any>, flag as bool): bool {
-                source["flag"] = flag;
-                return source["flag"] == true;
+            func put(source: dict<any>, flag: bool): bool {
+                source["flag"] = flag
+                return source["flag"] == true
             }
             func main(){
-                var source as dict<any> = {value:4};
-                dynamic var result = put(source,true);
+                var source: dict<any> = {value:4}
+                dynamic result = put(source,true)
             }
         """)
         assertEquals(1, execute(main).read(main.scope.getVar("result") as ScoreBool))
@@ -156,12 +156,12 @@ class DictionaryMemberTest {
     @Test fun mapDictionaryInteropUsesCurrentSharedStorageAfterNativeWrites() {
         val main = compile("""
             func main(){
-                var caller = {entries:[{key:"first",value:2}]} as map<int>;
-                var incoming = {entries:[{key:"second",value:7}]} as map<int>;
-                caller.merge(incoming);
-                var projection = caller.keyValueSet;
-                caller.clear();
-                dynamic var result = projection["second"] + caller.size();
+                var caller = {entries:[{key:"first",value:2}]} as map<int>
+                var incoming = {entries:[{key:"second",value:7}]} as map<int>
+                caller.merge(incoming)
+                var projection = caller.keyValueSet
+                caller.clear()
+                dynamic result = projection["second"] + caller.size()
             }
         """)
         assertEquals(7, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -193,14 +193,14 @@ class DictionaryMemberTest {
 
     @Test fun aBulkDeepMergeKeepsUnrelatedFactsAndRecordsKnownScalarInputs() {
         val main = compile("""
-            func update(values as dict<any>, runtime as int): int {
-                values["runtime"] = runtime;
-                values.merge({nested:{added:8},scalar:7});
-                return (values["runtime"] as int) + values["scalar"];
+            func update(values: dict<any>, runtime: int): int {
+                values["runtime"] = runtime
+                values.merge({nested:{added:8},scalar:7})
+                return (values["runtime"] as int) + values["scalar"]
             }
             func main(){
-                var values as dict<any> = {nested:{kept:2}};
-                dynamic var result = update(values,5);
+                var values: dict<any> = {nested:{kept:2}}
+                dynamic result = update(values,5)
             }
         """)
         assertEquals(12, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -208,15 +208,15 @@ class DictionaryMemberTest {
 
     @Test fun mergingAnUnknownRuntimeSourceCopiesWholeNbtAndDeepMergesExistingFields() {
         val main = compile("""
-            func update(values as dict<any>, extra as dict<any>): int {
-                values.merge(extra);
-                var nested = values["nested"] as dict<any>;
-                return (nested["kept"] as int)*100 + (nested["added"] as int)*10 + (values["scalar"] as int);
+            func update(values: dict<any>, extra: dict<any>): int {
+                values.merge(extra)
+                var nested = values["nested"] as dict<any>
+                return (nested["kept"] as int)*100 + (nested["added"] as int)*10 + (values["scalar"] as int)
             }
             func main(){
-                var values as dict<any> = {nested:{kept:2}};
-                var extra as dict<any> = {nested:{added:8},scalar:7};
-                dynamic var result = update(values,extra);
+                var values: dict<any> = {nested:{kept:2}}
+                var extra: dict<any> = {nested:{added:8},scalar:7}
+                dynamic result = update(values,extra)
             }
         """)
         assertEquals(287, execute(main).read(main.scope.getVar("result") as MCInt))

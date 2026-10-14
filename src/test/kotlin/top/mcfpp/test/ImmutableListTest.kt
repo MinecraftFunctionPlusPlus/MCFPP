@@ -44,11 +44,11 @@ class ImmutableListTest {
     @Test fun readOnlyViewsObserveWritesThroughTheMutableSource() {
         val main = compile("""
             func main(){
-                var source = [2,3];
-                var view = source as ImmutableList<int>;
-                var first = view[0];
-                source[0] = 7;
-                dynamic var result = view[0]*10 + view[-1];
+                var source = [2,3]
+                var view = source as ImmutableList<int>
+                var first = view[0]
+                source[0] = 7
+                dynamic result = view[0]*10 + view[-1]
             }
         """)
         assertEquals(73, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -59,14 +59,14 @@ class ImmutableListTest {
 
     @Test fun ordinaryImmutableCopiesAndRuntimeParametersAndReturnsUseIndependentValues() {
         val main = compile("""
-            func copy(values as ImmutableList<int>): ImmutableList<int> { return values; }
+            func copy(values: ImmutableList<int>): ImmutableList<int> { return values; }
             func main(){
-                var source = [2,3];
-                var view = source as ImmutableList<int>;
-                var copied = view;
-                var returned = copy(view);
-                source[0] = 7;
-                dynamic var result = view[0]*100 + copied[0]*10 + returned[0];
+                var source = [2,3]
+                var view = source as ImmutableList<int>
+                var copied = view
+                var returned = copy(view)
+                source[0] = 7
+                dynamic result = view[0]*100 + copied[0]*10 + returned[0]
             }
         """)
         assertEquals(722, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -75,16 +75,16 @@ class ImmutableListTest {
 
     @Test fun runtimeQueriesHaveIndependentResultsAndSupportOldTargets() {
         val main = compile("""
-            func lookup(values as ImmutableList<int>, value as int): int {
-                var first = values.indexOf(value);
-                var last = values.lastIndexOf(value);
-                return first*100 + last*10 + values[0];
+            func lookup(values: ImmutableList<int>, value: int): int {
+                var first = values.indexOf(value)
+                var last = values.lastIndexOf(value)
+                return first*100 + last*10 + values[0]
             }
-            func contains(values as ImmutableList<int>, value as int): bool { return values.contains(value); }
+            func contains(values: ImmutableList<int>, value: int): bool { return values.contains(value); }
             func main(){
-                var values = [2,4,2] as ImmutableList<int>;
-                dynamic var result = lookup(values,2);
-                dynamic var found = contains(values,4);
+                var values = [2,4,2] as ImmutableList<int>
+                dynamic result = lookup(values,2)
+                dynamic found = contains(values,4)
             }
         """, "1.20.1")
         val machine = execute(main)
@@ -99,7 +99,7 @@ class ImmutableListTest {
             "var view = [2,3] as ImmutableList<int>; var values = view;",
             "var values = copy([2,3] as ImmutableList<int>);")) {
             for (action in listOf("values[0] = 7;", "values.add(7);", "values.clear();", "values.removeAt(0);")) {
-                MCFPPStringTest.readFromString("func copy(value as ImmutableList<int>): ImmutableList<int> { return value; } func main(){ $declaration $action }", version = "26.3")
+                MCFPPStringTest.readFromString("func copy(value: ImmutableList<int>): ImmutableList<int> { return value; } func main(){ $declaration $action }", version = "26.3")
                 assertTrue(Project.errorCount > 0, "$declaration $action")
             }
         }

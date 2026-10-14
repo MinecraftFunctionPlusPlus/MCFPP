@@ -1,2 +1,2 @@
 @MCFPPEntity
-data ZombieHorseData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, GeneralHorseData;
+data ZombieHorseData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, GeneralHorseData

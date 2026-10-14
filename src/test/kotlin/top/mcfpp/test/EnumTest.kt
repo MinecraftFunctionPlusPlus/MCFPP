@@ -27,8 +27,8 @@ class EnumTest {
                 } 
                 
                 func main(){
-                    var qwq as Test = A;
-                    print(qwq);
+                    var qwq: Test = A
+                    print(qwq)
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test)

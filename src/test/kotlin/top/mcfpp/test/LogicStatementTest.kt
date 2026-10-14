@@ -15,18 +15,18 @@ class LogicStatementTest {
         val test =
             """
                 func main(){
-                    var a = true;
-                    dynamic var b = false;
-                    var c = a && b;
-                    var d = a || b;
-                    var e = !a;
-                    var f = !b;
-                    print(c);
-                    print(d);
-                    print(e);
-                    print(f);
-                    dynamic var x as bool;
-                    print(a && b || x && b);
+                    var a = true
+                    dynamic b = false
+                    var c = a && b
+                    var d = a || b
+                    var e = !a
+                    var f = !b
+                    print(c)
+                    print(d)
+                    print(e)
+                    print(f)
+                    dynamic x: bool
+                    print(a && b || x && b)
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test, arrayOf("debug"))
@@ -37,16 +37,16 @@ class LogicStatementTest {
         val test =
             """
                 func base(){
-                    dynamic var i = 5;
+                    dynamic i = 5
                     if(i < 7){
-                        print("i < 7");
-                        dynamic var p as int;
+                        print("i < 7")
+                        dynamic p: int
                     }else{
-                        print("i >= 7");
-                        dynamic var p as int;
+                        print("i >= 7")
+                        dynamic p: int
                     }
-                    print(p);
-                    print("end");
+                    print(p)
+                    print("end")
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test, targetPath = Files.createTempDirectory("mcfpp-if-").toString())
@@ -57,10 +57,10 @@ class LogicStatementTest {
         val test =
             """
                 func generateSequence(){
-                    dynamic var i = 0;
+                    dynamic i = 0
                     while(i < 10){
-                        print(i);
-                        i = i + 1;
+                        print(i)
+                        i = i + 1
                     }
                 }
             """.trimIndent()
@@ -72,11 +72,11 @@ class LogicStatementTest {
         val test =
             """
             func generateSequenceDoWhile(){
-                dynamic var i = 0;
+                dynamic i = 0
                 do {
-                    print(i);
-                    i = i + 1;
-                } while(i < 10);
+                    print(i)
+                    i = i + 1
+                } while(i < 10)
             }
         """.trimIndent()
         MCFPPStringTest.readFromString(test, targetPath = Files.createTempDirectory("mcfpp-do-while-").toString())
@@ -100,7 +100,7 @@ class LogicStatementTest {
             val output = Files.createTempDirectory("mcfpp-nested-if-")
             MCFPPStringTest.readFromString("""
                 func nested(){
-                    dynamic var n = $input;
+                    dynamic n = $input
                     if(n > 0){
                         if(n == 5){
                             /scoreboard players set #case result 1
@@ -125,7 +125,7 @@ class LogicStatementTest {
         val output = Files.createTempDirectory("mcfpp-nested-constant-")
         MCFPPStringTest.readFromString("""
             func nested(){
-                dynamic var n = -5;
+                dynamic n = -5
                 if(n > 0){
                     if(true){
                         /scoreboard players set #case result -1

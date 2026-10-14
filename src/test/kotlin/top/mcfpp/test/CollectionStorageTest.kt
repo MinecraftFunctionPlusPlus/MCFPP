@@ -30,12 +30,12 @@ class CollectionStorageTest {
     @Test fun listElementsKeepActualTypesAndKnownSiblingsAfterAWritingView() {
         val main = compile("""
             func main(){
-                var values = [2,9] as list<any>;
-                var view = values as list<any>;
-                dynamic var before = view[0] + 1;
-                values[0] = 7;
-                dynamic var result = values[0] + view[0];
-                dynamic var preserved as int = view[1];
+                var values = [2,9] as list<any>
+                var view = values as list<any>
+                dynamic before = view[0] + 1
+                values[0] = 7
+                dynamic result = values[0] + view[0]
+                dynamic preserved: int = view[1]
             }
         """)
         val source = main.scope.getVar("values")!!.storageBinding!!
@@ -51,12 +51,12 @@ class CollectionStorageTest {
     @Test fun ordinaryCollectionCopiesKeepElementFactsAndIndependentPlaces() {
         val main = compile("""
             func main(){
-                var values = [2,9] as list<any>;
-                var view = values as list<any>;
-                var copied = values;
-                values[0] = 6;
-                copied[0] = 10;
-                dynamic var result = view[0] + copied[0] + copied[1];
+                var values = [2,9] as list<any>
+                var view = values as list<any>
+                var copied = values
+                values[0] = 6
+                copied[0] = 10
+                dynamic result = view[0] + copied[0] + copied[1]
             }
         """)
         assertNotEquals(main.scope.getVar("values")!!.storageBinding!!.place, main.scope.getVar("copied")!!.storageBinding!!.place)
@@ -66,11 +66,11 @@ class CollectionStorageTest {
     @Test fun dictionaryElementsPreserveBooleanIdentityAndSiblingFacts() {
         val main = compile("""
             func main(){
-                var values as dict<any> = {flag:true, first:2, second:9};
-                var view = values as dict<any>;
-                dynamic var flag = values["flag"] == true;
-                view["first"] = 7;
-                dynamic var result = values["first"] + values["second"];
+                var values: dict<any> = {flag:true, first:2, second:9}
+                var view = values as dict<any>
+                dynamic flag = values["flag"] == true
+                view["first"] = 7
+                dynamic result = values["first"] + values["second"]
             }
         """)
         val binding = main.scope.getVar("values")!!.storageBinding!!
@@ -105,12 +105,12 @@ class CollectionStorageTest {
         for (version in listOf("26.3", "1.20.2")) {
             val main = compile("""
                 func main(){
-                    var values = [2,9] as list<any>;
-                    var view = values as list<any>;
-                    dynamic var index = 1;
-                    dynamic var before = (view[1] as int) + 0;
-                    values[index] = 7;
-                    dynamic var result = (view[0] as int) + (view[1] as int);
+                    var values = [2,9] as list<any>
+                    var view = values as list<any>
+                    dynamic index = 1
+                    dynamic before = (view[1] as int) + 0
+                    values[index] = 7
+                    dynamic result = (view[0] as int) + (view[1] as int)
                 }
             """, version)
             val machine = execute(main)
@@ -122,9 +122,9 @@ class CollectionStorageTest {
     @Test fun partialCollectionsRetainTypesAndMaterializeEachSourceEncoding() {
         val main = compile("""
             func main(){
-                dynamic var source = 5;
-                var values = [2,source] as list<any>;
-                dynamic var result = values[0] + values[1];
+                dynamic source = 5
+                var values = [2,source] as list<any>
+                dynamic result = values[0] + values[1]
             }
         """)
         assertNull(StorageAccess.snapshot(assertNotNull(main.scope.getVar("values"))))
@@ -134,11 +134,11 @@ class CollectionStorageTest {
     @Test fun negativeAndPositiveIndicesOfTheSameElementShareWriteVersions() {
         val main = compile("""
             func main(){
-                var values = [2,9] as list<any>;
-                var view = values as list<any>;
-                dynamic var before = (values[1] as int) + 0;
-                view[-1] = 11;
-                dynamic var result = (values[1] as int) + (values[-1] as int);
+                var values = [2,9] as list<any>
+                var view = values as list<any>
+                dynamic before = (values[1] as int) + 0
+                view[-1] = 11
+                dynamic result = (values[1] as int) + (values[-1] as int)
             }
         """)
         val machine = execute(main)
@@ -149,9 +149,9 @@ class CollectionStorageTest {
     @Test fun erasingACollectionCopiesItsElementKnowledgeWithThePayload() {
         val main = compile("""
             func main(){
-                var values = [2,9] as list<any>;
-                var erased as any = values;
-                dynamic var result = erased[0] + erased[1];
+                var values = [2,9] as list<any>
+                var erased: any = values
+                dynamic result = erased[0] + erased[1]
             }
         """)
         assertEquals(11, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -160,11 +160,11 @@ class CollectionStorageTest {
     @Test fun replacingAWholeCollectionReseedsElementKnowledgeAndInvalidatesViews() {
         val main = compile("""
             func main(){
-                var values = [2,9] as list<any>;
-                var view = values as list<any>;
-                dynamic var before = (view[0] as int) + 0;
-                values = [5,6] as list<any>;
-                dynamic var result = view[0] + view[-1];
+                var values = [2,9] as list<any>
+                var view = values as list<any>
+                dynamic before = (view[0] as int) + 0
+                values = [5,6] as list<any>
+                dynamic result = view[0] + view[-1]
             }
         """)
         val machine = execute(main)
@@ -175,11 +175,11 @@ class CollectionStorageTest {
     @Test fun dynamicDictionaryKeysAndQuotedConstantKeysSelectTheCorrectMember() {
         val main = compile("""
             func main(){
-                var values as dict<any> = {first:2, second:9};
-                dynamic var key = "second";
-                dynamic var before = values[key] + 1;
-                values["a.b"] = 7;
-                dynamic var result = values["a.b"] + values["first"];
+                var values: dict<any> = {first:2, second:9}
+                dynamic key = "second"
+                dynamic before = values[key] + 1
+                values["a.b"] = 7
+                dynamic result = values["a.b"] + values["first"]
             }
         """)
         val machine = execute(main)
@@ -192,12 +192,12 @@ class CollectionStorageTest {
             val literal = top.mcfpp.nbt.tags.Tag.toSNBT(top.mcfpp.nbt.tags.primitive.StringTag(key))
             val main = compile("""
                 func main(){
-                    var values as dict<any> = {first:2};
-                    values[$literal] = 9;
-                    dynamic var key = $literal;
-                    dynamic var before = (values[key] as int) + 0;
-                    values[key] = 7;
-                    dynamic var result = (values[key] as int) + values["first"];
+                    var values: dict<any> = {first:2}
+                    values[$literal] = 9
+                    dynamic key = $literal
+                    dynamic before = (values[key] as int) + 0
+                    values[key] = 7
+                    dynamic result = (values[key] as int) + values["first"]
                 }
             """, version)
             val binding = main.scope.getVar("values")!!.storageBinding!!
@@ -210,8 +210,8 @@ class CollectionStorageTest {
 
     @Test fun unknownDictionaryKeysHaveAnExplicitBackendDiagnostic() {
         MCFPPStringTest.readFromString("""
-            func lookup(values as dict<any>, key as string): int { return values[key] as int; }
-            func main(){ var values as dict<any> = {first:2}; dynamic var result = lookup(values,"first"); }
+            func lookup(values: dict<any>, key: string): int { return values[key] as int; }
+            func main(){ var values: dict<any> = {first:2}; dynamic result = lookup(values,"first"); }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0)
         assertTrue(Project.macroFunction.isEmpty())
@@ -219,7 +219,7 @@ class CollectionStorageTest {
 
     @Test fun targetsBeforeHeterogeneousNbtListsRejectMixedElementEncodings() {
         for (version in listOf("1.20.2", "1.21.4")) {
-            MCFPPStringTest.readFromString("func main(){ dynamic var values = [2,true] as list<any>; }", version = version)
+            MCFPPStringTest.readFromString("func main(){ dynamic values = [2,true] as list<any>; }", version = version)
             assertTrue(Project.errorCount > 0, version)
         }
     }
@@ -235,10 +235,10 @@ class CollectionStorageTest {
         for (version in listOf("1.21.5", "26.3")) {
             val main = compile("""
                 func main(){
-                    var values = [2,true] as list<any>;
-                    dynamic var before = values[1] == true;
-                    values[0] = false;
-                    dynamic var result = values[0] == false;
+                    var values = [2,true] as list<any>
+                    dynamic before = values[1] == true
+                    values[0] = false
+                    dynamic result = values[0] == false
                 }
             """, version)
             assertTrue(main.commands.analyzeAll().any { "set value [2,1b]" in it })
@@ -252,16 +252,16 @@ class CollectionStorageTest {
         val main = compile("func main(){ var values = [2,true]; }")
         val element = (main.scope.getVar("values")!!.type as top.mcfpp.type.MCFPPListType).generic.single()
         assertEquals(TypeId.Union(setOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.Bool.typeId)), element.typeId)
-        MCFPPStringTest.readFromString("func main(){ dynamic var values = [int,2]; }", version = "26.3")
+        MCFPPStringTest.readFromString("func main(){ dynamic values = [int,2]; }", version = "26.3")
         assertTrue(Project.errorCount > 0)
     }
 
     @Test fun languageBoolAndNbtByteShareEncodingWithoutSharingIdentityOnLegacyTargets() {
         val main = compile("""
             func main(){
-                var values = [true,1b] as list<any>;
-                values[1] = false;
-                dynamic var result = (values[0] as bool) == (values[1] as bool);
+                var values = [true,1b] as list<any>
+                values[1] = false
+                dynamic result = (values[0] as bool) == (values[1] as bool)
             }
         """, "1.20.2")
         val binding = main.scope.getVar("values")!!.storageBinding!!
@@ -272,39 +272,39 @@ class CollectionStorageTest {
     @Test fun partiallyKnownMixedAndNestedListsUseVisiblePayloads() {
         val main = compile("""
             func main(){
-                dynamic var flag = true;
-                var values = [[2,flag]] as list<any>;
-                var nested = values[0] as list<any>;
-                dynamic var result = nested[1] == true;
+                dynamic flag = true
+                var values = [[2,flag]] as list<any>
+                var nested = values[0] as list<any>
+                dynamic result = nested[1] == true
             }
         """)
         assertEquals(1, execute(main).read(main.scope.getVar("result") as ScoreBool))
-        MCFPPStringTest.readFromString("func main(){ dynamic var values = [[2,true]]; }", version = "1.20.2")
+        MCFPPStringTest.readFromString("func main(){ dynamic values = [[2,true]]; }", version = "1.20.2")
         assertTrue(Project.errorCount > 0)
     }
 
     @Test fun emptyDictionaryKeysFollowTheExplicitTargetCapability() {
         val main = compile("""
             func main(){
-                var values as dict<any> = {first:2};
-                values[""] = 7;
-                dynamic var result = values[""] + 0;
+                var values: dict<any> = {first:2}
+                values[""] = 7
+                dynamic result = values[""] + 0
             }
         """, "1.20.2")
         assertEquals(7, execute(main).read(main.scope.getVar("result") as MCInt))
-        MCFPPStringTest.readFromString("func main(){ var values as dict<any> = {first:2}; values[\"\"] = 7; }", version = "1.21.5")
+        MCFPPStringTest.readFromString("func main(){ var values: dict<any> = {first:2}; values[\"\"] = 7; }", version = "1.21.5")
         assertTrue(Project.errorCount > 0)
     }
 
     @Test fun aLaterRhsCallDoesNotChangeAnAlreadyEvaluatedIndex() {
         val main = compile("""
-            func change(static index as int): int { index = 0; return 7; }
+            func change(static index: int): int { index = 0; return 7; }
             func main(){
-                var values = [2,9] as list<any>;
-                dynamic var index = 1;
-                values[index] = change(index);
-                dynamic var result = (values[0] as int) + (values[1] as int);
-                dynamic var after = index + 0;
+                var values = [2,9] as list<any>
+                dynamic index = 1
+                values[index] = change(index)
+                dynamic result = (values[0] as int) + (values[1] as int)
+                dynamic after = index + 0
             }
         """)
         val machine = execute(main)
@@ -314,12 +314,12 @@ class CollectionStorageTest {
 
     @Test fun aLaterLiteralElementCallPreservesTheEarlierElementValue() {
         val main = compile("""
-            func change(static value as int): int { value = 9; return 1; }
+            func change(static value: int): int { value = 9; return 1; }
             func main(){
-                var value = 4;
-                var values = [value,change(value)] as list<any>;
-                dynamic var result = values[0] + values[1];
-                dynamic var after = value + 0;
+                var value = 4
+                var values = [value,change(value)] as list<any>
+                dynamic result = values[0] + values[1]
+                dynamic after = value + 0
             }
         """)
         val machine = execute(main)
@@ -328,16 +328,16 @@ class CollectionStorageTest {
     }
 
     @Test fun compilerOnlyElementsCannotBeMaterializedThroughARuntimeCollection() {
-        MCFPPStringTest.readFromString("func main(){ dynamic var values = [int]; }", version = "26.3")
+        MCFPPStringTest.readFromString("func main(){ dynamic values = [int]; }", version = "26.3")
         assertTrue(Project.errorCount > 0)
     }
 
     @Test fun dynamicDeclarationsRejectCompilerOnlyContentsBeforeEmittingPayloadWrites() {
         for (source in listOf(
-            "dynamic var value = {kind:int};",
-            "dynamic var value as any = {kind:int};",
-            "dynamic var value as object = {kind:int};",
-            "dynamic var value = [{kind:int}];"
+            "dynamic value = {kind:int};",
+            "dynamic value: any = {kind:int};",
+            "dynamic value: object = {kind:int};",
+            "dynamic value = [{kind:int}];"
         )) {
             MCFPPStringTest.readFromString("func main(){ $source }", version = "26.3")
             assertTrue(Project.errorCount > 0, source)
@@ -358,7 +358,7 @@ class CollectionStorageTest {
     }
 
     @Test fun anEmptyLiteralStillHasARuntimeRepresentation() {
-        val main = compile("func main(){ dynamic var values = []; }")
+        val main = compile("func main(){ dynamic values = []; }")
         val values = assertNotNull(main.scope.getVar("values"))
         assertTrue(values.type.hasRuntimeRepresentation)
         assertEquals(CompilerValue.Typed(values.type.typeId, CompilerValue.Sequence(emptyList())), StorageAccess.snapshot(values))
@@ -376,9 +376,9 @@ class CollectionStorageTest {
     @Test fun aKnownAnyIndexBindsItsActualIntegerType() {
         val main = compile("""
             func main(){
-                var values = [2,9] as list<any>;
-                var index as any = 1;
-                dynamic var result = values[index] + 1;
+                var values = [2,9] as list<any>
+                var index: any = 1
+                dynamic result = values[index] + 1
             }
         """)
         assertEquals(10, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -387,11 +387,11 @@ class CollectionStorageTest {
     @Test fun differentRuntimeIndicesCannotReuseTheSameUnknownElementReadCache() {
         val main = compile("""
             func main(){
-                var values = [2,9] as list<any>;
-                dynamic var first = 0;
-                dynamic var second = 1;
-                dynamic var before = (values[first] as int) + 0;
-                dynamic var result = (values[first] as int) + (values[second] as int);
+                var values = [2,9] as list<any>
+                dynamic first = 0
+                dynamic second = 1
+                dynamic before = (values[first] as int) + 0
+                dynamic result = (values[first] as int) + (values[second] as int)
             }
         """)
         val machine = execute(main)
@@ -407,20 +407,20 @@ class CollectionStorageTest {
     @Test fun targetsWithoutMacrosAcceptProvenIndicesAndRejectUnknownIndices() {
         val main = compile("""
             func main(){
-                var values = [2,9] as list<any>;
-                dynamic var index = 1;
-                values[index] = 7;
-                dynamic var result = values[index] + 0;
+                var values = [2,9] as list<any>
+                dynamic index = 1
+                values[index] = 7
+                dynamic result = values[index] + 0
             }
         """, "1.20")
         assertEquals(7, execute(main).read(main.scope.getVar("result") as MCInt))
         assertTrue(Project.macroFunction.isEmpty())
         MCFPPStringTest.readFromString("""
-            func identity(value as int): int { return value; }
+            func identity(value: int): int { return value; }
             func main(){
-                var values = [2,9] as list<any>;
-                dynamic var index = identity(1);
-                values[index] = 7;
+                var values = [2,9] as list<any>
+                dynamic index = identity(1)
+                values[index] = 7
             }
         """.trimIndent(), version = "1.20")
         assertTrue(Project.errorCount > 0)

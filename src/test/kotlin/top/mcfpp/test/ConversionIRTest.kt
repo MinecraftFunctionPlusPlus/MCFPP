@@ -39,12 +39,12 @@ class ConversionIRTest {
         for (version in listOf("26.3", "1.20.1")) {
             val main = compile("""
                 func main(){
-                    dynamic var input = 65535;
-                    var small = toByte(input);
-                    var medium = toShort(input);
-                    var wide = toLong(input);
-                    var precise = toDouble(input);
-                    dynamic var result = toInt(small) + toInt(medium) + input;
+                    dynamic input = 65535
+                    var small = toByte(input)
+                    var medium = toShort(input)
+                    var wide = toLong(input)
+                    var precise = toDouble(input)
+                    dynamic result = toInt(small) + toInt(medium) + input
                     /data modify storage mcfpp:system temp.small set from storage mcfpp:system stack_frame[0].small
                     /data modify storage mcfpp:system temp.medium set from storage mcfpp:system stack_frame[0].medium
                     /data modify storage mcfpp:system temp.wide set from storage mcfpp:system stack_frame[0].wide
@@ -62,15 +62,15 @@ class ConversionIRTest {
 
     @Test fun nativeFloatConversionParticipatesInLoopsCallsAndRecursion() = modes {
         val main = compile("""
-            func sum(depth as int): float {
+            func sum(depth: int): float {
                 if(depth <= 0){ return toFloat(-7s); }
-                return toFloat(depth) + sum(depth - 1);
+                return toFloat(depth) + sum(depth - 1)
             }
             func expose(): any { return -1.8; }
             func main(){
-                var value = sum(3);
+                var value = sum(3)
                 while(value < 2.5){ value += 0.5; }
-                dynamic var result = toInt(value) + toInt(expose());
+                dynamic result = toInt(value) + toInt(expose())
             }
         """)
         assertEquals(1, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -78,13 +78,13 @@ class ConversionIRTest {
 
     @Test fun nbtEncodingCopiesPayloadAndDirectViewsKeepTheEncodedValue() = modes {
         val main = compile("""
-            func forward(value as nbt): nbt { return value; }
+            func forward(value: nbt): nbt { return value; }
             func main(){
-                dynamic var source = 12s;
-                var encoded = toNBT(source);
-                source = 3s;
-                var returned = forward(toNBT(toLong(9007199254740993L)));
-                dynamic var result = (toNBT(7) as int) + toInt(source);
+                dynamic source = 12s
+                var encoded = toNBT(source)
+                source = 3s
+                var returned = forward(toNBT(toLong(9007199254740993L)))
+                dynamic result = (toNBT(7) as int) + toInt(source)
                 /data modify storage mcfpp:system temp.encoded set from storage mcfpp:system stack_frame[0].encoded
                 /data modify storage mcfpp:system temp.returned set from storage mcfpp:system stack_frame[0].returned
             }
@@ -98,9 +98,9 @@ class ConversionIRTest {
     @Test fun longAndDoubleReadsRetainBackendRoundingEvenForLiterals() = modes {
         val main = compile("""
             func main(){
-                var wide = toInt(17L);
-                var precise = toInt(-1.8d);
-                dynamic var result = wide + precise;
+                var wide = toInt(17L)
+                var precise = toInt(-1.8d)
+                dynamic result = wide + precise
             }
         """, "1.20.1")
         assertEquals(15, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -111,8 +111,8 @@ class ConversionIRTest {
     @Test fun constantNbtSnapshotRetainsTagAndNumericIdentity() {
         val main = compile("""
             func main(){
-                var payload = toNBT(toShort(65535));
-                var precise = toDouble(2147483647);
+                var payload = toNBT(toShort(65535))
+                var precise = toDouble(2147483647)
             }
         """)
         assertEquals(ShortTag(-1), StorageAccess.constantEncoding(main.scope.getVar("payload")!!))
@@ -122,8 +122,8 @@ class ConversionIRTest {
 
     @Test fun userFunctionsNamedLikeConversionsKeepTheirOwnBehavior() = modes {
         val main = compile("""
-            func toInt(value as int): int { return value + 10; }
-            func main(){ dynamic var result = toInt(2); }
+            func toInt(value: int): int { return value + 10; }
+            func main(){ dynamic result = toInt(2); }
         """)
         assertEquals(12, execute(main).read(main.scope.getVar("result") as MCInt))
         assertTrue(main.typedIR!!.blocks.flatMap { it.instructions }.any { it is Instruction.Call })
@@ -132,13 +132,13 @@ class ConversionIRTest {
     @Test fun legacyAndIRCallersCanReadNarrowIntegerReturns() {
         for (legacy in listOf(true, false)) {
             MCFPPStringTest.readFromString("""
-                func narrow(value as int): short { return toShort(value); }
-                func narrowByte(value as int): byte { return toByte(value); }
+                func narrow(value: int): short { return toShort(value); }
+                func narrowByte(value: int): byte { return toByte(value); }
                 func main(){
                     ${if (legacy) "var ignored = 6 / 2;" else ""}
-                    var small = narrow(65535);
-                    var tiny = narrowByte(128);
-                    dynamic var result = toInt(small) + toInt(tiny);
+                    var small = narrow(65535)
+                    var tiny = narrowByte(128)
+                    dynamic result = toInt(small) + toInt(tiny)
                 }
             """.trimIndent(), version = "26.3")
             assertEquals(0, Project.errorCount)
@@ -156,7 +156,7 @@ class ConversionIRTest {
             "func main(){ var result = toByte(7L); }",
             "func main(){ var result = toLong(1.5); }",
             "func main(){ var result = toInt(2147483648.0); }",
-            "func main(){ var value as any = 2; if(true){ value = false; }; var result = toInt(value); }")) {
+            "func main(){ var value: any = 2; if(true){ value = false; }; var result = toInt(value); }")) {
             MCFPPStringTest.readFromString(source, version = "26.3")
             assertTrue(Project.errorCount > 0, source)
         }

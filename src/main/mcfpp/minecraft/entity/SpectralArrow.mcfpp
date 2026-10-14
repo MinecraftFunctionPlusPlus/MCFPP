@@ -1,4 +1,4 @@
 @MCFPPEntity
 data SpectralArrowData: EntityData, ProjectileData, GeneralArrowData {
-    @Name<"Duration"> var duration as int;
+    @Name<"Duration"> var duration: int
 }

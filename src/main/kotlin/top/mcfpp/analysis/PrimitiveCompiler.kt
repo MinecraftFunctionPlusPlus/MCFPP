@@ -526,13 +526,13 @@ object PrimitiveCompiler {
                 declaredHere = priorDeclarations
             }
         }
-        private fun condition(context: Parser.BucketExpressionContext): ValueRef =
-            boundValue(expression(context.expression() ?: unsupported())).also { if (it.type != bool && !(exploratory && it.type == any)) invalid("Condition must be bool") }
+        private fun condition(context: Parser.ExpressionContext): ValueRef =
+            boundValue(expression(context)).also { if (it.type != bool && !(exploratory && it.type == any)) invalid("Condition must be bool") }
         private fun conditional(context: Parser.IfStatementContext) {
             val merge = newBlock()
             val before = LinkedHashMap(knowledge)
             val branches = mutableListOf<Map<SymbolId, TypeKnowledge>>()
-            val choices = listOf(context.bucketExpression() to context.block()) + context.elseIfStatement().map { it.bucketExpression() to it.block() }
+            val choices = listOf(context.expression() to context.block()) + context.elseIfStatement().map { it.expression() to it.block() }
             for ((predicate, body) in choices) {
                 knowledge = LinkedHashMap(before)
                 val value = condition(predicate)
@@ -558,7 +558,7 @@ object PrimitiveCompiler {
             val exit = newBlock()
             jump(header)
             current = header
-            terminate(Terminator.Branch(condition(context.bucketExpression()), body.id, exit.id))
+            terminate(Terminator.Branch(condition(context.expression()), body.id, exit.id))
             current = body
             loops.addLast(header.id to exit.id)
             try { scoped(context.block()) } finally { loops.removeLast() }
@@ -575,7 +575,7 @@ object PrimitiveCompiler {
             try { scoped(context.block()) } finally { loops.removeLast() }
             jump(test)
             current = test
-            terminate(Terminator.Branch(condition(context.bucketExpression()), body.id, exit.id))
+            terminate(Terminator.Branch(condition(context.expression()), body.id, exit.id))
             current = exit
         }
         private fun range(node: ParserRuleContext): Parser.RangeContext? = if (node is Parser.RangeContext) node else
@@ -654,7 +654,7 @@ object PrimitiveCompiler {
             val name = context.Identifier().text
             if (!declaredHere.add(name)) invalid("Duplicate defined variable: $name")
             localNames.add(name)
-            val modifier = context.fieldModifier()?.text
+            val modifier = context.fieldModifier()?.start?.text
             val storedName = if (depth == 0) name else "\$local_${context.start.tokenIndex}_$name"
             val symbol = Symbol(declarationIds.getOrPut(context.start.tokenIndex, SymbolId::fresh), name,
                 type, modifier != "const", forceRuntime = modifier == "dynamic")
@@ -706,7 +706,7 @@ object PrimitiveCompiler {
             }
             val declaration = context.fieldDeclaration()
             if (declaration != null) {
-                val modifier = declaration.fieldModifier()?.text
+                val modifier = declaration.fieldModifier()?.start?.text
                 if (modifier == "import") unsupported()
                 val initializer = declaration.expression()
                 if (initializer == null) {

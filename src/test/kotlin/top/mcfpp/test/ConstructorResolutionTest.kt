@@ -27,12 +27,12 @@ class ConstructorResolutionTest {
 
     @Test fun exactConstructorWinsInEitherDeclarationOrder() {
         val integer = """
-            constructor(value as int){
+            constructor(value: int){
                 /say integer
             }
         """.trimIndent()
         val floating = """
-            constructor(value as float){
+            constructor(value: float){
                 /say floating
             }
         """.trimIndent()
@@ -51,11 +51,11 @@ class ConstructorResolutionTest {
     @Test fun ordinaryConstructorAcceptsRuntimeParametersAndLiteralsWithoutSpecializing() {
         compile("""
             data Box {
-                constructor(value as int){
+                constructor(value: int){
                     /say ordinary
                 }
             }
-            func accepted(value as int){ Box(value); }
+            func accepted(value: int){ Box(value); }
             func main(){ accepted(2); }
         """)
         assertEquals(0, Project.errorCount)
@@ -63,7 +63,7 @@ class ConstructorResolutionTest {
         assertEquals(listOf("ordinary"), execute().messages)
         compile("""
             data Box {
-                constructor(value as int){
+                constructor(value: int){
                     /say ordinary
                 }
             }
@@ -90,7 +90,7 @@ class ConstructorResolutionTest {
         for (body in listOf(direct, chained)) {
             compile("""
                 data Box {
-                    constructor(value as int = 3){
+                    constructor(value: int = 3){
                         $body
                     }
                 }
@@ -104,10 +104,10 @@ class ConstructorResolutionTest {
     @Test fun incomparableCandidatesReportAmbiguityBeforeInitializingAnObject() {
         compile("""
             data Box {
-                constructor(left as int, right as float){
+                constructor(left: int, right: float){
                     /say first
                 }
-                constructor(left as float, right as int){
+                constructor(left: float, right: int){
                     /say second
                 }
             }

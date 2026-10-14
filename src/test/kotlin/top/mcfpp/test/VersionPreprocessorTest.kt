@@ -39,9 +39,9 @@ class VersionPreprocessorTest {
             #if MC >= 26.2
             func newest(){
                 #if MC == 26.3
-                var value = 3;
+                var value = 3
                 #else
-                var value = 2;
+                var value = 2
                 #endif
             }
             #elif MC >= 26.1
@@ -195,9 +195,9 @@ class VersionPreprocessorTest {
             #if MC >= 26.1
             func selected(){
                 #if MC >= 26.3
-                var result = 3;
+                var result = 3
                 #else
-                var result = 1;
+                var result = 1
                 #endif
             }
             #else

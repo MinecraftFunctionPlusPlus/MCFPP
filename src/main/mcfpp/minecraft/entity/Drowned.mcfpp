@@ -1,2 +1,2 @@
 @MCFPPEntity
-data DrownedData: EntityData, CreatureData, AIMobData, GeneralZombieData;
+data DrownedData: EntityData, CreatureData, AIMobData, GeneralZombieData

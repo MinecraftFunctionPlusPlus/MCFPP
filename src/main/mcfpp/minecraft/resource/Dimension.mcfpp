@@ -1,5 +1,5 @@
 @From<"top.mcfpp.mni.resource.DimensionData">
-data Dimension: ResourceID;
+data Dimension: ResourceID
 
 @From<"top.mcfpp.mni.resource.DimensionObjectData">
-object data Dimension: ResourceID;
+object data Dimension: ResourceID

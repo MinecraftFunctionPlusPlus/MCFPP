@@ -1,2 +1,2 @@
 @MCFPPEntity
-data WitchData: EntityData, CreatureData, AIMobData, RaiderData;
+data WitchData: EntityData, CreatureData, AIMobData, RaiderData

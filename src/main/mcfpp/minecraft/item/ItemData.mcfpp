@@ -1,5 +1,5 @@
 data ItemStackData {
-    var id as string;
-    var count as int;
-    var components as dict<ItemComponent>;
+    var id: string
+    var count: int
+    var components: dict<ItemComponent>
 }

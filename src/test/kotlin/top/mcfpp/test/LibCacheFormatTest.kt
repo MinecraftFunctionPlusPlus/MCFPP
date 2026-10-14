@@ -76,19 +76,19 @@ class LibCacheFormatTest {
         Project.config = top.mcfpp.ProjectConfig()
         try {
             val declarations = """
-                namespace fixture.descriptors;
+                namespace fixture.descriptors
                 enum Mode {first=3,second=7}
-                data Frozen<M as Mode>{constructor(){}}
+                data Frozen<M: Mode>{constructor(){}}
                 data Node {
-                    var children as list<Node>;
+                    var children: list<Node>
                     constructor(){this.children=[] as list<Node>;}
                 }
-                func choose(modes as list<Mode> = [Mode.second]):int{return 7;}
+                func choose(modes: list<Mode> = [Mode.second]):int{return 7;}
             """.trimIndent()
             val body = """
                 func main(){
-                    var node=Node();var frozen=Frozen<Mode.second>();
-                    dynamic var result=node.children.size()+choose();
+                    var node=Node();var frozen=Frozen<Mode.second>()
+                    dynamic result=node.children.size()+choose()
                 }
             """.trimIndent()
             fun check(): Pair<top.mcfpp.model.compound.DataTemplate,top.mcfpp.type.MCFPPEnumType> {

@@ -1,50 +1,50 @@
-import mcfpp.minecraft.item:ItemStackData;
+import mcfpp.minecraft.item:ItemStackData
 
 @MCFPPEntity
 data ArmorStandData: EntityData, CreatureData {
 
     @Name<"ArmorItems">
-    var armorItems as list<ItemData>;
+    var armorItems: list<ItemData>
 
     @Name<"DisabledSlots">
-    var disabledslots as int;
+    var disabledslots: int
 
     @Name<"HandItems">
-    var handItems as list<ItemData>;
+    var handItems: list<ItemData>
 
     @Name<"Invisible">
-    var invisible as bool;
+    var invisible: bool
 
     @Name<"Marker">
-    var marker as bool;
+    var marker: bool
 
     @Name<"NoBasePlate">
-    var noBasePlate as bool;
+    var noBasePlate: bool
 
     @Name<"Pose">
-    var pose as data {
+    var pose: data {
         @Name<"Body">
-        var body as list<float>;
+        var body: list<float>
 
         @Name<"Head">
-        var head as list<float>;
+        var head: list<float>
 
         @Name<"LeftArm">
-        var leftArm as list<float>;
+        var leftArm: list<float>
 
         @Name<"LeftLeg">
-        var leftLeg as list<float>;
+        var leftLeg: list<float>
 
         @Name<"RightArm">
-        var rightArm as list<float>;
+        var rightArm: list<float>
 
         @Name<"RightLeg">
-        var rightLeg as list<float>;
-    };
+        var rightLeg: list<float>
+    }
 
     @Name<"ShowArms">
-    var showArms as bool;
+    var showArms: bool
 
     @Name<"Small">
-    var small as bool;
+    var small: bool
 }

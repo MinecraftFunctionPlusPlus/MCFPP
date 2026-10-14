@@ -492,6 +492,10 @@ class MCFPPExprVisitor(
     }
 
     override fun visitBucketExpression(ctx: mcfppParser.BucketExpressionContext): Var<*> = withCompilationContext(ctx) {
+        if (ctx.expression() == null) {
+            LogProcessor.error("An empty expression cannot produce a value")
+            return UnknownVar("expression").apply { isError = true }
+        }
         // Keep separate expression result fields while preserving outer values across nested calls.
         return MCFPPExprVisitor(processVarCache = processVarCache).visit(ctx.expression())
     }

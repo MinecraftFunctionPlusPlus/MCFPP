@@ -30,7 +30,7 @@ class FloatProviderTest {
     @Test
     fun declarationsArePureAndLegacyConsumersEnableTheFloatModule() {
         for (version in listOf("1.20.1", "1.20.2", "26.3")) {
-            MCFPPStringTest.readFromString("func signature(value as float):float { return value; }\nfunc main(){}", version = version)
+            MCFPPStringTest.readFromString("func signature(value: float):float { return value; }\nfunc main(){}", version = version)
             assertEquals(0, Project.errorCount)
             val module = Project.modules.single { it.id == "stdlib" }
             val floatPackage = module.packages.keys.single { it.id == "math.float" }
@@ -139,17 +139,17 @@ class FloatProviderTest {
     @Test
     fun nativeArithmeticPreservesOperandsAndNestedResults() {
         val (_, commands) = compile("""
-            dynamic var a as float = 8.5;
-            dynamic var b as float = 2.0;
-            var sum = a + b;
-            var difference = a - b;
-            var product = a * b;
-            var quotient = a / b;
-            var remainder = a % b;
-            var negated = -a;
-            var nestedRight = a - (b + 0.5);
-            var nestedBoth = (a + b) / (a - b);
-            var mixed = 2.0 + a;
+            dynamic a: float = 8.5
+            dynamic b: float = 2.0
+            var sum = a + b
+            var difference = a - b
+            var product = a * b
+            var quotient = a / b
+            var remainder = a % b
+            var negated = -a
+            var nestedRight = a - (b + 0.5)
+            var nestedBoth = (a + b) / (a - b)
+            var mixed = 2.0 + a
         """.trimIndent())
         assertNative(commands)
         val machine = FloatMachine(commands)
@@ -165,13 +165,13 @@ class FloatProviderTest {
     @Test
     fun compoundAssignmentsAndSignedRemaindersUseNativeProviders() {
         val (_, commands) = compile("""
-            dynamic var a as float = -8.5;
-            a += 0.5;
-            a -= 2.0;
-            a *= 1.5;
-            a /= 2.0;
-            a %= 2.0;
-            var mixed = 1.0 - a;
+            dynamic a: float = -8.5
+            a += 0.5
+            a -= 2.0
+            a *= 1.5
+            a /= 2.0
+            a %= 2.0
+            var mixed = 1.0 - a
         """.trimIndent())
         assertNative(commands)
         val machine = FloatMachine(commands)
@@ -182,16 +182,16 @@ class FloatProviderTest {
     @Test
     fun comparisonsCheckFloatBoundsWithoutIntegerRounding() {
         val (function, commands) = compile("""
-            dynamic var a as float = -0.125;
-            dynamic var b as float = -0.125;
-            var gt = a > b;
-            var lt = a < b;
-            var ge = a >= b;
-            var le = a <= b;
-            var eq = a == b;
-            var ne = a != b;
-            var tiny = a < 0.0;
-            var constantLeft = 0.0 > a;
+            dynamic a: float = -0.125
+            dynamic b: float = -0.125
+            var gt = a > b
+            var lt = a < b
+            var ge = a >= b
+            var le = a <= b
+            var eq = a == b
+            var ne = a != b
+            var tiny = a < 0.0
+            var constantLeft = 0.0 > a
         """.trimIndent())
         assertNative(commands)
         val machine = FloatMachine(commands)
@@ -205,12 +205,12 @@ class FloatProviderTest {
     @Test
     fun conversionsTruncateNegativeFloatsTowardsZeroAndAllowMixedIntegers() {
         val (function, commands) = compile("""
-            dynamic var f as float = -1.75;
-            dynamic var i as int = 3;
-            var truncated = toInt(f);
-            var converted = toFloat(i);
-            var sum = f + i;
-            f += i;
+            dynamic f: float = -1.75
+            dynamic i: int = 3
+            var truncated = toInt(f)
+            var converted = toFloat(i)
+            var sum = f + i
+            f += i
         """.trimIndent())
         assertNative(commands)
         assertTrue(commands.any { it.contains("compute default integer {type:\"minecraft:from_float\"") })
@@ -225,10 +225,10 @@ class FloatProviderTest {
     @Test
     fun constantExpressionsFoldWithoutRuntimeFloatCommands() {
         val (function, commands) = compile("""
-            var other = 8.0;
-            var value = (1.5 + 2.0) * (other - 3.0) / 2.0;
-            var negated = -value;
-            var remainder = -8.5 % 2.0;
+            var other = 8.0
+            var value = (1.5 + 2.0) * (other - 3.0) / 2.0
+            var negated = -value
+            var remainder = -8.5 % 2.0
         """.trimIndent())
         fun constant(name: String): Float {
             val snapshot = StorageAccess.snapshot(function.scope.getVar(name)!!) as CompilerValue.Typed
@@ -243,7 +243,7 @@ class FloatProviderTest {
     @Test
     fun legacyTargetsKeepTheMathLibraryAndNativeTargetsDoNotEnableIt() {
         for (version in listOf("26.2", "1.21.8", "26.3", "26.2", "26.3")) {
-            val (_, commands) = compile("dynamic var a as float = 1.5; a += 0.5;", version)
+            val (_, commands) = compile("dynamic a: float = 1.5; a += 0.5;", version)
             val enabled = Project.modules.any { module -> module.packages.any { it.key.id == "math.float" && it.value } }
             val load = Project.projectLoad.commands.analyzeAll().joinToString("\n")
             if (version == "26.3") {
@@ -260,7 +260,7 @@ class FloatProviderTest {
 
     @Test
     fun nonStorageAndDynamicIndexSourcesAreCopiedBeforeEvaluation() {
-        val (function, _) = compile("dynamic var a as float = 1.5;")
+        val (function, _) = compile("dynamic a: float = 1.5;")
         function.runInFunction {
             val entityValue = MCFloat("entity_float").apply {
                 nbtPath = NBTPath(EntitySource(SelectorVar(EntitySelector('s')))).memberIndex("data").memberIndex("value")
@@ -295,7 +295,7 @@ class FloatProviderTest {
     fun exportedDatapackUses121AndOmitsFloatLibrary() {
         val output = Files.createTempDirectory("mcfpp-native-float-")
         try {
-            MCFPPStringTest.readFromString("func arithmetic(){ dynamic var f as float = 1.5; f += 0.5; }",
+            MCFPPStringTest.readFromString("func arithmetic(){ dynamic f: float = 1.5; f += 0.5; }",
                 version = "26.3", targetPath = output.toString())
             assertEquals(0, Project.errorCount)
             val pack = output.resolve("debug")
@@ -311,18 +311,18 @@ class FloatProviderTest {
     @Test
     fun nativeFunctionArgumentsAndRepeatedReturnsSurviveStackChanges() {
         MCFPPStringTest.readFromString("""
-            func half(value as float): float {
-                return value / 2.0;
+            func half(value: float): float {
+                return value / 2.0
             }
-            func doubleValue(static value as float) {
-                value *= 2.0;
+            func doubleValue(static value: float) {
+                value *= 2.0
             }
             func arithmetic(){
-                dynamic var a as float = 8.0;
-                dynamic var b as float = 4.0;
-                var sum = half(a) + half(b);
-                var nested = half(half(a));
-                doubleValue(a);
+                dynamic a: float = 8.0
+                dynamic b: float = 4.0
+                var sum = half(a) + half(b)
+                var nested = half(half(a))
+                doubleValue(a)
             }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)

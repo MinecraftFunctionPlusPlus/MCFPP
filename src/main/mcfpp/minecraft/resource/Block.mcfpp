@@ -1,5 +1,5 @@
 @From<"top.mcfpp.mni.resource.BlockData">
-data Block: ResourceID;
+data Block: ResourceID
 
 @From<"top.mcfpp.mni.resource.BlockObjectData">
-object data Block: ResourceID;
+object data Block: ResourceID

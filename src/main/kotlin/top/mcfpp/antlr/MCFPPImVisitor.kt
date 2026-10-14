@@ -250,7 +250,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     @InsertCommand
     override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext):Any? = withCompilationContext(ctx) {
         val declarationErrors = Project.errorCount
-        val fieldModifier = ctx.fieldModifier()?.text
+        val fieldModifier = ctx.fieldModifier()?.start?.text
         var type = ctx.type()?.let {
             MCFPPType.parseFromContextNotNull(it, Function.currFunction.scope)
         }
@@ -571,7 +571,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addComment("if branch start")
         //匿名函数的定义
         val f = NoStackFunction(TempPool.getFunctionIdentify("if_branch"), Function.currFunction)
-        val expr = ctx.bucketExpression().expression()
+        val expr = ctx.expression()
         if(expr == null){
             LogProcessor.error("The condition of if statement is null.")
             return false to f
@@ -617,7 +617,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addComment("else-if branch start")
         //匿名函数的定义
         val f = NoStackFunction(TempPool.getFunctionIdentify("else_if_branch"), Function.currFunction)
-        val expr = ctx.bucketExpression().expression()
+        val expr = ctx.expression()
         if(expr == null){
             LogProcessor.error("The condition of if statement is null.")
             return false to f
@@ -661,7 +661,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     override fun visitWhileStatement(ctx: mcfppParser.WhileStatementContext): Any? = withCompilationContext(ctx) {
-        compileLoop(ctx.block(), { MCFPPExprVisitor().visitExpression(ctx.bucketExpression().expression()) }, false)
+        compileLoop(ctx.block(), { MCFPPExprVisitor().visitExpression(ctx.expression()) }, false)
         return null
     }
 
@@ -742,7 +742,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     override fun visitDoWhileStatement(ctx: mcfppParser.DoWhileStatementContext): Any? = withCompilationContext(ctx) {
-        compileLoop(ctx.block(), { MCFPPExprVisitor().visitExpression(ctx.bucketExpression().expression()) }, true)
+        compileLoop(ctx.block(), { MCFPPExprVisitor().visitExpression(ctx.expression()) }, true)
         return null
     }
 

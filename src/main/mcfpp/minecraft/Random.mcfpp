@@ -1,20 +1,20 @@
-import mcfpp.minecraft.std:*;
+import mcfpp.minecraft.std:*
 
 @From<"top.mcfpp.mni.minecraft.RandomData">
 data Random {
-    private var id as string;
+    private var id: string
 
     constructor(){
         /random reset ${this.id} 0 true true
     }
 
     constructor(string){
-        this.id = p0;
+        this.id = p0
         /random reset ${this.id} 0 true true
     }
 
-    constructor(id as string, seed as int, includeWorldSeed as bool, includeGameSeed as bool){
-        this.id = id;
+    constructor(id: string, seed: int, includeWorldSeed: bool, includeGameSeed: bool){
+        this.id = id
         /random reset ${this.id} ${seed} ${includeWorldSeed} ${includeGameSeed}
     }
 }

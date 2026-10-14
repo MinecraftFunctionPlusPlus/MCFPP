@@ -1,5 +1,5 @@
 @MCFPPEntity
 data WolfData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, TameableData, NeutralData {
-    @Name<"CollarColor"> var collarColor as byte;
-    @Name<"Variant"> var variant as string;
+    @Name<"CollarColor"> var collarColor: byte
+    @Name<"Variant"> var variant: string
 }

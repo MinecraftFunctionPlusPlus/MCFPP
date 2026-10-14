@@ -1,8 +1,8 @@
 @MCFPPEntity
 data CatData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, TameableData {
     @Name<"CollarColor">
-    var collarColor as byte;
+    var collarColor: byte
 
     @Name<"Variant">
-    var variant as string;
+    var variant: string
 }

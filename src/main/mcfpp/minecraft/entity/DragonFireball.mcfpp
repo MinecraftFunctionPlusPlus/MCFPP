@@ -1,2 +1,2 @@
 @MCFPPEntity
-data DragonFireballData: EntityData, ProjectileData, FireballData;
+data DragonFireballData: EntityData, ProjectileData, FireballData

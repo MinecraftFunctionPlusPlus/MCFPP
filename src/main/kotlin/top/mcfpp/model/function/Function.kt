@@ -615,13 +615,14 @@ open class Function : Member, FieldContainer, WithDocument {
     protected open fun parseParam(param: mcfppParser.ParameterContext, isReadOnly: Boolean = false) : Pair<FunctionParam,Var<*>>{
         if (param.OUT() != null || param.IN() != null)
             LogProcessor.error("Declaration variance is only allowed on template type parameters")
-        val declaredType = parseDeclaredType(param.type())
+        val declaredType = if (isReadOnly && top.mcfpp.antlr.DeclarationSyntax.isBareTypeParameter(param))
+            top.mcfpp.type.MCFPPConcreteType.Type else parseDeclaredType(param.type())
         val diagnostic = if (isReadOnly) null else top.mcfpp.analysis.TypeUsage.ordinaryDiagnostic(declaredType)
         diagnostic?.let(LogProcessor::error)
         //参数构建
         val param1 = FunctionParam(
             if (diagnostic == null) declaredType else MCFPPBaseType.Any,
-            param.Identifier()?.text?: "p${paramCount()}",
+            top.mcfpp.antlr.DeclarationSyntax.parameterName(param, isReadOnly, "p${paramCount()}"),
             this,
             param.STATIC() != null,
             param.value() != null,

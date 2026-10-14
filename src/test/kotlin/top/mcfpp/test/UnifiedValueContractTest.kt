@@ -34,17 +34,17 @@ class UnifiedValueContractTest {
             "while(flag){value=4;};",
             "while(flag){value=4;break;}; value=9;",
             "do {value=4;} while(flag);",
-            "if(flag){value=4;}; dynamic var observed=value;",
+            "if(flag){value=4;}; dynamic observed=value;",
             "value=1;replace(value);",
-            "var source=1;const var alias=source as int;alias=2;",
-            "var source=1;const var alias=source as int;replace(alias);",
-            "const var source=1;var alias=source as int;alias=2;"
+            "var source=1;const alias=source as int;alias=2;",
+            "var source=1;const alias=source as int;replace(alias);",
+            "const source=1;var alias=source as int;alias=2;"
         )
         for (fold in listOf(false, true)) {
             CompileSettings.foldIRConstants = fold
             for (body in rejected) {
-                compile("func replace(static target as int){target=4;}\n" +
-                    "func reject(flag as bool){const var value as int; $body}\nfunc main(){}")
+                compile("func replace(static target: int){target=4;}\n" +
+                    "func reject(flag: bool){const value: int; $body}\nfunc main(){}")
                 assertTrue(Project.errorCount > 0, "fold=$fold: $body")
             }
         }
@@ -53,24 +53,24 @@ class UnifiedValueContractTest {
     @Test
     fun constFirstAssignmentAndMutableContentsWorkAcrossCallsAndLibraryReloads() = isolated { output ->
         val body = """
-            const var answer as int;
-            var marker=0;
+            const answer: int
+            var marker=0
             if(flag){marker=1;} else {marker=2;}
-            answer=4;
-            const var values as list<int> = [1];
-            values[0]=answer;
-            const var shared=values as list<int>;
-            shared[0]=answer;
-            append(shared);
-            return values[0]+values[1]+marker;
+            answer=4
+            const values: list<int> = [1]
+            values[0]=answer
+            const shared=values as list<int>
+            shared[0]=answer
+            append(shared)
+            return values[0]+values[1]+marker
         """.trimIndent()
         for (ir in listOf(false, true)) for (fold in listOf(false, true)) {
             CompileSettings.foldIRConstants = fold
-            val declarations = "namespace fixture.const_values;\nfunc append(static values as list<int>){values[0]+=1;values.add(8);}\n" +
-                if (ir) "func choose(flag as bool):int {$body}" else "data Box {func choose(flag as bool):int {$body}}"
+            val declarations = "namespace fixture.const_values;\nfunc append(static values: list<int>){values[0]+=1;values.add(8);}\n" +
+                if (ir) "func choose(flag: bool):int {$body}" else "data Box {func choose(flag: bool):int {$body}}"
             val receiver = if (ir) "" else "box."
             val main = "func main(){${if (ir) "" else "var box=Box();"}" +
-                "dynamic var result=${receiver}choose(true)*100+${receiver}choose(false);}"
+                "dynamic result=${receiver}choose(true)*100+${receiver}choose(false);}"
             roundTrip(declarations, main, output.resolve("const-$ir-$fold")) { entry, machine ->
                 val function = if (ir) namespace("fixture.const_values").scope.functions.getValue("choose").single()
                     else (entry.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("choose").single()
@@ -87,8 +87,8 @@ class UnifiedValueContractTest {
         val resources = output.resolve("resources")
         val entities = output.resolve("entities")
         compile("""
-            namespace mcfpp.minecraft.resource;
-            data ResourceID {var id as string;}
+            namespace mcfpp.minecraft.resource
+            data ResourceID {var id: string;}
             data EntityType:ResourceID {}
             data Predicate:ResourceID {}
             data Advancement:ResourceID {}
@@ -96,36 +96,36 @@ class UnifiedValueContractTest {
         assertEquals(0, Project.errorCount)
         Project.config.includes = arrayListOf(resources.toString())
         compile("""
-            namespace mcfpp.minecraft.entity;
+            namespace mcfpp.minecraft.entity
             @From<"top.mcfpp.mni.SelectorData">
             data EntityData {}
         """.trimIndent(), entities)
         assertEquals(0, Project.errorCount)
         val dependencies = listOf(resources, entities)
         val declarations = """
-            namespace fixture.selector_values;
-            func build(label as string,coordinate as int):entity {
-                var selected=@e;
-                selected.tag(label);selected.x(coordinate);
-                label="inside";coordinate=88;
-                return selected;
+            namespace fixture.selector_values
+            func build(label: string,coordinate: int):entity {
+                var selected=@e
+                selected.tag(label);selected.x(coordinate)
+                label="inside";coordinate=88
+                return selected
             }
-            func relay(value as entity):entity {
-                var selected=value;
-                selected.tag("relayed");
-                return selected;
+            func relay(value: entity):entity {
+                var selected=value
+                selected.tag("relayed")
+                return selected
             }
         """.trimIndent()
         val main = """
             func main(){
-                dynamic var label="first";dynamic var coordinate=4;
-                var original=build(label,coordinate);
-                var copied=original;
-                var shared=original as entity;
-                shared.limit(1);copied.tag("copied");
-                label="mutated";coordinate=90;
-                var later=build("second",9);
-                var returned=relay(copied);
+                dynamic label="first";dynamic coordinate=4
+                var original=build(label,coordinate)
+                var copied=original
+                var shared=original as entity
+                shared.limit(1);copied.tag("copied")
+                label="mutated";coordinate=90
+                var later=build("second",9)
+                var returned=relay(copied)
                 /say ${'$'}{original}
                 /say ${'$'}{copied}
                 /say ${'$'}{returned}
@@ -147,10 +147,10 @@ class UnifiedValueContractTest {
         }
         Project.config.includes = ArrayList(dependencies.map(Path::toString))
         compile("""
-            data Frozen<selection as entity> {}
-            func reject(label as string){
-                var selected=@e;selected.tag(label);
-                var invalid=Frozen<selected>();
+            data Frozen<selection: entity> {}
+            func reject(label: string){
+                var selected=@e;selected.tag(label)
+                var invalid=Frozen<selected>()
             }
             func main(){var valid=Frozen<@e>();}
         """.trimIndent())
@@ -160,26 +160,26 @@ class UnifiedValueContractTest {
     @Test
     fun compilerOnlyActualPayloadsKeepTheDeclaredOrdinaryOverloadContract() = isolated { output ->
         val declarations = """
-            namespace fixture.formal_values;
-            data Base {var position as pos3=1 0 0;}
-            data Child:Base {var marker as int=2;}
-            func choose(value as Base):int {return 1;}
-            func choose(value as Child):int {return 2;}
-            func inspect(value as Base,count as int):int {return choose(value)*10+count;}
-            func iterateClosed(early as bool):int {
-                var values as list<pos3> = [1 0 0,2 0 0,3 0 0];
-                var count=0;
+            namespace fixture.formal_values
+            data Base {var position: pos3=1 0 0;}
+            data Child:Base {var marker: int=2;}
+            func choose(value: Base):int {return 1;}
+            func choose(value: Child):int {return 2;}
+            func inspect(value: Base,count: int):int {return choose(value)*10+count;}
+            func iterateClosed(early: bool):int {
+                var values: list<pos3> = [1 0 0,2 0 0,3 0 0]
+                var count=0
                 for(value:values){
-                    value=9 0 0;
-                    count+=1;
+                    value=9 0 0
+                    count+=1
                     if(count==1){continue;}
                     if(count==2){if(early){return count+10;};break;}
                 }
-                return count;
+                return count
             }
         """.trimIndent()
-        val main = "func main(){var child=Child();dynamic var result=inspect(child,7);dynamic var direct=choose(child);" +
-            "dynamic var iteration=iterateClosed(false);dynamic var earlyIteration=iterateClosed(true);}"
+        val main = "func main(){var child=Child();dynamic result=inspect(child,7);dynamic direct=choose(child);" +
+            "dynamic iteration=iterateClosed(false);dynamic earlyIteration=iterateClosed(true);}"
         for (fold in listOf(false, true)) {
             CompileSettings.foldIRConstants = fold
             roundTrip(declarations, main, output.resolve("formals-$fold")) { entry, machine ->
@@ -197,44 +197,44 @@ class UnifiedValueContractTest {
     @Test
     fun unknownIntegerRangeBoundsAreCapturedAndAllLoopExitsBalanceFrames() = isolated { output ->
         val body = """
-            func iterate(start as int,finish as int):int {
-                var bounds=start .. finish;
-                start=0;finish=0;
-                var sum=0;
+            func iterate(start: int,finish: int):int {
+                var bounds=start .. finish
+                start=0;finish=0
+                var sum=0
                 for(index:bounds){
                     if(index==2){continue;}
-                    sum+=index;
+                    sum+=index
                     if(index>=4){break;}
                 }
-                return sum;
+                return sum
             }
-            func natural(start as int,finish as int):int {
-                var bounds=start .. finish;
-                var sum=0;
-                for(index:bounds){const var term=index;sum+=term;bounds=1 .. 1;}
-                return sum;
+            func natural(start: int,finish: int):int {
+                var bounds=start .. finish
+                var sum=0
+                for(index:bounds){const term=index;sum+=term;bounds=1 .. 1;}
+                return sum
             }
-            func early(start as int,finish as int):int {
+            func early(start: int,finish: int):int {
                 for(index:start .. finish){if(index>=3){return index;};}
-                return 0;
+                return 0
             }
-            func nested(start as int,finish as int):int {
-                var selected=0;
+            func nested(start: int,finish: int):int {
+                var selected=0
                 if(start==1){start=2;selected=10;}
                 else if(start==2){selected=20;}
                 else {selected=30;}
                 for(outer:start .. finish){
                     for(inner:1 .. finish){if(inner>=3){return selected+outer*10+inner;};}
                 }
-                return 0;
+                return 0
             }
-            func condition(static count as int,limit as int):bool {
-                count+=1;return count<limit;
+            func condition(static count: int,limit: int):bool {
+                count+=1;return count<limit
             }
-            func observe(limit as int):int {
-                var count=0;var iterations=0;
+            func observe(limit: int):int {
+                var count=0;var iterations=0
                 while(condition(count,limit)){iterations+=1;}
-                return count*10+iterations;
+                return count*10+iterations
             }
         """.trimIndent()
         for (version in listOf("26.3", "1.20.2", "1.20.1"))
@@ -244,14 +244,14 @@ class UnifiedValueContractTest {
                 "data Box {${body.replace("while(condition(", "while(this.condition(")}}"
             val receiver = if (ir) "" else "box."
             val main = "func main(){${if (ir) "" else "var box=Box();"}" +
-                "dynamic var start=1;dynamic var finish=5;" +
-                "dynamic var result=${receiver}iterate(start,finish)*100+${receiver}natural(start,3)*10+${receiver}early(start,finish);" +
-                "dynamic var empty=${receiver}natural(3,1);" +
-                "dynamic var branchResult=${receiver}nested(start,finish);" +
-                "dynamic var alternative=${receiver}nested(2,finish);" +
-                "dynamic var last=${receiver}nested(3,finish);" +
-                "dynamic var skipped=${receiver}observe(1);" +
-                "dynamic var completed=${receiver}observe(3);}"
+                "dynamic start=1;dynamic finish=5;" +
+                "dynamic result=${receiver}iterate(start,finish)*100+${receiver}natural(start,3)*10+${receiver}early(start,finish);" +
+                "dynamic empty=${receiver}natural(3,1);" +
+                "dynamic branchResult=${receiver}nested(start,finish);" +
+                "dynamic alternative=${receiver}nested(2,finish);" +
+                "dynamic last=${receiver}nested(3,finish);" +
+                "dynamic skipped=${receiver}observe(1);" +
+                "dynamic completed=${receiver}observe(3);}"
             roundTrip(declarations, main, output.resolve("ranges-$version-$ir-$fold"), version = version) { entry, machine ->
                 val functions = if (ir) namespace("fixture.range_values").scope.functions
                     else (entry.scope.getVar("box") as DataTemplateObject).templateType.scope.functions
@@ -274,19 +274,19 @@ class UnifiedValueContractTest {
     @Test
     fun nestedFloatTagsPreserveSignedZeroInReturnsDTOsAndIndependentCopies() = isolated { output ->
         val pack = """
-            func pack(value as float):nbt {
-                var values as list<float> = [value];
-                return {nested:{value:value,values:values}} as nbt;
+            func pack(value: float):nbt {
+                var values: list<float> = [value]
+                return {nested:{value:value,values:values}} as nbt
             }
         """.trimIndent()
         val payload = """
             data Payload {
-                var nested as dict<any>;
-                constructor(value as float){
-                    var nested as dict<any> = {};
-                    nested["value"]=value;
-                    nested["values"]=[value];
-                    this.nested=nested;
+                var nested: dict<any>
+                constructor(value: float){
+                    var nested: dict<any> = {}
+                    nested["value"]=value
+                    nested["values"]=[value]
+                    this.nested=nested
                 }
             }
         """.trimIndent()
@@ -296,13 +296,13 @@ class UnifiedValueContractTest {
             val main = """
                 func main(){
                     ${if (ir) "" else "var box=Box();"}
-                    dynamic var zero=0.0;var negative=-zero;
-                    var original=${if (ir) "" else "box."}pack(negative);
-                    var copied=original;
-                    var shared=original as dict<dict<any>>;
-                    shared["nested"]["value"]=1.0;
-                    var dto=Payload(negative);var dtoCopy=dto;
-                    var dtoView=dto as Payload;dtoView.nested["value"]=2.0;
+                    dynamic zero=0.0;var negative=-zero
+                    var original=${if (ir) "" else "box."}pack(negative)
+                    var copied=original
+                    var shared=original as dict<dict<any>>
+                    shared["nested"]["value"]=1.0
+                    var dto=Payload(negative);var dtoCopy=dto
+                    var dtoView=dto as Payload;dtoView.nested["value"]=2.0
                     /data modify storage fixture:float_values original set from storage mcfpp:system stack_frame[0].original
                     /data modify storage fixture:float_values copied set from storage mcfpp:system stack_frame[0].copied
                     /data modify storage fixture:float_values dto set from storage mcfpp:system stack_frame[0].dto
@@ -323,15 +323,15 @@ class UnifiedValueContractTest {
 
     @Test
     fun vectorViewsShareTheirSourceAndOrdinaryReturnsHaveIndependentComponents() = isolated { output ->
-        val declarations = "namespace fixture.vector_values;\nfunc relay(value as vec3):vec3{return value;}"
+        val declarations = "namespace fixture.vector_values;\nfunc relay(value: vec3):vec3{return value;}"
         val main = """
             func main(){
-                var values as list<int> = [1,2,3];
-                var original=values as vec3;
-                var copied=relay(original);
-                var shared=original as vec3;
-                shared[1]=9;
-                dynamic var result=values[1]*100+copied[1]*10+copied[0];
+                var values: list<int> = [1,2,3]
+                var original=values as vec3
+                var copied=relay(original)
+                var shared=original as vec3
+                shared[1]=9
+                dynamic result=values[1]*100+copied[1]*10+copied[0]
             }
         """.trimIndent()
         for (fold in listOf(false, true)) {
@@ -358,7 +358,7 @@ class UnifiedValueContractTest {
     private fun roundTrip(declarations: String, main: String, output: Path, dependencies: List<Path> = emptyList(),
                           version: String = "26.3",
                           check: (Function, ScoreCommandExecutor) -> Unit) {
-        val namespace = Regex("namespace ([^;]+);").find(declarations)!!.groupValues[1]
+        val namespace = Regex("\\bnamespace\\s+([^\\s;]+)").find(declarations)!!.groupValues[1]
         for (fresh in listOf(false, true)) {
             Project.config.includes = ArrayList((dependencies + if (fresh) listOf(output) else emptyList()).map(Path::toString))
             compile(if (fresh) "import $namespace:*;\n$main" else "$declarations\n$main", if (fresh) null else output, version)

@@ -1,5 +1,5 @@
 @From<"top.mcfpp.mni.minecraft.TimeData">
-data Time as int;
+data Time as int
 
 @From<"top.mcfpp.mni.minecraft.TimeObjectData">
-object data Time;
+object data Time

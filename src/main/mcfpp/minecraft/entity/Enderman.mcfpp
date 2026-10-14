@@ -1,6 +1,6 @@
-import mcfpp.minecraft.other:*;
+import mcfpp.minecraft.other:*
 
 @MCFPPEntity
 data EndermanData: EntityData, CreatureData, AIMobData, NeutralData {
-    var carriedBlockState as BlockState;
+    var carriedBlockState: BlockState
 }

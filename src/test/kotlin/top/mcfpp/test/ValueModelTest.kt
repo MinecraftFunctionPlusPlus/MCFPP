@@ -29,8 +29,8 @@ class ValueModelTest {
     private fun constant(value: Long) = ValueFacts(TypeKnowledge.Exact(int), ValueKnowledge.Constant(CompilerValue.Integral(value)))
     private fun layoutType(): MCFPPDataTemplateType {
         top.mcfpp.test.util.MCFPPStringTest.readFromString("""
-            namespace fixture.value_model_layout;
-            data Node { var value as int; var next as Node?; constructor(value as int){this.value=value;} }
+            namespace fixture.value_model_layout
+            data Node { var value: int; var next: Node?; constructor(value: int){this.value=value;} }
             func main(){}
         """.trimIndent(), version = "26.3")
         assertEquals(0, top.mcfpp.Project.errorCount)

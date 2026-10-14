@@ -1,5 +1,5 @@
 @From<"top.mcfpp.mni.resource.ItemTagData">
-data ItemTag: ResourceID;
+data ItemTag: ResourceID
 
 @From<"top.mcfpp.mni.resource.ItemTagObjectData">
-object data ItemTag: ResourceID;
+object data ItemTag: ResourceID

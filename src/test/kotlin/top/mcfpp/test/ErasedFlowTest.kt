@@ -44,10 +44,10 @@ class ErasedFlowTest {
         for (version in listOf("26.3", "1.20.2", "1.20")) {
             val main = compile("""
                 func main(){
-                    var value as any = 1;
-                    var i = 0;
+                    var value: any = 1
+                    var i = 0
                     while(i < 4){ value += i; i += 1; }
-                    dynamic var result = value + 2;
+                    dynamic result = value + 2
                 }
             """, version)
             assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), (main.scope.getVar("value") as MCAny).typeKnowledge)
@@ -58,9 +58,9 @@ class ErasedFlowTest {
     @Test fun backedgeTypeChangesRequireAsEvenBeforeTheAssignmentInTheBody() = withBothFoldingModes {
         MCFPPStringTest.readFromString("""
             func main(){
-                var value as any = 1;
-                var i = 0;
-                while(i < 2){ dynamic var result = value + 1; value = false; i += 1; }
+                var value: any = 1
+                var i = 0
+                while(i < 2){ dynamic result = value + 1; value = false; i += 1; }
             }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0, "A later iteration must not bind arithmetic to the first iteration's int")
@@ -70,10 +70,10 @@ class ErasedFlowTest {
     @Test fun zeroIterationAndBackedgeTypesJoinAsCandidates() = withBothFoldingModes {
         val main = compile("""
             func main(){
-                var value as any = 1;
-                var i = 0;
+                var value: any = 1
+                var i = 0
                 while(i < 2){ value = false; i += 1; }
-                dynamic var result = (value as bool) == false;
+                dynamic result = (value as bool) == false
             }
         """)
         assertEquals(setOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.Bool.typeId),
@@ -84,15 +84,15 @@ class ErasedFlowTest {
     @Test fun breakAndContinueOnlyContributeReachableTypes() = withBothFoldingModes {
         val main = compile("""
             func main(){
-                var value as any = 1;
-                var i = 0;
+                var value: any = 1
+                var i = 0
                 while(i < 6){
-                    i += 1;
+                    i += 1
                     if(i == 2){ continue; value = false; }
                     if(i == 4){ break; value = false; }
-                    value += i;
+                    value += i
                 }
-                dynamic var result = value + 2;
+                dynamic result = value + 2
             }
         """)
         assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), (main.scope.getVar("value") as MCAny).typeKnowledge)
@@ -102,9 +102,9 @@ class ErasedFlowTest {
     @Test fun anUnconditionalBreakUsesTheBreakStateInsteadOfTheLoopEntry() = withBothFoldingModes {
         val main = compile("""
             func main(){
-                var value as any = 1;
+                var value: any = 1
                 while(true){ value = false; break; }
-                dynamic var result = value == false;
+                dynamic result = value == false
             }
         """)
         assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Bool.typeId), (main.scope.getVar("value") as MCAny).typeKnowledge)
@@ -114,17 +114,17 @@ class ErasedFlowTest {
     @Test fun erasedCopiesAndObjectPayloadsSurviveNestedLoops() = withBothFoldingModes {
         val main = compile("""
             func main(){
-                var value as any = 1;
-                var copied as any = 0;
-                var opaque as object = 0;
-                var i = 0;
+                var value: any = 1
+                var copied: any = 0
+                var opaque: object = 0
+                var i = 0
                 while(i < 2){
-                    var j = 0;
+                    var j = 0
                     while(j < 2){ copied = value; value += 1; j += 1; }
-                    opaque = copied;
-                    i += 1;
+                    opaque = copied
+                    i += 1
                 }
-                dynamic var result = value + copied + (opaque as int);
+                dynamic result = value + copied + (opaque as int)
             }
         """)
         assertEquals(13, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -134,9 +134,9 @@ class ErasedFlowTest {
     @Test fun anUnreachableConditionalWriteDoesNotPreventConcreteBinding() = withBothFoldingModes {
         val main = compile("""
             func main(){
-                var value as any = 1;
+                var value: any = 1
                 if(false){ value = false; }
-                dynamic var result = value + 2;
+                dynamic result = value + 2
             }
         """)
         assertEquals(3, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -146,9 +146,9 @@ class ErasedFlowTest {
     @Test fun objectRetainsItsStaticSignatureInsideTheLoop() {
         MCFPPStringTest.readFromString("""
             func main(){
-                var value as object = 1;
-                var i = 0;
-                while(i < 2){ dynamic var result = value + 1; i += 1; }
+                var value: object = 1
+                var i = 0
+                while(i < 2){ dynamic result = value + 1; i += 1; }
             }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0)
@@ -157,11 +157,11 @@ class ErasedFlowTest {
     @Test fun returnKnowledgePreservesRuntimeConditionsAndDoesNotEvaluateTheCall() {
         MCFPPStringTest.readFromString("""
             func choose(): any {
-                dynamic var condition = true;
+                dynamic condition = true
                 while(condition){ return false; }
-                return 2;
+                return 2
             }
-            func main(){ var value = choose(); dynamic var result = (value as bool) == false; }
+            func main(){ var value = choose(); dynamic result = (value as bool) == false; }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
         val functions = GlobalScope.localNamespaces.getValue("default.test").scope.functions

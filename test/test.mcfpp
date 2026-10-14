@@ -37,44 +37,44 @@ func main(){
 }
 
 object data Snake {
-    const var ROWS = 20
-    const var COLS = 20
-    const var CH_EMPTY = "□"
-    const var CH_SNAKE = "■"
-    const var CH_FOOD = "*"
+    const ROWS = 20
+    const COLS = 20
+    const CH_EMPTY = "□"
+    const CH_SNAKE = "■"
+    const CH_FOOD = "*"
 
     var dir = 1
 
     var alive = false
     var score = 0
 
-    const var MAXCELLS = Snake.ROWS * Snake.COLS
-    var snake as list<int> = []
+    const MAXCELLS = Snake.ROWS * Snake.COLS
+    var snake: list<int> = []
     var headIdx = 0
     var tailIdx = 0
-    var occupied as list<list<bool>> = []
+    var occupied: list<list<bool>> = []
 
-    var gameMap as list<list<string>> = []
+    var gameMap: list<list<string>> = []
     var foodR = -1
     var foodC = -1
 
-    var snakeLen as int {
+    var snakeLen: int {
         get = (Snake.tailIdx - Snake.headIdx + Snake.MAXCELLS) % Snake.MAXCELLS
     }
 
-    func queueAdd(v as int){
+    func queueAdd(v: int){
         Snake.snake[Snake.tailIdx] = v
         Snake.tailIdx = (Snake.tailIdx + 1) % Snake.MAXCELLS
     }
 
     func queueRemove(): int {
-        var v as int = Snake.snake[Snake.headIdx]
+        var v: int = Snake.snake[Snake.headIdx]
         Snake.headIdx = (Snake.headIdx + 1) % Snake.MAXCELLS
         return v
     }
 
     func init() {
-        var gM as list<list<string>> = []
+        var gM: list<list<string>> = []
         for(r: 0..(Snake.ROWS-1)){
             gM.add([] as list<string>)
             for(c: 0..(Snake.COLS-1)){
@@ -92,7 +92,7 @@ object data Snake {
         Snake.queueAdd(midR * Snake.COLS + c1)
         Snake.queueAdd(midR * Snake.COLS + c2)
         Snake.queueAdd(midR * Snake.COLS + c3)
-        var o as list<list<bool>> = []
+        var o: list<list<bool>> = []
         for(r : 0..(Snake.ROWS-1)){
             o.add([] as list<bool>)
             for(c : 0..(Snake.COLS-1)){
@@ -133,12 +133,12 @@ object data Snake {
         }
     }
 
-    func render(score as int){
+    func render(score: int){
         Snake.flush()
-        var t as text = "Score: " + score.toText()
+        var t: text = "Score: " + score.toText()
         print(t)
         for(r : 0..(Snake.ROWS-1)){
-            var line as text = ""
+            var line: text = ""
             for(c : 0..(Snake.COLS-1)){
                 line = line + Snake.gameMap[r][c]
             }

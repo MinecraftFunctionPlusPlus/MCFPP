@@ -38,14 +38,14 @@ class NbtArrayIRTest {
 
     @Test fun copiesAndViewsPreserveArrayIdentityAndAliasing() = modes {
         val main = compile("""
-            func copy(value as any): any { return value; }
+            func copy(value: any): any { return value; }
             func main(){
-                var source = {values:[I;2,3]};
-                var view = source["values"] as IntArray;
-                var copied = copy(view) as IntArray;
-                view[0] = 7;
-                copied[1] = 9;
-                dynamic var result = source["values"][0]*100 + source["values"][1]*10 + copied[0];
+                var source = {values:[I;2,3]}
+                var view = source["values"] as IntArray
+                var copied = copy(view) as IntArray
+                view[0] = 7
+                copied[1] = 9
+                dynamic result = source["values"][0]*100 + source["values"][1]*10 + copied[0]
             }
         """)
         assertEquals(732, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -53,15 +53,15 @@ class NbtArrayIRTest {
 
     @Test fun byteAndLongCopiesKeepExactPayloadsAcrossFrames() = modes {
         val main = compile("""
-            func putByte(values as ByteArray, index as int, value as byte): ByteArray { values[index] = value; return values; }
-            func putLong(values as LongArray, index as int, value as long): LongArray { values[index] = value; return values; }
-            func last(values as LongArray): long { return values[-1]; }
+            func putByte(values: ByteArray, index: int, value: byte): ByteArray { values[index] = value; return values; }
+            func putLong(values: LongArray, index: int, value: long): LongArray { values[index] = value; return values; }
+            func last(values: LongArray): long { return values[-1]; }
             func main(){
-                var bytes = [B;-128b,127b];
-                var longs = [L;9007199254740993l,9223372036854775807l];
-                var changedBytes = putByte(bytes,-1,-7b);
-                var changedLongs = putLong(longs,0,-9223372036854775808l);
-                var scalar = last(longs);
+                var bytes = [B;-128b,127b]
+                var longs = [L;9007199254740993l,9223372036854775807l]
+                var changedBytes = putByte(bytes,-1,-7b)
+                var changedLongs = putLong(longs,0,-9223372036854775808l)
+                var scalar = last(longs)
                 /data modify storage mcfpp:system temp.bytes set from storage mcfpp:system stack_frame[0].changedBytes
                 /data modify storage mcfpp:system temp.longs set from storage mcfpp:system stack_frame[0].changedLongs
                 /data modify storage mcfpp:system temp.original set from storage mcfpp:system stack_frame[0].longs
@@ -77,12 +77,12 @@ class NbtArrayIRTest {
 
     @Test fun arrayIndexIsCapturedBeforeStaticRightHandSideEffects() = modes {
         val main = compile("""
-            func change(static index as int): int { index = 1; return 7; }
-            func put(static values as IntArray, index as int) { values[index] = change(index); }
+            func change(static index: int): int { index = 1; return 7; }
+            func put(static values: IntArray, index: int) { values[index] = change(index); }
             func main(){
-                var values = [I;2,3];
-                put(values,0);
-                dynamic var result = values[0]*10 + values[1];
+                var values = [I;2,3]
+                put(values,0)
+                dynamic result = values[0]*10 + values[1]
             }
         """)
         assertEquals(73, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -90,15 +90,15 @@ class NbtArrayIRTest {
 
     @Test fun recursiveFramesAndLoopsKeepTheirOwnArrays() = modes {
         val main = compile("""
-            func sum(values as IntArray, count as int): int {
+            func sum(values: IntArray, count: int): int {
                 if(count == 0){ return 0; }
-                return values[count-1] + sum(values,count-1);
+                return values[count-1] + sum(values,count-1)
             }
             func main(){
-                var values = [I;2,3,4];
-                var index = 0;
+                var values = [I;2,3,4]
+                var index = 0
                 while(index < 3){ values[index] = values[index] + 1; index += 1; }
-                dynamic var result = sum(values,3);
+                dynamic result = sum(values,3)
             }
         """, "1.20.2")
         assertEquals(12, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -106,12 +106,12 @@ class NbtArrayIRTest {
 
     @Test fun emptyArraysRetainDistinctFormatsThroughCalls() = modes {
         val main = compile("""
-            func bytes(value as ByteArray): ByteArray { return value; }
-            func ints(value as IntArray): IntArray { return value; }
-            func longs(value as LongArray): LongArray { return value; }
+            func bytes(value: ByteArray): ByteArray { return value; }
+            func ints(value: IntArray): IntArray { return value; }
+            func longs(value: LongArray): LongArray { return value; }
             func main(){
-                var emptyBytes = [B;]; var emptyInts = [I;]; var emptyLongs = [L;];
-                var b = bytes(emptyBytes); var i = ints(emptyInts); var l = longs(emptyLongs);
+                var emptyBytes = [B;]; var emptyInts = [I;]; var emptyLongs = [L;]
+                var b = bytes(emptyBytes); var i = ints(emptyInts); var l = longs(emptyLongs)
                 /data modify storage mcfpp:system temp.b set from storage mcfpp:system stack_frame[0].b
                 /data modify storage mcfpp:system temp.i set from storage mcfpp:system stack_frame[0].i
                 /data modify storage mcfpp:system temp.l set from storage mcfpp:system stack_frame[0].l
@@ -126,8 +126,8 @@ class NbtArrayIRTest {
 
     @Test fun knownNegativeIndicesStillWorkOnTargetsWithoutMacros() {
         MCFPPStringTest.readFromString("""
-            func last(values as IntArray): int { return values[-1]; }
-            func main(){ dynamic var result = last([I;2,9]); }
+            func last(values: IntArray): int { return values[-1]; }
+            func main(){ dynamic result = last([I;2,9]); }
         """.trimIndent(), version = "1.20.1")
         assertEquals(0, Project.errorCount)
         val main = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()

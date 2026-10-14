@@ -1,8 +1,8 @@
 @MCFPPEntity
 data ChickenData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"EggLayTime">
-    var eggLayTime as int;
+    var eggLayTime: int
 
     @Name<"IsChickenJockey">
-    var isChickenJockey as bool;
+    var isChickenJockey: bool
 }

@@ -24,38 +24,38 @@ import kotlin.test.Test
 class DeclarationInitializationContractTest {
     @Test fun declarationsBindSignaturesAndPropertiesWithoutExecutingInitializers() = isolated { output ->
         val declarations = """
-            namespace fixture.declarations;
-            func identity(value as any):any{return value;}
-            data Leaf { var value as int; constructor(value as int){this.value=value;} }
+            namespace fixture.declarations
+            func identity(value: any):any{return value;}
+            data Leaf { var value: int; constructor(value: int){this.value=value;} }
             data Box {
-                var first=1;
-                var second=this.first;
-                var erased=identity(1);
-                var declaredAny as any=1;
-                var copiedAny=this.declaredAny;
-                var promoted as float=1;
-                var copiedFloat=this.promoted;
-                var bytes=[B;1b,2b];
-                private var backing as int;
-                var nested as Leaf;
-                var observed as int { get=backing as int; set {this.backing=value;} }
-                var chained as int {get=this.nested.value;}
-                var computed as int {get {return 7;}}
-                constructor(value as int){
+                var first=1
+                var second=this.first
+                var erased=identity(1)
+                var declaredAny: any=1
+                var copiedAny=this.declaredAny
+                var promoted: float=1
+                var copiedFloat=this.promoted
+                var bytes=[B;1b,2b]
+                private var backing: int
+                var nested: Leaf
+                var observed: int { get=backing as int; set {this.backing=value;} }
+                var chained: int {get=this.nested.value;}
+                var computed: int {get {return 7;}}
+                constructor(value: int){
                     /say constructed
-                    this.backing=value;this.nested=Leaf(value);
+                    this.backing=value;this.nested=Leaf(value)
                 }
                 func read():int{return this.observed;}
             }
         """
         val main = """
             func main(){
-                var first=Box(4);var second=Box(9);
-                dynamic var firstResult=first.read();dynamic var secondResult=second.read();
-                first.observed=7;
-                dynamic var changed=first.observed;dynamic var computed=first.computed;
-                dynamic var nested=second.chained;
-                var erasedInt=identity(1);var erasedString=identity("other");
+                var first=Box(4);var second=Box(9)
+                dynamic firstResult=first.read();dynamic secondResult=second.read()
+                first.observed=7
+                dynamic changed=first.observed;dynamic computed=first.computed
+                dynamic nested=second.chained
+                var erasedInt=identity(1);var erasedString=identity("other")
             }
         """
         roundTrip(declarations, main, output) { function, machine ->
@@ -78,33 +78,33 @@ class DeclarationInitializationContractTest {
 
     @Test fun compilerOnlyCallsBindActualPayloadsAndDoNotCacheOrdinaryValues() = isolated { output ->
         val declarations = """
-            namespace fixture.payloads;
-            func observe(position as pos3):int=top.mcfpp.test.DeclarationInitializationContractTest.observe;
-            func erased(position as any):int{return observe(position as pos3);}
+            namespace fixture.payloads
+            func observe(position: pos3):int=top.mcfpp.test.DeclarationInitializationContractTest.observe
+            func erased(position: any):int{return observe(position as pos3);}
             data PositionBox {
-                private var position as any;
-                constructor(position as pos3){
+                private var position: any
+                constructor(position: pos3){
                     /say constructed
-                    this.position=position;
+                    this.position=position
                 }
                 func read():int{return observe(this.position as pos3);}
-                func change(position as pos3):int{this.position=position;return observe(this.position as pos3);}
-                func unused(position as pos3):int{return observe(position);}
+                func change(position: pos3):int{this.position=position;return observe(this.position as pos3);}
+                func unused(position: pos3):int{return observe(position);}
             }
             object data PositionState {
-                private var position as any=4 0 0;
+                private var position: any=4 0 0
                 func read():int{return observe(position as pos3);}
-                func change(next as pos3):int{position=next;return observe(position as pos3);}
+                func change(next: pos3):int{position=next;return observe(position as pos3);}
             }
         """
         val main = """
             func main(){
-                var first=PositionBox(4 0 0);var second=PositionBox(9 0 0);
-                dynamic var firstResult=first.read();dynamic var secondResult=second.read();
-                dynamic var changed=first.change(7 0 0);dynamic var readAgain=first.read();
-                dynamic var otherAgain=second.read();dynamic var erasedResult=erased(9 0 0);
-                dynamic var objectFirst=PositionState.read();dynamic var objectChanged=PositionState.change(7 0 0);
-                dynamic var objectAgain=PositionState.read();
+                var first=PositionBox(4 0 0);var second=PositionBox(9 0 0)
+                dynamic firstResult=first.read();dynamic secondResult=second.read()
+                dynamic changed=first.change(7 0 0);dynamic readAgain=first.read()
+                dynamic otherAgain=second.read();dynamic erasedResult=erased(9 0 0)
+                dynamic objectFirst=PositionState.read();dynamic objectChanged=PositionState.change(7 0 0)
+                dynamic objectAgain=PositionState.read()
             }
         """
         roundTrip(declarations, main, output, startup=true) { function, machine ->
@@ -122,10 +122,10 @@ class DeclarationInitializationContractTest {
 
     @Test fun inferredVarianceUsesOriginalNestedFormalTypes() = isolated { output ->
         roundTrip("""
-            namespace fixture.constfirst;
-            data Fixed {const var first as int;constructor(value as int){this.first=value;}
+            namespace fixture.constfirst
+            data Fixed {const first: int;constructor(value: int){this.first=value;}
                 func read():int{return first;}}
-        """, "func main(){var a=Fixed(4);var b=Fixed(9);dynamic var first=a.read();dynamic var second=b.read();}",output) { function,machine ->
+        """, "func main(){var a=Fixed(4);var b=Fixed(9);dynamic first=a.read();dynamic second=b.read();}",output) { function,machine ->
             assertEquals(4,machine.read(function.scope.getVar("first") as MCInt))
             assertEquals(9,machine.read(function.scope.getVar("second") as MCInt))
         }
@@ -133,50 +133,50 @@ class DeclarationInitializationContractTest {
         assertEquals(1,Project.errorCount)
         Project.config.includes=arrayListOf()
         compile("""
-            data Wrapper<out T as type>{constructor(){}}
-            data Good<out T as type>{const var item=Wrapper<T>();}
+            data Wrapper<out T>{constructor(){}}
+            data Good<out T>{const item=Wrapper<T>();}
             func main(){var item=Good<int>();}
         """, output)
         assertEquals(0, Project.errorCount)
         Project.config.includes=arrayListOf(output.toString())
         compile("func main(){var item=Good<int>();}")
         assertEquals(0, Project.errorCount)
-        for (declaration in listOf("var item=Wrapper<T>();", "const var item=Invariant<T>();")) {
+        for (declaration in listOf("var item=Wrapper<T>();", "const item=Invariant<T>();")) {
             Project.config.includes=arrayListOf()
             compile("""
-                data Wrapper<out T as type>{constructor(){}}
-                data Invariant<T as type>{constructor(){}}
-                data Bad<out T as type>{$declaration}
+                data Wrapper<out T>{constructor(){}}
+                data Invariant<T>{constructor(){}}
+                data Bad<out T>{$declaration}
                 func main(){var item=Bad<int>();}
             """)
             assertTrue(Project.errorCount>0, declaration)
         }
-        compile("data Bad<out T as type>{const var first as T;var second=this.first;}\nfunc main(){var item=Bad<int>();}")
+        compile("data Bad<out T>{const first: T;var second=this.first;}\nfunc main(){var item=Bad<int>();}")
         assertEquals(1,Project.errorCount)
     }
 
     @Test fun actualStartupInitializesDependenciesAndGenericOwnersOnceAcrossLibrary() = isolated { output ->
         val declarations = """
-            namespace fixture.startup;
-            func number(value as int):int{
+            namespace fixture.startup
+            func number(value: int):int{
                 /say initialized
-                return value;
+                return value
             }
-            object data First {var value as int=Second.read();func read():int{return value;}}
-            object data Second {var value as int=number(9);func read():int{return value;}}
-            object data Settings<N as int>{var value as int=number(N);func read():int{return value;}}
-            data Box {var value as int;constructor(value as int){this.value=value;}func read():int{return this.value;}}
-            func helper(flag as bool):int{
+            object data First {var value: int=Second.read();func read():int{return value;}}
+            object data Second {var value: int=number(9);func read():int{return value;}}
+            object data Settings<N: int>{var value: int=number(N);func read():int{return value;}}
+            data Box {var value: int;constructor(value: int){this.value=value;}func read():int{return this.value;}}
+            func helper(flag: bool):int{
                 if(flag){return First.read();}
-                return Second.read();
+                return Second.read()
             }
         """
         val main = """
             func main(){
-                dynamic var dependent=helper(true);
-                dynamic var four=Settings<4>.read();dynamic var nine=Settings<9>.read();
-                dynamic var again=Settings<4>.read();
-                var box=Box(7);dynamic var ordinary=box.read();
+                dynamic dependent=helper(true)
+                dynamic four=Settings<4>.read();dynamic nine=Settings<9>.read()
+                dynamic again=Settings<4>.read()
+                var box=Box(7);dynamic ordinary=box.read()
             }
         """
         roundTrip(declarations,main,output, startup=true) { function,machine ->
@@ -192,20 +192,20 @@ class DeclarationInitializationContractTest {
 
     @Test fun genericPropertiesKeepLexicalTokensAndPrivateInternalFunctionsAcrossLibrary() = isolated { output ->
         val declarations="""
-            namespace fixture.properties;
-            data Box<T as type>{
-                private var backing as T;
-                var value as T {get=this.backing as T;set {this.backing=value;}}
-                private var hidden as T {get=this.backing;}
-                constructor(value as T){this.backing=value;}
+            namespace fixture.properties
+            data Box<T>{
+                private var backing: T
+                var value: T {get=this.backing as T;set {this.backing=value;}}
+                private var hidden: T {get=this.backing;}
+                constructor(value: T){this.backing=value;}
                 func get_hidden():int{return 8;}
                 func readHidden():T{return this.hidden;}
             }
         """
         val main="""
-            func main(){var first=Box<int>(4);var second=Box<int>(9);
-                dynamic var four=first.value;dynamic var nine=second.value;
-                first.value=7;dynamic var seven=first.readHidden();dynamic var userGetter=first.get_hidden();}
+            func main(){var first=Box<int>(4);var second=Box<int>(9)
+                dynamic four=first.value;dynamic nine=second.value
+                first.value=7;dynamic seven=first.readHidden();dynamic userGetter=first.get_hidden();}
         """
         roundTrip(declarations,main,output) { function,machine ->
             for((name,value) in listOf("four" to 4,"nine" to 9,"seven" to 7,"userGetter" to 8))
@@ -224,33 +224,33 @@ class DeclarationInitializationContractTest {
 
     @Test fun declarationDefaultsRunOnlyForMissingArgumentsAndClosedReadonlyLiteralsBindPurely() = isolated { output ->
         val declarations="""
-            namespace fixture.defaults;
+            namespace fixture.defaults
             func number():int{
                 /say default
-                return 4;
+                return 4
             }
-            func take(values as list<int> = [number()]):int{return values[0];}
-            func earlier(value as int,values as list<int> = [value]):int{return values[0];}
-            func genericTake<T as type>(values as list<T> = [number()]):T{return values[0];}
-            func sink(values as list<int> = [number()]):int=top.mcfpp.test.DeclarationInitializationContractTest.sink;
-            data DefaultOwner {private var value as int;constructor(value as int){this.value=value;}
-                func read(values as list<int> = [this.value]):int{return values[0];}}
-            func DefaultOwner.extra<T as type>(values as list<T> = [this.read()]):T{return values[0];}
-            data Factory<N as int>{constructor(){}}
-            data RangeFactory<R as range>{constructor(){}}
-            data Ranges {const var item=RangeFactory<1..3>();}
+            func take(values: list<int> = [number()]):int{return values[0];}
+            func earlier(value: int,values: list<int> = [value]):int{return values[0];}
+            func genericTake<T>(values: list<T> = [number()]):T{return values[0];}
+            func sink(values: list<int> = [number()]):int=top.mcfpp.test.DeclarationInitializationContractTest.sink
+            data DefaultOwner {private var value: int;constructor(value: int){this.value=value;}
+                func read(values: list<int> = [this.value]):int{return values[0];}}
+            func DefaultOwner.extra<T>(values: list<T> = [this.read()]):T{return values[0];}
+            data Factory<N: int>{constructor(){}}
+            data RangeFactory<R: range>{constructor(){}}
+            data Ranges {const item=RangeFactory<1..3>();}
             enum Mode {first=3,second=7}
-            data Choice {const var selected=Mode.second;}
+            data Choice {const selected=Mode.second;}
             data Values {var bytes=[B;1b,2b];var longs=[L;4294967296L];}
         """
         val main="""
-            func main(){dynamic var defaultResult=take();dynamic var provided=take([9]);
-                var value=9;dynamic var earlierResult=earlier(4);
-                var owner=DefaultOwner(7);dynamic var ownerResult=owner.read();
-                dynamic var nativeDefault=sink();dynamic var nativeProvided=sink([9]);
-                dynamic var genericDefault=genericTake<int>();dynamic var genericProvided=genericTake<int>([9]);
-                dynamic var extensionDefault=owner.extra<int>();dynamic var extensionProvided=owner.extra<int>([9]);
-                const var count=2;var factory=Factory<-count>();var values=Values();var ranges=Ranges();var choice=Choice();}
+            func main(){dynamic defaultResult=take();dynamic provided=take([9])
+                var value=9;dynamic earlierResult=earlier(4)
+                var owner=DefaultOwner(7);dynamic ownerResult=owner.read()
+                dynamic nativeDefault=sink();dynamic nativeProvided=sink([9])
+                dynamic genericDefault=genericTake<int>();dynamic genericProvided=genericTake<int>([9])
+                dynamic extensionDefault=owner.extra<int>();dynamic extensionProvided=owner.extra<int>([9])
+                const count=2;var factory=Factory<-count>();var values=Values();var ranges=Ranges();var choice=Choice();}
         """
         roundTrip(declarations,main,output) { function,machine ->
             assertEquals(4,machine.read(function.scope.getVar("defaultResult") as MCInt))
@@ -295,27 +295,27 @@ class DeclarationInitializationContractTest {
 
     @Test fun compilerOnlyConstructionJoinsReceiverWritesAndKeepsUnrelatedEffects() = isolated { output ->
         val declarations="""
-            namespace fixture.paths;
-            func observe(position as pos3):int=top.mcfpp.test.DeclarationInitializationContractTest.observe;
-            data Stable {var position as pos3;constructor(flag as bool,position as pos3){
-                this.position=position;
+            namespace fixture.paths
+            func observe(position: pos3):int=top.mcfpp.test.DeclarationInitializationContractTest.observe
+            data Stable {var position: pos3;constructor(flag: bool,position: pos3){
+                this.position=position
                 if(flag){
                     /say side-effect
                 }
             }
                 func read():int{return observe(this.position);}}
-            data Varying {var position as pos3;constructor(flag as bool,left as pos3,right as pos3){
-                this.position=left;
+            data Varying {var position: pos3;constructor(flag: bool,left: pos3,right: pos3){
+                this.position=left
                 if(flag){this.position=right;}
             }
                 func read():int{return observe(this.position);}}
-            func select(flag as bool):int{var item=Stable(flag,4 0 0);return item.read();}
+            func select(flag: bool):int{var item=Stable(flag,4 0 0);return item.read();}
         """
-        roundTrip(declarations,"func main(){dynamic var result=select(true);}",output) { function,machine ->
+        roundTrip(declarations,"func main(){dynamic result=select(true);}",output) { function,machine ->
             assertEquals(4,machine.read(function.scope.getVar("result") as MCInt))
             assertEquals(listOf("side-effect","4 0 0"),machine.messages)
         }
-        val negative="func reject(flag as bool){var item=Varying(flag,4 0 0,9 0 0);var result=item.read();}\nfunc main(){reject(true);}"
+        val negative="func reject(flag: bool){var item=Varying(flag,4 0 0,9 0 0);var result=item.read();}\nfunc main(){reject(true);}"
         Project.config.includes=arrayListOf(output.toString())
         compile("import fixture.paths:*; $negative")
         assertTrue(Project.errorCount>0)
@@ -326,24 +326,24 @@ class DeclarationInitializationContractTest {
 
     @Test fun sameNamespaceSelectsDeclarationsByNameAndKindInsteadOfMatchingLibraryOverloads() = isolated { output ->
         val library="""
-            namespace fixture.names;
-            typealias int as Alias;
-            func choose(value as int):int{return 9;}
+            namespace fixture.names
+            typealias int as Alias
+            func choose(value: int):int{return 9;}
             func libraryOnly():int{return 4;}
-            data Box {var value as int;constructor(value as int){this.value=value;}func read():int{return this.value;}}
+            data Box {var value: int;constructor(value: int){this.value=value;}func read():int{return this.value;}}
             interface Marker {abstract func read():int;}
         """
         compile("$library func main(){}",output)
         assertEquals(0,Project.errorCount)
         Project.config.includes=arrayListOf(output.toString())
         val local="""
-            namespace fixture.names;
-            typealias bool as Alias;
-            func choose(value as string):int{return 7;}
+            namespace fixture.names
+            typealias bool as Alias
+            func choose(value: string):int{return 7;}
             data Marker {constructor(){}}
         """
-        compile("""$local func main(){dynamic var localResult=choose("local");dynamic var libraryResult=libraryOnly();
-            var box=Box(9);dynamic var fieldResult=box.read();var alias as Alias=true;}""")
+        compile("""$local func main(){dynamic localResult=choose("local");dynamic libraryResult=libraryOnly()
+            var box=Box(9);dynamic fieldResult=box.read();var alias: Alias=true;}""")
         assertEquals(0,Project.errorCount)
         val main=GlobalScope.localNamespaces.getValue("fixture.names").scope.functions.getValue("main").single()
         val machine=execute(main,output.resolve("consumer"))
@@ -356,7 +356,7 @@ class DeclarationInitializationContractTest {
             compile("$local func main(){var illegal=$call;}")
             assertTrue(Project.errorCount>0,call)
         }
-        compile("namespace fixture.names;typealias Missing as Alias;func main(){var illegal as Alias=1;}")
+        compile("namespace fixture.names;typealias Missing as Alias;func main(){var illegal: Alias=1;}")
         assertTrue(Project.errorCount>0)
         assertNull(GlobalScope.localNamespaces.getValue("fixture.names").scope.getType("Alias"))
     }
@@ -380,7 +380,7 @@ class DeclarationInitializationContractTest {
                           check: (Function, ScoreCommandExecutor)->Unit) {
         compile("$declarations\n$main", output)
         assertEquals(0, Project.errorCount)
-        val namespace=Regex("namespace ([^;]+);").find(declarations)!!.groupValues[1]
+        val namespace=Regex("\\bnamespace\\s+([^\\s;]+)").find(declarations)!!.groupValues[1]
         val source=GlobalScope.localNamespaces.getValue(namespace).scope.functions.getValue("main").single()
         check(source,execute(source, output.resolve("source"),startup))
         Project.config.includes=arrayListOf(output.toString())

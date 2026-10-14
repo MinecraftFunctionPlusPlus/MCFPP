@@ -113,24 +113,24 @@ class TemplateInitializationTest {
     @Test fun implicitAndExplicitInitializersRoundTripInDeclarationOrderAndRunForEveryInstance() {
         for (constructor in listOf("", "constructor(){}")) withLibrary { output ->
             write("""
-                namespace fixture.defaults;
+                namespace fixture.defaults
                 data Box {
-                    var z as int = 4;
-                    var a as int = this.z + 1;
+                    var z: int = 4
+                    var a: int = this.z + 1
                     $constructor
                 }
                 func main(){}
             """, output)
             val original = GlobalScope.getTemplate("fixture.defaults", "Box")!!
             val main = consume("""
-                import fixture.defaults:*;
+                import fixture.defaults:*
                 func main(){
-                    var first = Box();
-                    first.z = 9;
-                    var second = Box();
-                    dynamic var z = second.z;
-                    dynamic var a = second.a;
-                    dynamic var firstZ = first.z;
+                    var first = Box()
+                    first.z = 9
+                    var second = Box()
+                    dynamic z = second.z
+                    dynamic a = second.a
+                    dynamic firstZ = first.z
                 }
             """, output)
             val restored = GlobalScope.getTemplate("fixture.defaults", "Box")!!
@@ -146,19 +146,19 @@ class TemplateInitializationTest {
 
     @Test fun restoredInitializersAndFreeFunctionsKeepTheirDeclarationNamespace() = withLibrary { output ->
         write("""
-            namespace fixture.defaults;
+            namespace fixture.defaults
             func seed(): int { return 4; }
             func produce(): int { return seed(); }
-            data Box { const var value as int = produce(); }
+            data Box { const value: int = produce(); }
             func main(){}
         """, output)
         val original = GlobalScope.getTemplate("fixture.defaults", "Box")!!
         val main = consume("""
-            import fixture.defaults:*;
+            import fixture.defaults:*
             func seed(): int { return 9; }
             func main(){
-                var box = Box();
-                dynamic var result = box.value * 10 + produce();
+                var box = Box()
+                dynamic result = box.value * 10 + produce()
             }
         """, output)
         val restored = GlobalScope.getTemplate("fixture.defaults", "Box")!!
@@ -169,18 +169,18 @@ class TemplateInitializationTest {
 
     @Test fun restoredGenericSpecializationsKeepTheDeclarationFileForRuntimeArguments() = withLibrary { output ->
         write("""
-            namespace fixture.defaults;
+            namespace fixture.defaults
             func seed(): int { return 4; }
-            func add<T as type>(value as int): int { return seed() + value; }
+            func add<T>(value: int): int { return seed() + value; }
             func main(){}
         """, output)
         val original = GlobalScope.localNamespaces.getValue("fixture.defaults").scope.functions.getValue("add").single()
         val main = consume("""
-            import fixture.defaults:*;
+            import fixture.defaults:*
             func seed(): int { return 9; }
             func main(){
-                dynamic var first = add<int>(1);
-                dynamic var second = add<int>(2);
+                dynamic first = add<int>(1)
+                dynamic second = add<int>(2)
             }
         """, output)
         val restored = GlobalScope.libNamespaces.getValue("fixture.defaults").scope.functions.getValue("add").single()
@@ -204,24 +204,24 @@ class TemplateInitializationTest {
         val helper = output.resolve("helper")
         val library = output.resolve("library")
         write("""
-            namespace fixture.helper;
-            typealias int as Seed;
+            namespace fixture.helper
+            typealias int as Seed
             func seed(): int { return 4; }
             func main(){}
         """, helper)
         write("""
-            namespace fixture.defaults;
-            import fixture.helper:*;
-            func produce(): int { var value as Seed = seed(); return value; }
-            data Box { var value as int = produce(); }
+            namespace fixture.defaults
+            import fixture.helper:*
+            func produce(): int { var value: Seed = seed(); return value; }
+            data Box { var value: int = produce(); }
             func main(){}
         """, library, includes = listOf(helper))
         val original = GlobalScope.getTemplate("fixture.defaults", "Box")!!
         val main = consume("""
-            import fixture.defaults:*;
-            typealias bool as Seed;
+            import fixture.defaults:*
+            typealias bool as Seed
             func seed(): int { return 9; }
-            func main(){ var box = Box(); dynamic var result = box.value; }
+            func main(){ var box = Box(); dynamic result = box.value; }
         """, library, includes = listOf(library, helper))
         val restored = GlobalScope.getTemplate("fixture.defaults", "Box")!!
         assertNotSame(original, restored)
@@ -231,29 +231,29 @@ class TemplateInitializationTest {
 
     @Test fun restoredTemplateMethodsKeepOwnersAndIndependentReceivers() = withLibrary { output ->
         write("""
-            namespace fixture.members;
+            namespace fixture.members
             data Box {
-                var value as int;
-                constructor(value as int){ this.value = value; }
-                func setValue(value as int){ this.value = value; }
-                func add<T as type>(amount as int): int { return this.value + amount; }
+                var value: int
+                constructor(value: int){ this.value = value; }
+                func setValue(value: int){ this.value = value; }
+                func add<T>(amount: int): int { return this.value + amount; }
             }
             data Child : Box {
-                constructor(value as int){ this.value = value; }
+                constructor(value: int){ this.value = value; }
             }
             func main(){}
         """, output)
         val original = GlobalScope.getTemplate("fixture.members", "Box")!!
         val main = consume("""
-            import fixture.members:*;
+            import fixture.members:*
             func main(){
-                var first = Box(1);
-                var second = Box(2);
-                var child = Child(3);
-                first.setValue(9);
-                child.setValue(7);
-                dynamic var result = first.value * 100 + second.value * 10 + child.value;
-                dynamic var added = first.add<int>(3);
+                var first = Box(1)
+                var second = Box(2)
+                var child = Child(3)
+                first.setValue(9)
+                child.setValue(7)
+                dynamic result = first.value * 100 + second.value * 10 + child.value
+                dynamic added = first.add<int>(3)
             }
         """, output)
         val box = GlobalScope.getTemplate("fixture.members", "Box")!!
@@ -278,10 +278,10 @@ class TemplateInitializationTest {
 
     @Test fun restoredObjectMethodsKeepStaticOwnersAndTemplateScope() = withLibrary { output ->
         write("""
-            namespace fixture.members;
+            namespace fixture.members
             object data Defaults {
-                var value as int = 4;
-                func setValue(value as int){ Defaults.value = value; }
+                var value: int = 4
+                func setValue(value: int){ Defaults.value = value; }
                 func read(): int { return value; }
             }
             func main(){}
@@ -289,8 +289,8 @@ class TemplateInitializationTest {
         val original = GlobalScope.localNamespaces.getValue("fixture.members").scope.objects
             .filterIsInstance<ObjectDataTemplate>().single { it.identifier == "Defaults" }
         val main = consume("""
-            import fixture.members:*;
-            func main(){ Defaults.setValue(7); dynamic var result = Defaults.read(); }
+            import fixture.members:*
+            func main(){ Defaults.setValue(7); dynamic result = Defaults.read(); }
         """, output)
         val defaults = GlobalScope.libNamespaces.getValue("fixture.members").scope.objects
             .filterIsInstance<ObjectDataTemplate>().single { it.identifier == "Defaults" }
@@ -320,17 +320,17 @@ class TemplateInitializationTest {
 
     @Test fun restoredObjectInitializersExecuteWhenTheirConstructorIsExplicitlyInvoked() = withLibrary { output ->
         write("""
-            namespace fixture.defaults;
+            namespace fixture.defaults
             object data Defaults {
-                var z as int = 4;
-                var a as int = Defaults.z + 1;
+                var z: int = 4
+                var a: int = Defaults.z + 1
             }
             func main(){}
         """, output)
         val original = GlobalScope.localNamespaces.getValue("fixture.defaults").scope.objects
             .filterIsInstance<ObjectDataTemplate>().single { it.identifier == "Defaults" }
         val main = consume("""
-            import fixture.defaults:*;
+            import fixture.defaults:*
             func main(){}
         """, output)
         val restored = GlobalScope.libNamespaces.getValue("fixture.defaults").scope.objects

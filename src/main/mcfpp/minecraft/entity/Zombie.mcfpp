@@ -1,2 +1,2 @@
 @MCFPPEntity
-data ZombieData: EntityData, CreatureData, AIMobData, GeneralZombieData;
+data ZombieData: EntityData, CreatureData, AIMobData, GeneralZombieData

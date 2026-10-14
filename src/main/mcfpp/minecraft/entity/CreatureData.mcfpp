@@ -1,40 +1,40 @@
-import mcfpp.minecraft.other:*;
+import mcfpp.minecraft.other:*
 data CreatureData{
     @Name<"AbsorptionAmount">
-    var absorptionAmount as float;
+    var absorptionAmount: float
 
     @Name<"active_effects">
-    var activeEffects as list<PotionEffectData>;
+    var activeEffects: list<PotionEffectData>
 
-    var attributes as list<Attribute>;
+    var attributes: list<Attribute>
 
     @Name<"Brain">
-    var brain as nbt;
+    var brain: nbt
 
     @Name<"DeathTime">
-    var deathTime as short;
+    var deathTime: short
 
     @Name<"FallFlying">
-    var fallFlying as bool;
+    var fallFlying: bool
 
     @Name<"Health">
-    var health as float;
+    var health: float
 
     @Name<"HurtByTimestamp">
-    var hurtByTimestamp as int;
+    var hurtByTimestamp: int
 
     @Name<"HurtTime">
-    var hurtTime as short;
+    var hurtTime: short
 
     @Name<"SleepingX">
-    var sleepingX as int;
+    var sleepingX: int
 
     @Name<"SleepingY">
-    var sleepingY as int;
+    var sleepingY: int
 
     @Name<"SleepingZ">
-    var sleepingZ as int;
+    var sleepingZ: int
 
     @Name<"Team">
-    var team as string;
+    var team: string
 }

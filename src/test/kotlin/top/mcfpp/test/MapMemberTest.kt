@@ -28,7 +28,7 @@ class MapMemberTest {
 
     @Test fun constantAndRuntimeMapsExposeTheSameMemberSignatures() {
         val main = compile("""
-            func observe(values as map<int>) {}
+            func observe(values: map<int>) {}
             func main(){ var known = {entries:[]} as map<int>; }
         """)
         val known = assertIs<NBTMap>(main.scope.getVar("known"))
@@ -59,13 +59,13 @@ class MapMemberTest {
     @Test fun overwritingAKeyKeepsOneEntryAndViewsShareWrites() {
         val main = compile("""
             func main(){
-                var source = {entries:[{key:"first",value:2},{key:"second",value:3}]};
-                var values = source as map<int>;
-                values["first"] = 4;
-                values["third"] = 5;
-                values["third"] = 6;
-                dynamic var result = values.size()*100 + values["first"]*10 + values["third"];
-                dynamic var rootValue = (source["entries"][0]["value"] as int) + 0;
+                var source = {entries:[{key:"first",value:2},{key:"second",value:3}]}
+                var values = source as map<int>
+                values["first"] = 4
+                values["third"] = 5
+                values["third"] = 6
+                dynamic result = values.size()*100 + values["first"]*10 + values["third"]
+                dynamic rootValue = (source["entries"][0]["value"] as int) + 0
             }
         """)
         val machine = execute(main)
@@ -76,11 +76,11 @@ class MapMemberTest {
     @Test fun ordinaryMapCopiesKeepIndependentStorage() {
         val main = compile("""
             func main(){
-                var values = {entries:[{key:"first",value:2}]} as map<int>;
-                var copy = values;
-                copy["first"] = 7;
-                copy["next"] = 9;
-                dynamic var result = values.size()*100 + values["first"]*10 + copy["first"];
+                var values = {entries:[{key:"first",value:2}]} as map<int>
+                var copy = values
+                copy["first"] = 7
+                copy["next"] = 9
+                dynamic result = values.size()*100 + values["first"]*10 + copy["first"]
             }
         """)
         assertEquals(127, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -88,18 +88,18 @@ class MapMemberTest {
 
     @Test fun runtimeQueriesAndMutationsSupportParametersAndIndependentResults() {
         val main = compile("""
-            func edit(values as map<int>, key as string, value as int): map<int> {
-                values[key] = value;
-                return values;
+            func edit(values: map<int>, key: string, value: int): map<int> {
+                values[key] = value
+                return values
             }
-            func lookup(values as map<int>, key as string): bool { return values.containsKey(key); }
+            func lookup(values: map<int>, key: string): bool { return values.containsKey(key); }
             func main(){
-                var original = {entries:[{key:"first",value:2}]} as map<int>;
-                var changed = edit(original,"first",7);
-                dynamic var found = lookup(changed,"first");
-                dynamic var missing = lookup(changed,"absent");
-                dynamic var empty = changed.isEmpty();
-                dynamic var result = original["first"]*100 + changed["first"]*10 + changed.size();
+                var original = {entries:[{key:"first",value:2}]} as map<int>
+                var changed = edit(original,"first",7)
+                dynamic found = lookup(changed,"first")
+                dynamic missing = lookup(changed,"absent")
+                dynamic empty = changed.isEmpty()
+                dynamic result = original["first"]*100 + changed["first"]*10 + changed.size()
             }
         """)
         val machine = execute(main)
@@ -111,16 +111,16 @@ class MapMemberTest {
 
     @Test fun mergingMapsReplacesWholeValuesAndDeduplicatesKeys() {
         val main = compile("""
-            func overlay(values as map<dict<int>>, extra as map<dict<int>>): map<dict<int>> {
-                values.merge(extra);
-                return values;
+            func overlay(values: map<dict<int>>, extra: map<dict<int>>): map<dict<int>> {
+                values.merge(extra)
+                return values
             }
             func main(){
-                var left = {entries:[{key:"same",value:{old:2}},{key:"other",value:{keep:3}}]} as map<dict<int>>;
-                var right = {entries:[{key:"same",value:{fresh:7}},{key:"new",value:{fresh:9}}]} as map<dict<int>>;
-                var result = overlay(left,right);
-                dynamic var number = result.size()*100 + result["same"]["fresh"]*10 + result["other"]["keep"];
-                dynamic var old = result["same"].containsKey("old");
+                var left = {entries:[{key:"same",value:{old:2}},{key:"other",value:{keep:3}}]} as map<dict<int>>
+                var right = {entries:[{key:"same",value:{fresh:7}},{key:"new",value:{fresh:9}}]} as map<dict<int>>
+                var result = overlay(left,right)
+                dynamic number = result.size()*100 + result["same"]["fresh"]*10 + result["other"]["keep"]
+                dynamic old = result["same"].containsKey("old")
             }
         """)
         val machine = execute(main)
@@ -130,11 +130,11 @@ class MapMemberTest {
 
     @Test fun unknownKeyRemovalWorksOnTargetsWithoutMacros() {
         val main = compile("""
-            func erase(values as map<int>, key as string): map<int> { values.remove(key); return values; }
+            func erase(values: map<int>, key: string): map<int> { values.remove(key); return values; }
             func main(){
-                var values = {entries:[{key:"first",value:2},{key:"second",value:3}]} as map<int>;
-                var result = erase(values,"first");
-                dynamic var number = result.size()*10 + result["second"];
+                var values = {entries:[{key:"first",value:2},{key:"second",value:3}]} as map<int>
+                var result = erase(values,"first")
+                dynamic number = result.size()*10 + result["second"]
             }
         """, "1.20.1")
         assertEquals(13, execute(main).read(main.scope.getVar("number") as MCInt))
@@ -143,12 +143,12 @@ class MapMemberTest {
 
     @Test fun runtimeStringKeysUseCompoundPredicatesWithTheirFullEscaping() {
         val main = compile("""
-            func lookup(values as map<int>, key as string): int { return values[key]; }
-            func edit(values as map<int>, key as string): map<int> { values[key] = 8; return values; }
+            func lookup(values: map<int>, key: string): int { return values[key]; }
+            func edit(values: map<int>, key: string): map<int> { values[key] = 8; return values; }
             func main(){
-                var values = {entries:[{key:"",value:2},{key:"q\".[]\\end",value:3}]} as map<int>;
-                var result = edit(values,"q\".[]\\end");
-                dynamic var number = lookup(values,"")*100 + lookup(result,"q\".[]\\end")*10 + result.size();
+                var values = {entries:[{key:"",value:2},{key:"q\".[]\\end",value:3}]} as map<int>
+                var result = edit(values,"q\".[]\\end")
+                dynamic number = lookup(values,"")*100 + lookup(result,"q\".[]\\end")*10 + result.size()
             }
         """, "1.20.2")
         assertEquals(282, execute(main).read(main.scope.getVar("number") as MCInt))
@@ -157,15 +157,15 @@ class MapMemberTest {
 
     @Test fun runtimeKeyInsertionAndReplacementWorkWithoutMacros() {
         val main = compile("""
-            func put(values as map<int>, key as string, value as int): map<int> {
-                values[key] = value;
-                values[key] = value+1;
-                return values;
+            func put(values: map<int>, key: string, value: int): map<int> {
+                values[key] = value
+                values[key] = value+1
+                return values
             }
             func main(){
-                var values = {entries:[{key:"first",value:2}]} as map<int>;
-                var result = put(values,"second",7);
-                dynamic var number = result.size()*10 + result["second"];
+                var values = {entries:[{key:"first",value:2}]} as map<int>
+                var result = put(values,"second",7)
+                dynamic number = result.size()*10 + result["second"]
             }
         """, "1.20.1")
         assertEquals(28, execute(main).read(main.scope.getVar("number") as MCInt))
@@ -174,16 +174,16 @@ class MapMemberTest {
 
     @Test fun unknownSourceMergeInitializesTheReceiverOnceAndCopiesIncomingValues() {
         val main = compile("""
-            func overlay(extra as map<int>): map<int> {
-                var values = {entries:[{key:"first",value:2}]} as map<int>;
-                values.merge(extra);
-                values.merge(values);
-                return values;
+            func overlay(extra: map<int>): map<int> {
+                var values = {entries:[{key:"first",value:2}]} as map<int>
+                values.merge(extra)
+                values.merge(values)
+                return values
             }
             func main(){
-                var extra = {entries:[{key:"second",value:3},{key:"third",value:4}]} as map<int>;
-                var result = overlay(extra);
-                dynamic var number = result.size()*1000 + result["first"]*100 + result["second"]*10 + result["third"];
+                var extra = {entries:[{key:"second",value:3},{key:"third",value:4}]} as map<int>
+                var result = overlay(extra)
+                dynamic number = result.size()*1000 + result["first"]*100 + result["second"]*10 + result["third"]
             }
         """, "1.20.1")
         assertEquals(3234, execute(main).read(main.scope.getVar("number") as MCInt))
@@ -191,14 +191,14 @@ class MapMemberTest {
 
     @Test fun keysAreIndependentProjectionsOfTheCurrentMembership() {
         val main = compile("""
-            func allKeys(values as map<int>): list<string> { return values.keys; }
+            func allKeys(values: map<int>): list<string> { return values.keys; }
             func main(){
-                var values = {entries:[{key:"first",value:2},{key:"second",value:3}]} as map<int>;
-                var names = allKeys(values);
-                names.remove("first");
-                dynamic var original = values.size();
-                dynamic var found = names.contains("second");
-                dynamic var removed = names.contains("first");
+                var values = {entries:[{key:"first",value:2},{key:"second",value:3}]} as map<int>
+                var names = allKeys(values)
+                names.remove("first")
+                dynamic original = values.size()
+                dynamic found = names.contains("second")
+                dynamic removed = names.contains("first")
             }
         """)
         val machine = execute(main)
@@ -230,12 +230,12 @@ class MapMemberTest {
 
     @Test fun unknownKeyWritesKeepAUniformErasedValueTypeAndDropOldConstants() {
         val main = compile("""
-            func edit(key as string, value as int): int {
-                var values = {entries:[{key:"first",value:2 as any}]} as map<any>;
-                values[key] = value;
-                return values["first"] + values[key];
+            func edit(key: string, value: int): int {
+                var values = {entries:[{key:"first",value:2 as any}]} as map<any>
+                values[key] = value
+                return values["first"] + values[key]
             }
-            func main(){ dynamic var result = edit("first",7); }
+            func main(){ dynamic result = edit("first",7); }
         """)
         assertEquals(14, execute(main).read(main.scope.getVar("result") as MCInt))
     }
@@ -243,8 +243,8 @@ class MapMemberTest {
     @Test fun runtimeDictionaryProjectionDiagnosesUnsupportedEmptyMemberNames() {
         MCFPPStringTest.readFromString("""
             func main(){
-                var values = {entries:[{key:"",value:2}]} as map<int>;
-                var projected = values.keyValueSet;
+                var values = {entries:[{key:"",value:2}]} as map<int>
+                var projected = values.keyValueSet
             }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0)

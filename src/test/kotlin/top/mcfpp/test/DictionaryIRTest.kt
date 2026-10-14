@@ -36,17 +36,17 @@ class DictionaryIRTest {
         for (version in listOf("26.3", "1.20.2", "1.20")) {
             val main = compile("""
                 func main(){
-                    var values as dict<int> = {first:2, second:9};
-                    var i = 0;
+                    var values: dict<int> = {first:2, second:9}
+                    var i = 0
                     while(i < 2){
-                        values.remove("first");
-                        values.merge({first:7} as dict<int>);
-                        i += 1;
+                        values.remove("first")
+                        values.merge({first:7} as dict<int>)
+                        i += 1
                     }
-                    dynamic var present = values.containsKey("first");
-                    dynamic var result = values["first"] + values["second"];
-                    values.clear();
-                    dynamic var removed = values.containsKey("first");
+                    dynamic present = values.containsKey("first")
+                    dynamic result = values["first"] + values["second"]
+                    values.clear()
+                    dynamic removed = values.containsKey("first")
                 }
             """, version)
             val machine = execute(main)
@@ -59,14 +59,14 @@ class DictionaryIRTest {
     @Test fun deepMergeKeepsUntouchedFieldsAndCopiesTheSource() = modes {
         val main = compile("""
             func main(){
-                var values as dict<any> = {nested:{first:2, second:9}, untouched:true};
-                var source as dict<any> = {nested:{first:7}};
-                values.merge(source);
-                var nested = values["nested"] as dict<int>;
-                nested["first"] = 8;
-                var original = source["nested"] as dict<int>;
-                dynamic var result = nested["first"] + nested["second"] + original["first"];
-                dynamic var preserved = values["untouched"] == true;
+                var values: dict<any> = {nested:{first:2, second:9}, untouched:true}
+                var source: dict<any> = {nested:{first:7}}
+                values.merge(source)
+                var nested = values["nested"] as dict<int>
+                nested["first"] = 8
+                var original = source["nested"] as dict<int>
+                dynamic result = nested["first"] + nested["second"] + original["first"]
+                dynamic preserved = values["untouched"] == true
             }
         """)
         val machine = execute(main)
@@ -76,12 +76,12 @@ class DictionaryIRTest {
 
     @Test fun staticRemovalMapsItsFieldEffectAndPreservesSiblingTypes() = modes {
         val main = compile("""
-            func erase(static values as dict<any>) { values.remove("first"); }
+            func erase(static values: dict<any>) { values.remove("first"); }
             func main(){
-                var values as dict<any> = {first:2, second:9};
-                erase(values);
-                dynamic var result = values["second"] + 1;
-                dynamic var removed = values.containsKey("first");
+                var values: dict<any> = {first:2, second:9}
+                erase(values)
+                dynamic result = values["second"] + 1
+                dynamic removed = values.containsKey("first")
             }
         """)
         val machine = execute(main)
@@ -94,13 +94,13 @@ class DictionaryIRTest {
 
     @Test fun memberReceiverRetainsItsIndexAcrossArgumentEffects() = modes {
         val main = compile("""
-            func identity(value as int): int { return value; }
-            func change(static index as int): dict<int> { index = 1; return {first:7}; }
+            func identity(value: int): int { return value; }
+            func change(static index: int): dict<int> { index = 1; return {first:7}; }
             func main(){
-                var values = [{first:2},{first:9}];
-                var index = identity(0);
-                values[index].merge(change(index));
-                dynamic var result = values[0]["first"] + values[1]["first"];
+                var values = [{first:2},{first:9}]
+                var index = identity(0)
+                values[index].merge(change(index))
+                dynamic result = values[0]["first"] + values[1]["first"]
             }
         """)
         assertEquals(16, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -108,9 +108,9 @@ class DictionaryIRTest {
 
     @Test fun signaturesAndKeyCapabilitiesAreCheckedBeforeCommands() {
         for (source in listOf(
-            "func main(){ var values as dict<int> = {first:2}; values.remove(1); }",
-            "func main(){ var values as dict<int> = {first:2}; values.merge({first:true}); }",
-            "func inspect(values as dict<int>, key as string): bool { return values.containsKey(key); }\nfunc main(){ var values as dict<int> = {first:2}; var found = inspect(values,\"first\"); }"
+            "func main(){ var values: dict<int> = {first:2}; values.remove(1); }",
+            "func main(){ var values: dict<int> = {first:2}; values.merge({first:true}); }",
+            "func inspect(values: dict<int>, key: string): bool { return values.containsKey(key); }\nfunc main(){ var values: dict<int> = {first:2}; var found = inspect(values,\"first\"); }"
         )) {
             MCFPPStringTest.readFromString(source, version = "26.3")
             assertNotNull(function("main").typedIR)
@@ -119,11 +119,11 @@ class DictionaryIRTest {
         }
         val main = compile("""
             func main(){
-                var values as dict<int> = {first:2};
-                values["a.b"] = 7;
-                dynamic var before = values.containsKey("a.b");
-                values.remove("a.b");
-                dynamic var after = values.containsKey("a.b");
+                var values: dict<int> = {first:2}
+                values["a.b"] = 7
+                dynamic before = values.containsKey("a.b")
+                values.remove("a.b")
+                dynamic after = values.containsKey("a.b")
             }
         """)
         val machine = execute(main)
@@ -137,57 +137,57 @@ class DictionaryIRTest {
         Project.config = top.mcfpp.ProjectConfig()
         try {
             val declarations = """
-                namespace fixture.dictionary_composite;
-                data Node { var value as int; var next as Node?; constructor(value as int){this.value=value;} }
-                func readList(values as dict<list<int>>):int{return values["key"][0];}
-                func readNode(values as dict<Node>):int{return values["key"].value;}
-                func readNested(values as dict<dict<int>>):int{return values["key"]["value"];}
-                func returnNode(values as dict<Node>):Node{return values["key"];}
-                func sameNode(value as Node):Node{return value;}
-                func readDeep(values as dict<Node>):int{return values["key"].next.value;}
-                func copyDeep(values as dict<Node>):int{
-                    var copied=values["key"];var before=copied.next.value;
-                    copied.next.value=99;return before;
+                namespace fixture.dictionary_composite
+                data Node { var value: int; var next: Node?; constructor(value: int){this.value=value;} }
+                func readList(values: dict<list<int>>):int{return values["key"][0];}
+                func readNode(values: dict<Node>):int{return values["key"].value;}
+                func readNested(values: dict<dict<int>>):int{return values["key"]["value"];}
+                func returnNode(values: dict<Node>):Node{return values["key"];}
+                func sameNode(value: Node):Node{return value;}
+                func readDeep(values: dict<Node>):int{return values["key"].next.value;}
+                func copyDeep(values: dict<Node>):int{
+                    var copied=values["key"];var before=copied.next.value
+                    copied.next.value=99;return before
                 }
-                func returnDeep(values as dict<Node>):int{
-                    var returned=sameNode(returnNode(values));var before=returned.next.value;
-                    returned.next.value=88;return before+returned.next.value-before;
+                func returnDeep(values: dict<Node>):int{
+                    var returned=sameNode(returnNode(values));var before=returned.next.value
+                    returned.next.value=88;return before+returned.next.value-before
                 }
-                func independentDeep(values as dict<Node>):int{
-                    var original=values["key"];var copied=original;
-                    copied.next.value=999;return copied.next.value;
+                func independentDeep(values: dict<Node>):int{
+                    var original=values["key"];var copied=original
+                    copied.next.value=999;return copied.next.value
                 }
-                func repeatDeep(values as dict<Node>):int{
-                    var first=returnNode(values);var second=first;
-                    var third=sameNode(second);var fourth=sameNode(third);
-                    return fourth.next.next.next.next.value;
+                func repeatDeep(values: dict<Node>):int{
+                    var first=returnNode(values);var second=first
+                    var third=sameNode(second);var fourth=sameNode(third)
+                    return fourth.next.next.next.next.value
                 }
-                func copyNode(values as dict<Node>):int{
-                    var original=values["key"];var copied=original;var returned=returnNode(values);
-                    copied.value=99;
-                    return original.value*10000+copied.value*100+returned.value;
+                func copyNode(values: dict<Node>):int{
+                    var original=values["key"];var copied=original;var returned=returnNode(values)
+                    copied.value=99
+                    return original.value*10000+copied.value*100+returned.value
                 }
             """.trimIndent()
             val body = """
                 func main(){
-                    var lists as dict<list<int>> = {key:[7]};
-                    var node=Node(9);var nodes as dict<Node> = {key:node};
-                    var nested as dict<dict<int>> = {key:{value:11}};
-                    dynamic var listResult=readList(lists);
-                    dynamic var nodeResult=readNode(nodes);
-                    dynamic var nestedResult=readNested(nested);
-                    var returned=returnNode(nodes);dynamic var returnResult=returned.value;
-                    dynamic var copyResult=copyNode(nodes);dynamic var originalAgain=readNode(nodes);
-                    var deep=Node(7);var next=Node(9);var third=Node(88);
-                    var fourth=Node(123);var fifth=Node(456);
-                    fourth.next=fifth;third.next=fourth;next.next=third;deep.next=next;
-                    var deepNodes as dict<Node> = {key:deep};
-                    dynamic var deepDirect=readDeep(deepNodes);
-                    dynamic var deepCopy=copyDeep(deepNodes);
-                    dynamic var deepReturned=returnDeep(deepNodes);
-                    dynamic var deepIndependent=independentDeep(deepNodes);
-                    dynamic var deepOriginalAgain=readDeep(deepNodes);
-                    dynamic var deepRepeated=repeatDeep(deepNodes);
+                    var lists: dict<list<int>> = {key:[7]}
+                    var node=Node(9);var nodes: dict<Node> = {key:node}
+                    var nested: dict<dict<int>> = {key:{value:11}}
+                    dynamic listResult=readList(lists)
+                    dynamic nodeResult=readNode(nodes)
+                    dynamic nestedResult=readNested(nested)
+                    var returned=returnNode(nodes);dynamic returnResult=returned.value
+                    dynamic copyResult=copyNode(nodes);dynamic originalAgain=readNode(nodes)
+                    var deep=Node(7);var next=Node(9);var third=Node(88)
+                    var fourth=Node(123);var fifth=Node(456)
+                    fourth.next=fifth;third.next=fourth;next.next=third;deep.next=next
+                    var deepNodes: dict<Node> = {key:deep}
+                    dynamic deepDirect=readDeep(deepNodes)
+                    dynamic deepCopy=copyDeep(deepNodes)
+                    dynamic deepReturned=returnDeep(deepNodes)
+                    dynamic deepIndependent=independentDeep(deepNodes)
+                    dynamic deepOriginalAgain=readDeep(deepNodes)
+                    dynamic deepRepeated=repeatDeep(deepNodes)
                 }
             """.trimIndent()
             fun check() {
@@ -287,9 +287,9 @@ class DictionaryIRTest {
 
     @Test fun compositeAccessDoesNotProveMissingFieldsOrErasedLayouts() {
         for (source in listOf(
-            "data Node { var value as int; constructor(){} }\nfunc main(){var node=Node();dynamic var result=node.value;}",
-            "func reject(values as dict<any>){dynamic var result=values[\"key\"][0];}\nfunc main(){}",
-            "func reject(values as dict<object>){dynamic var result=values[\"key\"][0];}\nfunc main(){}"
+            "data Node { var value: int; constructor(){} }\nfunc main(){var node=Node();dynamic result=node.value;}",
+            "func reject(values: dict<any>){dynamic result=values[\"key\"][0];}\nfunc main(){}",
+            "func reject(values: dict<object>){dynamic result=values[\"key\"][0];}\nfunc main(){}"
         )) {
             MCFPPStringTest.readFromString(source, version = "26.3")
             assertTrue(Project.errorCount > 0, source)
@@ -301,7 +301,7 @@ class DictionaryIRTest {
             } == true, source)
         }
         // An ordinary incoming parameter provides initialization, not a closed coordinate payload.
-        MCFPPStringTest.readFromString("func reject(values as dict<pos3>){}\nfunc main(){}", version = "26.3")
+        MCFPPStringTest.readFromString("func reject(values: dict<pos3>){}\nfunc main(){}", version = "26.3")
         assertEquals(0, Project.errorCount)
         val reject = function("reject")
         reject.runInFunction {

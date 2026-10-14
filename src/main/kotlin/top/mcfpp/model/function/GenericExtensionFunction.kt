@@ -55,7 +55,7 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
         val r = ctx.readOnlyParams().parameterList()
         val n = ctx.normalParams().parameterList()
         if(r == null && n == null) return
-        for (param in r.parameter()){
+        for (param in r?.parameter().orEmpty()){
             val (p,v) = parseParam(param, isReadOnly = true)
             readOnlyParams.add(p)
             scope.putVar(p.identifier, v)
@@ -63,7 +63,7 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
                 scope.putType(p.identifier, top.mcfpp.type.MCFPPGenericParamType(p.identifier, arrayListOf()))
         }
         hasDefaultValue = false
-        for (param in n.parameter()) {
+        for (param in n?.parameter().orEmpty()) {
             val (p,v) = parseParam(param)
             normalParams.add(p)
             scope.putVar(p.identifier, v)

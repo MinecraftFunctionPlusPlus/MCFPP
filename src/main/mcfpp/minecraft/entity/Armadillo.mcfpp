@@ -1,10 +1,10 @@
 @MCFPPEntity
 data ArmadilloData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"Scute_Time">
-    var scuteTime as int;
+    var scuteTime: int
 
     @Name<"State">
-    var state as ArmadilloState;
+    var state: ArmadilloState
 }
 
 enum ArmadilloState {

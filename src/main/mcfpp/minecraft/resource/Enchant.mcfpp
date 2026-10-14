@@ -1,5 +1,5 @@
 @From<"top.mcfpp.mni.resource.EnchantData">
-data Enchant: ResourceID;
+data Enchant: ResourceID
 
 @From<"top.mcfpp.mni.resource.EnchantObjectData">
-object data Enchant: ResourceID;
+object data Enchant: ResourceID

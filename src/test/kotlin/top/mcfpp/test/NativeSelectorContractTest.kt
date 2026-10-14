@@ -72,8 +72,8 @@ class NativeSelectorContractTest {
         val library = output.resolve("selectors")
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString("""
-            namespace mcfpp.minecraft.resource;
-            data ResourceID { var id as string; }
+            namespace mcfpp.minecraft.resource
+            data ResourceID { var id: string; }
             data EntityType: ResourceID {}
             data Predicate: ResourceID {}
             data Advancement: ResourceID {}
@@ -81,52 +81,52 @@ class NativeSelectorContractTest {
         assertEquals(0, Project.errorCount)
         Project.config.includes = arrayListOf(resources.toString())
         MCFPPStringTest.readFromString("""
-            namespace mcfpp.minecraft.entity;
+            namespace mcfpp.minecraft.entity
             @From<"top.mcfpp.mni.SelectorData">
             data EntityData {}
         """.trimIndent(), targetPath = entities.toString(), version = "26.3")
         assertEquals(0, Project.errorCount)
         val source = """
-            namespace fixture.selectors;
-            import mcfpp.minecraft.resource:*;
+            namespace fixture.selectors
+            import mcfpp.minecraft.resource:*
             data Box {
-                func observe(number as int, label as string, word as string, payload as nbt, bounds as range, mode as string, order as string):int {
-                    var kind = EntityType(); kind.id = label;
-                    var predicate = Predicate(); predicate.id = label;
-                    var advancement = Advancement(); advancement.id = label;
-                    var target = @e;
-                    target.x(number); target.y(number); target.z(number);
-                    target.dx(number); target.dy(number); target.dz(number);
-                    target.distance(bounds); target.xRotation(bounds); target.yRotation(bounds); target.level(bounds);
-                    target.tag(word); target.tagNot(word);
-                    target.teamNot(word); target.team(word);
-                    target.nameNot(label); target.name(label);
-                    target.typeNot(kind); target.type(kind);
-                    target.predicate(predicate); target.predicateNot(predicate);
-                    target.filterNbt(payload);
-                    target.gamemodeNot(mode); target.gamemode(mode);
-                    target.advancements(advancement); target.advancementsNot(advancement);
-                    target.limit(number); target.sort(order);
-                    var copied = target;
-                    number = 99; label = "changed"; word = "changed"; kind.id = "changed"; mode = "creative"; order = "arbitrary";
-                    target.tag("later");
+                func observe(number: int, label: string, word: string, payload: nbt, bounds: range, mode: string, order: string):int {
+                    var kind = EntityType(); kind.id = label
+                    var predicate = Predicate(); predicate.id = label
+                    var advancement = Advancement(); advancement.id = label
+                    var target = @e
+                    target.x(number); target.y(number); target.z(number)
+                    target.dx(number); target.dy(number); target.dz(number)
+                    target.distance(bounds); target.xRotation(bounds); target.yRotation(bounds); target.level(bounds)
+                    target.tag(word); target.tagNot(word)
+                    target.teamNot(word); target.team(word)
+                    target.nameNot(label); target.name(label)
+                    target.typeNot(kind); target.type(kind)
+                    target.predicate(predicate); target.predicateNot(predicate)
+                    target.filterNbt(payload)
+                    target.gamemodeNot(mode); target.gamemode(mode)
+                    target.advancements(advancement); target.advancementsNot(advancement)
+                    target.limit(number); target.sort(order)
+                    var copied = target
+                    number = 99; label = "changed"; word = "changed"; kind.id = "changed"; mode = "creative"; order = "arbitrary"
+                    target.tag("later")
                     /say ${'$'}{target}
                     /say ${'$'}{copied}
-                    return 7;
+                    return 7
                 }
-                func recurse(depth as int, label as string):int {
-                    var selected = @e;
-                    selected.tag(label);
+                func recurse(depth: int, label: string):int {
+                    var selected = @e
+                    selected.tag(label)
                     if (depth > 0) { this.recurse(depth - 1, "inner"); }
-                    label = "changed";
+                    label = "changed"
                     /say ${'$'}{selected}
-                    return 7;
+                    return 7
                 }
             }
             func main() {
-                var box = Box();
-                dynamic var result = box.observe(4, "fixture:original", "savedword", {value:7} as nbt, 1..3, "survival", "nearest");
-                dynamic var openResult = box.observe(4, "fixture:original", "savedword", {value:7} as nbt, 1.., "survival", "nearest");
+                var box = Box()
+                dynamic result = box.observe(4, "fixture:original", "savedword", {value:7} as nbt, 1..3, "survival", "nearest")
+                dynamic openResult = box.observe(4, "fixture:original", "savedword", {value:7} as nbt, 1.., "survival", "nearest")
             }
         """
         Project.config.includes = arrayListOf(resources.toString(), entities.toString())
@@ -135,20 +135,20 @@ class NativeSelectorContractTest {
         checkExport(output.resolve("source"))
         Project.config.includes = arrayListOf(resources.toString(), entities.toString(), library.toString())
         MCFPPStringTest.readFromString("""
-            import fixture.selectors:*;
+            import fixture.selectors:*
             func main() {
-                var box = Box();
-                dynamic var result = box.observe(4, "fixture:original", "savedword", {value:7} as nbt, 1..3, "survival", "nearest");
-                dynamic var openResult = box.observe(4, "fixture:original", "savedword", {value:7} as nbt, 1.., "survival", "nearest");
+                var box = Box()
+                dynamic result = box.observe(4, "fixture:original", "savedword", {value:7} as nbt, 1..3, "survival", "nearest")
+                dynamic openResult = box.observe(4, "fixture:original", "savedword", {value:7} as nbt, 1.., "survival", "nearest")
             }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
         checkExport(output.resolve("fresh"))
         MCFPPStringTest.readFromString("""
-            import fixture.selectors:*;
+            import fixture.selectors:*
             func main() {
-                var box = Box();
-                dynamic var result = box.recurse(1, "outer");
+                var box = Box()
+                dynamic result = box.recurse(1, "outer")
             }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
@@ -163,16 +163,16 @@ class NativeSelectorContractTest {
             assertEquals("entity", it.getAnnotation(MNIFunction::class.java).caller)
         }
         MCFPPStringTest.readFromString("""
-            import mcfpp.minecraft.entity:*;
+            import mcfpp.minecraft.entity:*
             func reject() {
-                var original = @e;
-                original.x(1);
-                var copied = original;
-                copied.x(2);
-                var dto = EntityData();
-                dto.x(1);
-                original.tag("bad:tag");
-                original.team("bad team");
+                var original = @e
+                original.x(1)
+                var copied = original
+                copied.x(2)
+                var dto = EntityData()
+                dto.x(1)
+                original.tag("bad:tag")
+                original.team("bad team")
             }
             func main() {}
         """.trimIndent(), version = "26.3")
@@ -319,8 +319,8 @@ class NativeSelectorContractTest {
         val library=output.resolve("guard-library")
         Project.config.includes=arrayListOf()
         MCFPPStringTest.readFromString("""
-            namespace mcfpp.minecraft.resource;
-            data ResourceID {var id as string;}
+            namespace mcfpp.minecraft.resource
+            data ResourceID {var id: string;}
             data EntityType:ResourceID {}
             data Predicate:ResourceID {}
             data Advancement:ResourceID {}
@@ -328,35 +328,35 @@ class NativeSelectorContractTest {
         assertEquals(0,Project.errorCount)
         Project.config.includes=arrayListOf(resources.toString())
         MCFPPStringTest.readFromString("""
-            namespace mcfpp.minecraft.entity;
+            namespace mcfpp.minecraft.entity
             @From<"top.mcfpp.mni.SelectorData">
             data EntityData {}
         """.trimIndent(),targetPath=entities.toString(),version="26.3")
         assertEquals(0,Project.errorCount)
         val source="""
-            namespace fixture.guards;
+            namespace fixture.guards
             data Box {
-                func name(input as string):int {var selected=@e;selected.name(input);input="changed";
+                func name(input: string):int {var selected=@e;selected.name(input);input="changed"
                     /say ${'$'}{selected}
-                    return 7;
+                    return 7
                 }
-                func tag(input as string):int {var selected=@e;selected.tag(input);input="changed";
+                func tag(input: string):int {var selected=@e;selected.tag(input);input="changed"
                     /say ${'$'}{selected}
-                    return 7;
+                    return 7
                 }
-                func team(input as string):int {var selected=@e;selected.team(input);input="changed";
+                func team(input: string):int {var selected=@e;selected.team(input);input="changed"
                     /say ${'$'}{selected}
-                    return 7;
+                    return 7
                 }
             }
-            func known(){var selected=@e;selected.name("quote \" slash \\");
+            func known(){var selected=@e;selected.name("quote \" slash \\")
                 /say ${'$'}{selected}
             }
-            func main(){var box=Box();dynamic var result=box.name("initial");dynamic var tagResult=box.tag("initial");dynamic var teamResult=box.team("initial");known();}
+            func main(){var box=Box();dynamic result=box.name("initial");dynamic tagResult=box.tag("initial");dynamic teamResult=box.team("initial");known();}
         """.trimIndent()
         for(fresh in listOf(false,true)) {
             Project.config.includes=if(fresh) arrayListOf(resources.toString(),entities.toString(),library.toString()) else arrayListOf(resources.toString(),entities.toString())
-            MCFPPStringTest.readFromString(if(fresh) "import fixture.guards:*;\nfunc main(){var box=Box();dynamic var result=box.name(\"initial\");dynamic var tagResult=box.tag(\"initial\");dynamic var teamResult=box.team(\"initial\");known();}" else source,
+            MCFPPStringTest.readFromString(if(fresh) "import fixture.guards:*;\nfunc main(){var box=Box();dynamic result=box.name(\"initial\");dynamic tagResult=box.tag(\"initial\");dynamic teamResult=box.team(\"initial\");known();}" else source,
                 targetPath=if(fresh)null else library.toString(),version="26.3")
             assertEquals(0,Project.errorCount)
             val main=GlobalScope.localNamespaces.values.flatMap {it.scope.functions.values.flatten()}.single {it.identifier=="main"}

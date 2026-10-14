@@ -40,12 +40,12 @@ class RangeIRTest {
     @Test fun namedAndReturnedRangesKeepIntegerPrecisionAndCaptureLoopBounds() = modes {
         val main = compile("""
             func make(): range { return 16777217 .. 16777218; }
-            func forward(value as any): any { return value; }
+            func forward(value: any): any { return value; }
             func main(){
-                var bounds = forward(make());
-                var sum = 0;
+                var bounds = forward(make())
+                var sum = 0
                 for(index : bounds){ sum += index - 16777216; bounds = 1 .. 1; }
-                dynamic var result = sum;
+                dynamic result = sum
             }
         """, "1.20.1")
         assertEquals(3, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -54,12 +54,12 @@ class RangeIRTest {
     @Test fun integerExtremesDoNotRoundOrOverflowTheLoopCounter() = modes {
         val main = compile("""
             func main(){
-                var high = 2147483646 .. 2147483647;
-                var low = -2147483648 .. -2147483647;
-                var count = 0;
+                var high = 2147483646 .. 2147483647
+                var low = -2147483648 .. -2147483647
+                var count = 0
                 for(index : high){ count += 1; }
                 for(index : low){ count += 1; }
-                dynamic var result = count;
+                dynamic result = count
             }
         """)
         assertEquals(4, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -67,17 +67,17 @@ class RangeIRTest {
 
     @Test fun constructingBoundsCapturesEarlierReadsAndSeparatesCallResults() = modes {
         val main = compile("""
-            func end(static value as int): int { value = 10; return 3; }
+            func end(static value: int): int { value = 10; return 3; }
             func start(): int { return 4; }
             func finish(): int { return 5; }
             func main(){
-                var first = 1;
-                var bounds = first .. end(first);
-                var next = start() .. finish();
-                var sum = 0;
+                var first = 1
+                var bounds = first .. end(first)
+                var next = start() .. finish()
+                var sum = 0
                 for(index : bounds){ sum += index; }
                 for(index : next){ sum += index; }
-                dynamic var result = sum + first;
+                dynamic result = sum + first
             }
         """)
         assertEquals(25, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -85,16 +85,16 @@ class RangeIRTest {
 
     @Test fun rangeCopiesAndViewsUseTheSameStorageRulesAsOtherValues() = modes {
         val main = compile("""
-            func replace(static value as range){ value = 4 .. 5; }
+            func replace(static value: range){ value = 4 .. 5; }
             func main(){
-                var bounds = 1 .. 2;
-                var copied = bounds;
-                var view = bounds as range;
-                replace(view);
-                var sum = 0;
+                var bounds = 1 .. 2
+                var copied = bounds
+                var view = bounds as range
+                replace(view)
+                var sum = 0
                 for(index : bounds){ sum += index; }
                 for(index : copied){ sum += index; }
-                dynamic var result = sum;
+                dynamic result = sum
             }
         """, "1.20.2")
         assertEquals(12, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -103,14 +103,14 @@ class RangeIRTest {
     @Test fun joinedAndNestedRangesKeepOnlyTheirProvenEndpointTypes() = modes {
         val main = compile("""
             func main(){
-                var bounds = 1 .. 2;
-                dynamic var condition = true;
+                var bounds = 1 .. 2
+                dynamic condition = true
                 if(condition){ bounds = 3 .. 4; } else { bounds = 5 .. 6; }
-                var values = [bounds, 1 .. 2];
-                var sum = 0;
+                var values = [bounds, 1 .. 2]
+                var sum = 0
                 for(index : values[0]){ sum += index; }
                 for(index : values[1]){ sum += index; }
-                dynamic var result = sum;
+                dynamic result = sum
             }
         """)
         assertEquals(10, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -120,7 +120,7 @@ class RangeIRTest {
         for (source in listOf(
             "func main(){ var bounds = 1 ..; for(index : bounds){ var value = index; }; }",
             "func main(){ var bounds = {left:false,right:2} as range; for(index : bounds){ var value = index; }; }",
-            "func iterate(bounds as range){ for(index : bounds){ var value = index; }; }\nfunc main(){ iterate(1 .. 2); }")) {
+            "func iterate(bounds: range){ for(index : bounds){ var value = index; }; }\nfunc main(){ iterate(1 .. 2); }")) {
             MCFPPStringTest.readFromString(source, version = "26.3")
             assertTrue(Project.errorCount > 0, source)
             assertNotNull(GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single().typedIR)
@@ -128,7 +128,7 @@ class RangeIRTest {
         for ((source, name) in listOf(
             """
                 func main(){
-                    var ignored=6/2; var bounds=1 ..;
+                    var ignored=6/2; var bounds=1 ..
                     for(index:bounds){
                         /say fixture.invalid_range_iteration
                     }
@@ -136,15 +136,15 @@ class RangeIRTest {
             """.trimIndent() to "main",
             """
                 func main(){
-                    var ignored=6/2; var bounds=1.0 .. 2.0;
+                    var ignored=6/2; var bounds=1.0 .. 2.0
                     for(index:bounds){
                         /say fixture.invalid_range_iteration
                     }
                 }
             """.trimIndent() to "main",
             """
-                func iterate(bounds as range){
-                    var ignored=6/2;
+                func iterate(bounds: range){
+                    var ignored=6/2
                     for(index:bounds){
                         /say fixture.invalid_range_iteration
                     }
@@ -168,15 +168,15 @@ class RangeIRTest {
         MCFPPStringTest.readFromString("""
             func make(): range { var ignored = 6 / 2; return 16777217 .. 16777218; }
             func main(){
-                var ignored = 6 / 2;
-                dynamic var first = 16777217;
-                var bounds = first .. 16777218;
-                var constantBounds = 16777217 .. 16777218;
-                first = 0;
-                dynamic var sum = 0;
+                var ignored = 6 / 2
+                dynamic first = 16777217
+                var bounds = first .. 16777218
+                var constantBounds = 16777217 .. 16777218
+                first = 0
+                dynamic sum = 0
                 for(index : constantBounds){ sum += index - 16777216; }
-                dynamic var result = sum;
-                var returned = make();
+                dynamic result = sum
+                var returned = make()
                 /data modify storage mcfpp:system temp.bounds set from storage mcfpp:system stack_frame[0].bounds
                 /data modify storage mcfpp:system temp.returned set from storage mcfpp:system stack_frame[0].returned
             }

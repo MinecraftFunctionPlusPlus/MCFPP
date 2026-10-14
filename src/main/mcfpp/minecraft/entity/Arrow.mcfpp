@@ -1,31 +1,31 @@
-import mcfpp.minecraft.item:ItemStackData;
-import mcfpp.minecraft.other:BlockState;
+import mcfpp.minecraft.item:ItemStackData
+import mcfpp.minecraft.other:BlockState
 
 @MCFPPEntity
 data GeneralArrowData{
-    var crit as bool;
+    var crit: bool
 
-    var damage as double;
+    var damage: double
 
-    var inBlockState as BlockState;
+    var inBlockState: BlockState
 
-    var inGround as bool;
+    var inGround: bool
 
-    var item as ItemData;
+    var item: ItemData
 
-    var life as short;
+    var life: short
 
-    var pickup as byte;
+    var pickup: byte
 
     @Name<"PierceLevel">
-    var pierceLevel as byte;
+    var pierceLevel: byte
 
-    var shake as byte;
+    var shake: byte
 
     @Name<"SoundEvent">
-    var soundEvent as string;
+    var soundEvent: string
 
-    var weapon as ItemData;
+    var weapon: ItemData
 }
 
-data ArrowData: EntityData, ProjectileData, GeneralArrowData;
+data ArrowData: EntityData, ProjectileData, GeneralArrowData

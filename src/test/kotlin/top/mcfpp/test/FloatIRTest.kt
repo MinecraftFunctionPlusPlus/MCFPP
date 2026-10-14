@@ -35,14 +35,14 @@ class FloatIRTest {
     @Test fun arithmeticPromotionComparisonsAndLoopBackedgesUseFloatValues() = modes {
         val main = compile("""
             func main(){
-                dynamic var start = 8;
-                var value as float = start;
-                value += 0.5;
-                value /= 2.0;
-                value %= 3.0;
+                dynamic start = 8
+                var value: float = start
+                value += 0.5
+                value /= 2.0
+                value %= 3.0
                 while(value < 3.0){ value += 0.5; }
-                var negated = -value;
-                dynamic var result = 0;
+                var negated = -value
+                dynamic result = 0
                 if(value == 3.25 && negated == -3.25){ result = 1; }
                 /data modify storage mcfpp:system temp.float_result set from storage mcfpp:system stack_frame[0].value
             }
@@ -54,17 +54,17 @@ class FloatIRTest {
 
     @Test fun recursiveCallsPreserveEarlierOperandsAndStaticWriteback() = modes {
         val main = compile("""
-            func sum(value as float, depth as int): float {
+            func sum(value: float, depth: int): float {
                 if(depth <= 0){ return value; }
-                return value + sum(value + 0.5,depth - 1);
+                return value + sum(value + 0.5,depth - 1)
             }
-            func change(static value as float): float { value = 10.0; return 0.5; }
-            func forward(value as float, ignored as float): any { return value; }
+            func change(static value: float): float { value = 10.0; return 0.5; }
+            func forward(value: float, ignored: float): any { return value; }
             func main(){
-                var value = 1.25;
-                var captured = forward(value,change(value));
-                var total = sum(captured,2) + value;
-                dynamic var result = 0;
+                var value = 1.25
+                var captured = forward(value,change(value))
+                var total = sum(captured,2) + value
+                dynamic result = 0
                 if(total == 15.25){ result = 1; }
             }
         """)
@@ -73,18 +73,18 @@ class FloatIRTest {
 
     @Test fun collectionsPromoteElementsAndKeepViewsAndCapturedDynamicIndices() = modes {
         val main = compile("""
-            func replace(static index as int): float { index = 1; return 2.5; }
+            func replace(static index: int): float { index = 1; return 2.5; }
             func main(){
-                var values as list<float> = [1,2.0];
-                dynamic var index = 0;
-                values[index] = replace(index);
-                var erased as any = values[0];
-                var view = erased as float;
-                view += 0.5;
-                var valuesCopy = values;
-                valuesCopy[1] = 4;
-                valuesCopy.add(3);
-                dynamic var result = 0;
+                var values: list<float> = [1,2.0]
+                dynamic index = 0
+                values[index] = replace(index)
+                var erased: any = values[0]
+                var view = erased as float
+                view += 0.5
+                var valuesCopy = values
+                valuesCopy[1] = 4
+                valuesCopy.add(3)
+                dynamic result = 0
                 if(erased == 3.0 && values[1] == 2.0 && valuesCopy[1] == 4.0 && valuesCopy[2] == 3.0){ result = 1; }
                 /data modify storage mcfpp:system temp.element set from storage mcfpp:system stack_frame[0].valuesCopy[2]
             }
@@ -96,13 +96,13 @@ class FloatIRTest {
 
     @Test fun implicitReturnAndDefaultArgumentsRoundIntOnlyAtPromotion() = modes {
         val main = compile("""
-            func promoted(value as int): float { return value; }
-            func add(value as float, extra as float = 0.5): float { return value + extra; }
+            func promoted(value: int): float { return value; }
+            func add(value: float, extra: float = 0.5): float { return value + extra; }
             func main(){
-                dynamic var integer = 16777217;
-                var rounded = promoted(integer);
-                var total = add(2);
-                dynamic var result = 0;
+                dynamic integer = 16777217
+                var rounded = promoted(integer)
+                var total = add(2)
+                dynamic result = 0
                 if(rounded == 16777216.0 && total == 2.5 && integer == 16777217){ result = 1; }
             }
         """)
@@ -112,9 +112,9 @@ class FloatIRTest {
     @Test fun signedZeroSurvivesNegationAndFloatRangesKeepEncodedEndpoints() = modes {
         val main = compile("""
             func main(){
-                dynamic var zero = 0.0;
-                var negative = -zero;
-                var bounds = negative .. 2.5;
+                dynamic zero = 0.0
+                var negative = -zero
+                var bounds = negative .. 2.5
                 /data modify storage mcfpp:system temp.bounds set from storage mcfpp:system stack_frame[0].bounds
             }
         """)
@@ -127,7 +127,7 @@ class FloatIRTest {
         modes {
             val main = compile("""
                 func main(){
-                    var value = 1.0 / 0.0;
+                    var value = 1.0 / 0.0
                     /data modify storage fixture:float_contract zero set from storage mcfpp:system stack_frame[0].value
                 }
             """)
@@ -137,7 +137,7 @@ class FloatIRTest {
         }
         for (source in listOf(
             "func main(){ var bounds = 2.5 .. 1.5; }",
-            "func change(static value as float){ value = 1.5; }\nfunc main(){ var value = 1; change(value); }")) {
+            "func change(static value: float){ value = 1.5; }\nfunc main(){ var value = 1; change(value); }")) {
             MCFPPStringTest.readFromString(source, version = "26.3")
             assertTrue(Project.errorCount > 0)
             assertNotNull(GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single().typedIR)

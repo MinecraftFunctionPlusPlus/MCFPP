@@ -23,16 +23,16 @@ import kotlin.test.Test
 class LibMemberAccessTest {
     @Test fun restoredOrdinaryAndGenericMethodsRejectExternalAccess() = withLibrary { output ->
         write("""
-            namespace fixture.access;
+            namespace fixture.access
             data Box {
                 private func secret():int { return 4; }
-                protected func add<T as type>(value as int):int { return value+4; }
+                protected func add<T>(value: int):int { return value+4; }
             }
             data Child:Box {}
         """, output)
         val original = GlobalScope.localNamespaces.getValue("fixture.access").scope.getTemplate("Box")!!
         consume("""
-            import fixture.access:*;
+            import fixture.access:*
             func main(){ var box=Box(); var child=Child(); box.secret(); child.add<int>(2); }
         """, output)
         assertEquals(2, Project.errorCount, "Both external member calls must be denied")
@@ -47,25 +47,25 @@ class LibMemberAccessTest {
 
     @Test fun restoredMethodsUseLexicalOwnerForPrivateAndProtectedCalls() = withLibrary { output ->
         write("""
-            namespace fixture.access;
+            namespace fixture.access
             data Box {
                 private func secret():int { return 4; }
-                protected func add<T as type>(value as int):int { return value+4; }
+                protected func add<T>(value: int):int { return value+4; }
                 func read():int { return this.secret(); }
             }
             data Child:Box {
                 func readProtected():int { return this.add<int>(2); }
             }
             func main(){
-                var box=Box(); var child=Child();
-                dynamic var first=box.read(); dynamic var second=child.readProtected();
+                var box=Box(); var child=Child()
+                dynamic first=box.read(); dynamic second=child.readProtected()
             }
         """, output)
         val main = consume("""
-            import fixture.access:*;
+            import fixture.access:*
             func main(){
-                var box=Box(); var child=Child();
-                dynamic var first=box.read(); dynamic var second=child.readProtected();
+                var box=Box(); var child=Child()
+                dynamic first=box.read(); dynamic second=child.readProtected()
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -73,7 +73,7 @@ class LibMemberAccessTest {
         assertEquals(4, machine.read(main.scope.getVar("first") as MCInt))
         assertEquals(6, machine.read(main.scope.getVar("second") as MCInt))
         consume("""
-            import fixture.access:*;
+            import fixture.access:*
             data Intruder:Box { func steal():int { return this.secret(); } }
             func main(){ var child=Intruder(); child.steal(); }
         """, output)
@@ -82,7 +82,7 @@ class LibMemberAccessTest {
 
     @Test fun modelInjectedPrivateNativeAccessSurvivesRealLibraryRoundTrip() = withLibrary { output ->
         write("""
-            namespace fixture.access;
+            namespace fixture.access
             @From<"top.mcfpp.mni.ConversionData">
             data NativeConversions {}
         """, output)
@@ -96,7 +96,7 @@ class LibMemberAccessTest {
         Project.genIndex()
         checkHeader(output)
         consume("""
-            import fixture.access:*;
+            import fixture.access:*
             func main(){ var box=NativeConversions(); box.toInt(4); }
         """, output)
         assertEquals(1, Project.errorCount)

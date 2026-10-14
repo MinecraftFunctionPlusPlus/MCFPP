@@ -1,2 +1,2 @@
 @MCFPPEntity
-data GiantData: EntityData, CreatureData, AIMobData;
+data GiantData: EntityData, CreatureData, AIMobData
