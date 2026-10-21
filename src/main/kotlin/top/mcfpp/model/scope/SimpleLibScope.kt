@@ -8,7 +8,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.type.*
 
 open class SimpleLibScope
-    : SimpleScopeWithFunction, SimpleScopeWithTemplate, SimpleScopeWithInterface,
+    : SimpleScopeWithFunction, SimpleScopeWithTemplate,
     SimpleScopeWithEnum, SimpleScopeWithObject, SimpleScopeWithAnnotation, SimpleScopeWithVar,
     IScopeWithType
 {
@@ -30,16 +30,21 @@ open class SimpleLibScope
     final override var genericTemplate: HashMap<Pair<String, List<MCFPPType>>, GenericDataTemplate> = HashMap()
 
     /**
-     * 接口
-     */
-    final override var interfaces: HashMap<String, DataTemplate> = HashMap()
-
-    final override var genericInterfaces: HashMap<Pair<String, List<MCFPPType>>, GenericDataTemplate> = HashMap()
-
-    /**
      * 类型别名
      */
     protected var typeAlias: HashMap<String, MCFPPType> = HashMap()
+
+    /** Compiler journal slot. Reading this never resolves an alias or allocates a type. */
+    internal var journalTypeAliases: HashMap<String, MCFPPType>
+        get() = typeAlias
+        set(value) { typeAlias = value }
+
+    internal fun checkpointTypeAliases(): NamespaceRelationCheckpoint<MCFPPType> {
+        check(javaClass in setOf<Class<*>>(SimpleLibScope::class.java, NamespaceScope::class.java, FileScope::class.java)) {
+            "Namespace relation journal cannot capture scope ${javaClass.name}"
+        }
+        return NamespaceRelationJournal.map({ typeAlias }, { typeAlias = it })
+    }
 
     final override var enums: ArrayList<Enum> = ArrayList()
 
@@ -65,16 +70,16 @@ open class SimpleLibScope
     }
 
     open fun hasDeclaredType(identifier: String): Boolean{
-        return hasEnum(identifier) || hasTemplate(identifier) || hasInterface(identifier) || hasObject(identifier)
+        return hasEnum(identifier) || hasTemplate(identifier) || hasObject(identifier)
     }
 
     open fun hasDeclaredType(type: CompoundData): Boolean{
         val identifier = type.identifier
-        return hasEnum(identifier) || hasTemplate(identifier) || hasInterface(identifier) || hasObject(identifier)
+        return hasEnum(identifier) || hasTemplate(identifier) || hasObject(identifier)
     }
 
     open fun getDeclaredType(identifier: String): CompoundData?{
-        return getEnum(identifier) ?: getTemplate(identifier) ?: getInterface(identifier) ?: getObject(identifier)
+        return getEnum(identifier) ?: getTemplate(identifier) ?: getObject(identifier)
     }
 
     open fun addDeclaredType(type: CompoundData): Boolean {
@@ -84,10 +89,8 @@ open class SimpleLibScope
             is DataTemplate -> {
                 if(type is ObjectDataTemplate || type is GenericObjectDataTemplate){
                     addObject(type.identifier, type)
-                }else if(!type.isInterface){
-                    addTemplate(type.identifier, type)
                 }else{
-                    addInterface(type.identifier, type)
+                    addTemplate(type.identifier, type)
                 }
             }
 
@@ -109,8 +112,6 @@ open class SimpleLibScope
                 }
             }
 
-            is MCFPPInterfaceType -> addInterface(type.i.identifier, type.i, forced)
-
             is MCFPPTypeAliasType -> {
                 if (!forced && containType(key)) return false
                 typeAlias[key] = type
@@ -122,7 +123,7 @@ open class SimpleLibScope
     }
 
     override fun getType(key: String): MCFPPType? {
-        return (getEnum(key) ?: getTemplate(key) ?: getInterface(key))?.getType() ?: resolveAlias(key)
+        return (getEnum(key) ?: getTemplate(key))?.getType() ?: resolveAlias(key)
     }
 
     protected fun resolveAlias(key: String): MCFPPType? = typeAlias[key]?.let {
@@ -149,14 +150,13 @@ open class SimpleLibScope
     }
 
     override fun containType(id: String): Boolean {
-        return hasEnum(id) || hasTemplate(id) || hasInterface(id) || typeAlias.containsKey(id)
+        return hasEnum(id) || hasTemplate(id) || typeAlias.containsKey(id)
     }
 
     override fun removeType(id: String): MCFPPType? {
         return when {
             hasEnum(id) -> removeEnum(id)
             hasTemplate(id) -> removeTemplate(id)
-            hasInterface(id) -> removeInterface(id)
             else -> null
         }?.getType()?: typeAlias.remove(id)
     }
@@ -164,7 +164,6 @@ open class SimpleLibScope
     override fun forEachType(action: (MCFPPType) -> Any?) {
         forEachEnum { action(it.getType()) }
         forEachTemplate { action(it.getType()) }
-        forEachInterface { action(it.getType()) }
         typeAlias.values.forEach { action(it) }
     }
 
@@ -173,8 +172,77 @@ open class SimpleLibScope
             val list = mutableListOf<MCFPPType>()
             forEachEnum { list.add(it.getType()) }
             forEachTemplate { list.add(it.getType()) }
-            forEachInterface { list.add(it.getType()) }
             list.addAll(typeAlias.values)
             return list
         }
+}
+
+/** Relation identities only. Element internals belong to declaration, object and storage journals. */
+internal class NamespaceRelationCheckpoint<E : Any> internal constructor(
+    elements: List<E>, private val restoreState: () -> Unit,
+    private val recapture: () -> NamespaceRelationCheckpoint<E>
+) {
+    val elements: List<E> = java.util.Collections.unmodifiableList(ArrayList(elements))
+    fun restore() = restoreState()
+    fun captureCurrent(): NamespaceRelationCheckpoint<E> = recapture()
+}
+
+/** Keep former containers enrolled even after their owner points at a replacement. */
+internal object NamespaceRelationJournal {
+    fun <E : Any> list(current: () -> ArrayList<E>, replace: (ArrayList<E>) -> Unit,
+                       accepts: (Any?) -> Boolean): NamespaceRelationCheckpoint<E> =
+        list(current, replace, accepts, emptyList(), emptyList())
+
+    private fun <E : Any> list(current: () -> ArrayList<E>, replace: (ArrayList<E>) -> Unit,
+                              accepts: (Any?) -> Boolean, retained: List<ArrayList<E>>,
+                              oldElements: List<E>): NamespaceRelationCheckpoint<E> {
+        val original = current()
+        val roots = identities(listOf(original) + retained)
+        // Preflight all containers before touching any of their elements or invoking collection methods.
+        roots.forEach { check(it.javaClass == java.util.ArrayList::class.java) {
+            "Namespace relation journal cannot capture list ${it.javaClass.name}"
+        } }
+        val contents = roots.map { root ->
+            val erased: List<*> = root
+            check(erased.all(accepts)) { "Namespace relation journal found an unsupported list element" }
+            root.toList()
+        }
+        val elements = identities(oldElements + contents.flatten())
+        return NamespaceRelationCheckpoint(elements, {
+            replace(original)
+            roots.zip(contents).forEach { (root, values) -> root.clear(); root.addAll(values) }
+        }, { list(current, replace, accepts, roots, elements) })
+    }
+
+    fun map(current: () -> HashMap<String, MCFPPType>, replace: (HashMap<String, MCFPPType>) -> Unit):
+        NamespaceRelationCheckpoint<MCFPPType> = map(current, replace, emptyList(), emptyList())
+
+    private fun map(current: () -> HashMap<String, MCFPPType>, replace: (HashMap<String, MCFPPType>) -> Unit,
+                    retained: List<HashMap<String, MCFPPType>>, oldElements: List<MCFPPType>):
+        NamespaceRelationCheckpoint<MCFPPType> {
+        val original = current()
+        val roots = identities(listOf(original) + retained)
+        roots.forEach { check(it.javaClass in mapClasses) {
+            "Namespace relation journal cannot capture map ${it.javaClass.name}"
+        } }
+        val contents = roots.map { root ->
+            val erased: Map<*, *> = root
+            // Validate erased keys before copying/rehashing; source types are opaque identity roots.
+            check(erased.entries.all { it.key is String && it.value is MCFPPType }) {
+                "Namespace relation journal found an unsupported alias entry"
+            }
+            LinkedHashMap(root)
+        }
+        val elements = identities(oldElements + contents.flatMap { it.values })
+        return NamespaceRelationCheckpoint(elements, {
+            replace(original)
+            roots.zip(contents).forEach { (root, values) -> root.clear(); root.putAll(values) }
+        }, { map(current, replace, roots, elements) })
+    }
+
+    private val mapClasses = setOf<Class<*>>(java.util.HashMap::class.java, java.util.LinkedHashMap::class.java)
+    private fun <E : Any> identities(values: List<E>): List<E> {
+        val seen = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<E, Boolean>())
+        return values.filter { seen.add(it) }
+    }
 }

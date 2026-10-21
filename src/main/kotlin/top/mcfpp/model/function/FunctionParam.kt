@@ -33,11 +33,6 @@ class FunctionParam(
     val function: Function,
 
     /**
-     * 参数是否为静态的
-     */
-    var isStatic: Boolean = false,
-
-    /**
      * 是否有缺省值
      */
     var hasDefault: Boolean = false,

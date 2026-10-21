@@ -39,13 +39,13 @@ class DeclarationsTest {
             }
             const func fixed(value: int): int { return value; }
             func nativeValue<T, N: int>(value: T) = example.Native.value
-            func accept(Box<int, 2>, static value: int) {}
+            func accept(Box<int, 2>, value: int) {}
             func main() {
                 var typed: int
                 var inferred = 1 as int
                 const fixed: int
-                dynamic runtime: int
-                dynamic inferredRuntime = 2
+                external runtime: int
+                external inferredRuntime = 2
                 import var incoming: int
             }
         """.trimIndent()))
@@ -57,6 +57,10 @@ class DeclarationsTest {
             "func main(){const var value=1;}",
             "func main(){dynamic var value=1;}",
             "func old(value as int){}",
+            "func old(static value: int){}",
+            "func old<static T>(){}",
+            "data Old{constructor(static value: int){}}",
+            "func main(){static var value=1;}",
             "func old<T as type>(){}",
             "data Old<T as type>{}",
             "data Old{var value as int;}",
@@ -126,10 +130,10 @@ class DeclarationsTest {
                 var typed: int
                 const fixed: int
                 fixed = 2
-                dynamic runtime: int
+                external runtime: int
                 runtime = 3
                 var inferred = 4
-                dynamic inferredRuntime = 5
+                external inferredRuntime = 5
             }
         """.trimIndent())
         val main = GlobalScope.localNamespaces.getValue("fixture.variables").scope.functions.getValue("main").single()

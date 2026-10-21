@@ -74,10 +74,64 @@ data class Property(val identifier: String, val accessor: AbstractAccessor?, val
     }
 
     fun clone(): Property {
-        return Property(identifier , accessor, mutator)
+        // Accessor functions retain their declaration owner; receiver binding lives here.
+        return copy().also {
+            it.parent = parent
+            it.declaredParentTemplate = declaredParentTemplate
+            it.accessModifier = accessModifier
+            it.isStatic = isStatic
+            it.isFinal = isFinal
+            it.isInherited = isInherited
+        }
     }
 
     companion object {
+        /** Annotations are Serializable declaration objects, including their mutable parent graph. */
+        internal fun copyAnnotations(annotations: List<top.mcfpp.model.annotation.Annotation>): ArrayList<top.mcfpp.model.annotation.Annotation> {
+            if (annotations.isEmpty()) return arrayListOf()
+            return try {
+                copySerializableAnnotations(annotations)
+            } catch (failure: java.io.IOException) {
+                LogProcessor.error("Cannot copy field annotation metadata: ${failure.message}")
+                arrayListOf()
+            } catch (failure: ClassNotFoundException) {
+                LogProcessor.error("Cannot load copied field annotation metadata: ${failure.message}")
+                arrayListOf()
+            }
+        }
+
+        private fun copySerializableAnnotations(annotations: List<top.mcfpp.model.annotation.Annotation>): ArrayList<top.mcfpp.model.annotation.Annotation> {
+            val bytes = java.io.ByteArrayOutputStream().use { output ->
+                java.io.ObjectOutputStream(output).use { it.writeObject(ArrayList(annotations)) }
+                output.toByteArray()
+            }
+            return object : java.io.ObjectInputStream(java.io.ByteArrayInputStream(bytes)) {
+                override fun resolveClass(desc: java.io.ObjectStreamClass): Class<*> = try {
+                    Class.forName(desc.name, false, top.mcfpp.Project.classLoader)
+                } catch (_: ClassNotFoundException) {
+                    super.resolveClass(desc)
+                }
+            }.use {
+                @Suppress("UNCHECKED_CAST")
+                (it.readObject() as ArrayList<top.mcfpp.model.annotation.Annotation>)
+            }
+        }
+
+        /** Copy declaration metadata without replacing an instance adapter's storage binding. */
+        internal fun copyFieldMetadata(source: Var<*>, target: Var<*>) {
+            target.isConst = source.isConst
+            target.isStatic = source.isStatic
+            target.isFinal = source.isFinal
+            target.accessModifier = source.accessModifier
+            target.declaredParentTemplate = source.declaredParentTemplate
+            target.nullable = source.nullable
+            target.annotations = copyAnnotations(source.annotations)
+            if (source is top.mcfpp.core.lang.MCNumber<*> && target is top.mcfpp.core.lang.MCNumber<*>)
+                target.isDataOnly = source.isDataOnly
+            if (source is top.mcfpp.core.lang.OnScoreboard && target is top.mcfpp.core.lang.OnScoreboard)
+                target.isDataOnly = source.isDataOnly
+        }
+
         /** Bind declared accessors without evaluating their bodies or initializer expressions. */
         fun fromContext(ctx: mcfppParser.AccessorContext?, field: Var<*>, template: DataTemplate): Property {
             if (ctx == null) return buildSimpleProperty(field)

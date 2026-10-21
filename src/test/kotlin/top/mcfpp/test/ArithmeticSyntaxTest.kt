@@ -124,7 +124,7 @@ class ArithmeticSyntaxTest {
     fun dynamicAssignmentWritesCalculatedValue() {
         MCFPPStringTest.readFromString("""
             func arithmetic(){
-                dynamic a: int = 4
+                external a: int = 4
                 a += 2
                 a -= 1
                 a *= 3
@@ -151,7 +151,7 @@ class ArithmeticSyntaxTest {
     fun dynamicFloatCanUseCompoundAssignmentAndUnaryMinus() {
         MCFPPStringTest.readFromString("""
             func arithmetic(){
-                dynamic f: float = 1.5
+                external f: float = 1.5
                 f += 0.5
                 var negated = -f
             }
@@ -171,7 +171,7 @@ class ArithmeticSyntaxTest {
     fun nestedDynamicFloatExpressionCompiles() {
         MCFPPStringTest.readFromString("""
             func arithmetic(){
-                dynamic f: float = 1.5
+                external f: float = 1.5
                 var expressionNegated = -(f + 0.5)
             }
         """.trimIndent())
@@ -208,8 +208,8 @@ class ArithmeticSyntaxTest {
             func arithmetic(){
                 var values = [1, 2]
                 values[0] += 3
-                dynamic updated = values[0]
-                dynamic preserved = values[1]
+                external updated = values[0]
+                external preserved = values[1]
             }
         """.trimIndent())
         assertEquals(0, Project.errorCount)

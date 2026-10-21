@@ -16,7 +16,7 @@ class LogicStatementTest {
             """
                 func main(){
                     var a = true
-                    dynamic b = false
+                    external b = false
                     var c = a && b
                     var d = a || b
                     var e = !a
@@ -25,7 +25,7 @@ class LogicStatementTest {
                     print(d)
                     print(e)
                     print(f)
-                    dynamic x: bool
+                    external x: bool
                     print(a && b || x && b)
                 }
             """.trimIndent()
@@ -37,13 +37,13 @@ class LogicStatementTest {
         val test =
             """
                 func base(){
-                    dynamic i = 5
+                    external i = 5
                     if(i < 7){
                         print("i < 7")
-                        dynamic p: int
+                        external p: int
                     }else{
                         print("i >= 7")
-                        dynamic p: int
+                        external p: int
                     }
                     print(p)
                     print("end")
@@ -57,7 +57,7 @@ class LogicStatementTest {
         val test =
             """
                 func generateSequence(){
-                    dynamic i = 0
+                    external i = 0
                     while(i < 10){
                         print(i)
                         i = i + 1
@@ -72,7 +72,7 @@ class LogicStatementTest {
         val test =
             """
             func generateSequenceDoWhile(){
-                dynamic i = 0
+                external i = 0
                 do {
                     print(i)
                     i = i + 1
@@ -100,7 +100,7 @@ class LogicStatementTest {
             val output = Files.createTempDirectory("mcfpp-nested-if-")
             MCFPPStringTest.readFromString("""
                 func nested(){
-                    dynamic n = $input
+                    external n = $input
                     if(n > 0){
                         if(n == 5){
                             /scoreboard players set #case result 1
@@ -125,7 +125,7 @@ class LogicStatementTest {
         val output = Files.createTempDirectory("mcfpp-nested-constant-")
         MCFPPStringTest.readFromString("""
             func nested(){
-                dynamic n = -5
+                external n = -5
                 if(n > 0){
                     if(true){
                         /scoreboard players set #case result -1

@@ -64,8 +64,8 @@ class MapMemberTest {
                 values["first"] = 4
                 values["third"] = 5
                 values["third"] = 6
-                dynamic result = values.size()*100 + values["first"]*10 + values["third"]
-                dynamic rootValue = (source["entries"][0]["value"] as int) + 0
+                external result = values.size()*100 + values["first"]*10 + values["third"]
+                external rootValue = (source["entries"][0]["value"] as int) + 0
             }
         """)
         val machine = execute(main)
@@ -80,7 +80,7 @@ class MapMemberTest {
                 var copy = values
                 copy["first"] = 7
                 copy["next"] = 9
-                dynamic result = values.size()*100 + values["first"]*10 + copy["first"]
+                external result = values.size()*100 + values["first"]*10 + copy["first"]
             }
         """)
         assertEquals(127, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -96,10 +96,10 @@ class MapMemberTest {
             func main(){
                 var original = {entries:[{key:"first",value:2}]} as map<int>
                 var changed = edit(original,"first",7)
-                dynamic found = lookup(changed,"first")
-                dynamic missing = lookup(changed,"absent")
-                dynamic empty = changed.isEmpty()
-                dynamic result = original["first"]*100 + changed["first"]*10 + changed.size()
+                external found = lookup(changed,"first")
+                external missing = lookup(changed,"absent")
+                external empty = changed.isEmpty()
+                external result = original["first"]*100 + changed["first"]*10 + changed.size()
             }
         """)
         val machine = execute(main)
@@ -119,8 +119,8 @@ class MapMemberTest {
                 var left = {entries:[{key:"same",value:{old:2}},{key:"other",value:{keep:3}}]} as map<dict<int>>
                 var right = {entries:[{key:"same",value:{fresh:7}},{key:"new",value:{fresh:9}}]} as map<dict<int>>
                 var result = overlay(left,right)
-                dynamic number = result.size()*100 + result["same"]["fresh"]*10 + result["other"]["keep"]
-                dynamic old = result["same"].containsKey("old")
+                external number = result.size()*100 + result["same"]["fresh"]*10 + result["other"]["keep"]
+                external old = result["same"].containsKey("old")
             }
         """)
         val machine = execute(main)
@@ -134,7 +134,7 @@ class MapMemberTest {
             func main(){
                 var values = {entries:[{key:"first",value:2},{key:"second",value:3}]} as map<int>
                 var result = erase(values,"first")
-                dynamic number = result.size()*10 + result["second"]
+                external number = result.size()*10 + result["second"]
             }
         """, "1.20.1")
         assertEquals(13, execute(main).read(main.scope.getVar("number") as MCInt))
@@ -148,7 +148,7 @@ class MapMemberTest {
             func main(){
                 var values = {entries:[{key:"",value:2},{key:"q\".[]\\end",value:3}]} as map<int>
                 var result = edit(values,"q\".[]\\end")
-                dynamic number = lookup(values,"")*100 + lookup(result,"q\".[]\\end")*10 + result.size()
+                external number = lookup(values,"")*100 + lookup(result,"q\".[]\\end")*10 + result.size()
             }
         """, "1.20.2")
         assertEquals(282, execute(main).read(main.scope.getVar("number") as MCInt))
@@ -165,7 +165,7 @@ class MapMemberTest {
             func main(){
                 var values = {entries:[{key:"first",value:2}]} as map<int>
                 var result = put(values,"second",7)
-                dynamic number = result.size()*10 + result["second"]
+                external number = result.size()*10 + result["second"]
             }
         """, "1.20.1")
         assertEquals(28, execute(main).read(main.scope.getVar("number") as MCInt))
@@ -183,7 +183,7 @@ class MapMemberTest {
             func main(){
                 var extra = {entries:[{key:"second",value:3},{key:"third",value:4}]} as map<int>
                 var result = overlay(extra)
-                dynamic number = result.size()*1000 + result["first"]*100 + result["second"]*10 + result["third"]
+                external number = result.size()*1000 + result["first"]*100 + result["second"]*10 + result["third"]
             }
         """, "1.20.1")
         assertEquals(3234, execute(main).read(main.scope.getVar("number") as MCInt))
@@ -196,9 +196,9 @@ class MapMemberTest {
                 var values = {entries:[{key:"first",value:2},{key:"second",value:3}]} as map<int>
                 var names = allKeys(values)
                 names.remove("first")
-                dynamic original = values.size()
-                dynamic found = names.contains("second")
-                dynamic removed = names.contains("first")
+                external original = values.size()
+                external found = names.contains("second")
+                external removed = names.contains("first")
             }
         """)
         val machine = execute(main)
@@ -235,7 +235,7 @@ class MapMemberTest {
                 values[key] = value
                 return values["first"] + values[key]
             }
-            func main(){ dynamic result = edit("first",7); }
+            func main(){ external result = edit("first",7); }
         """)
         assertEquals(14, execute(main).read(main.scope.getVar("result") as MCInt))
     }

@@ -34,7 +34,7 @@ class NbtArrayTest {
                 var bytes = [B;1b,2b]
                 var ints = [I;3,4]
                 var longs = [L;5l,6l]
-                dynamic result = toInt(bytes[-1])*100 + ints[0]*10 + toInt(longs[-1])
+                external result = toInt(bytes[-1])*100 + ints[0]*10 + toInt(longs[-1])
             }
         """)
         assertEquals(MCFPPNBTType.ByteArray.typeId, main.scope.getVar("bytes")!!.type.typeId)
@@ -51,7 +51,7 @@ class NbtArrayTest {
                 var copied = values
                 view[0] = 7
                 copied[-1] = 9
-                dynamic result = values[0]*100 + values[1]*10 + copied[0]
+                external result = values[0]*100 + values[1]*10 + copied[0]
             }
         """)
         assertEquals(732, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -63,7 +63,7 @@ class NbtArrayTest {
             func main(){
                 var values = [I;2,3]
                 var result = put(values,1,7)
-                dynamic number = values[1]*100 + result[0]*10 + result[1]
+                external number = values[1]*100 + result[0]*10 + result[1]
             }
         """)
         assertEquals(MCFPPNBTType.IntArray.typeId, main.scope.getVar("result")!!.type.typeId)
@@ -79,22 +79,10 @@ class NbtArrayTest {
                 var longs = [L;4l,5l]
                 var changedBytes = putByte(bytes,0,7b)
                 var changedLongs = putLong(longs,1,8l)
-                dynamic number = toInt(changedBytes[0])*10 + toInt(changedLongs[-1])
+                external number = toInt(changedBytes[0])*10 + toInt(changedLongs[-1])
             }
         """)
         assertEquals(78, execute(main).read(main.scope.getVar("number") as MCInt))
-    }
-
-    @Test fun arrayWriteCapturesTheIndexBeforeRightHandCalls() {
-        val main = compile("""
-            func change(static index: int): int { index = 1; return 7; }
-            func put(values: IntArray, index: int): IntArray { values[index] = change(index); return values; }
-            func main(){
-                var result = put([I;2,3],0)
-                dynamic number = result[0]*10 + result[1]
-            }
-        """)
-        assertEquals(73, execute(main).read(main.scope.getVar("number") as MCInt))
     }
 
     @Test fun multipleUnknownIndicesUseIndependentReadsAndAliasCachesReload() {
@@ -103,10 +91,10 @@ class NbtArrayTest {
             func main(){
                 var values = [I;2,3]
                 var view = values as IntArray
-                dynamic before = view[0] + 0
+                external before = view[0] + 0
                 values[-2] = 7
-                dynamic after = view[0] + 0
-                dynamic result = read(values,0,1)
+                external after = view[0] + 0
+                external result = read(values,0,1)
             }
         """)
         val machine = execute(main)
@@ -172,8 +160,8 @@ class NbtArrayTest {
                 copied["values"][0] = 9
                 var erased = copy(source["values"]) as IntArray
                 erased[1] = 7
-                dynamic result = source["values"][0]*100 + source["values"][1]*10 + copied["values"][0]
-                dynamic returned = erased[0]*10 + erased[1]
+                external result = source["values"][0]*100 + source["values"][1]*10 + copied["values"][0]
+                external returned = erased[0]*10 + erased[1]
             }
         """)
         val machine = execute(main)

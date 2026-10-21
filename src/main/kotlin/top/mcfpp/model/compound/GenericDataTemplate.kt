@@ -1,20 +1,23 @@
 package top.mcfpp.model.compound
 
+import org.antlr.v4.runtime.ParserRuleContext
 import top.mcfpp.Project
+import top.mcfpp.analysis.CompilerValue
+import top.mcfpp.analysis.PreparedExpressionFact
+import top.mcfpp.analysis.PreparedTemplateReservation
+import top.mcfpp.analysis.SpecializationArgument
 import top.mcfpp.analysis.SpecializationKey
 import top.mcfpp.analysis.SpecializationKeys
 import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.analysis.SymbolId
-import top.mcfpp.analysis.CompilerValue
-import top.mcfpp.analysis.SpecializationArgument
 import top.mcfpp.antlr.MCFPPGenericDataTemplateFieldVisitor
-import top.mcfpp.antlr.MCFPPFieldVisitor
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.core.lang.MCFPPTypeVar
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.property.Property
+import top.mcfpp.mni.api.SourceSpan
+import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.ParameterMatcher
+import top.mcfpp.model.property.Property
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPDataTemplateType
@@ -23,6 +26,8 @@ import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.TypeId
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.splitNamespaceID
+import java.util.Collections
+import java.util.IdentityHashMap
 
 /**
  * 结构体是一种和类的语法极为相似的数据结构。在结构体中，只能有int类型的数据，或者说记分板的数据作为结构体的成员。
@@ -46,6 +51,166 @@ open class GenericDataTemplate : DataTemplate {
 
     val compiledTemplates: HashMap<SpecializationKey, CompiledGenericDataTemplate> = HashMap()
 
+    /** Models under declaration completion remain canonical without entering the COMPLETE cache. */
+    @Transient private val materializations = LinkedHashMap<SpecializationKey, Materialization>()
+    private class Materialization(val key: SpecializationKey, val model: CompiledGenericDataTemplate) {
+        var origins: MaterializedOrigins? = null
+    }
+    internal class MaterializedOrigins(
+        fields: Map<mcfppParser.TemplateFieldDeclarationContext, Var<*>>,
+        properties: Map<mcfppParser.TemplateFieldDeclarationContext, Property>,
+        functions: Map<ParserRuleContext, Function>
+    ) {
+        val fields: Map<mcfppParser.TemplateFieldDeclarationContext, Var<*>> = Collections.unmodifiableMap(IdentityHashMap(fields))
+        val properties: Map<mcfppParser.TemplateFieldDeclarationContext, Property> = Collections.unmodifiableMap(IdentityHashMap(properties))
+        val functions: Map<ParserRuleContext, Function> = Collections.unmodifiableMap(IdentityHashMap(functions))
+    }
+    internal fun materializedTemplate(key: SpecializationKey): CompiledGenericDataTemplate? = materializations[key]?.model
+    internal fun materializedInstances(): List<CompiledGenericDataTemplate> {
+        val seen = Collections.newSetFromMap(IdentityHashMap<CompiledGenericDataTemplate, Boolean>())
+        return Collections.unmodifiableList((compiledTemplates.values + materializations.values.map { it.model }).filter { seen.add(it) })
+    }
+    internal fun materializedOrigins(key: SpecializationKey): MaterializedOrigins? = materializations[key]?.origins
+
+    internal fun revokeCompletedMaterialization(model: CompiledGenericDataTemplate) {
+        val entries = compiledTemplates.entries.filter { it.value === model }.map { it.key }
+        for (key in entries) {
+            materializations.putIfAbsent(key, Materialization(key, model))
+            compiledTemplates.remove(key)
+        }
+    }
+
+    /** Called only after the real Project barrier has assigned its revocable proof. */
+    internal fun finishMaterialization(model: CompiledGenericDataTemplate) {
+        for ((key, entry) in materializations) if (entry.model === model) {
+            if (model.hasCompletedDeclaration && entry.origins != null) compiledTemplates[key] = model
+            else if (compiledTemplates[key] === model) compiledTemplates.remove(key)
+        }
+    }
+
+    /** Incomplete models are private to header-aware declaration preparation, never legacy lookup. */
+    @Transient private val preparedHeaders = LinkedHashMap<SpecializationKey, PreparedTemplateReservation>()
+
+    internal fun preparedHeader(key: SpecializationKey): PreparedTemplateReservation? = preparedHeaders[key]
+
+    internal fun reservePreparedHeader(
+        key: SpecializationKey,
+        facts: List<PreparedExpressionFact>,
+        source: SourceSpan
+    ): PreparedTemplateReservation {
+        preparedHeaders[key]?.let {
+            it.requireCurrentDeclaration()
+            return it
+        }
+        return PreparedTemplateReservation.create(this, key, facts, source, compiledTemplates[key] ?: materializations[key]?.model)
+    }
+
+    internal fun checkHeaderPublication(reservation: PreparedTemplateReservation) {
+        check(reservation.prototype === this && reservation.key.declaration == declarationId) { "Template reservation belongs to another declaration" }
+        reservation.requireCurrentDeclaration()
+        val previous = preparedHeaders[reservation.key]
+        val complete = compiledTemplates[reservation.key]
+        val materializing = materializations[reservation.key]?.model
+        check(previous == null || previous === reservation) { "A canonical template shell was published by another batch; prepare again" }
+        check(complete == null || complete === reservation.model) { "A complete template was published by another batch; prepare again" }
+        check(materializing == null || materializing === reservation.model) { "A template is materializing in another batch; prepare again" }
+    }
+
+    internal fun publishPreparedHeader(reservation: PreparedTemplateReservation) {
+        checkHeaderPublication(reservation)
+        if (reservation.publishName(index)) index++
+        preparedHeaders[reservation.key] = reservation
+    }
+
+    private class HeaderCheckpoint(
+        val elements: List<Any>,
+        val restore: () -> Unit,
+        val recapture: () -> HeaderCheckpoint,
+        val preparation: RawPreparationFact
+    )
+
+    private class MaterializationCheckpoint(
+        val elements: List<Any>,
+        val restore: () -> Unit,
+        val recapture: () -> MaterializationCheckpoint,
+        val preparation: RawPreparationFact
+    )
+    private fun captureMaterializations(retained: List<Materialization> = emptyList()): MaterializationCheckpoint {
+        val entries = (materializations as Map<*, *>).entries.map { (key, value) ->
+            check(key is SpecializationKey && value is Materialization)
+            (key.arguments as List<*>).forEach { argument ->
+                check(argument is SpecializationArgument.Constant)
+                checkSpecializationPayload(argument.value)
+            }
+            check(key.declaration == declarationId && value.key == key && value.model.originTemplate === this)
+            key to value
+        }
+        val seen = Collections.newSetFromMap(IdentityHashMap<Materialization, Boolean>())
+        val records = (retained + entries.map { it.second }).filter { seen.add(it) }
+        val origins = records.map { it.origins }
+        val roots = buildList<Any> {
+            records.forEach { entry ->
+                add(entry.model)
+                entry.key.arguments.forEach { add((it as SpecializationArgument.Constant).value) }
+                entry.origins?.let { origin ->
+                    addAll(origin.fields.keys)
+                    addAll(origin.fields.values)
+                    addAll(origin.properties.values)
+                    addAll(origin.functions.keys)
+                    addAll(origin.functions.values)
+                }
+            }
+        }
+        val preparation = RawPreparationFact.unordered(
+            entries.map { (key, value) ->
+                RawPreparationFact.row(
+                    preparationKey(key),
+                    RawPreparationFact.identity(value.model),
+                    RawPreparationFact.identity(value.origins)
+                )
+            }
+        )
+        return MaterializationCheckpoint(roots, {
+            records.forEachIndexed { index, record -> record.origins = origins[index] }
+            materializations.clear()
+            entries.forEach { (key, value) -> materializations[key] = value }
+        }, { captureMaterializations(records) }, preparation)
+    }
+
+    /** Retain detached entries as well as entries now reachable through the private cache. */
+    private fun captureHeaderState(retained: List<PreparedTemplateReservation> = emptyList()): HeaderCheckpoint {
+        val entries = (preparedHeaders as Map<*, *>).entries.map { (key, value) ->
+            check(key is SpecializationKey && value is PreparedTemplateReservation) { "Invalid prepared header cache entry" }
+            check(key.declaration == declarationId && value.prototype === this) { "Invalid prepared header owner" }
+            (key.arguments as List<*>).forEach { argument ->
+                check(argument is SpecializationArgument.Constant) { "Prepared headers require closed readonly arguments" }
+                checkSpecializationPayload(argument.value)
+            }
+            check(key == value.key) { "Prepared header key does not match its record" }
+            key to value
+        }
+        val seen = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<PreparedTemplateReservation, Boolean>())
+        val records = (retained + entries.map { it.second }).filter { seen.add(it) }
+        val states = records.map { it.checkpoint() }
+        val roots = records.flatMap { it.checkpointElements() }
+        val preparation = RawPreparationFact.unordered(
+            entries.map { (key, value) ->
+                RawPreparationFact.row(
+                    preparationKey(key),
+                    RawPreparationFact.identity(value),
+                    RawPreparationFact.identity(value.model),
+                    RawPreparationFact.identity(value.type),
+                    value.rawPreparationFacts()
+                )
+            }
+        )
+        return HeaderCheckpoint(roots, {
+            states.forEach { it() }
+            preparedHeaders.clear()
+            entries.forEach { (key, value) -> preparedHeaders[key] = value }
+        }, { captureHeaderState(records) }, preparation)
+    }
+
     val readOnlyParams: ArrayList<DataTemplateParam> = ArrayList()
 
     var index = 0
@@ -53,17 +218,111 @@ open class GenericDataTemplate : DataTemplate {
     @Transient private var varianceChecked = false
     @Transient private var headerPrepared = false
 
+    internal override fun checkpointDeclarationState(): DeclarationStateCheckpoint = captureGenericDeclarationState(super.checkpointDeclarationState(), emptyList(), emptyList())
+
+    private fun captureGenericDeclarationState(
+        base: DeclarationStateCheckpoint,
+        retained: List<(TemplatePrivateCapture) -> Unit>,
+        previous: List<Any>,
+        previousHeaders: HeaderCheckpoint? = null,
+        previousMaterializations: MaterializationCheckpoint? = null
+    ): DeclarationStateCheckpoint {
+        val graph = TemplatePrivateCapture(previous + base.elements)
+        val savedVariance = varianceChecked
+        val savedHeader = headerPrepared
+        val savedIndex = index
+        val headers = previousHeaders?.recapture?.invoke() ?: captureHeaderState()
+        val materialized = previousMaterializations?.recapture?.invoke() ?: captureMaterializations()
+        headers.elements.forEach(graph::element)
+        materialized.elements.forEach(graph::element)
+        graph.list(readOnlyParams, TemplatePrivateCapture.ListRole.READONLY_PARAMETERS) { g, value ->
+            val parameter = value as DataTemplateParam
+            g.state(parameter) { current ->
+                val name = parameter.identifier
+                val typeName = parameter.typeIdentifier
+                val type = parameter.type
+                type?.let(current::element)
+                current.preparationFact(
+                    "readonly.parameter",
+                    RawPreparationFact.identity(parameter),
+                    RawPreparationFact.scalar(name),
+                    RawPreparationFact.scalar(typeName),
+                    RawPreparationFact.identity(type)
+                )
+                current.restoreWith {
+                    parameter.identifier = name
+                    parameter.typeIdentifier = typeName
+                    parameter.type = type
+                }
+            }
+        }
+        graph.map(compiledTemplates, TemplatePrivateCapture.MapRole.COMPILED_TEMPLATES, { value ->
+            check(value is SpecializationKey)
+            // Constructors defensively own these containers. Check erased payloads before map restore hashes them.
+            (value.arguments as List<*>).forEach { argument ->
+                when (argument) {
+                    is SpecializationArgument.Constant -> checkSpecializationPayload(argument.value)
+                    SpecializationArgument.Unknown, SpecializationArgument.Error -> Unit
+                    else -> error("Template checkpoint cannot capture specialization argument")
+                }
+            }
+        }) { g, value -> g.element(value as CompiledGenericDataTemplate) }
+        val preparationFacts = base.preparationFacts.extended(
+            linkedMapOf(
+                "generic.headerPrepared" to RawPreparationFact.scalar(savedHeader),
+                "generic.varianceChecked" to RawPreparationFact.scalar(savedVariance),
+                "generic.index" to RawPreparationFact.scalar(savedIndex),
+                "generic.relations" to graph.preparationRelations(),
+                "generic.headers" to headers.preparation,
+                "generic.materializations" to materialized.preparation
+            )
+        )
+        retained.forEach { it(graph) }
+        return DeclarationStateCheckpoint(graph.elements, {
+            base.restore()
+            varianceChecked = savedVariance
+            headerPrepared = savedHeader
+            index = savedIndex
+            headers.restore()
+            materialized.restore()
+            graph.restore()
+        }, {
+            captureGenericDeclarationState(base.captureCurrent(), graph.roots, graph.elements, headers, materialized)
+        }, preparationFacts)
+    }
+
+    private fun preparationKey(key: SpecializationKey): RawPreparationFact = RawPreparationFact.row(
+        RawPreparationFact.scalar(key.declaration.value),
+        RawPreparationFact.scalar(key.options.targetVersion),
+        RawPreparationFact.scalar(key.options.maxWhileInline),
+        RawPreparationFact.scalar(key.options.foldIRConstants),
+        RawPreparationFact.sequence(
+            (key.arguments as List<*>).map { argument ->
+                when (argument) {
+                    is SpecializationArgument.Constant -> RawPreparationFact.closed(argument.value)
+                    SpecializationArgument.Unknown -> RawPreparationFact.scalar("unknown")
+                    SpecializationArgument.Error -> RawPreparationFact.scalar("error")
+                    else -> error("Template checkpoint cannot capture specialization argument")
+                }
+            }
+        )
+    )
+
+    private fun checkSpecializationPayload(value: Any?) {
+        RawPreparationFact.closed(value)
+    }
+
     @Suppress("ConvertSecondaryConstructorToPrimary")
     constructor(ctx: mcfppParser.TemplateBodyContext, identifier: String, namespace: String = Project.currNamespace) : super(identifier, namespace) {
         this.ctx = ctx
     }
 
-    open fun compile(readOnlyArgs: List<Var<*>>): CompiledGenericDataTemplate? {
+    open fun compile(readOnlyArgs: List<Var<*>>): CompiledGenericDataTemplate? = Project.collectingTemplateSignatures {
         val callerFunction = Function.currFunction
         val callerTemplate = currTemplate
         try {
             val file = restoreDeclarationEnvironment()
-            return if (file == null) compileInDeclarationEnvironment(readOnlyArgs)
+            if (file == null) compileInDeclarationEnvironment(readOnlyArgs)
             else file.withDeclarationContext { compileInDeclarationEnvironment(readOnlyArgs) }
         } finally {
             Function.currFunction = callerFunction
@@ -72,6 +331,11 @@ open class GenericDataTemplate : DataTemplate {
     }
 
     internal fun prepareHeader() {
+        if (!Project.hasValidTemplateInheritance(this)) return
+        declarationCompletionStage { prepareHeaderInDeclarationEnvironment() }
+    }
+
+    private fun prepareHeaderInDeclarationEnvironment() {
         if (!varianceChecked) {
             for (param in readOnlyParams) if (param.type == null)
                 param.type = MCFPPType.parseFromString(param.typeIdentifier, scope)
@@ -88,13 +352,11 @@ open class GenericDataTemplate : DataTemplate {
         }
         for (name in parentID) {
             val (namespace, identifier) = name.substringBefore('<').splitNamespaceID()
-            val parent = GlobalScope.getTemplate(namespace, identifier)
-                ?: (GlobalScope.getObject(namespace, identifier) as? ObjectDataTemplate)
+            val parent = GlobalScope.getData(namespace, identifier)
             when {
                 parent == null -> LogProcessor.error("Undefined template: $name")
-                parent == this -> LogProcessor.error("Infinitive reference: $identifier -> $name")
                 parent.isFinal -> LogProcessor.error("Cannot extends $identifier because it's final")
-                else -> if (parent !in this.parent) extends(parent)
+                else -> if (this.parent.none { it.inheritanceIdentity == parent.inheritanceIdentity }) extends(parent)
             }
         }
         if (parent.isEmpty()) extends(DataTemplate.baseDataTemplate)
@@ -131,28 +393,125 @@ open class GenericDataTemplate : DataTemplate {
         return args
     }
 
-    protected open fun createCompiledTemplate(identifier: String, args: List<Var<*>>,
-                                              argumentValues: List<CompilerValue>): CompiledGenericDataTemplate =
-        CompiledGenericDataTemplate(identifier, namespace, this, args, argumentValues)
+    protected open fun createCompiledTemplate(
+        identifier: String,
+        args: List<Var<*>>,
+        argumentValues: List<CompilerValue>
+    ): CompiledGenericDataTemplate = CompiledGenericDataTemplate(identifier, namespace, this, args, argumentValues)
+
+    /** A generic header describes its materializations; its raw scope has no completed fields. */
+    internal fun recordDeclarationAnnotations(recorded: List<Annotation>) {
+        annotations.addAll(recorded)
+        // A declaration signature may have materialized a binding before the annotation pass.
+        materializedInstances().forEach { target ->
+            target.declarationCompletionStage { copyDeclarationAnnotations(target, recorded) }
+        }
+    }
+
+    private fun copyDeclarationAnnotations(target: CompiledGenericDataTemplate, recorded: List<Annotation>) {
+        val copied = Property.copyAnnotations(recorded)
+        target.annotations.addAll(copied)
+        target.pendingDeclarationAnnotations.addAll(copied)
+    }
+
+    /** Restore only the reservation's converted facts, inside the external declaration transaction.
+     * The ordinary materializer then promotes this published canonical shell and retains its source
+     * origins. Calling-function readonly parameters are unrelated to this template binding.
+     */
+    internal fun materializePreparedHeader(reservation: PreparedTemplateReservation): CompiledGenericDataTemplate {
+        check(preparedHeaders[reservation.key] === reservation && reservation.prototype === this && reservation.isPublished) {
+            "Declaration completion requires its adopted canonical reservation"
+        }
+        reservation.requireCurrentDeclaration()
+        check(
+            reservation.key.options == top.mcfpp.analysis.GenerationOptions(
+                Project.config.version,
+                top.mcfpp.CompileSettings.maxWhileInline,
+                top.mcfpp.CompileSettings.foldIRConstants
+            )
+        ) {
+            "Generation options changed; prepare a fresh declaration binding"
+        }
+        check(reservation.readonlyFacts.size == readOnlyParams.size)
+        val args = reservation.readonlyFacts.mapIndexed { ordinal, fact ->
+            StorageAccess.restore(fact.type, fact.value, readOnlyParams[ordinal].identifier, fact.bound.descriptors)
+                ?: throw top.mcfpp.analysis.PreparationFactFailure(
+                    top.mcfpp.analysis.PreparationFactCode.NON_CLOSED_VALUE,
+                    fact.source,
+                    "Cannot restore readonly declaration argument '${readOnlyParams[ordinal].identifier}'"
+                )
+        }
+        val model = compile(args)
+        check(model === reservation.model) { "Declaration materialization changed the canonical template shell" }
+        return reservation.model
+    }
 
     private fun compileInDeclarationEnvironment(readOnlyArgs: List<Var<*>>): CompiledGenericDataTemplate? {
+        if (!Project.hasValidTemplateInheritance(this)) return null
         prepareHeader()
         val args = bindReadonlyArguments(readOnlyArgs) ?: return null
         val key = SpecializationKeys.forArguments(declarationId, args)
-        compiledTemplates[key]?.let { return it }
+        compiledTemplates[key]?.let { cached ->
+            if (cached.hasCompletedDeclaration) return cached
+            revokeCompletedMaterialization(cached)
+        }
+        materializations[key]?.let { entry ->
+            if (!entry.model.hasDeclarationCompletionFailure && !Project.isTemplateCompletionQueued(entry.model))
+                Project.registerTemplateContract(entry.model)
+            return entry.model
+        }
 
-        val template = createCompiledTemplate(
-            "${identifier}_${readOnlyParams.joinToString("_") { it.typeIdentifier }}-$index",
-            args,
-            key.arguments.map { (it as SpecializationArgument.Constant).value }
-        )
+        val header = preparedHeaders[key]
+        val template = header?.let {
+            it.requireCurrentDeclaration()
+            if (!it.isPublished) publishPreparedHeader(it)
+            it.beginMaterialization()
+            it.model
+        } ?: declarationCompletionStage {
+            createCompiledTemplate(
+                "${identifier}_${readOnlyParams.joinToString("_") { it.typeIdentifier }}-$index",
+                args,
+                key.arguments.map { (it as SpecializationArgument.Constant).value }
+            )
+        }
+        materializations[key] = Materialization(key, template)
+        if (header == null) index++
+        return template.declarationCompletionStage {
+            materializeCompiledTemplate(template, args, key)
+        }
+    }
+
+    private fun materializeCompiledTemplate(
+        template: CompiledGenericDataTemplate,
+        args: List<Var<*>>,
+        key: SpecializationKey
+    ): CompiledGenericDataTemplate {
+        val unsupported = ctx.templateMemberDeclaration().map { it.templateMember() }.filter {
+            it.operationOverrideDeclaration() != null || it.nativeOperationOverrideDeclaration() != null
+        }
+        if (unsupported.isNotEmpty()) {
+            unsupported.forEach { source ->
+                Project.withCompilationContext(source) {
+                    LogProcessor.error("Generic template operator header has no materialization adapter")
+                }
+            }
+            Project.registerTemplateContract(template)
+            return template
+        }
         template.declarationFile = declarationFile
         template.declarationEnvironment = declarationEnvironment
         template.isAbstract = isAbstract
         template.isFinal = isFinal
-        template.isInterface = isInterface
         template.initialize()
         template.restoreDeclarationEnvironment()
+        // Library metadata can retain the same annotation in both declared and pending lists.
+        // Copy the graph together, preserving aliases, and schedule each declaration once.
+        copyDeclarationAnnotations(
+            template,
+            annotations + pendingDeclarationAnnotations.filter { pending ->
+                annotations.none { it === pending }
+            }
+        )
         //只读属性
         for (i in readOnlyParams.indices) {
             StorageAccess.resolveTypeValue(args[i])?.let { type ->
@@ -164,7 +523,7 @@ open class GenericDataTemplate : DataTemplate {
 
         if (parentID.isNotEmpty()) {
             template.parentID.addAll(parentID)
-            template.resolveDeclaredParents()
+            Project.resolveTemplateInheritance(template)
         } else for (parent in this.parent) {
             template.extends(parent)
         }
@@ -172,32 +531,51 @@ open class GenericDataTemplate : DataTemplate {
         //注册
         currTemplate = template
         MCFPPGenericDataTemplateFieldVisitor(template).visitTemplateBody(ctx)
-        if (!template.isAbstract) {
-            template.scope.forEachFunction {
-                if (it.isAbstract) {
-                    LogProcessor.error("${it.identifier} is abstract, but not implemented.")
-                }
-            }
-        }
-        if (Project.templateDeclarationsReady) template.flatExtends()
         currTemplate = template
         top.mcfpp.antlr.MCFPPAnnotationVisitor().visitTemplateBody(ctx)
-        if (Project.templateDeclarationsReady) {
-            MCFPPFieldVisitor().completeTemplateFields(template)
-            template.applyDeclarationAnnotations()
-            (template.constructors + template.scope.functions.values.flatten()).forEach {
-                it.refreshTemplateSignature()
-                it.validateDefaultDeclarations()
-            }
-        }
-        index ++
-
-        compiledTemplates[key] = template
         GenericDeclarationContract.bindCompanion(template, args)
+        Project.registerTemplateContract(template)
 
         return template
     }
 
+    /** Source identities describe local declarations only; inherited slots retain their own owner. */
+    internal fun bindMaterializedOrigins(template: CompiledGenericDataTemplate) {
+        val entry = materializations.values.firstOrNull { it.model === template } ?: return
+        if (entry.origins != null || template.hasDeclarationCompletionFailure) return
+        val fields = IdentityHashMap<mcfppParser.TemplateFieldDeclarationContext, Var<*>>()
+        val properties = IdentityHashMap<mcfppParser.TemplateFieldDeclarationContext, Property>()
+        val functions = IdentityHashMap<ParserRuleContext, Function>()
+        val offsets = hashMapOf<String, Int>()
+        for (declaration in ctx.templateMemberDeclaration()) {
+            val member = declaration.templateMember()
+            member.templateFieldDeclaration()?.let { source ->
+                val field = template.scope.getVar(source.Identifier().text)
+                val property = template.scope.getProperty(source.Identifier().text)
+                if (field == null || property == null || field.declaredParentTemplate !== template) {
+                    Project.withCompilationContext(source) { LogProcessor.error("Missing local field materialization: ${source.Identifier().text}") }
+                } else {
+                    fields[source] = field
+                    properties[source] = property
+                }
+            }
+            member.templateFunctionDeclaration()?.let { source ->
+                val name = source.functionDeclarationPart().Identifier().text
+                val index = offsets.getOrDefault(name, 0)
+                offsets[name] = index + 1
+                val function = template.scope.functions[name].orEmpty().filter { it.owner === template }.getOrNull(index)
+                if (function == null || function.ast !== source.curlBlock()) {
+                    Project.withCompilationContext(source) { LogProcessor.error("Missing local function materialization: $name") }
+                } else functions[declaration] = function
+            }
+            member.templateConstructorDeclaration()?.let { source ->
+                val function = template.constructors.singleOrNull { it.ast === source.curlBlock() }
+                if (function == null) Project.withCompilationContext(source) { LogProcessor.error("Missing constructor materialization") }
+                else functions[declaration] = function
+            }
+        }
+        entry.origins = MaterializedOrigins(fields, properties, functions)
+    }
 }
 
 class DataTemplateParam(
@@ -233,13 +611,19 @@ open class CompiledGenericDataTemplate(
             requireNotNull(scope.getVar(parameter.identifier)) { "Missing readonly binding '${parameter.identifier}'" }
         }
     protected val identity = TypeId.Specialized(
-        TypeId.Declaration(when {
-            originTemplate is ObjectCompoundData -> "object"
-            originTemplate.isInterface -> "interface"
-            else -> "template"
-        },
-            originTemplate.namespace, originTemplate.identifier), argumentValues
+        TypeId.Declaration(
+            when {
+                originTemplate is ObjectCompoundData -> "object"
+                else -> "template"
+            },
+            originTemplate.namespace,
+            originTemplate.identifier
+        ),
+        argumentValues
     )
+
+    internal override val inheritanceIdentity: TypeId
+        get() = identity
 
     override fun getType(): MCFPPDataTemplateType {
         val t = super.getType()

@@ -137,9 +137,9 @@ class LegacyFloatConversionTest {
     @Test fun parsedPromotionAndConversionSelectLegacyLibrary() {
         MCFPPStringTest.readFromString("""
             func main(){
-                dynamic input = 123456789
-                dynamic promoted: float = input
-                dynamic converted = toInt(promoted)
+                external input = 123456789
+                external promoted: float = input
+                external converted = toInt(promoted)
             }
         """.trimIndent(), version = "1.20.1")
         assertEquals(0, Project.errorCount)

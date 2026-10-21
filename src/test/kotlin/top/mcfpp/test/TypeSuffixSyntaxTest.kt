@@ -51,8 +51,8 @@ class TypeSuffixSyntaxTest {
             func main(){
                 const immutable: int=4
                 var ordinary: int=7
-                dynamic negated=!false
-                dynamic unequal=4!=7
+                external negated=!false
+                external unequal=4!=7
                 var box=Box<int>()
             }
         """.trimIndent(), version = "26.3")

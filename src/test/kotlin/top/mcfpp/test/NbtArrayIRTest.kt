@@ -45,7 +45,7 @@ class NbtArrayIRTest {
                 var copied = copy(view) as IntArray
                 view[0] = 7
                 copied[1] = 9
-                dynamic result = source["values"][0]*100 + source["values"][1]*10 + copied[0]
+                external result = source["values"][0]*100 + source["values"][1]*10 + copied[0]
             }
         """)
         assertEquals(732, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -75,19 +75,6 @@ class NbtArrayIRTest {
         assertEquals(Long.MAX_VALUE, assertIs<LongTag>(machine.readNbt("mcfpp:system", "temp.scalar")).value)
     }
 
-    @Test fun arrayIndexIsCapturedBeforeStaticRightHandSideEffects() = modes {
-        val main = compile("""
-            func change(static index: int): int { index = 1; return 7; }
-            func put(static values: IntArray, index: int) { values[index] = change(index); }
-            func main(){
-                var values = [I;2,3]
-                put(values,0)
-                dynamic result = values[0]*10 + values[1]
-            }
-        """)
-        assertEquals(73, execute(main).read(main.scope.getVar("result") as MCInt))
-    }
-
     @Test fun recursiveFramesAndLoopsKeepTheirOwnArrays() = modes {
         val main = compile("""
             func sum(values: IntArray, count: int): int {
@@ -98,7 +85,7 @@ class NbtArrayIRTest {
                 var values = [I;2,3,4]
                 var index = 0
                 while(index < 3){ values[index] = values[index] + 1; index += 1; }
-                dynamic result = sum(values,3)
+                external result = sum(values,3)
             }
         """, "1.20.2")
         assertEquals(12, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -127,7 +114,7 @@ class NbtArrayIRTest {
     @Test fun knownNegativeIndicesStillWorkOnTargetsWithoutMacros() {
         MCFPPStringTest.readFromString("""
             func last(values: IntArray): int { return values[-1]; }
-            func main(){ dynamic result = last([I;2,9]); }
+            func main(){ external result = last([I;2,9]); }
         """.trimIndent(), version = "1.20.1")
         assertEquals(0, Project.errorCount)
         val main = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()

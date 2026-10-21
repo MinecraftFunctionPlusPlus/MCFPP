@@ -2,9 +2,29 @@ package top.mcfpp
 
 import top.mcfpp.command.CommentLevel
 import top.mcfpp.util.MCUUID
+import top.mcfpp.mni.expand.ExpansionBudget
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
+
+/** Limits and diagnostics for MNI code expansion. Each compilation creates its own budget. */
+data class MacroExpansionConfig(
+    val maxDepth: Int = DEFAULT_MAX_DEPTH,
+    val maxNodes: Int = DEFAULT_MAX_NODES,
+    val dump: Boolean = false,
+) {
+    init {
+        require(maxDepth > 0) { "Macro expansion depth must be positive" }
+        require(maxNodes > 0) { "Macro expansion node limit must be positive" }
+    }
+
+    internal fun newBudget(): ExpansionBudget = ExpansionBudget(maxDepth, maxNodes)
+
+    companion object {
+        const val DEFAULT_MAX_DEPTH = 64
+        const val DEFAULT_MAX_NODES = 100_000
+    }
+}
 
 //TODO 标准库引用逻辑优化
 open class ProjectConfig(
@@ -92,4 +112,10 @@ open class ProjectConfig(
     * 数据文件夹路径
     */
     var dataPath: Path? = null,
+
+    /** MNI macro limits and expansion dump setting. */
+    var macroExpansion: MacroExpansionConfig = MacroExpansionConfig(),
 )
+
+/** Create a fresh budget for one compilation unit; counts are never shared between compilations. */
+internal fun ProjectConfig.newExpansionBudget(): ExpansionBudget = macroExpansion.newBudget()

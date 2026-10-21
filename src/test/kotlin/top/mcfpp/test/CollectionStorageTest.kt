@@ -32,10 +32,10 @@ class CollectionStorageTest {
             func main(){
                 var values = [2,9] as list<any>
                 var view = values as list<any>
-                dynamic before = view[0] + 1
+                external before = view[0] + 1
                 values[0] = 7
-                dynamic result = values[0] + view[0]
-                dynamic preserved: int = view[1]
+                external result = values[0] + view[0]
+                external preserved: int = view[1]
             }
         """)
         val source = main.scope.getVar("values")!!.storageBinding!!
@@ -56,7 +56,7 @@ class CollectionStorageTest {
                 var copied = values
                 values[0] = 6
                 copied[0] = 10
-                dynamic result = view[0] + copied[0] + copied[1]
+                external result = view[0] + copied[0] + copied[1]
             }
         """)
         assertNotEquals(main.scope.getVar("values")!!.storageBinding!!.place, main.scope.getVar("copied")!!.storageBinding!!.place)
@@ -68,9 +68,9 @@ class CollectionStorageTest {
             func main(){
                 var values: dict<any> = {flag:true, first:2, second:9}
                 var view = values as dict<any>
-                dynamic flag = values["flag"] == true
+                external flag = values["flag"] == true
                 view["first"] = 7
-                dynamic result = values["first"] + values["second"]
+                external result = values["first"] + values["second"]
             }
         """)
         val binding = main.scope.getVar("values")!!.storageBinding!!
@@ -107,10 +107,10 @@ class CollectionStorageTest {
                 func main(){
                     var values = [2,9] as list<any>
                     var view = values as list<any>
-                    dynamic index = 1
-                    dynamic before = (view[1] as int) + 0
+                    external index = 1
+                    external before = (view[1] as int) + 0
                     values[index] = 7
-                    dynamic result = (view[0] as int) + (view[1] as int)
+                    external result = (view[0] as int) + (view[1] as int)
                 }
             """, version)
             val machine = execute(main)
@@ -122,9 +122,9 @@ class CollectionStorageTest {
     @Test fun partialCollectionsRetainTypesAndMaterializeEachSourceEncoding() {
         val main = compile("""
             func main(){
-                dynamic source = 5
+                external source = 5
                 var values = [2,source] as list<any>
-                dynamic result = values[0] + values[1]
+                external result = values[0] + values[1]
             }
         """)
         assertNull(StorageAccess.snapshot(assertNotNull(main.scope.getVar("values"))))
@@ -136,9 +136,9 @@ class CollectionStorageTest {
             func main(){
                 var values = [2,9] as list<any>
                 var view = values as list<any>
-                dynamic before = (values[1] as int) + 0
+                external before = (values[1] as int) + 0
                 view[-1] = 11
-                dynamic result = (values[1] as int) + (values[-1] as int)
+                external result = (values[1] as int) + (values[-1] as int)
             }
         """)
         val machine = execute(main)
@@ -151,7 +151,7 @@ class CollectionStorageTest {
             func main(){
                 var values = [2,9] as list<any>
                 var erased: any = values
-                dynamic result = erased[0] + erased[1]
+                external result = erased[0] + erased[1]
             }
         """)
         assertEquals(11, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -162,9 +162,9 @@ class CollectionStorageTest {
             func main(){
                 var values = [2,9] as list<any>
                 var view = values as list<any>
-                dynamic before = (view[0] as int) + 0
+                external before = (view[0] as int) + 0
                 values = [5,6] as list<any>
-                dynamic result = view[0] + view[-1]
+                external result = view[0] + view[-1]
             }
         """)
         val machine = execute(main)
@@ -176,10 +176,10 @@ class CollectionStorageTest {
         val main = compile("""
             func main(){
                 var values: dict<any> = {first:2, second:9}
-                dynamic key = "second"
-                dynamic before = values[key] + 1
+                external key = "second"
+                external before = values[key] + 1
                 values["a.b"] = 7
-                dynamic result = values["a.b"] + values["first"]
+                external result = values["a.b"] + values["first"]
             }
         """)
         val machine = execute(main)
@@ -194,10 +194,10 @@ class CollectionStorageTest {
                 func main(){
                     var values: dict<any> = {first:2}
                     values[$literal] = 9
-                    dynamic key = $literal
-                    dynamic before = (values[key] as int) + 0
+                    external key = $literal
+                    external before = (values[key] as int) + 0
                     values[key] = 7
-                    dynamic result = (values[key] as int) + values["first"]
+                    external result = (values[key] as int) + values["first"]
                 }
             """, version)
             val binding = main.scope.getVar("values")!!.storageBinding!!
@@ -211,7 +211,7 @@ class CollectionStorageTest {
     @Test fun unknownDictionaryKeysHaveAnExplicitBackendDiagnostic() {
         MCFPPStringTest.readFromString("""
             func lookup(values: dict<any>, key: string): int { return values[key] as int; }
-            func main(){ var values: dict<any> = {first:2}; dynamic result = lookup(values,"first"); }
+            func main(){ var values: dict<any> = {first:2}; external result = lookup(values,"first"); }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0)
         assertTrue(Project.macroFunction.isEmpty())
@@ -219,7 +219,7 @@ class CollectionStorageTest {
 
     @Test fun targetsBeforeHeterogeneousNbtListsRejectMixedElementEncodings() {
         for (version in listOf("1.20.2", "1.21.4")) {
-            MCFPPStringTest.readFromString("func main(){ dynamic values = [2,true] as list<any>; }", version = version)
+            MCFPPStringTest.readFromString("func main(){ external values = [2,true] as list<any>; }", version = version)
             assertTrue(Project.errorCount > 0, version)
         }
     }
@@ -236,9 +236,9 @@ class CollectionStorageTest {
             val main = compile("""
                 func main(){
                     var values = [2,true] as list<any>
-                    dynamic before = values[1] == true
+                    external before = values[1] == true
                     values[0] = false
-                    dynamic result = values[0] == false
+                    external result = values[0] == false
                 }
             """, version)
             assertTrue(main.commands.analyzeAll().any { "set value [2,1b]" in it })
@@ -252,7 +252,7 @@ class CollectionStorageTest {
         val main = compile("func main(){ var values = [2,true]; }")
         val element = (main.scope.getVar("values")!!.type as top.mcfpp.type.MCFPPListType).generic.single()
         assertEquals(TypeId.Union(setOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.Bool.typeId)), element.typeId)
-        MCFPPStringTest.readFromString("func main(){ dynamic values = [int,2]; }", version = "26.3")
+        MCFPPStringTest.readFromString("func main(){ external values = [int,2]; }", version = "26.3")
         assertTrue(Project.errorCount > 0)
     }
 
@@ -261,7 +261,7 @@ class CollectionStorageTest {
             func main(){
                 var values = [true,1b] as list<any>
                 values[1] = false
-                dynamic result = (values[0] as bool) == (values[1] as bool)
+                external result = (values[0] as bool) == (values[1] as bool)
             }
         """, "1.20.2")
         val binding = main.scope.getVar("values")!!.storageBinding!!
@@ -272,14 +272,14 @@ class CollectionStorageTest {
     @Test fun partiallyKnownMixedAndNestedListsUseVisiblePayloads() {
         val main = compile("""
             func main(){
-                dynamic flag = true
+                external flag = true
                 var values = [[2,flag]] as list<any>
                 var nested = values[0] as list<any>
-                dynamic result = nested[1] == true
+                external result = nested[1] == true
             }
         """)
         assertEquals(1, execute(main).read(main.scope.getVar("result") as ScoreBool))
-        MCFPPStringTest.readFromString("func main(){ dynamic values = [[2,true]]; }", version = "1.20.2")
+        MCFPPStringTest.readFromString("func main(){ external values = [[2,true]]; }", version = "1.20.2")
         assertTrue(Project.errorCount > 0)
     }
 
@@ -288,7 +288,7 @@ class CollectionStorageTest {
             func main(){
                 var values: dict<any> = {first:2}
                 values[""] = 7
-                dynamic result = values[""] + 0
+                external result = values[""] + 0
             }
         """, "1.20.2")
         assertEquals(7, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -296,48 +296,17 @@ class CollectionStorageTest {
         assertTrue(Project.errorCount > 0)
     }
 
-    @Test fun aLaterRhsCallDoesNotChangeAnAlreadyEvaluatedIndex() {
-        val main = compile("""
-            func change(static index: int): int { index = 0; return 7; }
-            func main(){
-                var values = [2,9] as list<any>
-                dynamic index = 1
-                values[index] = change(index)
-                dynamic result = (values[0] as int) + (values[1] as int)
-                dynamic after = index + 0
-            }
-        """)
-        val machine = execute(main)
-        assertEquals(9, machine.read(main.scope.getVar("result") as MCInt))
-        assertEquals(0, machine.read(main.scope.getVar("after") as MCInt))
-    }
-
-    @Test fun aLaterLiteralElementCallPreservesTheEarlierElementValue() {
-        val main = compile("""
-            func change(static value: int): int { value = 9; return 1; }
-            func main(){
-                var value = 4
-                var values = [value,change(value)] as list<any>
-                dynamic result = values[0] + values[1]
-                dynamic after = value + 0
-            }
-        """)
-        val machine = execute(main)
-        assertEquals(5, machine.read(main.scope.getVar("result") as MCInt))
-        assertEquals(9, machine.read(main.scope.getVar("after") as MCInt))
-    }
-
     @Test fun compilerOnlyElementsCannotBeMaterializedThroughARuntimeCollection() {
-        MCFPPStringTest.readFromString("func main(){ dynamic values = [int]; }", version = "26.3")
+        MCFPPStringTest.readFromString("func main(){ external values = [int]; }", version = "26.3")
         assertTrue(Project.errorCount > 0)
     }
 
     @Test fun dynamicDeclarationsRejectCompilerOnlyContentsBeforeEmittingPayloadWrites() {
         for (source in listOf(
-            "dynamic value = {kind:int};",
-            "dynamic value: any = {kind:int};",
-            "dynamic value: object = {kind:int};",
-            "dynamic value = [{kind:int}];"
+            "external value = {kind:int};",
+            "external value: any = {kind:int};",
+            "external value: object = {kind:int};",
+            "external value = [{kind:int}];"
         )) {
             MCFPPStringTest.readFromString("func main(){ $source }", version = "26.3")
             assertTrue(Project.errorCount > 0, source)
@@ -358,7 +327,7 @@ class CollectionStorageTest {
     }
 
     @Test fun anEmptyLiteralStillHasARuntimeRepresentation() {
-        val main = compile("func main(){ dynamic values = []; }")
+        val main = compile("func main(){ external values = []; }")
         val values = assertNotNull(main.scope.getVar("values"))
         assertTrue(values.type.hasRuntimeRepresentation)
         assertEquals(CompilerValue.Typed(values.type.typeId, CompilerValue.Sequence(emptyList())), StorageAccess.snapshot(values))
@@ -378,7 +347,7 @@ class CollectionStorageTest {
             func main(){
                 var values = [2,9] as list<any>
                 var index: any = 1
-                dynamic result = values[index] + 1
+                external result = values[index] + 1
             }
         """)
         assertEquals(10, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -388,10 +357,10 @@ class CollectionStorageTest {
         val main = compile("""
             func main(){
                 var values = [2,9] as list<any>
-                dynamic first = 0
-                dynamic second = 1
-                dynamic before = (values[first] as int) + 0
-                dynamic result = (values[first] as int) + (values[second] as int)
+                external first = 0
+                external second = 1
+                external before = (values[first] as int) + 0
+                external result = (values[first] as int) + (values[second] as int)
             }
         """)
         val machine = execute(main)
@@ -408,9 +377,9 @@ class CollectionStorageTest {
         val main = compile("""
             func main(){
                 var values = [2,9] as list<any>
-                dynamic index = 1
+                external index = 1
                 values[index] = 7
-                dynamic result = values[index] + 0
+                external result = values[index] + 0
             }
         """, "1.20")
         assertEquals(7, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -419,7 +388,7 @@ class CollectionStorageTest {
             func identity(value: int): int { return value; }
             func main(){
                 var values = [2,9] as list<any>
-                dynamic index = identity(1)
+                external index = identity(1)
                 values[index] = 7
             }
         """.trimIndent(), version = "1.20")

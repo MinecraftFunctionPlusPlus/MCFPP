@@ -43,10 +43,10 @@ class ListIRTest {
                     values.prependAll([4,5])
                     var i = 0
                     while(i < 2){ values.add(i); i += 1; }
-                    dynamic result = values[0] + values[1] + values[2] + values[3] + values[4] + values[5] + values[6] + values[7] + values[8]
+                    external result = values[0] + values[1] + values[2] + values[3] + values[4] + values[5] + values[6] + values[7] + values[8]
                     values.clear()
                     values.add(3)
-                    dynamic cleared = values[0] + 0
+                    external cleared = values[0] + 0
                 }
             """, version)
             val machine = execute(main)
@@ -65,48 +65,13 @@ class ListIRTest {
                 values[0][0] = 8
                 var copied = values[2]
                 copied[-1] = 6
-                dynamic result = values[0][0] + values[1][-1] + values[2][-1] + copied[0]
+                external result = values[0][0] + values[1][-1] + values[2][-1] + copied[0]
             }
         """)
         assertEquals(30, execute(main).read(main.scope.getVar("result") as MCInt))
         val root = main.scope.getVar("values")!!.storageBinding!!
         assertEquals(4, root.data.facts.length(root.place))
         assertEquals(1, root.data.facts.length(root.place.index(2)))
-    }
-
-    @Test fun dynamicInsertionCapturesTheIndexValueBeforeLaterArguments() = modes {
-        for (version in listOf("26.3", "1.20.2")) {
-            val main = compile("""
-                func identity(value: int): int { return value; }
-                func change(static index: int): int { index = 0; return 7; }
-                func main(){
-                    var values = [2,9] as list<any>
-                    var index = identity(-1)
-                    values.insert(index, change(index))
-                    values.removeAt(identity(0))
-                    dynamic result = values[0] + values[1]
-                }
-            """, version)
-            assertEquals(16, execute(main).read(main.scope.getVar("result") as MCInt))
-        }
-    }
-
-    @Test fun staticListMutationHasAReceiverEffectAndKeepsFramesIndependent() = modes {
-        val main = compile("""
-            func append(static values: list<int>, count: int) {
-                if(count > 0){ values.add(count); append(values, count - 1); }
-            }
-            func main(){
-                var values = [2]
-                append(values, 2)
-                dynamic result = values[0] + values[1] + values[2]
-            }
-        """)
-        assertEquals(5, execute(main).read(main.scope.getVar("result") as MCInt))
-        val append = function("append")
-        assertNotNull(append.typedIR)
-        assertEquals(setOf(Place(append.typedIR!!.parameters.first())), assertIs<Effect.Writes>(append.runtimeEffect).places)
-        assertEquals(setOf(Place(append.typedIR!!.parameters.first())), assertIs<Effect.Writes>(append.runtimeEffect).contents)
     }
 
     @Test fun invalidWritesAreDiagnosedBeforeBackendCommands() {
@@ -131,7 +96,7 @@ class ListIRTest {
                 while(i < 2){ values.add(true); i += 1; }
                 values.prependAll([])
                 values.addAll([])
-                dynamic result = values[0] + 1
+                external result = values[0] + 1
             }
         """)
         assertEquals(3, execute(main).read(main.scope.getVar("result") as MCInt))

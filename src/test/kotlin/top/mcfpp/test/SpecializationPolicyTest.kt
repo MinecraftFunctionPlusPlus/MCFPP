@@ -15,7 +15,7 @@ class SpecializationPolicyTest {
 
     @Test fun compilerTypePayloadsCannotBecomeDynamicErasedValues() {
         for (type in listOf("object", "any")) {
-            MCFPPStringTest.readFromString("func main(){ dynamic payload: $type = int; }", version = "26.3")
+            MCFPPStringTest.readFromString("func main(){ external payload: $type = int; }", version = "26.3")
             assertTrue(Project.errorCount > 0, type)
             assertTrue(function("main").commands.analyzeAll().none { it.contains("minecraft:from_int") })
         }

@@ -44,15 +44,14 @@ class LibCacheFormatTest {
         }
     }
 
-    @Test fun aliasesAndInterfaceIdentitySurviveNamespaceSerialization() {
+    @Test fun aliasesAndAbstractDataIdentitySurviveNamespaceSerialization() {
         val namespace = top.mcfpp.model.Namespace("library.identity")
         namespace.scope.putResolvedAlias("Count", top.mcfpp.type.MCFPPBaseType.Int)
         namespace.scope.putResolvedAlias("Counts", top.mcfpp.type.MCFPPListType(top.mcfpp.type.MCFPPBaseType.Int))
         val capability = top.mcfpp.model.compound.DataTemplate("Capability", namespace.identifier).apply {
-            isInterface = true
             isAbstract = true
         }
-        namespace.scope.addInterface(capability.identifier, capability)
+        namespace.scope.addTemplate(capability.identifier, capability)
         namespace.scope.putResolvedAlias("CapabilityAlias", capability.getType())
         val info = top.mcfpp.io.info.NamespaceInfo.from(namespace)
         val output = Output(16384)
@@ -64,8 +63,7 @@ class LibCacheFormatTest {
         val alias = restored.scope.getType("CapabilityAlias")!!
         assertEquals(capability.getType(), alias)
         assertEquals(capability.getType().hashCode(), alias.hashCode())
-        kotlin.test.assertTrue(restored.scope.interfaces.getValue("Capability").isInterface)
-        kotlin.test.assertTrue(restored.scope.interfaces.getValue("Capability").isAbstract)
+        kotlin.test.assertTrue(restored.scope.template.getValue("Capability").isAbstract)
         alias.tryResolve()
         assertEquals(capability.getType(), alias)
     }
@@ -88,7 +86,7 @@ class LibCacheFormatTest {
             val body = """
                 func main(){
                     var node=Node();var frozen=Frozen<Mode.second>()
-                    dynamic result=node.children.size()+choose()
+                    external result=node.children.size()+choose()
                 }
             """.trimIndent()
             fun check(): Pair<top.mcfpp.model.compound.DataTemplate,top.mcfpp.type.MCFPPEnumType> {

@@ -18,6 +18,62 @@ import top.mcfpp.util.TextTranslator.translate
 
 class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, val isName: Boolean = false) : MCFPPConcreteType(arrayListOf(MCFPPBaseType.Object)) {
 
+    /** A compiler-owned selector member, with its receiver slot kept separate from a dictionary value. */
+    private class ScoresDictionary : NBTDictionary("scores"), SelectorVar.SelectorParamMap {
+        private var selectorSlot: SelectorVar? = null
+
+        override var selector: SelectorVar
+            get() = selectorSlot ?: throw UninitializedPropertyAccessException("lateinit property selector has not been initialized")
+            set(value) { selectorSlot = value }
+
+        override var type: MCFPPType = ScoresDictionaryType(this)
+
+        fun checkpoint(retained: List<Any>): ScoresStateCheckpoint {
+            val receiver = selectorSlot
+            val declaredType = type
+            val owner = scoresTypeOwner(declaredType)
+            val seen = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Any, Boolean>())
+            val elements = (retained + listOfNotNull(this, declaredType, owner, receiver)).filter { seen.add(it) }
+            return ScoresStateCheckpoint(elements, {
+                selectorSlot = receiver
+                type = declaredType
+            }, { checkpoint(elements) })
+        }
+
+        override fun getByIndex(index: Var<*>): PropertyVar {
+            if (index !is MCString) {
+                LogProcessor.error("Index must be concrete string")
+                return PropertyVar(Property.buildSimpleProperty(UnknownVar("error")), Void, this)
+            }
+            val str = index.value.value
+            return PropertyVar(Property("type", null, AnonymousNativeMutator { caller, v ->
+                val selector = (caller as SelectorVar).value
+                val value = checkParamType(v, MCFPPBaseType.Range)
+                if (value is RangeVar) selector.scores(mapOf(str to value))
+                Void
+            }), Void, selector)
+        }
+    }
+
+    /** The original anonymous type captures this exact adapter, including its current identifier. */
+    private class ScoresDictionaryType(val owner: ScoresDictionary) : MCFPPPrivateType() {
+        override val typeName: String = "ScoreDictionary"
+        override fun buildReturnVar(): Var<*> {
+            LogProcessor.error("Cannot build var for type: $typeName")
+            return UnknownVar(owner.identifier)
+        }
+    }
+
+    /** Raw relationships only; declaration/type/annotation internals belong to the deep journal. */
+    internal class ScoresStateCheckpoint internal constructor(
+        elements: List<Any>, private val restoreState: () -> Unit,
+        private val recapture: () -> ScoresStateCheckpoint
+    ) {
+        val elements: List<Any> = java.util.Collections.unmodifiableList(ArrayList(elements))
+        fun restore() = restoreState()
+        fun captureCurrent(): ScoresStateCheckpoint = recapture()
+    }
+
     override fun buildUnConcrete(identifier: String): Var<*> = SelectorVar(identifier).apply { type = this@MCFPPEntityType }
 
     override val typeId: TypeId get() = TypeId.Selector(limit, types?.toList(), isName)
@@ -60,16 +116,28 @@ class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, v
         val NormalSelector = MCFPPEntityType()
         val SpecifiedEntity = MCFPPEntityType(1, null, false)
 
-        val data by lazy {
-            fun checkParamType(v: Var<*>, type: MCFPPType): Var<*>?{
-                val value = v.implicitCast(type)
-                if(value.isError){
-                    LogProcessor.error(TextTranslator.CAST_ERROR.translate(value.type.typeName, type.typeName))
-                    return null
-                }
-                return value
-            }
+        internal fun newScoresDeclaration(): NBTDictionary = ScoresDictionary()
 
+        internal fun isOwnedScores(value: Var<*>): Boolean = value.javaClass === ScoresDictionary::class.java
+
+        internal fun scoresTypeOwner(type: MCFPPType): Var<*>? =
+            if (type.javaClass === ScoresDictionaryType::class.java) (type as ScoresDictionaryType).owner else null
+
+        internal fun checkpointScores(value: Var<*>): ScoresStateCheckpoint {
+            check(isOwnedScores(value)) { "Selector scores checkpoint cannot capture ${value.javaClass.name}" }
+            return (value as ScoresDictionary).checkpoint(emptyList())
+        }
+
+        private fun checkParamType(v: Var<*>, type: MCFPPType): Var<*>? {
+            val value = v.implicitCast(type)
+            if (value.isError) {
+                LogProcessor.error(TextTranslator.CAST_ERROR.translate(value.type.typeName, type.typeName))
+                return null
+            }
+            return value
+        }
+
+        val data by lazy {
             fun stringParam(op: (EntitySelector, MCString) -> Unit): (CanSelectMember, Var<*>) -> Var<*> = { caller, v ->
                 val selector = (caller as SelectorVar).value
                 val value = checkParamType(v, MCFPPBaseType.String)
@@ -140,34 +208,7 @@ class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, v
                     }
                     return@AnonymousNativeMutator Void
                 }))
-                addMember(object : NBTDictionary("scores"), SelectorVar.SelectorParamMap {
-
-                    override lateinit var selector: SelectorVar
-
-                    override var type: MCFPPType = object :MCFPPPrivateType(){
-                        override val typeName: String = "ScoreDictionary"
-                        override fun buildReturnVar(): Var<*> {
-                            LogProcessor.error("Cannot build var for type: $typeName")
-                            return UnknownVar(identifier)
-                        }
-                    }
-
-                    override fun getByIndex(index: Var<*>): PropertyVar {
-                        if(index !is MCString){
-                            LogProcessor.error("Index must be concrete string")
-                            return PropertyVar(Property.buildSimpleProperty(UnknownVar("error")), Void, this)
-                        }
-                        val str = index.value.value
-                        return PropertyVar(Property("type", null, AnonymousNativeMutator { caller, v ->
-                            val selector = (caller as SelectorVar).value
-                            val value = checkParamType(v, MCFPPBaseType.Range)
-                            if(value is RangeVar){
-                                selector.scores(mapOf(str to value))
-                            }
-                            return@AnonymousNativeMutator Void
-                        }), Void, selector)
-                    }
-                })
+                addMember(newScoresDeclaration())
                 addMember(Property("tag", null, AnonymousNativeMutator(stringParam { selector, str->
                     selector.tag(str.value.value, false)
                 })))

@@ -128,9 +128,9 @@ class TemplateInitializationTest {
                     var first = Box()
                     first.z = 9
                     var second = Box()
-                    dynamic z = second.z
-                    dynamic a = second.a
-                    dynamic firstZ = first.z
+                    external z = second.z
+                    external a = second.a
+                    external firstZ = first.z
                 }
             """, output)
             val restored = GlobalScope.getTemplate("fixture.defaults", "Box")!!
@@ -158,7 +158,7 @@ class TemplateInitializationTest {
             func seed(): int { return 9; }
             func main(){
                 var box = Box()
-                dynamic result = box.value * 10 + produce()
+                external result = box.value * 10 + produce()
             }
         """, output)
         val restored = GlobalScope.getTemplate("fixture.defaults", "Box")!!
@@ -179,8 +179,8 @@ class TemplateInitializationTest {
             import fixture.defaults:*
             func seed(): int { return 9; }
             func main(){
-                dynamic first = add<int>(1)
-                dynamic second = add<int>(2)
+                external first = add<int>(1)
+                external second = add<int>(2)
             }
         """, output)
         val restored = GlobalScope.libNamespaces.getValue("fixture.defaults").scope.functions.getValue("add").single()
@@ -221,7 +221,7 @@ class TemplateInitializationTest {
             import fixture.defaults:*
             typealias bool as Seed
             func seed(): int { return 9; }
-            func main(){ var box = Box(); dynamic result = box.value; }
+            func main(){ var box = Box(); external result = box.value; }
         """, library, includes = listOf(library, helper))
         val restored = GlobalScope.getTemplate("fixture.defaults", "Box")!!
         assertNotSame(original, restored)
@@ -234,6 +234,7 @@ class TemplateInitializationTest {
             namespace fixture.members
             data Box {
                 var value: int
+                constructor(){}
                 constructor(value: int){ this.value = value; }
                 func setValue(value: int){ this.value = value; }
                 func add<T>(amount: int): int { return this.value + amount; }
@@ -252,8 +253,8 @@ class TemplateInitializationTest {
                 var child = Child(3)
                 first.setValue(9)
                 child.setValue(7)
-                dynamic result = first.value * 100 + second.value * 10 + child.value
-                dynamic added = first.add<int>(3)
+                external result = first.value * 100 + second.value * 10 + child.value
+                external added = first.add<int>(3)
             }
         """, output)
         val box = GlobalScope.getTemplate("fixture.members", "Box")!!
@@ -290,7 +291,7 @@ class TemplateInitializationTest {
             .filterIsInstance<ObjectDataTemplate>().single { it.identifier == "Defaults" }
         val main = consume("""
             import fixture.members:*
-            func main(){ Defaults.setValue(7); dynamic result = Defaults.read(); }
+            func main(){ Defaults.setValue(7); external result = Defaults.read(); }
         """, output)
         val defaults = GlobalScope.libNamespaces.getValue("fixture.members").scope.objects
             .filterIsInstance<ObjectDataTemplate>().single { it.identifier == "Defaults" }

@@ -218,10 +218,10 @@ class StorageViewTest {
                 source.sibling = 9
                 var first = source as Target
                 var second = source as Target
-                dynamic before = second.value
+                external before = second.value
                 first.value = 7
-                dynamic result = source.value + second.value
-                dynamic preserved = second.sibling
+                external result = source.value + second.value
+                external preserved = second.sibling
             }
         """)
         val source = main.scope.getVar("source")!!
@@ -259,9 +259,9 @@ class StorageViewTest {
                 var source = {value:2, sibling:9} as Source
                 var copied = source
                 copied.value = 10
-                dynamic result = source.value + copied.value
+                external result = source.value + copied.value
                 source.sibling = 4
-                dynamic preserved = copied.sibling
+                external preserved = copied.sibling
             }
         """)
         assertNotEquals(main.scope.getVar("source")!!.storageBinding!!.place,
@@ -272,7 +272,7 @@ class StorageViewTest {
     }
 
     @Test fun unprovenButAccessibleReinterpretationWarnsAndUsesSourceEncoding() {
-        val main = compile("func main(){ var value = 7; dynamic view = value as bool; dynamic result = view == true; }")
+        val main = compile("func main(){ var value = 7; external view = value as bool; external result = view == true; }")
         assertEquals(1, Project.warningCount)
         val commands = main.commands.analyzeAll().joinToString("\n")
         assertTrue(commands.contains("set value 7"), commands)
@@ -332,10 +332,10 @@ class StorageViewTest {
                 CompileSettings.foldIRConstants = enabled
                 val main = compile("""
                     func main(){
-                        dynamic flag = true
+                        external flag = true
                         var value: any = 1
                         if(flag){ value = 2; } else { value = ${if (sameType) "3" else "false"}; }
-                        dynamic result = (value as int) + 5
+                        external result = (value as int) + 5
                     }
                 """)
                 assertNotNull(main.typedIR)
@@ -353,7 +353,7 @@ class StorageViewTest {
             func main(){
                 var first = identity(4)
                 var second = identity(9)
-                dynamic result = first + second
+                external result = first + second
             }
         """)
         assertEquals(13, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -378,7 +378,7 @@ class StorageViewTest {
             func choose(flag: bool): any {
                 if(flag){ return 2; } else { return false; }
             }
-            func main(){ var value = choose(true); dynamic result = (value as int) + 4; }
+            func main(){ var value = choose(true); external result = (value as int) + 4; }
         """)
         val value = main.scope.getVar("value") as MCAny
         assertEquals(setOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.Bool.typeId),
@@ -397,9 +397,9 @@ class StorageViewTest {
                 var value = 4
                 var view = value as int
                 pure()
-                dynamic before = view
+                external before = view
                 change()
-                dynamic result = value + 1
+                external result = value + 1
             }
         """)
         val functions = GlobalScope.localNamespaces.getValue("default.test").scope.functions
@@ -433,18 +433,6 @@ class StorageViewTest {
         }
     }
 
-    @Test fun erasedStaticParametersWriteBackToTheCallingFrame() {
-        val main = compile("""
-            func replace(static value: any){ value = 9; }
-            func main(){
-                var value: any = 4
-                replace(value)
-                dynamic result = (value as int) + 1
-            }
-        """)
-        assertEquals(10, execute(main).read(main.scope.getVar("result") as MCInt))
-    }
-
     @Test fun templateParametersAndReturnsCopyThePayloadAcrossFrames() {
         val main = compile("""
             data Payload { var value: int; }
@@ -453,8 +441,8 @@ class StorageViewTest {
                 var source = {value:2} as Payload
                 var first = adjust(source)
                 var second = adjust(source)
-                dynamic result = first.value + second.value
-                dynamic preserved = source.value
+                external result = first.value + second.value
+                external preserved = source.value
             }
         """)
         val machine = execute(main)
@@ -470,24 +458,9 @@ class StorageViewTest {
                 if(value <= 0){ return 0; }
                 return (identity(value) as int) + sum(value - 1)
             }
-            func main(){ dynamic result = sum(4); }
+            func main(){ external result = sum(4); }
         """)
         assertEquals(10, execute(main).read(main.scope.getVar("result") as MCInt))
-    }
-
-    @Test fun evaluatingALaterOperandKeepsTheEarlierValueAndTheCallsWriteBack() {
-        val main = compile("""
-            func change(static value: int): int { value = 9; return 1; }
-            func main(){
-                var value = 4
-                var view = value as int
-                dynamic result = value + change(value)
-                dynamic after = value
-            }
-        """)
-        val machine = execute(main)
-        assertEquals(5, machine.read(main.scope.getVar("result") as MCInt))
-        assertEquals(9, machine.read(main.scope.getVar("after") as MCInt))
     }
 
     @Test fun anEarlierArgumentSurvivesARecursiveCallInALaterArgument() {
@@ -498,7 +471,7 @@ class StorageViewTest {
                 if(value <= 0){ return 0; }
                 return add(identity(value) as int, sum(value - 1))
             }
-            func main(){ dynamic result = sum(4); }
+            func main(){ external result = sum(4); }
         """)
         assertEquals(10, execute(main).read(main.scope.getVar("result") as MCInt))
     }

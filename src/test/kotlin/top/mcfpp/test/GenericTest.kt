@@ -15,7 +15,7 @@ class GenericTest {
                 }
 
                 func main(){
-                    dynamic qwq: int
+                    external qwq: int
                     test<2>(qwq)
                 }
             """.trimIndent()

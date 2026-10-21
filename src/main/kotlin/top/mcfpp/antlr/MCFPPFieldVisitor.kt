@@ -5,13 +5,17 @@ import top.mcfpp.analysis.TypeUsage
 import top.mcfpp.Project
 import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.analysis.PrimitiveCompiler
+import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.antlr.mcfppParser.TemplateDeclarationContext
 import top.mcfpp.compiletime.CompileTimeFunction
 import top.mcfpp.core.lang.UnionTypeVar
 import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.exception.UndefinedException
 import top.mcfpp.io.MCFPPFile
+import top.mcfpp.lib.NBTPath
+import top.mcfpp.mni.NativeSignatureValidator
 import top.mcfpp.model.Member
 import top.mcfpp.model.Member.AccessModifier
 import top.mcfpp.model.Namespace
@@ -54,6 +58,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
      * @return null
      */
     override fun visitCompilationUnit(ctx: mcfppParser.CompilationUnitContext): Any? = withCompilationContext(ctx) {
+        Project.prepareTemplateInheritanceHeaders()
         typeScope = GlobalScope.localNamespaces[Project.currNamespace]!!.scope
         //文件结构，类和函数
         for (t in ctx.typeDeclaration()) {
@@ -253,13 +258,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                         declared.generic.singleOrNull() === MCFPPPrivateType.Wildcard
                 if(nf.readOnlyParams.map { it.type } == readOnlyType && nf.normalParams.size == normalType.size &&
                     nf.normalParams.zip(normalType).all { (param, registered) -> matchesNativeType(param.type, registered) }){
-                    if (!java.lang.reflect.Modifier.isStatic(method.modifiers) ||
-                        !method.parameterTypes.contentEquals(arrayOf(top.mcfpp.mni.NativeCallContext::class.java))) {
-                        LogProcessor.error("Method ${method.name} in class ${method.declaringClass.name} must use NativeCallContext")
-                        return null
-                    }
-                    hasFind = true
                     nf.javaMethod = method
+                    if (!NativeSignatureValidator.validate(nf)) return null
+                    hasFind = true
                     nf.normalParams.zip(normalType).forEach { (param, registered) ->
                         if (registered is MCFPPNotCompiledGenericType && param.type != registered) {
                             param.type = registered
@@ -274,7 +275,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             }
         } catch (e: ClassNotFoundException) {
             LogProcessor.error("Cannot find java class: " + e.message)
-            e.printStackTrace()
+            LogProcessor.captureStackTrace(e)
             return null
         }
         //写入域
@@ -303,20 +304,10 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         DataTemplate.currTemplate = template
         typeScope = template.scope
-        if (template is GenericDataTemplate) {
-            template.prepareHeader()
-        } else template.resolveDeclaredParents()
+        Project.resolveTemplateInheritance(template)
         isInObject = false
         if (template !is GenericDataTemplate) {
             ctx.templateBody()?.let { visitTemplateBody(it) }
-
-            if(!template.isAbstract){
-                template.scope.forEachFunction {
-                    if(it.isAbstract){
-                        LogProcessor.error("${it.identifier} is abstract, but not implemented.")
-                    }
-                }
-            }
 
             //默认构造函数和默认字段
             if(template is TypeDataTemplate){
@@ -343,37 +334,14 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         DataTemplate.currTemplate = objectTemplate
         typeScope = objectTemplate.scope
         if (objectTemplate is GenericDataTemplate) {
-            objectTemplate.prepareHeader()
+            Project.resolveTemplateInheritance(objectTemplate)
             DataTemplate.currTemplate = null
             typeScope = MCFPPFile.currFile!!.field.namespaceField
             return null
         }
-        for (c in ctx.compoundDeclaration().extendName()){
-            //是否存在继承
-            val (namespace, identifier) = c.text.splitNamespaceID()
-            val s = GlobalScope.getData(namespace, identifier)
-            if(s == null){
-                LogProcessor.error("${c.text} is undefined.")
-            }else{
-                if(s.isSubOf(objectTemplate) || s == objectTemplate){
-                    LogProcessor.error("Infinitive reference: $id -> $identifier")
-                }else if(s.isFinal){
-                    LogProcessor.error("Cannot extends $identifier because it's final")
-                }else {
-                    objectTemplate.extends(s)
-                }
-            }
-        }
+        Project.resolveTemplateInheritance(objectTemplate)
         isInObject = true
         ctx.templateBody()?.let { visitTemplateBody(it) }
-
-        if(!objectTemplate.isAbstract){
-            objectTemplate.scope.forEachFunction {
-                if(it.isAbstract){
-                    LogProcessor.error("${it.identifier} is abstract, but not implemented.")
-                }
-            }
-        }
 
         //如果没有构造函数，生成默认的构造函数
         if(objectTemplate.constructors.isEmpty()){
@@ -385,39 +353,17 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    override fun visitAnonymousTemplateType(ctx: mcfppParser.AnonymousTemplateTypeContext): Any = withCompilationContext(ctx) {
+    override fun visitAnonymousTemplateType(ctx: mcfppParser.AnonymousTemplateTypeContext): Any = Project.collectingTemplateSignatures { withCompilationContext(ctx) {
         //注册模板
         val template = DataTemplate(TempPool.getAnonymousTemplateIdentify())
         val qwq = DataTemplate.currTemplate
         DataTemplate.currTemplate = template
         typeScope = template.scope
-        for (c in ctx.extendName()){
-            //是否存在继承
-            val (namespace, identifier) = c.text.splitNamespaceID()
-            val s = GlobalScope.getData(namespace, identifier)
-            if(s == null){
-                LogProcessor.error("${c.text} is undefined.")
-            }else{
-                if(s == template){
-                    LogProcessor.error("Infinitive reference: ${template.identifier} -> $identifier")
-                }else if(s.isFinal){
-                    LogProcessor.error("Cannot extends $identifier because it's final")
-                }else {
-                    template.extends(s)
-                }
-            }
-        }
+        template.parentID.addAll(ctx.extendName().map { it.text })
+        Project.resolveTemplateInheritance(template)
         isInObject = false
         visitTemplateBody(ctx.templateBody())
         MCFPPAnnotationVisitor().visitTemplateBody(ctx.templateBody())
-
-        if(!template.isAbstract){
-            template.scope.forEachFunction {
-                if(it.isAbstract){
-                    LogProcessor.error("${it.identifier} is abstract, but not implemented.")
-                }
-            }
-        }
 
         //如果没有构造函数，生成默认的构造函数
         if(template.constructors.isEmpty()){
@@ -426,49 +372,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         Project.registerAnonymousTemplate(template)
         DataTemplate.currTemplate = qwq
         typeScope = MCFPPFile.currFile!!.field.namespaceField
-        return template
-    }
+        template
+    } }
 
-    override fun visitInterfaceDeclaration(ctx: mcfppParser.InterfaceDeclarationContext): Any? = withCompilationContext(ctx) {
-        //注册类
-        val id = ctx.compoundDeclaration().declarationName().classWithoutNamespace().text
-        val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
-        val itf = if(namespace1.scope.hasInterface(id)){
-            namespace1.scope.getInterface(id)!!
-        }else{
-            throw UndefinedException("Interface should have been defined: $id")
-        }
-        val previousTemplate = DataTemplate.currTemplate
-        val previousScope = typeScope
-        DataTemplate.currTemplate = itf
-        typeScope = itf.scope
-        try {
-            if (itf is GenericDataTemplate) {
-                itf.prepareHeader()
-                return null
-            }
-            for (c in ctx.compoundDeclaration().extendName()){
-                //是否存在继承
-                val (namespace, identifier) = c.text.splitNamespaceID()
-                val s = GlobalScope.getInterface(namespace, identifier)
-                if(s == null){
-                    LogProcessor.error("Undefined interface: " + c.text)
-                }else{
-                    if(s == itf || s.isSubOf(itf)){
-                        LogProcessor.error("Infinitive reference: ${itf.identifier} -> $identifier")
-                    }else{
-                        itf.extends(s)
-                    }
-                }
-            }
-            //接口成员
-            ctx.templateBody()?.let { visitTemplateBody(it) }
-        } finally {
-            DataTemplate.currTemplate = previousTemplate
-            typeScope = previousScope
-        }
-        return null
-    }
 
     override fun visitTemplateBody(ctx: mcfppParser.TemplateBodyContext): Any? = withCompilationContext(ctx) {
         //解析成员
@@ -492,9 +398,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val accessModifier = AccessModifier.valueOf((ctx.accessModifier()?.text?:"public").uppercase(Locale.getDefault()))
         //访问修饰符
         if(m is Member){
-            if(DataTemplate.currTemplate!!.isInterface && accessModifier != AccessModifier.PUBLIC){
-                LogProcessor.error("Members in interface must be public")
-            }
             m.accessModifier = accessModifier
             DataTemplate.currTemplate!!.addMember(m)
         }else if(m is Pair<*,*>){//Pair<Var, Property>
@@ -502,9 +405,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             val p = m.second as Property?
             if(v == null || p == null) return null
             //访问修饰符
-            if(DataTemplate.currTemplate!!.isInterface && accessModifier != AccessModifier.PUBLIC){
-                LogProcessor.error("Members in interface must be public")
-            }
             v.accessModifier = AccessModifier.valueOf((ctx.accessModifier()?.text?:"public").uppercase(Locale.getDefault()))
             p.accessModifier = v.accessModifier
             DataTemplate.currTemplate!!.addMember(v)
@@ -552,11 +452,36 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         //解析参数
         //检测重复定义
-        if (DataTemplate.currTemplate!!.scope.hasFunction(f, !f.isOverride)) {
+        if (DataTemplate.currTemplate!!.scope.hasFunction(f, false)) {
             LogProcessor.error("Already defined function:" + ctx.functionDeclarationPart().Identifier().text + "in template " + DataTemplate.currTemplate!!.identifier)
             Function.currFunction = Function.nullFunction
         }
         return f
+    }
+
+    /**
+     * Builds the detached declaration half of a generated instance member. This mirrors the
+     * source member setup (owner scope, explicit parameter values and the `this` receiver bound to
+     * the callee frame) but never registers the function or emits a command. The declaration
+     * compiler publishes it only after the live inheritance/overload contract and body checks pass.
+     */
+    internal fun buildGeneratedMethodDeclaration(
+        template: DataTemplate, name: String, returnType: MCFPPType, parameters: List<Pair<String, MCFPPType>>
+    ): Function {
+        val function = Function(name, template, null)
+        function.accessModifier = AccessModifier.PUBLIC
+        function.returnType = returnType
+        parameters.forEach { (parameterName, type) -> function.appendNormalParam(type, parameterName) }
+        function.declarationFile = template.declarationFile
+        function.bodyCompiled = true
+        function.buildParamVar()
+        val receiver = (FunctionParam(template.getType(), "this", function).buildVar() as DataTemplateObject).apply {
+            nbtPath = NBTPath.stack.intIndex(0).memberIndex("this")
+            storageBinding = null
+            StorageAccess.bindIncomingParameter(this)
+        }
+        function.scope.putVar("this", receiver, true)
+        return function
     }
 
     override fun visitTemplateFieldDeclaration(ctx: mcfppParser.TemplateFieldDeclarationContext): Pair<Var<*>?, Property?> = withCompilationContext(ctx) {
@@ -627,6 +552,11 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     }
 
     internal fun completeTemplateFields(template: DataTemplate) {
+        // Detach inherited annotation graphs before this declaration's annotations run,
+        // including declarations with no fields requiring inference.
+        template.scope.allVars.forEach { field ->
+            field.annotations = Property.copyAnnotations(field.annotations)
+        }
         if (template.deferredFields.isEmpty()) return
         val previousTemplate = DataTemplate.currTemplate
         val previousFile = MCFPPFile.currFile
@@ -635,14 +565,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             DataTemplate.currTemplate = template
             MCFPPFile.currFile = template.constructors.firstOrNull()?.file ?: previousFile
             Project.currNamespace = template.namespace
-            // Flattening retains the existing rule that an inherited field replaces a same-named local field.
-            for ((name, declaration) in template.deferredFields.toMap()) {
-                if (template.scope.getVar(name) != null) {
-                    template.pendingFieldAnnotations.getOrPut(name) { arrayListOf() }.addAll(declaration.annotations)
-                    template.deferredFields.remove(name)
-                }
-            }
-            if (template.deferredFields.isEmpty()) return
             val declared = template.scope.allVars.associate { it.identifier to it.type }
             val contexts = template.constructors.ifEmpty { listOf(Function("field-declarations", template, null)) }
             val inferredDeclarations = linkedMapOf<String, String>()

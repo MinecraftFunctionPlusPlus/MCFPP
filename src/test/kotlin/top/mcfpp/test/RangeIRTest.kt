@@ -45,7 +45,7 @@ class RangeIRTest {
                 var bounds = forward(make())
                 var sum = 0
                 for(index : bounds){ sum += index - 16777216; bounds = 1 .. 1; }
-                dynamic result = sum
+                external result = sum
             }
         """, "1.20.1")
         assertEquals(3, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -59,58 +59,23 @@ class RangeIRTest {
                 var count = 0
                 for(index : high){ count += 1; }
                 for(index : low){ count += 1; }
-                dynamic result = count
+                external result = count
             }
         """)
         assertEquals(4, execute(main).read(main.scope.getVar("result") as MCInt))
-    }
-
-    @Test fun constructingBoundsCapturesEarlierReadsAndSeparatesCallResults() = modes {
-        val main = compile("""
-            func end(static value: int): int { value = 10; return 3; }
-            func start(): int { return 4; }
-            func finish(): int { return 5; }
-            func main(){
-                var first = 1
-                var bounds = first .. end(first)
-                var next = start() .. finish()
-                var sum = 0
-                for(index : bounds){ sum += index; }
-                for(index : next){ sum += index; }
-                dynamic result = sum + first
-            }
-        """)
-        assertEquals(25, execute(main).read(main.scope.getVar("result") as MCInt))
-    }
-
-    @Test fun rangeCopiesAndViewsUseTheSameStorageRulesAsOtherValues() = modes {
-        val main = compile("""
-            func replace(static value: range){ value = 4 .. 5; }
-            func main(){
-                var bounds = 1 .. 2
-                var copied = bounds
-                var view = bounds as range
-                replace(view)
-                var sum = 0
-                for(index : bounds){ sum += index; }
-                for(index : copied){ sum += index; }
-                dynamic result = sum
-            }
-        """, "1.20.2")
-        assertEquals(12, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun joinedAndNestedRangesKeepOnlyTheirProvenEndpointTypes() = modes {
         val main = compile("""
             func main(){
                 var bounds = 1 .. 2
-                dynamic condition = true
+                external condition = true
                 if(condition){ bounds = 3 .. 4; } else { bounds = 5 .. 6; }
                 var values = [bounds, 1 .. 2]
                 var sum = 0
                 for(index : values[0]){ sum += index; }
                 for(index : values[1]){ sum += index; }
-                dynamic result = sum
+                external result = sum
             }
         """)
         assertEquals(10, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -169,13 +134,13 @@ class RangeIRTest {
             func make(): range { var ignored = 6 / 2; return 16777217 .. 16777218; }
             func main(){
                 var ignored = 6 / 2
-                dynamic first = 16777217
+                external first = 16777217
                 var bounds = first .. 16777218
                 var constantBounds = 16777217 .. 16777218
                 first = 0
-                dynamic sum = 0
+                external sum = 0
                 for(index : constantBounds){ sum += index - 16777216; }
-                dynamic result = sum
+                external result = sum
                 var returned = make()
                 /data modify storage mcfpp:system temp.bounds set from storage mcfpp:system stack_frame[0].bounds
                 /data modify storage mcfpp:system temp.returned set from storage mcfpp:system stack_frame[0].returned

@@ -201,6 +201,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
     init {
         val nbtPath = """(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s"'])+"""
         val set = Regex("scoreboard players set (\\S+ \\S+) (-?\\d+)")
+        val reset = Regex("scoreboard players reset (\\S+)(?: (\\S+))?")
         val add = Regex("scoreboard players (add|remove) (\\S+ \\S+) (\\d+)")
         val operation = Regex("scoreboard players operation (\\S+ \\S+) (=|\\+=|-=|\\*=|/=|%=|><) (\\S+ \\S+)")
         val compare = Regex("execute (if|unless) score (\\S+ \\S+) (=|<|>|<=|>=) (\\S+ \\S+) (?:run (.*)|((?:if|unless) (?:score|function) .*))")
@@ -212,7 +213,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val save = Regex("execute store result storage (\\S+) ($nbtPath) (int|byte|short|long|double) 1 run scoreboard players get (\\S+ \\S+)")
         val saveOperation = Regex("execute store result storage (\\S+) ($nbtPath) int 1 run (scoreboard players operation (\\S+ \\S+) = \\S+ \\S+)")
         val restore = Regex("execute store result score (\\S+ \\S+) run data get storage (\\S+) ($nbtPath)(?: 1(?:\\.0)?)?")
-        val setNbt = Regex("data modify storage (\\S+) ($nbtPath) set value (.*)")
+        val setNbt = Regex("data modify storage (\\S+) ($nbtPath) set value (.*)", RegexOption.DOT_MATCHES_ALL)
         val copyNbt = Regex("data modify storage (\\S+) ($nbtPath) set from storage (\\S+) ($nbtPath)")
         val sliceString = Regex("data modify storage (\\S+) ($nbtPath) set string storage (\\S+) ($nbtPath) (-?\\d+) (-?\\d+)")
         val computeFloat = Regex("data modify storage (\\S+) ($nbtPath) set compute default float (.*)")
@@ -242,26 +243,32 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             check(player == "@s") { "Unsupported score selector: $player" }
             return "${identity ?: error("@s needs an executor identity")} ${key.substringAfter(' ')}"
         }
+        fun scoreComparison(leftKey: String, operator: String, rightKey: String): Boolean {
+            val left = values[scoreKey(leftKey)] ?: return false
+            val right = values[scoreKey(rightKey)] ?: return false
+            return when (operator) {
+                "=" -> left == right
+                "<" -> left < right
+                ">" -> left > right
+                "<=" -> left <= right
+                ">=" -> left >= right
+                else -> error(operator)
+            }
+        }
+        fun scoreMatches(key: String, range: String): Boolean {
+            val value = values[scoreKey(key)] ?: return false
+            val bounds = range.split("..")
+            return if (bounds.size == 1) value == range.toInt() else
+                (bounds[0].isEmpty() || value >= bounds[0].toInt()) && (bounds[1].isEmpty() || value <= bounds[1].toInt())
+        }
         fun testScoreConditions(conditions: String): Boolean {
             var remaining = conditions
             while (remaining.isNotEmpty()) {
                 val condition = scoreCondition.matchEntire(remaining) ?: error("Unsupported score conditions: $remaining")
-                val left = values.getValue(scoreKey(condition.groupValues[2]))
                 val match = if (condition.groupValues[3].isNotEmpty()) {
-                    val right = values.getValue(scoreKey(condition.groupValues[4]))
-                    when (condition.groupValues[3]) {
-                        "=" -> left == right
-                        "<" -> left < right
-                        ">" -> left > right
-                        "<=" -> left <= right
-                        ">=" -> left >= right
-                        else -> error(remaining)
-                    }
+                    scoreComparison(condition.groupValues[2], condition.groupValues[3], condition.groupValues[4])
                 } else {
-                    val range = condition.groupValues[5]
-                    val bounds = range.split("..")
-                    if (bounds.size == 1) left == range.toInt() else
-                        (bounds[0].isEmpty() || left >= bounds[0].toInt()) && (bounds[1].isEmpty() || left <= bounds[1].toInt())
+                    scoreMatches(condition.groupValues[2], condition.groupValues[5])
                 }
                 if (match != (condition.groupValues[1] == "if")) return false
                 remaining = condition.groupValues[6]
@@ -363,6 +370,14 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 return@command false
             }
             set.matchEntire(command)?.let { values[scoreKey(it.groupValues[1])] = it.groupValues[2].toInt(); return@command false }
+            reset.matchEntire(command)?.let {
+                val objective = it.groupValues[2]
+                if (objective.isEmpty()) {
+                    val player = scoreKey("${it.groupValues[1]} __all__").substringBefore(' ')
+                    values.keys.removeIf { key -> key.substringBefore(' ') == player }
+                } else values.remove(scoreKey("${it.groupValues[1]} $objective"))
+                return@command false
+            }
             saveOperation.matchEntire(command)?.let {
                 execute(it.groupValues[3])
                 writeNbt(it.groupValues[1], it.groupValues[2], IntTag(values.getValue(scoreKey(it.groupValues[4]))))
@@ -548,26 +563,13 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 return@command false
             }
             compare.matchEntire(command)?.let {
-                val left = values.getValue(scoreKey(it.groupValues[2]))
-                val right = values.getValue(scoreKey(it.groupValues[4]))
-                val condition = when (it.groupValues[3]) {
-                    "=" -> left == right
-                    "<" -> left < right
-                    ">" -> left > right
-                    "<=" -> left <= right
-                    ">=" -> left >= right
-                    else -> error(command)
-                }
+                val condition = scoreComparison(it.groupValues[2], it.groupValues[3], it.groupValues[4])
                 if (condition == (it.groupValues[1] == "if")) return@command execute(
                     if (it.groupValues[6].isNotEmpty()) "execute ${it.groupValues[6]}" else it.groupValues[5])
                 return@command false
             }
             matches.matchEntire(command)?.let {
-                val value = values.getValue(scoreKey(it.groupValues[2]))
-                val range = it.groupValues[3]
-                val bounds = range.split("..")
-                val match = if (bounds.size == 1) value == range.toInt() else
-                    (bounds[0].isEmpty() || value >= bounds[0].toInt()) && (bounds[1].isEmpty() || value <= bounds[1].toInt())
+                val match = scoreMatches(it.groupValues[2], it.groupValues[3])
                 if (match == (it.groupValues[1] == "if")) return@command execute(
                     if (it.groupValues[5].isNotEmpty()) "execute ${it.groupValues[5]}" else it.groupValues[4])
                 return@command false

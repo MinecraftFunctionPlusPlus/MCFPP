@@ -41,7 +41,7 @@ class CollectionIRTest {
                     var values = [1,9] as list<any>
                     var i = 0
                     while(i < 3){ values[0] = values[0] + 1; i += 1; }
-                    dynamic result = values[0] + values[1]
+                    external result = values[0] + values[1]
                 }
             """, version)
             assertEquals(13, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -55,9 +55,9 @@ class CollectionIRTest {
         val main = compile("""
             func main(){
                 var values = {first:2, second:9} as dict<any>
-                dynamic condition = true
+                external condition = true
                 if(condition){ values["first"] = 3; } else { values["first"] = 5; }
-                dynamic result = values["first"] + values["second"]
+                external result = values["first"] + values["second"]
             }
         """)
         assertEquals(12, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -87,7 +87,7 @@ class CollectionIRTest {
                 var i = 0
                 while(i < 2){ view["field"][0] += 1; i += 1; }
                 copied["field"][0] = 7
-                dynamic result = values["field"][0] + copied["field"][0] + copied["field"][1]
+                external result = values["field"][0] + copied["field"][0] + copied["field"][1]
             }
         """)
         assertEquals(20, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -95,21 +95,19 @@ class CollectionIRTest {
         assertNotEquals(main.scope.getVar("values")!!.storageBinding!!.place, main.scope.getVar("copied")!!.storageBinding!!.place)
     }
 
-    @Test fun staticFieldEffectsPreserveOtherFieldsAndOrdinaryParameterCopies() {
+    @Test fun ordinaryParameterCopiesPreserveTheCallerFields() {
         val main = compile("""
-            func put(static value: dict<int>) { value["first"] = 7; }
             func privateChange(value: dict<int>): int { value["first"] = 4; return value["first"]; }
             func main(){
                 var values = {first:2, second:9}
                 var changed = privateChange(values)
-                put(values)
-                dynamic result = values["first"] + values["second"] + changed
+                external result = values["first"] + values["second"] + changed
             }
         """)
-        assertEquals(20, execute(main).read(main.scope.getVar("result") as MCInt))
+        assertEquals(15, execute(main).read(main.scope.getVar("result") as MCInt))
         val binding = main.scope.getVar("values")!!.storageBinding!!
         val call = main.typedIR!!.blocks.flatMap { it.instructions }.filterIsInstance<Instruction.Call>().last()
-        assertEquals(setOf(binding.place.field("first")), assertIs<Effect.Writes>(call.effect).places)
+        assertEquals(Effect.Pure, call.effect)
         assertIs<ValueKnowledge.Constant>(binding.data.facts.read(binding.place.field("second"))!!.value)
         assertEquals(Effect.Pure, function("privateChange").runtimeEffect)
     }
@@ -125,25 +123,12 @@ class CollectionIRTest {
                 var original = [2,9]
                 var copied = change(original, 3)
                 original[0] = 7
-                dynamic result = copied[0] + original[0] + copied[1]
+                external result = copied[0] + original[0] + copied[1]
             }
         """)
         assertEquals(21, execute(main).read(main.scope.getVar("result") as MCInt))
         assertNotNull(function("change").typedIR)
         assertEquals(Effect.Pure, function("change").runtimeEffect)
-    }
-
-    @Test fun collectionLiteralOperandsAreCapturedBeforeLaterCalls() {
-        val main = compile("""
-            func change(static value: int): int { value = 7; return 5; }
-            func main(){
-                var value = 2
-                var values = [value,change(value)]
-                var fields = {first:value, second:change(value)}
-                dynamic result = values[0]*100 + values[1]*10 + fields["first"] + fields["second"]
-            }
-        """)
-        assertEquals(262, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun negativeAndConstantVariableIndicesUseJoinedLengthsAndPreserveCopyShapes() = modes {
@@ -154,7 +139,7 @@ class CollectionIRTest {
                 var index = 0
                 values[index] = 7
                 var sum = values[-1] + copied[0]
-                dynamic result = sum
+                external result = sum
             }
         """)
         assertEquals(11, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -174,7 +159,7 @@ class CollectionIRTest {
             func main(){
                 var values: any = [2,9]
                 var view = values as list<any>
-                dynamic result = view[0] + view[1]
+                external result = view[0] + view[1]
             }
         """)
         val source = main.scope.getVar("values")!!.storageBinding!!
@@ -189,66 +174,9 @@ class CollectionIRTest {
         assertEquals(6, (StorageAccess.snapshotTag(assertIs<ValueKnowledge.Constant>(changed.value).value) as top.mcfpp.nbt.tags.primitive.IntTag).value)
     }
 
-    @Test fun staticElementWritesReplaceOldActualTypesAndKeepOtherFieldsKnown() = modes {
-        val main = compile("""
-            func change(static value: dict<any>) { value["first"] = false; }
-            func main(){
-                var values = {first:2, second:9} as dict<any>
-                change(values)
-                dynamic result = values["first"] == false
-            }
-        """)
-        assertEquals(1, execute(main).read(main.scope.getVar("result") as top.mcfpp.core.lang.bool.ScoreBool))
-        val binding = main.scope.getVar("values")!!.storageBinding!!
-        assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Bool.typeId), binding.data.facts.read(binding.place.field("first"))!!.type)
-        assertEquals(TypeKnowledge.Exact(top.mcfpp.type.MCFPPDictType(MCFPPBaseType.Int).typeId), binding.data.facts.read(binding.place)!!.type)
-        assertIs<ValueKnowledge.Constant>(binding.data.facts.read(binding.place.field("second"))!!.value)
-        MCFPPStringTest.readFromString("""
-            func change(static value: list<any>) { value[0] = false; }
-            func main(){ var values = [2] as list<any>; change(values); var result = values[0] + 1; }
-        """.trimIndent(), version = "26.3")
-        assertNotNull(function("main").typedIR)
-        assertTrue(Project.errorCount > 0)
-    }
-
-    @Test fun conditionalStaticElementWritesCannotBorrowTheUntouchedInputType() = modes {
-        MCFPPStringTest.readFromString("""
-            func change(static value: dict<any>, condition: bool) {
-                if(condition){ value["first"] = false; }
-            }
-            func main(){
-                var values = {first:2, second:9} as dict<any>
-                change(values, true)
-                var result = values["first"] + 1
-            }
-        """.trimIndent(), version = "26.3")
-        assertNotNull(function("main").typedIR)
-        assertTrue(Project.errorCount > 0)
-        val binding = function("main").scope.getVar("values")!!.storageBinding!!
-        assertIs<ValueKnowledge.Constant>(binding.data.facts.read(binding.place.field("second"))!!.value)
-    }
-
-    @Test fun nestedLiteralShapesBelongToCapturedOperandsBeforeLaterStaticCalls() = modes {
-        val main = compile("""
-            func replace(static value: list<any>): list<any> {
-                value = [false,false] as list<any>
-                return [7] as list<any>
-            }
-            func main(){
-                var values = [2] as list<any>
-                var nested = [values,replace(values)]
-                dynamic result = nested[0][-1] + (nested[1][0] as int)
-            }
-        """)
-        assertEquals(9, execute(main).read(main.scope.getVar("result") as MCInt))
-        val binding = main.scope.getVar("nested")!!.storageBinding!!
-        assertEquals(1, binding.data.facts.length(binding.place.index(0)))
-        assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), binding.data.facts.read(binding.place.index(0).index(0))!!.type)
-    }
-
     @Test fun emptyDictionaryLiteralsKeepRuntimeIdentityAndAcceptNewFields() {
         val main = compile("""
-            func main(){ var values = {}; values["first"] = 2; dynamic result = values["first"] + 1; }
+            func main(){ var values = {}; values["first"] = 2; external result = values["first"] + 1; }
         """)
         val values = main.scope.getVar("values")!!
         assertEquals(top.mcfpp.type.MCFPPDictType(MCFPPBaseType.Any).typeId, values.type.typeId)
@@ -263,7 +191,7 @@ class CollectionIRTest {
                 var view = values as ImmutableList<list<int>>
                 var copied = view
                 view[0][0] = 7
-                dynamic result = values[0][0] + copied[0][0]
+                external result = values[0][0] + copied[0][0]
             }
         """)
         assertEquals(9, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -280,7 +208,7 @@ class CollectionIRTest {
                 var values = [2,9] as list<any>
                 var i = 0
                 while(i < 2){ values = [4] as list<any>; i += 1; }
-                dynamic result = values[0] + 1
+                external result = values[0] + 1
             }
         """)
         assertEquals(5, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -305,7 +233,7 @@ class CollectionIRTest {
 
     @Test fun contextualLiteralsDoNotMakeOrdinaryMutableCollectionAssignmentsCovariant() {
         val main = compile("""
-            func main(){ var values: list<any> = [2]; values[0] = false; dynamic result = values[0] == false; }
+            func main(){ var values: list<any> = [2]; values[0] = false; external result = values[0] == false; }
         """)
         assertEquals(1, execute(main).read(main.scope.getVar("result") as top.mcfpp.core.lang.bool.ScoreBool))
         MCFPPStringTest.readFromString("""

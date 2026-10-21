@@ -88,9 +88,9 @@ class CompilerOnlyViewTest {
 
     @Test fun dynamicViewDeclarationsRejectCompilerOnlyLayoutsWithoutCallingTheirRuntimeAdapters() {
         for (source in listOf(
-            "dynamic view = int as type;",
-            "dynamic view = {kind:int} as dict<any>;",
-            "dynamic view = [int,float] as list<any>;"
+            "external view = int as type;",
+            "external view = {kind:int} as dict<any>;",
+            "external view = [int,float] as list<any>;"
         )) {
             MCFPPStringTest.readFromString("func main(){ $source }", version = "26.3")
             assertTrue(Project.errorCount > 0, source)

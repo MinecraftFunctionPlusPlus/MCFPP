@@ -29,6 +29,7 @@ import top.mcfpp.model.function.ParameterMatcher
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.mni.expand.MacroCallPipeline
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.scope.MCFPPFuncGetter
 import top.mcfpp.nbt.tags.Tag
@@ -58,6 +59,7 @@ class MCFPPExprVisitor(
 ): mcfppParserBaseVisitor<Var<*>>() {
 
     private var currSelector : Var<*>? = null
+    private var superSelector: DataTemplate? = null
     private var expectedLiteral: Pair<Int, MCFPPType>? = null
 
     fun visitExpression(ctx: mcfppParser.ExpressionContext, expectedType: MCFPPType?): Var<*> {
@@ -369,6 +371,7 @@ class MCFPPExprVisitor(
 
     private fun resolveVarWithSelector(ctx: mcfppParser.VarWithSelectorContext, preserveFinalProperty: Boolean): Var<*> {
         currSelector = null
+        superSelector = null
         currSelector = visitJvmAccessExpression(ctx.jvmAccessExpression())
         if(currSelector is PropertyVar && (!preserveFinalProperty || ctx.selector().isNotEmpty())){
             currSelector = (currSelector as PropertyVar).get();
@@ -416,7 +419,7 @@ class MCFPPExprVisitor(
     override fun visitSelector(ctx: mcfppParser.SelectorContext): Var<*> = withCompilationContext(ctx) {
         if (currSelector is PropertyVar) currSelector = (currSelector as PropertyVar).get()
         //进入visitVar，currSelector作为成员选择的上下文
-        currSelector = visitVar(ctx.`var`())
+        currSelector = try { visitVar(ctx.`var`()) } finally { superSelector = null }
         return currSelector!!
     }
 
@@ -463,6 +466,19 @@ class MCFPPExprVisitor(
             })
         } else {
             //this或者super
+            if (ctx.SUPER() != null) {
+                try {
+                    superSelector = Function.currFunction.superDeclarationOwner()
+                } catch (failure: Function.SuperFailure) {
+                    LogProcessor.error(failure.message ?: "Cannot bind super")
+                    return UnknownVar("super").apply { isError = true }
+                }
+                return (Function.currField.getVar("this") as? DataTemplateObject)
+                    ?: run {
+                        LogProcessor.error("'super' requires the current member receiver")
+                        UnknownVar("super").apply { isError = true }
+                    }
+            }
             val re: Var<*>? = Function.currField.getVar(ctx.text)
             if (re == null) {
                 LogProcessor.error("${ctx.text} can only be used in member functions.")
@@ -501,13 +517,18 @@ class MCFPPExprVisitor(
     }
 
     override fun visitFunctionCall(ctx: mcfppParser.FunctionCallContext): Var<*> = withCompilationContext(ctx) {
+        // Namespace macros must be intercepted before spills, comments or any argument is visited.
+        // A member/static/super call can never select a namespace macro, so those keep the old path.
+        if (currSelector == null && superSelector == null) {
+            val macro = MacroCallPipeline.visitFunctionCall(ctx, Function.currFunction)
+            if (macro != null) return@withCompilationContext macro
+        }
         //是函数调用，将已经计算好的中间量存储到栈中
         val spills = top.mcfpp.analysis.StorageAccess.spill(processVarCache)
         //函数的调用
         Function.addComment(ctx.text)
         //参数获取
         val normalArgs: ArrayList<Var<*>> = ArrayList()
-        val originalArgs: ArrayList<Var<*>> = ArrayList()
         val readOnlyArgs: ArrayList<Var<*>> = ArrayList()
         val exprVisitor = MCFPPExprVisitor()
         val concreteExprVisitor = MCFPPReadonlyExprVisitor()
@@ -539,13 +560,26 @@ class MCFPPExprVisitor(
                 top.mcfpp.analysis.StorageAccess.restore(spills)
                 return captured
             }
-            originalArgs.add(arg)
             normalArgs.add(captured)
             exprVisitor.processVarCache.add(captured)
         }
         //Try to get function
         val p = ctx.namespaceID().text.splitNamespaceID()
-        val func = if(currSelector == null){
+        val func = if (superSelector != null) {
+            try {
+                Function.currFunction.selectSuper(superSelector!!, p.second, readOnlyArgs.map {
+                    top.mcfpp.analysis.DeclarationBinding.Bound(ParameterMatcher.argumentType(it),
+                        StorageAccess.snapshot(it), descriptors = StorageAccess.boundTypes(it))
+                }, normalArgs.map(ParameterMatcher::argumentType))
+            } catch (failure: Function.SuperFailure) {
+                LogProcessor.error(failure.message ?: "Cannot bind super member")
+                StorageAccess.restore(spills)
+                return UnknownVar(p.second).apply { isError = true }
+            }
+        } else if (currSelector?.isError == true) {
+            StorageAccess.restore(spills)
+            return currSelector!!
+        } else if(currSelector == null){
             GlobalScope.getFunction(p.first, p.second, readOnlyArgs, normalArgs)
         }else{
             if(p.first != null){
@@ -555,26 +589,23 @@ class MCFPPExprVisitor(
         }
         //Function invoke
         if (func !is UnknownFunction) {
-            val passedArgs = normalArgs.mapIndexed { index, value ->
-                if (func.normalParams.getOrNull(index)?.isStatic == true) originalArgs[index] else value
-            }
             val returnVar = if(func is Generic<*>){
                 if(readOnlyArgs.any { it is UnknownVar } || normalArgs.any { it is UnknownVar }){
                     UnknownVar("re")
                 }else{
-                    func.invoke(readOnlyArgs, passedArgs, currSelector)
+                    func.invoke(readOnlyArgs, normalArgs, currSelector)
                 }
             }else if(func is NativeFunction){
                 if(readOnlyArgs.any { it is UnknownVar } || normalArgs.any { it is UnknownVar }){
                     UnknownVar("re")
                 }else{
-                    func.invoke(readOnlyArgs, passedArgs, currSelector)
+                    func.invoke(readOnlyArgs, normalArgs, currSelector)
                 }
             }else{
                 if(normalArgs.any { it is UnknownVar }){
                     UnknownVar("re")
                 }else {
-                    func.invoke(passedArgs, currSelector)
+                    func.invoke(normalArgs, currSelector)
                 }
             }
             //函数树
@@ -661,7 +692,15 @@ class MCFPPExprVisitor(
                 currSelector = (currSelector as PropertyVar).get()
             }
             //获取成员
-            val re  = currSelector!!.getMemberVar(qwq, Function.currFunction)
+            val re = if (superSelector != null && currSelector is DataTemplateObject) {
+                try {
+                    Function.currFunction.superMember(currSelector as DataTemplateObject, superSelector!!, qwq) to true
+                } catch (failure: Function.SuperFailure) {
+                    LogProcessor.error(failure.message ?: "Cannot bind super field")
+                    return@withCompilationContext UnknownVar(qwq).apply { isError = true }
+                }
+            } else if (currSelector!!.isError) return@withCompilationContext currSelector!!
+            else currSelector!!.getMemberVar(qwq, Function.currFunction)
             if (re.first == null) {
                 LogProcessor.error("Cannot get member $qwq")
                 UnknownVar(qwq)

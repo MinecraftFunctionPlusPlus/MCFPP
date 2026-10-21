@@ -391,12 +391,39 @@ sealed interface StorageLayout {
     object CompilerOnly : StorageLayout
 }
 
+/** Layouts are values; detach the one collection-bearing variant from caller-owned lists. */
+internal fun StorageLayout.checkpointCopy(): StorageLayout = when (this) {
+    is StorageLayout.LegacyFloat -> StorageLayout.LegacyFloat(Collections.unmodifiableList(ArrayList(components)))
+    else -> this
+}
+
 /** Layout caches are versioned by writes; materialization itself is not a write to the value. */
 class StorageVersions {
     private var nextWrite = 0L
     private val writes = mutableMapOf<Place, Long>()
     private val materialized = mutableMapOf<Pair<Location, StorageLayout>, Long>()
     private val ownedMaterialized = IdentityHashMap<Function, MutableMap<Pair<Location, StorageLayout>, Long>>()
+
+    /** Restores cache ownership and the write clock exactly, without recording another write. */
+    internal fun checkpoint(): () -> Unit {
+        val savedNext = nextWrite
+        val savedWrites = LinkedHashMap(writes)
+        fun copyCache(source: Map<Pair<Location, StorageLayout>, Long>) = source.entries.associateTo(linkedMapOf()) {
+            (key, version) -> (key.first to key.second.checkpointCopy()) to version
+        }
+        val savedMaterialized = copyCache(materialized)
+        val savedOwned = IdentityHashMap<Function, Map<Pair<Location, StorageLayout>, Long>>()
+        ownedMaterialized.forEach { (owner, cache) -> savedOwned[owner] = copyCache(cache) }
+        return {
+            nextWrite = savedNext
+            writes.clear()
+            writes.putAll(savedWrites)
+            materialized.clear()
+            materialized.putAll(savedMaterialized)
+            ownedMaterialized.clear()
+            savedOwned.forEach { (owner, cache) -> ownedMaterialized[owner] = LinkedHashMap(cache) }
+        }
+    }
     fun version(place: Place) = writes.filterKeys { it.overlaps(place) }.values.maxOrNull() ?: 0L
     fun invalidate(place: Place) { writes[place] = ++nextWrite }
     fun isMaterialized(place: Place, layout: StorageLayout, owner: Function? = null, location: Location = Location(place)) =

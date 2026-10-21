@@ -11,26 +11,11 @@ class EffectAnalysisTest {
     private fun body(instructions: List<Instruction>, parameters: List<SymbolId> = emptyList(), external: Set<SymbolId> = emptySet()) =
         TypedIR(0, listOf(BasicBlock(0, instructions, Terminator.Return(null))), parameters = parameters, externalRoots = external)
 
-    @Test fun ordinaryParameterCopiesAndReadOnlyStaticParametersHaveNoExternalWrites() {
+    @Test fun ordinaryParameterCopiesHaveNoExternalWrites() {
         val function = SymbolId.fresh()
         val parameter = SymbolId.fresh()
         assertEquals(Effect.Pure, EffectAnalysis.analyze(mapOf(function to body(listOf(Instruction.Write(Place(parameter), value)), listOf(parameter))))[function])
-        assertEquals(Effect.Pure, EffectAnalysis.analyze(mapOf(function to body(listOf(Instruction.Read(0, Place(parameter), int)), listOf(parameter), setOf(parameter))))[function])
-    }
-
-    @Test fun staticWritesMapThroughWrappersAndKeepUnrelatedParametersOutOfTheSummary() {
-        val leaf = SymbolId.fresh(); val wrapper = SymbolId.fresh()
-        val inner = SymbolId.fresh(); val outer = SymbolId.fresh(); val untouched = SymbolId.fresh()
-        val call = Instruction.Call(null, leaf, listOf(ValueRef.Read(int, Place(outer))), Effect.Unknown,
-            argumentPlaces = listOf(Place(outer)))
-        val graph = mapOf(leaf to body(listOf(Instruction.Write(Place(inner), value)), listOf(inner), setOf(inner)),
-            wrapper to body(listOf(call), listOf(outer, untouched), setOf(outer, untouched)))
-        val effects = EffectAnalysis.analyze(graph)
-        assertEquals(setOf(Place(inner)), assertIs<Effect.Writes>(effects[leaf]).places)
-        assertEquals(setOf(Place(outer)), assertIs<Effect.Writes>(effects[wrapper]).places)
-        assertEquals(emptySet(), assertIs<Effect.Writes>(effects[leaf]).contents)
-        assertEquals(emptySet(), assertIs<Effect.Writes>(effects[wrapper]).contents)
-        assertEquals(setOf(Place(outer)), assertIs<Effect.Writes>(EffectAnalysis.callEffect(call, graph, effects)).places)
+        assertEquals(Effect.Pure, EffectAnalysis.analyze(mapOf(function to body(listOf(Instruction.Read(0, Place(parameter), int)), listOf(parameter))))[function])
     }
 
     @Test fun mutualRecursionUsesALeastFixedPointAndPropagatesUnknownEffects() {
@@ -52,12 +37,4 @@ class EffectAnalysisTest {
         assertEquals(Effect.Pure, EffectAnalysis.analyze(mapOf(function to ir))[function])
     }
 
-    @Test fun recursiveFieldCompositionWidensAndTerminates() {
-        val function = SymbolId.fresh(); val parameter = SymbolId.fresh()
-        val place = Place(parameter)
-        val call = Instruction.Call(null, function, listOf(ValueRef.Read(int, place.field("child"))), Effect.Unknown,
-            argumentPlaces = listOf(place.field("child")))
-        val ir = body(listOf(Instruction.Write(place.field("value"), value), call), listOf(parameter), setOf(parameter))
-        assertEquals(setOf(place), assertIs<Effect.Writes>(EffectAnalysis.analyze(mapOf(function to ir))[function]).places)
-    }
 }

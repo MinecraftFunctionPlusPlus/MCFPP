@@ -3,11 +3,13 @@ package top.mcfpp
 import com.ibm.icu.impl.data.ResourceReader
 import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
+import picocli.CommandLine
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.util.LogLevel
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.UwU
+import java.io.File
 import java.nio.file.Files
 import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
@@ -17,7 +19,7 @@ import kotlin.system.exitProcess
  * 编译器的启动入口
  */
 fun main(args: Array<String>) {
-    //获取log4j2.xml配置文件
+    // 获取log4j2.xml配置文件
     val source:ConfigurationSource
     try {
         source = ConfigurationSource(ResourceReader::class.java.classLoader.getResourceAsStream("log4j2.xml"))
@@ -27,17 +29,13 @@ fun main(args: Array<String>) {
         e.printStackTrace()
     }
     if (args.isNotEmpty()) {
-        parseArgs(args.asList().subList(1, args.size))
+        val options = parseCompilerArgs(args)
 
-        LogProcessor.info("Tips: " + UwU.tip) //生成tips
+        LogProcessor.info("Tips: " + UwU.tip) // 生成tips
 
-        val path = args[0]
-        if(!Files.exists(Path(path))){
-            LogProcessor.error("Cannot find file: $path")
-            exitProcess(1)
-        }
-        val config = Project.readConfig(path) //读取配置文件
+        val config = Project.readConfig(options) // 读取配置文件
         if (Project.errorCount > 0) exitProcess(1)
+
         compile(config)
         if (Project.errorCount > 0) exitProcess(1)
     }
@@ -81,32 +79,43 @@ object MCFPP {
     const val VERSION = "0.1.0"
 }
 
-fun parseArgs(args: List<String>){
+/** This result contains only this invocation's macro options; it never carries legacy globals. */
+internal fun parseCompilerArgs(args: Array<String>): CompilerOptions {
+    val options = CompilerOptions()
+    CommandLine(options).parseArgs(*args)
+    return options
+}
 
-    for (arg in args) {
-        when (arg) {
-            "-debug"
-            -> CompileSettings.isDebug = true
+class CompilerOptions {
 
-            "-ignoreStdLib"
-            -> CompileSettings.ignoreStdLib = true
+    @CommandLine.Parameters(paramLabel = "FILE")
+    lateinit var file: File
 
-            "-isLib"
-            -> CompileSettings.isLib = true
+    @CommandLine.Option(names = ["-debug"])
+    var debug: Boolean = false
 
-            if (arg.startsWith("-maxWhileInline=")) arg else "$$arg"
-            -> CompileSettings.maxWhileInline = arg.split("=")[1].toInt()
+    @CommandLine.Option(names = ["-ignoreStdLib"])
+    var ignoreStdLib: Boolean = false
 
-            "-printAll"
-            -> CompileSettings.printAll = true
+    @CommandLine.Option(names = ["-macroMaxDepth"])
+    var isLib: Boolean = false
 
-            if(arg.startsWith("-level=")) arg else "$$arg"
-            -> LogProcessor.level = LogLevel.valueOf(arg.uppercase().split("=")[1])
+    @CommandLine.Option(names = ["-maxWhileInline"])
+    var macroMaxDepth: Int = 64
 
-            else -> {
-                LogProcessor.warn("Invalid argument: $arg")
-            }
-        }
-    }
+    @CommandLine.Option(names = ["-macroMaxDepth"])
+    var macroMaxNodes: Int = 100_000
+
+    @CommandLine.Option(names = ["-dumpMacroExpansion"])
+    var dumpMacroExpansion: Boolean = false
+
+    @CommandLine.Option(names = ["-debug"])
+    var maxWhileInline: Int = 32
+
+    @CommandLine.Option(names = ["-macroMaxDepth"])
+    var printAll: Boolean = false
+
+    @CommandLine.Option(names = ["-debug"])
+    var level: LogLevel = LogLevel.DEBUG
 
 }

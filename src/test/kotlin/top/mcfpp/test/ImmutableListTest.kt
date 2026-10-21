@@ -48,7 +48,7 @@ class ImmutableListTest {
                 var view = source as ImmutableList<int>
                 var first = view[0]
                 source[0] = 7
-                dynamic result = view[0]*10 + view[-1]
+                external result = view[0]*10 + view[-1]
             }
         """)
         assertEquals(73, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -66,7 +66,7 @@ class ImmutableListTest {
                 var copied = view
                 var returned = copy(view)
                 source[0] = 7
-                dynamic result = view[0]*100 + copied[0]*10 + returned[0]
+                external result = view[0]*100 + copied[0]*10 + returned[0]
             }
         """)
         assertEquals(722, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -83,8 +83,8 @@ class ImmutableListTest {
             func contains(values: ImmutableList<int>, value: int): bool { return values.contains(value); }
             func main(){
                 var values = [2,4,2] as ImmutableList<int>
-                dynamic result = lookup(values,2)
-                dynamic found = contains(values,4)
+                external result = lookup(values,2)
+                external found = contains(values,4)
             }
         """, "1.20.1")
         val machine = execute(main)

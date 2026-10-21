@@ -6,6 +6,7 @@ import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.mni.annotation.NoInstance
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.RawPreparationFact
 import top.mcfpp.model.compound.UnsolvedTemplate
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.util.LogProcessor
@@ -21,10 +22,12 @@ open class MCFPPDataTemplateType(
 
     @Transient private var resolvingTemplate = false
 
-    var template: DataTemplate = template
+    private var templateSlot: DataTemplate = template
+
+    var template: DataTemplate
         get() {
             if (this is MCFPPGenericDataTemplateType &&
-                field !is top.mcfpp.model.compound.CompiledGenericDataTemplate && !resolvingTemplate) {
+                templateSlot !is top.mcfpp.model.compound.CompiledGenericDataTemplate && !resolvingTemplate) {
                 resolvingTemplate = true
                 try {
                     tryResolve()
@@ -32,10 +35,47 @@ open class MCFPPDataTemplateType(
                     resolvingTemplate = false
                 }
             }
-            return field
+            return templateSlot
         }
+        set(value) { templateSlot = value }
 
-    override val typeId: TypeId get() = TypeId.Declaration(if (template.isInterface) "interface" else "template", template.namespace, template.identifier)
+    private class RawState(val target: DataTemplate, val resolving: Boolean)
+    private fun rawState(): RawState {
+        check(javaClass in checkpointClasses) { "Template type checkpoint cannot capture ${javaClass.name}" }
+        return RawState(templateSlot, resolvingTemplate)
+    }
+
+    /** Pure raw relationships: even a generic type does not invoke its template getter. */
+    internal fun rawPreparationFacts(): RawPreparationFact = rawState().let {
+        RawPreparationFact.row(RawPreparationFact.scalar("templateType"), RawPreparationFact.identity(this),
+            RawPreparationFact.identity(it.target), RawPreparationFact.scalar(it.resolving))
+    }
+
+    /** Raw private relationships only. Elements are opaque roots for the declaration deep journal. */
+    internal class PrivateStateCheckpoint internal constructor(
+        elements: List<DataTemplate>, private val restoreState: () -> Unit,
+        private val recapture: () -> PrivateStateCheckpoint
+    ) {
+        val elements: List<DataTemplate> = java.util.Collections.unmodifiableList(ArrayList(elements))
+        fun restore() = restoreState()
+        fun captureCurrent(): PrivateStateCheckpoint = recapture()
+    }
+
+    internal fun checkpointPrivateState(): PrivateStateCheckpoint = checkpointPrivateState(emptyList())
+
+    private fun checkpointPrivateState(retained: List<DataTemplate>): PrivateStateCheckpoint {
+        // Neither the public template getter nor a target's type/identity/getType is consulted.
+        val raw = rawState()
+        val target = raw.target
+        val seen = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<DataTemplate, Boolean>())
+        val elements = (retained + target).filter { seen.add(it) }
+        return PrivateStateCheckpoint(elements, {
+            templateSlot = target
+            resolvingTemplate = raw.resolving
+        }, { checkpointPrivateState(elements) })
+    }
+
+    override val typeId: TypeId get() = TypeId.Declaration("template", template.namespace, template.identifier)
 
     override val hasRuntimeRepresentation: Boolean
         get() = runtimeFields(hashSetOf())
@@ -119,6 +159,11 @@ open class MCFPPDataTemplateType(
     }
 
     companion object{
+        private val checkpointClasses = setOf<Class<*>>(
+            MCFPPDataTemplateType::class.java, MCFPPGenericDataTemplateType::class.java,
+            MCFPPObjectDataTemplateType::class.java,
+            MCFPPGenericObjectDataTemplateType::class.java, MCFPPTypeDataTemplateType::class.java
+        )
         val regex = Regex("^template\\((.+):(.+)\\)$")
     }
 

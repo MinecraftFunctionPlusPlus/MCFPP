@@ -25,6 +25,7 @@ import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.mni.annotation.NoExternalWrites
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.ValueWrapper
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
 import java.nio.file.Files
@@ -73,9 +74,11 @@ class NativeTemplateCommandContractTest {
             captured.clear()
             template.injectedBy(NativeRegistrationContractHelper::class.java)
             val diagnostics = captured.joinToString("\n")
-            assertEquals(errors + 4, Project.errorCount, diagnostics)
-            assertEquals(4, Regex("must use NativeCallContext").findAll(diagnostics).count(), diagnostics)
-            for (name in listOf("legacyFree", "wrongSignature", "legacyUnary", "legacyBinary")) {
+            assertEquals(errors + 3, Project.errorCount, diagnostics)
+            assertEquals(2, Regex("must use NativeCallContext").findAll(diagnostics).count(), diagnostics)
+            assertFalse(template.scope.functions.containsKey("wrongSignature"))
+            assertTrue(diagnostics.contains("must use Var wrappers"), diagnostics)
+            for (name in listOf("legacyUnary", "legacyBinary")) {
                 val diagnostic = "Method $name in class top.mcfpp.test.NativeRegistrationContractHelper must use NativeCallContext"
                 assertEquals(1, Regex(Regex.escape(diagnostic)).findAll(diagnostics).count(), diagnostics)
                 assertFalse(template.scope.functions.containsKey(name), name)
@@ -89,24 +92,27 @@ class NativeTemplateCommandContractTest {
             assertEquals(top.mcfpp.type.MCFPPPrivateType.Void, registered.returnType)
             assertTrue(registered.readOnlyParams.isEmpty())
             assertTrue(registered.normalParams.isEmpty())
-            registrationMain.runInFunction { registered.invoke(emptyList(), null) }
-            assertEquals(errors + 4, Project.errorCount)
+            val legacy = assertIs<NativeFunction>(template.scope.functions.getValue("legacyFree").single())
+            registrationMain.runInFunction {
+                registered.invoke(emptyList(), null)
+                legacy.invoke(emptyList(), null)
+            }
+            assertEquals(errors + 3, Project.errorCount)
             assertEquals(commands, registrationMain.commands)
 
             captured.clear()
             MCFPPStringTest.readFromString("""
-                func rejected() = top.mcfpp.test.NativeRegistrationContractHelper.legacyFree
+                func acceptedLegacy() = top.mcfpp.test.NativeRegistrationContractHelper.legacyFree
+                func acceptedLegacyResult(): int = top.mcfpp.test.NativeRegistrationContractHelper.legacyResult
                 func accepted() = top.mcfpp.test.NativeRegistrationContractHelper.valid
-                func main(){}
+                func main(){external result=acceptedLegacyResult();}
             """.trimIndent())
             val declarationDiagnostics = captured.joinToString("\n")
             assertFalse(assertNotNull(MCFPPFile.currFile).syntaxError, declarationDiagnostics)
-            assertEquals(1, Project.errorCount, declarationDiagnostics)
-            val diagnostic = "Method legacyFree in class top.mcfpp.test.NativeRegistrationContractHelper must use NativeCallContext"
-            assertEquals(1, Regex(Regex.escape(diagnostic)).findAll(declarationDiagnostics).count(), declarationDiagnostics)
-            assertEquals(1, Regex("must use NativeCallContext").findAll(declarationDiagnostics).count(), declarationDiagnostics)
+            assertEquals(0, Project.errorCount, declarationDiagnostics)
             val functions = GlobalScope.localNamespaces.getValue("default.test").scope.functions
-            assertFalse(functions.containsKey("rejected"))
+            val acceptedLegacy = assertIs<NativeFunction>(functions.getValue("acceptedLegacy").single())
+            assertTrue(acceptedLegacy.javaMethod.parameterTypes.isEmpty())
             val accepted = assertIs<NativeFunction>(functions.getValue("accepted").single())
             assertTrue(java.lang.reflect.Modifier.isStatic(accepted.javaMethod.modifiers))
             assertContentEquals(arrayOf<Class<*>>(NativeCallContext::class.java), accepted.javaMethod.parameterTypes)
@@ -115,10 +121,24 @@ class NativeTemplateCommandContractTest {
             assertTrue(accepted.readOnlyParams.isEmpty())
             assertTrue(accepted.normalParams.isEmpty())
             val acceptedMain = functions.getValue("main").single()
+            assertEquals(7, ScoreCommandExecutor(acceptedMain.commands.analyzeAll()).read(acceptedMain.scope.getVar("result") as MCInt))
             val acceptedCommands = acceptedMain.commands.toList()
-            acceptedMain.runInFunction { accepted.invoke(emptyList(), null) }
-            assertEquals(1, Project.errorCount)
+            acceptedMain.runInFunction {
+                accepted.invoke(emptyList(), null)
+                acceptedLegacy.invoke(emptyList(), null)
+            }
+            assertEquals(0, Project.errorCount)
             assertEquals(acceptedCommands, acceptedMain.commands)
+
+            captured.clear()
+            MCFPPStringTest.readFromString("""
+                func rejected(value:string) = top.mcfpp.test.NativeRegistrationContractHelper.wrongSignature
+                func main(){}
+            """.trimIndent())
+            val rejectedDiagnostics = captured.joinToString("\n")
+            assertEquals(1, Project.errorCount, rejectedDiagnostics)
+            assertTrue(rejectedDiagnostics.contains("must use Var wrappers"), rejectedDiagnostics)
+            assertFalse(GlobalScope.localNamespaces.getValue("default.test").scope.functions.containsKey("rejected"))
         } finally {
             logger.removeAppender(appender)
             appender.stop()
@@ -147,13 +167,13 @@ class NativeTemplateCommandContractTest {
         """, operation = "clone")
         reject("""
             import mcfpp.minecraft.other:*;import mcfpp.minecraft.resource:*;import mcfpp.minecraft.std:*
-            func main(){dynamic index=3;var slot=Slot(index,SlotType.container)
+            func main(){external index=3;var slot=Slot(index,SlotType.container)
                 var loot=LootTable();loot.id="fixture:loot";var result=lootReplace(0 0 0,slot,loot);}
         """, version = "1.19.4", operation = "loot")
     }
 
     @Test fun predicateFactoryCopiesNormalIdAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){var box=Box();dynamic result=box.observe(\"fixture:original\");}"
+        val mainSource = "func main(){var box=Box();external result=box.observe(\"fixture:original\");}"
         write("""
             namespace fixture.contracts
             import mcfpp.minecraft.resource:*
@@ -187,32 +207,17 @@ class NativeTemplateCommandContractTest {
     }
 
     @Test fun nominalAreaAndSlotsUseActualFieldsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){var box=Box();dynamic result=box.observe(3,SlotType.container,\"fixture:loot\",true);}"
-        write("""
+        fun mainSource(flag: Boolean) = "func main(){var box=Box();external result=box.observe(3,SlotType.container,\"fixture:loot\",$flag);}"
+        val librarySource = """
             namespace fixture.contracts
             import mcfpp.minecraft:*
             import mcfpp.minecraft.other:*
             import mcfpp.minecraft.resource:*
             import mcfpp.minecraft.std:*
-            data ConditionalArea:Area {
-                constructor(flag: bool) {
-                    this.start=1 2 3
-                    this.end=4 5 6
-                    if(flag){
-                        /say constructed-area
-                    }
-                }
-            }
-            data DifferentArea:Area {
-                constructor(flag: bool) {
-                    this.start=1 2 3
-                    if(flag){this.end=4 5 6;}
-                    else{this.end=10 11 12;}
-                }
-            }
             data Box {
                 func reject(flag: bool) {
-                    var area=DifferentArea(flag)
+                    var area=Area(1 2 3,4 5 6)
+                    while(flag){area.end=10 11 12;break;}
                     clone(area,7 8 9,CloneMaskMode.replace,CloneOperation.normal)
                 }
                 func observe(index: int,kind: SlotType,id: string,flag: bool):int {
@@ -221,7 +226,12 @@ class NativeTemplateCommandContractTest {
                     area.end=10 11 12
                     clone(areaCopy,7 8 9,CloneMaskMode.replace,CloneOperation.normal)
                     clone(area,7 8 9,CloneMaskMode.replace,CloneOperation.normal)
-                    var conditional=ConditionalArea(flag)
+                    var conditional=Area(0 0 0,0 0 0)
+                    if(flag){
+                        conditional.start=1 2 3;conditional.end=4 5 6
+                        /say constructed-area
+                    }
+                    else{conditional.start=1 2 3;conditional.end=4 5 6;}
                     clone(conditional,7 8 9,CloneMaskMode.replace,CloneOperation.normal)
                     var indexed=Slot(index,kind)
                     var copied=indexed
@@ -234,58 +244,123 @@ class NativeTemplateCommandContractTest {
                     return 7
                 }
             }
-            $mainSource
-        """, output)
-        fun check(main: Function, executionOutput: Path) {
-            assertTrue(observe(main).compiledFunctions.isEmpty())
+        """.trimIndent()
+        write("$librarySource\n${mainSource(true)}", output)
+        fun check(main: Function, executionOutput: Path, flag: Boolean) {
+            val observed = observe(main)
+            assertTrue(observed.compiledFunctions.isEmpty())
             val functions = exported(executionOutput)
-            val commands = functions.values.flatten()
-            assertEquals(2, commands.count { it == "clone 1 2 3 4 5 6 7 8 9 replace normal" })
-            assertEquals(1, commands.count { it == "clone 1 2 3 10 11 12 7 8 9 replace normal" })
-            val replacements = commands.filter { "run loot replace block 0 0 0 " in it }
-            assertEquals(3, replacements.size)
+            val replacements = functions.values.flatten().filter { "run loot replace block 0 0 0 " in it }
+            assertTrue(replacements.isNotEmpty(), "The published files must contain the native commands")
             assertFalse(replacements.any { "weapon_mainhand" in it || "EnumMember" in it || "JavaVar" in it })
-            val body = functions.getValue(observe(main).namespaceID.toString())
-            assertTrue(body.any { "set from storage mcfpp:system stack_frame[0].index" in it })
-            assertTrue(body.any { "stack_frame[0].loot.id set from storage mcfpp:system stack_frame[0].id" in it })
-            assertTrue(body.any { "set from storage mcfpp:system stack_frame[0].loot" in it })
+            val cloneTrace = "native-clone: "
+            val lootTrace = "native-loot: "
+            val functionTrace = "native-function: "
+            val lootCapture = Regex("""execute store result storage (\S+) (\S+) int 1 store success storage (\S+) (\S+) byte 1 run (loot replace block 0 0 0 .+)""")
+            // Keep exported files intact. Observe world effects in an execution copy, after the
+            // executor selects the real branch and substitutes the original macro arguments.
+            val executable = functions.mapValues { (name, lines) ->
+                listOf("say $functionTrace$name") + lines.flatMap { line ->
+                    val prefix = if (line.startsWith("$")) "$" else ""
+                    val command = line.removePrefix("$")
+                    when {
+                        command.startsWith("clone ") -> listOf("${prefix}say $cloneTrace$command")
+                        "run loot replace block 0 0 0 " in command -> {
+                            val capture = assertNotNull(lootCapture.matchEntire(command), command)
+                            val parts = capture.groupValues
+                            listOf(
+                                "${prefix}say $lootTrace${parts[5]}",
+                                // The external world result is a test input; compiler facts stay unknown.
+                                "${prefix}data modify storage ${parts[1]} ${parts[2]} set value 1",
+                                "${prefix}data modify storage ${parts[3]} ${parts[4]} set value 1b"
+                            )
+                        }
+                        else -> listOf(line)
+                    }
+                }
+            }
+            val machine = ScoreCommandExecutor(executable.getValue(main.namespaceID.toString()), executable)
+            val clones = machine.messages.filter { it.startsWith(cloneTrace) }.map { it.removePrefix(cloneTrace) }
+            assertEquals(listOf(
+                "clone 1 2 3 4 5 6 7 8 9 replace normal",
+                "clone 1 2 3 10 11 12 7 8 9 replace normal",
+                "clone 1 2 3 4 5 6 7 8 9 replace normal"
+            ), clones)
+            val loot = machine.messages.filter { it.startsWith(lootTrace) }.map { it.removePrefix(lootTrace) }
+            assertEquals(listOf(
+                "loot replace block 0 0 0 container.3 loot fixture:loot",
+                "loot replace block 0 0 0 weapon.mainhand loot fixture:loot",
+                "loot replace block 0 0 0 container.4 loot fixture:loot"
+            ), loot)
+            val executed = machine.messages.filter { it.startsWith(functionTrace) }.map { it.removePrefix(functionTrace) }.toSet()
+            val selectedCommands = executed.flatMap { functions.getValue(it) }
+            assertTrue(selectedCommands.any { "set from storage mcfpp:system stack_frame[0].index" in it })
+            assertTrue(selectedCommands.any { "stack_frame[0].loot.id set from storage mcfpp:system stack_frame[0].id" in it })
+            assertTrue(selectedCommands.any { "set from storage mcfpp:system stack_frame[0].loot" in it })
+            val selectedModels = GlobalScope.localNamespaces.values.flatMap { it.scope.functions.values.flatten() }
+                .plus(observed).filter { it.namespaceID.toString() in executed }
             for (name in listOf("first", "second", "third")) {
-                assertNull(top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(observe(main).scope.getVar(name))))
+                val locals = selectedModels.mapNotNull { it.scope.vars[name] }
+                assertTrue(locals.isNotEmpty(), "Missing $name in selected continuation scopes")
+                locals.forEach { assertNull(top.mcfpp.analysis.StorageAccess.snapshot(it), name) }
             }
-            val worldFunctions = functions.filterValues { lines -> lines.any { "run loot replace block 0 0 0 " in it } }.keys
-            val preparations = functions.mapValues { (name, lines) ->
-                if (name in worldFunctions) emptyList() else lines.filterNot { it.startsWith("clone ") }
-            }
-            val machine = ScoreCommandExecutor(preparations.getValue(main.namespaceID.toString()), preparations)
-            val calls = body.filter { line -> worldFunctions.any { line.startsWith("function $it with storage ") } }
-            assertEquals(3, calls.size)
-            val slots = calls.map { call ->
-                val name = call.substringAfter("function ").substringBefore(" with ")
-                val world = functions.getValue(name).single()
-                val slot = Regex("""run loot replace block 0 0 0 (\S+) loot""").find(world)!!.groupValues[1]
-                val path = call.substringAfter(" with storage mcfpp:system ")
-                val parameter = Regex("""\$\((arg_\d+)\)""").matchEntire(slot)?.groupValues?.get(1)
-                val lootParameter = Regex("""loot \$\((arg_\d+)\)""").find(world)!!.groupValues[1]
-                assertEquals("fixture:loot", assertIs<StringTag>(machine.readNbt("mcfpp:system", "$path.$lootParameter")).value)
-                if (parameter == null) slot else assertIs<StringTag>(machine.readNbt("mcfpp:system", "$path.$parameter")).value
-            }
-            assertEquals(listOf("container.3", "weapon.mainhand", "container.4"), slots)
             assertEquals(7, machine.read(main.scope.getVar("result") as MCInt))
-            assertEquals(listOf("constructed-area"), machine.messages)
+            val messages = machine.messages.filterNot {
+                it.startsWith(cloneTrace) || it.startsWith(lootTrace) || it.startsWith(functionTrace)
+            }
+            assertEquals(if (flag) listOf("constructed-area") else emptyList(), messages)
             assertEquals(0, machine.stackDepth)
         }
-        check(sourceMain(), output.resolve("source"))
-        check(consume("import mcfpp.minecraft.other:*;\n$mainSource", output), output.resolve("fresh"))
+        check(sourceMain(), output.resolve("source-true"), true)
+        Project.config.includes = arrayListOf()
+        MCFPPStringTest.readFromString("$librarySource\n${mainSource(false)}", version = "26.3")
+        assertEquals(0, Project.errorCount)
+        check(sourceMain(), output.resolve("source-false"), false)
+        for (flag in listOf(true, false)) {
+            check(consume("import mcfpp.minecraft.other:*;\n${mainSource(flag)}", output), output.resolve("fresh-$flag"), flag)
+        }
+        fun reject(source: String, namespace: String) {
+            val logger = assertIs<Logger>(LogProcessor.logger)
+            val captured = arrayListOf<String>()
+            val appender = object : AbstractAppender("area-flow-contract", null, null, false, Property.EMPTY_ARRAY) {
+                override fun append(event: LogEvent) { captured.add(event.message.formattedMessage) }
+            }
+            appender.start()
+            try {
+                logger.addAppender(appender)
+                MCFPPStringTest.readFromString(source.trimIndent(), version = "26.3")
+                val diagnostics = captured.joinToString("\n")
+                assertEquals(1, Project.errorCount, diagnostics)
+                assertTrue(diagnostics.contains("Cannot capture an incomplete compiler-only payload 'area'"), diagnostics)
+                val main = GlobalScope.localNamespaces.getValue(namespace).scope.functions.getValue("main").single()
+                val box = assertIs<DataTemplateObject>(main.scope.getVar("box"))
+                val rejected = box.templateType.scope.functions.getValue("reject").single()
+                assertTrue(rejected.compiledFunctions.isEmpty(), "The flag must remain an ordinary runtime parameter")
+                val area = assertIs<DataTemplateObject>(rejected.scope.getVar("area"))
+                assertFalse(area.isError, "The loop must retain a valid Area binding")
+                assertNotNull(area.storageBinding)
+                fun point(name: String): top.mcfpp.core.lang.Var<*> {
+                    val field = assertNotNull(DataTemplate.getField(area, name))
+                    return if (field is top.mcfpp.core.lang.PropertyVar) field.get() else field
+                }
+                assertNotNull(top.mcfpp.analysis.StorageAccess.snapshot(point("start")))
+                assertNull(top.mcfpp.analysis.StorageAccess.snapshot(point("end")),
+                    "The zero-iteration and break exits have different end coordinates")
+                assertFalse(rejected.commands.any { it.toString().startsWith("clone ") || "run clone " in it.toString() })
+            } finally {
+                logger.removeAppender(appender)
+                appender.stop()
+            }
+        }
+        val rejectedMain = "func main(){var box=Box();box.reject(true);}"
+        Project.config.includes = arrayListOf()
+        reject("$librarySource\n$rejectedMain", "fixture.contracts")
         Project.config.includes = arrayListOf(output.toString())
-        MCFPPStringTest.readFromString("""
-            import fixture.contracts:*
-            func main(){var box=Box();box.reject(true);}
-        """.trimIndent(), version = "26.3")
-        assertTrue(Project.errorCount > 0, "Different coordinates on unknown constructor paths require a capability diagnostic")
+        reject("import fixture.contracts:*;\n$rejectedMain", "default.test")
     }
 
     @Test fun nativeBossbarPropertiesPublishUnknownResultsAcrossLibraryRoundTrip() = withLibrary { output ->
-        val mainSource = "func main(){var box=Box();dynamic result=box.observe(\"fixture:bar\",11,true);}"
+        val mainSource = "func main(){var box=Box();external result=box.observe(\"fixture:bar\",11,true);}"
         write("""
             namespace fixture.contracts
             import mcfpp.minecraft.resource:*
@@ -293,9 +368,9 @@ class NativeTemplateCommandContractTest {
                 func observe(id: string,number: int,flag: bool):int {
                     var bar=BossBar(id)
                     bar.max=number;bar.value=number;bar.visible=flag
-                    dynamic maximum=bar.max
-                    dynamic current=bar.value
-                    dynamic visible=bar.visible
+                    external maximum=bar.max
+                    external current=bar.value
+                    external visible=bar.visible
                     number+=1;flag=false
                     return number
                 }
@@ -413,11 +488,11 @@ class NativeTemplateCommandContractTest {
 }
 
 object NativeRegistrationContractHelper {
-    @JvmStatic @MNIFunction fun legacyFree() {
-        error("An invalid host signature must be rejected before invocation")
-    }
+    @JvmStatic @MNIFunction fun legacyFree() {}
+    @JvmStatic @NoExternalWrites @MNIFunction(returnType = "int")
+    fun legacyResult(result: ValueWrapper<MCInt>) { result.set(MCInt(7)) }
 
-    @JvmStatic @MNIFunction(normalParams = ["string value"])
+    @JvmStatic @MNIFunction(normalParams = ["string"])
     fun wrongSignature(@Suppress("UNUSED_PARAMETER") value: String) {
         error("An invalid host signature must be rejected before invocation")
     }

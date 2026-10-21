@@ -95,7 +95,6 @@ BREAK:'break';
 CONTINUE:'continue';
 RETURN:'return';
 
-STATIC:'static';
 EXTENDS:'extends';
 NATIVE:'native';
 CONCRETE:'concrete';
@@ -110,13 +109,12 @@ ABSTRACT: 'abstract';
 IMPL: 'impl';
 
 CONST:'const';
-DYNAMIC:'dynamic';
+EXTERNAL:'external';
 IMPORT: 'import';
 
 INLINE:'inline';
 
 OBJECT:'object';
-INTERFACE:'interface';
 DATA:'data';
 FUNCTION:'func';
 ENUM:'enum';
@@ -185,6 +183,7 @@ fragment IntConstant : DecimalConstant|HexadecimalConstant|OctalConstant;
 
 Identifier
     : (Letter | '_') (Letter | '_' | UnicodeDigit)*
+      {if (getText().equals("ref")) setType(REF);}
     ;
 
 Letter
@@ -289,3 +288,8 @@ MultiLineStrExprStart
 MultiLineStrText
     :  ~('"' | '$')+ | '$'
     ;
+
+// Serialized library parse trees retain token numbers. Allocate new keywords
+// after every existing mode; Identifier emits them in DEFAULT_MODE.
+mode AddedKeywords;
+REF: 'ref';

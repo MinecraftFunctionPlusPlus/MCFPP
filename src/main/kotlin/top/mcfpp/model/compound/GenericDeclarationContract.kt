@@ -36,7 +36,6 @@ internal object GenericDeclarationContract {
                 if (name != null && arguments != null) {
                     val (namespace, identifier) = name.splitNamespaceID()
                     val declaration = GlobalScope.getTemplate(namespace, identifier)
-                        ?: GlobalScope.getInterface(namespace, identifier)
                         ?: GlobalScope.getObject(namespace, identifier) as? DataTemplate
                     val formals = (declaration as? GenericDataTemplate)?.readOnlyParams
                     arguments.forEachIndexed { index, argument ->

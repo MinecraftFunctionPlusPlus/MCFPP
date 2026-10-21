@@ -1,7 +1,9 @@
 package top.mcfpp.test
 
+import top.mcfpp.Project
 import top.mcfpp.test.util.MCFPPStringTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class DataTemplateTest {
     @Test
@@ -21,7 +23,8 @@ class DataTemplateTest {
                     print(t.qwq)
                 }
             """.trimIndent()
-        MCFPPStringTest.readFromString(test)
+        MCFPPStringTest.readFromString(test, version = "26.3")
+        assertEquals(0, Project.errorCount)
     }
 
     @Test
@@ -29,13 +32,12 @@ class DataTemplateTest {
         val test =
             """
                 data Test{
-                    var qwq: (int|string)
+                    var qwq: (int|string) = 0
                 }
                 
                 func main(){
                     var t = Test()
                     print(t.qwq as int)
-                    print(t.qwq as string)
                     print(t)
                     t.qwq = 6
                     print(t.qwq as int)
@@ -45,7 +47,8 @@ class DataTemplateTest {
                     print(t)
                 }
             """.trimIndent()
-        MCFPPStringTest.readFromString(test, arrayOf("debug"))
+        MCFPPStringTest.readFromString(test, arrayOf("debug"), version = "26.3")
+        assertEquals(0, Project.errorCount)
     }
 
     @Test
@@ -73,7 +76,8 @@ class DataTemplateTest {
                     print(t)
                 }
             """.trimIndent()
-        MCFPPStringTest.readFromString(test)
+        MCFPPStringTest.readFromString(test, version = "26.3")
+        assertEquals(0, Project.errorCount)
     }
 
     @Test
@@ -89,13 +93,14 @@ class DataTemplateTest {
                 }
                 
                 func main(){
-                    var t: (Test1&Test2) = {qwq:1, qwq2: "qwq"}
+                    var t: (Test1&Test2) = {qwq:1, qwq2: "qwq"} as (Test1&Test2)
                     print(t)
                     print(t.qwq)
                     print(t.qwq2)
                 }
             """.trimIndent()
-        MCFPPStringTest.readFromString(test)
+        MCFPPStringTest.readFromString(test, version = "26.3")
+        assertEquals(0, Project.errorCount)
     }
 
 }

@@ -71,35 +71,6 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         return ctx.text.splitNamespaceID()
     }
 
-    override fun visitInterfaceDeclaration(ctx: mcfppParser.InterfaceDeclarationContext): Unit = withCompilationContext(ctx){
-        //注册类
-        val id = ctx.compoundDeclaration().declarationName().classWithoutNamespace().text
-        val nsp = GlobalScope.localNamespaces[Project.currNamespace]!!
-        if (nsp.scope.hasDeclaredType(id)) {
-            //重复声明
-            LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
-            DataTemplate.currTemplate = nsp.scope.getInterface(id)
-        } else {
-            //如果没有声明过这个类
-            val itf = if(ctx.compoundDeclaration().declarationName().readOnlyParams() == null) {
-                DataTemplate(id,Project.currNamespace)
-            } else {
-                val qwq = GenericDataTemplate(ctx.templateBody(), id, Project.currNamespace)
-                qwq.readOnlyParams.addAll(ctx.compoundDeclaration().declarationName().readOnlyParams().parameterList().parameter().map {
-                    DataTemplateParam(DeclarationSyntax.readonlyTypeName(it), DeclarationSyntax.parameterName(it, true, "p${qwq.readOnlyParams.size}"), variance = when {
-                        it.OUT() != null -> top.mcfpp.model.compound.DeclarationVariance.OUT
-                        it.IN() != null -> top.mcfpp.model.compound.DeclarationVariance.IN
-                        else -> top.mcfpp.model.compound.DeclarationVariance.INVARIANT
-                    })
-                })
-                qwq
-            }
-            itf.parentID.addAll(ctx.compoundDeclaration().extendName().map { it.text })
-            itf.isInterface = true
-            itf.isAbstract = true
-            nsp.scope.addInterface(id, itf)
-        }
-    }
 
     override fun visitTemplateDeclaration(ctx: mcfppParser.TemplateDeclarationContext): Unit = withCompilationContext(ctx) {
         //注册模板

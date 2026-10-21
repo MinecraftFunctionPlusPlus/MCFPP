@@ -226,6 +226,9 @@ open class SelectorVar : Var<SelectorVar> {
 
         }
 
+        /** Recognizes only selector-owned declarations without resolving or inspecting their contents. */
+        internal fun isOwnedDeclaration(compound: CompoundData): Boolean =
+            compound.javaClass === AllEntityDataTemplate::class.java
 
     }
 }

@@ -65,7 +65,7 @@ class TemplateConstInitializationTest {
             }
             func main(){
                 $assignments
-                dynamic result = Defaults.typed*10 + Defaults.inferred
+                external result = Defaults.typed*10 + Defaults.inferred
             }
         """
         for (assignments in listOf("", "Defaults.typed = 99; Defaults.inferred = 99;")) {
@@ -127,7 +127,7 @@ class TemplateConstInitializationTest {
                     var first = Box(1)
                     var second = Box(2)
                     $assignment
-                    dynamic result = first.value*10 + second.value
+                    external result = first.value*10 + second.value
                 }
             """, if (assignment.isEmpty()) 0 else 1)
             val box = GlobalScope.getTemplate("default.test", "Box")!!

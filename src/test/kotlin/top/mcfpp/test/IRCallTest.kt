@@ -45,7 +45,7 @@ class IRCallTest {
                 var value: any = 1
                 var i = 0
                 while(i < 3){ value = wrapper(value); i += 1; }
-                dynamic result = value + 2
+                external result = value + 2
             }
         """)
         assertEquals(6, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -66,7 +66,7 @@ class IRCallTest {
                     return value + sum(value - 1)
                 }
                 func add(left: int, right: int): int { return left + right; }
-                func main(){ dynamic result = add(sum(3),sum(4)); }
+                func main(){ external result = add(sum(3),sum(4)); }
             """, version)
             assertEquals(16, execute(main).read(main.scope.getVar("result") as MCInt))
             assertEquals(Effect.Pure, function("sum").runtimeEffect)
@@ -84,47 +84,13 @@ class IRCallTest {
                 if(value <= 0){ return false; }
                 return even(value - 1)
             }
-            func main(){ dynamic result = even(4) && !odd(4); }
+            func main(){ external result = even(4) && !odd(4); }
         """)
         assertEquals(1, execute(main).read(main.scope.getVar("result") as ScoreBool))
         for (name in listOf("even", "odd")) {
             assertEquals(Effect.Pure, function(name).runtimeEffect)
             assertNotNull(function(name).typedIR)
         }
-    }
-
-    @Test fun staticWritesInvalidateOnlyTheirActualArgument() {
-        val main = compile("""
-            func put(static value: int) { value = 7; }
-            func main(){
-                var changed = 2
-                var untouched = 3
-                put(changed)
-                dynamic result = changed*10 + untouched
-            }
-        """)
-        assertEquals(73, execute(main).read(main.scope.getVar("result") as MCInt))
-        assertNotNull(StorageAccess.snapshot(assertNotNull(main.scope.getVar("untouched"))))
-        assertNull(StorageAccess.snapshot(assertNotNull(main.scope.getVar("changed"))))
-        val changed = main.scope.getVar("changed")!!.symbol!!.id
-        val call = main.typedIR!!.blocks.flatMap { it.instructions }.filterIsInstance<Instruction.Call>().single()
-        assertEquals(setOf(Place(changed)), assertIs<Effect.Writes>(call.effect).places)
-        assertEquals(1, assertIs<Effect.Writes>(function("put").runtimeEffect).places.size)
-    }
-
-    @Test fun staticCallsDoNotChangeAlreadyEvaluatedOperandsOrEarlierArguments() {
-        val main = compile("""
-            func change(static value: int): int { value = 9; return 7; }
-            func add(left: int, right: int): int { return left + right; }
-            func main(){
-                var first = 2
-                var result = first + change(first)
-                var second = 3
-                var arguments = add(second,change(second))
-                dynamic number = result*100 + arguments*10 + first
-            }
-        """)
-        assertEquals(1009, execute(main).read(main.scope.getVar("number") as MCInt))
     }
 
     @Test fun unknownCallsFlushAndInvalidateErasedPlacesAndPropagateThroughWrappers() {
@@ -136,7 +102,7 @@ class IRCallTest {
             func main(){
                 var value: any = 2
                 wrapper()
-                dynamic result = (value as int) + 1
+                external result = (value as int) + 1
             }
         """)
         assertEquals(8, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -151,7 +117,7 @@ class IRCallTest {
                 var original: any = 2
                 var copied = identity(original)
                 original = 7
-                dynamic result = copied + original
+                external result = copied + original
             }
         """)
         assertEquals(9, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -179,7 +145,7 @@ class IRCallTest {
             func main(){
                 var values = {field:2}
                 var result = wrapper(4)
-                dynamic number = values["field"] + result
+                external number = values["field"] + result
             }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
@@ -198,47 +164,12 @@ class IRCallTest {
             func add(value: int, delta: int = 2): int { return value + delta; }
             func main(){
                 var value: any = 2
-                dynamic result = choose(value) + choose(false) + add(3)
+                external result = choose(value) + choose(false) + add(3)
             }
         """)
         assertEquals(28, execute(main).read(main.scope.getVar("result") as MCInt))
         val calls = main.typedIR!!.blocks.flatMap { it.instructions }.filterIsInstance<Instruction.Call>()
         assertEquals(3, calls.map { it.declaration }.distinct().size)
-    }
-
-    @Test fun staticErasedWritesUpdateActualTypesInsteadOfRetainingTheInputType() {
-        val main = compile("""
-            func flip(static value: any) { value = false; }
-            func main(){
-                var value: any = 2
-                flip(value)
-                dynamic result = value == false
-            }
-        """)
-        assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Bool.typeId), (main.scope.getVar("value") as MCAny).typeKnowledge)
-        assertEquals(1, execute(main).read(main.scope.getVar("result") as ScoreBool))
-        MCFPPStringTest.readFromString("""
-            func flip(static value: any) { value = false; }
-            func main(){ var value: any = 2; flip(value); var result = value + 1; }
-        """.trimIndent(), version = "26.3")
-        assertTrue(Project.errorCount > 0)
-    }
-
-    @Test fun expressionViewsReadBeforeLaterCallsAndStaticViewsWriteTheSamePlace() {
-        val main = compile("""
-            func change(static value: any): int { value = 9; return 7; }
-            func put(static value: int) { value = 7; }
-            func main(){
-                var value: any = 2
-                var sum = (value as int) + change(value)
-                dynamic result = sum*10 + (value as int)
-                put(value as int)
-                dynamic updated = value + 1
-            }
-        """)
-        val machine = execute(main)
-        assertEquals(99, machine.read(main.scope.getVar("result") as MCInt))
-        assertEquals(8, machine.read(main.scope.getVar("updated") as MCInt))
     }
 
     @Test fun overloadBindingUsesReachableFactsInsteadOfLexicalBranchGuesses() = modes {
@@ -247,7 +178,7 @@ class IRCallTest {
             func main(){
                 var value: any = 2
                 if(false){ value = false; }
-                dynamic result = consume(value)
+                external result = consume(value)
             }
         """)
         assertEquals(3, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -259,7 +190,7 @@ class IRCallTest {
     @Test fun directErasedCallResultsProvideIndependentPlacesForViews() = modes {
         val main = compile("""
             func identity(value: any): any { return value; }
-            func main(){ dynamic result = (identity(2) as int) + (identity(3) as int); }
+            func main(){ external result = (identity(2) as int) + (identity(3) as int); }
         """)
         assertEquals(5, execute(main).read(main.scope.getVar("result") as MCInt))
         val calls = main.typedIR!!.blocks.flatMap { it.instructions }.filterIsInstance<Instruction.Call>()
@@ -273,7 +204,7 @@ class IRCallTest {
                     if(value <= 0){ return 0; }
                     return value + (sum(value - 1) as int)
                 }
-                func main(){ dynamic result = (sum(4) as int) + (sum(3) as int); }
+                func main(){ external result = (sum(4) as int) + (sum(3) as int); }
             """, version)
             assertEquals(16, execute(main).read(main.scope.getVar("result") as MCInt))
             assertEquals(Effect.Pure, function("sum").runtimeEffect)
@@ -286,10 +217,10 @@ class IRCallTest {
             func increment(value: int): int { return value + 1; }
             func main(){
                 var result = identity(2) + increment(identity(3))
-                dynamic number = result
+                external number = result
                 var copy = identity(4)
-                dynamic typedNumber: int = identity(5)
-                dynamic accepted = false
+                external typedNumber: int = identity(5)
+                external accepted = false
                 if(identity(true)){ accepted = true; }
             }
         """)
@@ -309,16 +240,16 @@ class IRCallTest {
             func choose(): int {
                 if(1 < 2){ return 7; }
             }
-            func main(){ dynamic result = choose(); }
+            func main(){ external result = choose(); }
         """)
         assertNotNull(function("choose").typedIR)
         assertEquals(7, execute(main).read(main.scope.getVar("result") as MCInt))
         MCFPPStringTest.readFromString("""
             func choose(): int {
-                dynamic condition = 1 < 2
+                external condition = 1 < 2
                 if(condition){ return 7; }
             }
-            func main(){ dynamic result = choose(); }
+            func main(){ external result = choose(); }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0)
     }

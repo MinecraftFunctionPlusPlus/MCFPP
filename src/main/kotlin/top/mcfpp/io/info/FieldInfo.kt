@@ -31,15 +31,25 @@ data class FieldInfo(
         properties.forEach {
             val restored = it.get()
             fun bind(function: top.mcfpp.model.function.Function): top.mcfpp.model.function.Function {
-                val canonical = field.getFunctionCandidates(function.identifier).singleOrNull { candidate ->
-                    top.mcfpp.model.function.ParameterMatcher.sameSignature(candidate, function)
-                } ?: function
                 if (owner != null) {
-                    canonical.owner = owner
-                    if (field !in canonical.scope.parent) canonical.scope.parent.add(0, field)
-                    if (canonical is top.mcfpp.model.function.NativeFunction) canonical.caller = owner.getType()
+                    function.owner = owner
+                    if (field !in function.scope.parent) function.scope.parent.add(0, field)
+                    if (function is top.mcfpp.model.function.NativeFunction) function.caller = owner.getType()
                 }
-                return canonical
+                // Only a declaration of this exact target may replace the independently
+                // restored accessor. In particular native property helpers need not be
+                // registered and may share their name/signature with ordinary methods.
+                return field.functions[function.identifier].orEmpty().singleOrNull { candidate ->
+                    candidate.owner === owner &&
+                        top.mcfpp.model.function.ParameterMatcher.sameSignature(candidate, function) &&
+                        candidate.returnType.typeId == function.returnType.typeId &&
+                        candidate.isStatic == function.isStatic && when {
+                            candidate is top.mcfpp.model.function.NativeFunction && function is top.mcfpp.model.function.NativeFunction ->
+                                candidate.javaMethod == function.javaMethod && candidate.caller.typeId == function.caller.typeId
+                            candidate is top.mcfpp.model.function.NativeFunction || function is top.mcfpp.model.function.NativeFunction -> false
+                            else -> candidate.javaClass == function.javaClass && function.ast != null && candidate.ast === function.ast
+                        }
+                } ?: function
             }
             val getter = when (val accessor = restored.accessor) {
                 is top.mcfpp.model.property.FunctionAccessor -> top.mcfpp.model.property.FunctionAccessor(bind(accessor.function))
@@ -53,6 +63,7 @@ data class FieldInfo(
             }
             val property = top.mcfpp.model.property.Property(restored.identifier, getter, setter).apply {
                 accessModifier = restored.accessModifier
+                isFinal = restored.isFinal
                 isStatic = field.getVar(identifier)?.isStatic ?: restored.isStatic
             }
             if (owner != null) property.declaredParentTemplate = owner

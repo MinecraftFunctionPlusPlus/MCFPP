@@ -125,8 +125,8 @@ class NativeSelectorContractTest {
             }
             func main() {
                 var box = Box()
-                dynamic result = box.observe(4, "fixture:original", "savedword", {value:7} as nbt, 1..3, "survival", "nearest")
-                dynamic openResult = box.observe(4, "fixture:original", "savedword", {value:7} as nbt, 1.., "survival", "nearest")
+                external result = box.observe(4, "fixture:original", "savedword", {value:7} as nbt, 1..3, "survival", "nearest")
+                external openResult = box.observe(4, "fixture:original", "savedword", {value:7} as nbt, 1.., "survival", "nearest")
             }
         """
         Project.config.includes = arrayListOf(resources.toString(), entities.toString())
@@ -138,8 +138,8 @@ class NativeSelectorContractTest {
             import fixture.selectors:*
             func main() {
                 var box = Box()
-                dynamic result = box.observe(4, "fixture:original", "savedword", {value:7} as nbt, 1..3, "survival", "nearest")
-                dynamic openResult = box.observe(4, "fixture:original", "savedword", {value:7} as nbt, 1.., "survival", "nearest")
+                external result = box.observe(4, "fixture:original", "savedword", {value:7} as nbt, 1..3, "survival", "nearest")
+                external openResult = box.observe(4, "fixture:original", "savedword", {value:7} as nbt, 1.., "survival", "nearest")
             }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
@@ -148,7 +148,7 @@ class NativeSelectorContractTest {
             import fixture.selectors:*
             func main() {
                 var box = Box()
-                dynamic result = box.recurse(1, "outer")
+                external result = box.recurse(1, "outer")
             }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
@@ -352,11 +352,11 @@ class NativeSelectorContractTest {
             func known(){var selected=@e;selected.name("quote \" slash \\")
                 /say ${'$'}{selected}
             }
-            func main(){var box=Box();dynamic result=box.name("initial");dynamic tagResult=box.tag("initial");dynamic teamResult=box.team("initial");known();}
+            func main(){var box=Box();external result=box.name("initial");external tagResult=box.tag("initial");external teamResult=box.team("initial");known();}
         """.trimIndent()
         for(fresh in listOf(false,true)) {
             Project.config.includes=if(fresh) arrayListOf(resources.toString(),entities.toString(),library.toString()) else arrayListOf(resources.toString(),entities.toString())
-            MCFPPStringTest.readFromString(if(fresh) "import fixture.guards:*;\nfunc main(){var box=Box();dynamic result=box.name(\"initial\");dynamic tagResult=box.tag(\"initial\");dynamic teamResult=box.team(\"initial\");known();}" else source,
+            MCFPPStringTest.readFromString(if(fresh) "import fixture.guards:*;\nfunc main(){var box=Box();external result=box.name(\"initial\");external tagResult=box.tag(\"initial\");external teamResult=box.team(\"initial\");known();}" else source,
                 targetPath=if(fresh)null else library.toString(),version="26.3")
             assertEquals(0,Project.errorCount)
             val main=GlobalScope.localNamespaces.values.flatMap {it.scope.functions.values.flatten()}.single {it.identifier=="main"}

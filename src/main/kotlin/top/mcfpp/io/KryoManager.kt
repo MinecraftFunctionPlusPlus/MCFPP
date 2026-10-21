@@ -6,6 +6,7 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import org.antlr.v4.runtime.CommonToken
 import org.objenesis.strategy.StdInstantiatorStrategy
+import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.io.info.DataTemplateInfo
 import top.mcfpp.io.info.FunctionTagInfo
 import top.mcfpp.model.compound.DataTemplate
@@ -14,6 +15,7 @@ import top.mcfpp.model.compound.UnsolvedTemplate
 import top.mcfpp.model.function.FunctionTag
 import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.type.MCFPPGenericDataTemplateType
+import top.mcfpp.type.MCFPPGenericObjectDataTemplateType
 import top.mcfpp.type.TypeId
 import top.mcfpp.type.MCFPPObjectDataTemplateType
 import top.mcfpp.type.MCFPPType
@@ -24,12 +26,12 @@ object KryoManager {
     val kryo = Kryo().apply {
         isRegistrationRequired = false
         references = true
-        addDefaultSerializer(top.mcfpp.type.TypeId::class.java, TypeIdentitySerializer())
+        addDefaultSerializer(TypeId::class.java, TypeIdentitySerializer())
         addDefaultSerializer(MCFPPType::class.java, TypeDescriptorSerializer())
-        addDefaultSerializer(top.mcfpp.analysis.CompilerValue::class.java, object : Serializer<top.mcfpp.analysis.CompilerValue>() {
+        addDefaultSerializer(CompilerValue::class.java, object : Serializer<CompilerValue>() {
             private val identities = TypeIdentitySerializer()
-            override fun write(kryo: Kryo, output: Output, value: top.mcfpp.analysis.CompilerValue) = identities.writeValue(output, value)
-            override fun read(kryo: Kryo, input: Input, type: Class<out top.mcfpp.analysis.CompilerValue>) = identities.readValue(input)
+            override fun write(kryo: Kryo, output: Output, value: CompilerValue) = identities.writeValue(output, value)
+            override fun read(kryo: Kryo, input: Input, type: Class<out CompilerValue>) = identities.readValue(input)
         })
         instantiatorStrategy = StdInstantiatorStrategy()
 
@@ -42,7 +44,7 @@ object KryoManager {
 
             override fun read(p0: Kryo, p1: Input, p2: Class<out DataTemplate>): DataTemplate {
                 val identity = readIdentity(p1)
-                val template = UnsolvedTemplate(identity.name, identity.namespace, identity.isInterface, identity.isAbstract, identity.isFinal)
+                val template = UnsolvedTemplate(identity.name, identity.namespace, identity.isAbstract, identity.isFinal)
                 // Register before nested reads can refer back: Kryo 5.6.2 README, Serializer references.
                 // https://github.com/EsotericSoftware/kryo/blob/kryo-parent-5.6.2/README.md#serializer-references
                 p0.reference(template)
@@ -74,7 +76,7 @@ object KryoManager {
             @Suppress("UNCHECKED_CAST")
             override fun read(p0: Kryo, p1: Input, p2: Class<out MCFPPDataTemplateType>): MCFPPDataTemplateType {
                 val identity = readIdentity(p1)
-                val template = UnsolvedTemplate(identity.name, identity.namespace, identity.isInterface, identity.isAbstract, identity.isFinal)
+                val template = UnsolvedTemplate(identity.name, identity.namespace, identity.isAbstract, identity.isFinal)
                 val type = MCFPPDataTemplateType(template, arrayListOf())
                 p0.reference(type)
                 template.info = p0.readObject(p1, DataTemplateInfo::class.java)
@@ -93,7 +95,7 @@ object KryoManager {
             @Suppress("UNCHECKED_CAST")
             override fun read(kryo: Kryo, input: Input, clazz: Class<out MCFPPTypeDataTemplateType>): MCFPPTypeDataTemplateType {
                 val identity = readIdentity(input)
-                val template = UnsolvedTemplate(identity.name, identity.namespace, identity.isInterface, identity.isAbstract, identity.isFinal)
+                val template = UnsolvedTemplate(identity.name, identity.namespace, identity.isAbstract, identity.isFinal)
                 val type = MCFPPTypeDataTemplateType(template)
                 kryo.reference(type)
                 template.info = kryo.readObject(input, DataTemplateInfo::class.java)
@@ -118,44 +120,18 @@ object KryoManager {
             }
         })
 
-        register(top.mcfpp.type.MCFPPGenericObjectDataTemplateType::class.java, object : Serializer<top.mcfpp.type.MCFPPGenericObjectDataTemplateType>() {
+        register(MCFPPGenericObjectDataTemplateType::class.java, object : Serializer<MCFPPGenericObjectDataTemplateType>() {
             private val identities = TypeIdentitySerializer()
-            override fun write(kryo: Kryo, output: Output, value: top.mcfpp.type.MCFPPGenericObjectDataTemplateType) = identities.write(kryo, output, value.typeId)
-            override fun read(kryo: Kryo, input: Input, type: Class<out top.mcfpp.type.MCFPPGenericObjectDataTemplateType>): top.mcfpp.type.MCFPPGenericObjectDataTemplateType {
+            override fun write(kryo: Kryo, output: Output, value: MCFPPGenericObjectDataTemplateType) = identities.write(kryo, output, value.typeId)
+            override fun read(kryo: Kryo, input: Input, type: Class<out MCFPPGenericObjectDataTemplateType>): MCFPPGenericObjectDataTemplateType {
                 val id = identities.read(kryo, input, TypeId::class.java) as TypeId.Specialized
                 val declaration = id.constructor as TypeId.Declaration
-                return top.mcfpp.type.MCFPPGenericObjectDataTemplateType(
+                return MCFPPGenericObjectDataTemplateType(
                     top.mcfpp.model.compound.ObjectDataTemplate(declaration.name, declaration.namespace), arrayListOf(), id)
             }
         })
 
-        register(top.mcfpp.type.MCFPPGenericInterfaceType::class.java, object : Serializer<top.mcfpp.type.MCFPPGenericInterfaceType>() {
-            private val identities = TypeIdentitySerializer()
-            override fun write(kryo: Kryo, output: Output, value: top.mcfpp.type.MCFPPGenericInterfaceType) = identities.write(kryo, output, value.typeId)
-            override fun read(kryo: Kryo, input: Input, type: Class<out top.mcfpp.type.MCFPPGenericInterfaceType>): top.mcfpp.type.MCFPPGenericInterfaceType {
-                val id = identities.read(kryo, input, TypeId::class.java) as TypeId.Specialized
-                val declaration = id.constructor as TypeId.Declaration
-                return top.mcfpp.type.MCFPPGenericInterfaceType(DataTemplate(declaration.name, declaration.namespace).apply { isInterface = true }, arrayListOf(), id)
-            }
-        })
 
-        register(top.mcfpp.type.MCFPPInterfaceType::class.java, object : Serializer<top.mcfpp.type.MCFPPInterfaceType>() {
-            override fun write(kryo: Kryo, output: Output, value: top.mcfpp.type.MCFPPInterfaceType) {
-                writeIdentity(output, value.i)
-                kryo.writeObject(output, DataTemplateInfo.from(value.i))
-                kryo.writeObject(output, value.parentType)
-            }
-            @Suppress("UNCHECKED_CAST")
-            override fun read(kryo: Kryo, input: Input, type: Class<out top.mcfpp.type.MCFPPInterfaceType>): top.mcfpp.type.MCFPPInterfaceType {
-                val id = readIdentity(input)
-                val template = UnsolvedTemplate(id.name, id.namespace, true, id.isAbstract, id.isFinal)
-                val result = top.mcfpp.type.MCFPPInterfaceType(template, arrayListOf())
-                kryo.reference(result)
-                template.info = kryo.readObject(input, DataTemplateInfo::class.java)
-                result.parentType = kryo.readObject(input, ArrayList::class.java) as ArrayList<MCFPPType>
-                return result
-            }
-        })
 
         register(MCFPPObjectDataTemplateType::class.java, object : Serializer<MCFPPObjectDataTemplateType>() {
             override fun write(p0: Kryo, p1: Output, p2: MCFPPObjectDataTemplateType) {
@@ -168,7 +144,7 @@ object KryoManager {
             @Suppress("UNCHECKED_CAST")
             override fun read(p0: Kryo, p1: Input, p2: Class<out MCFPPObjectDataTemplateType>): MCFPPObjectDataTemplateType {
                 val identity = readIdentity(p1)
-                val template = UnsolvedObjectTemplate(identity.name, identity.namespace, identity.isInterface, identity.isAbstract, identity.isFinal)
+                val template = UnsolvedObjectTemplate(identity.name, identity.namespace, identity.isAbstract, identity.isFinal)
                 val type = MCFPPObjectDataTemplateType(template, arrayListOf())
                 p0.reference(type)
                 template.info = p0.readObject(p1, DataTemplateInfo::class.java)
@@ -217,13 +193,12 @@ object KryoManager {
 
     // Metadata graphs can refer to a DataTemplateInfo while its fields are still being
     // read. Identity is therefore a separate prefix, never read from that partial object.
-    private data class DeclarationIdentity(val name: String, val namespace: String, val isInterface: Boolean, val isAbstract: Boolean, val isFinal: Boolean)
+    private data class DeclarationIdentity(val name: String, val namespace: String, val isAbstract: Boolean, val isFinal: Boolean)
     private fun writeIdentity(output: Output, template: DataTemplate) {
         output.writeString(template.identifier)
         output.writeString(template.namespace)
-        output.writeBoolean(template.isInterface)
         output.writeBoolean(template.isAbstract)
         output.writeBoolean(template.isFinal)
     }
-    private fun readIdentity(input: Input) = DeclarationIdentity(input.readString(), input.readString(), input.readBoolean(), input.readBoolean(), input.readBoolean())
+    private fun readIdentity(input: Input) = DeclarationIdentity(input.readString(), input.readString(), input.readBoolean(), input.readBoolean())
 }

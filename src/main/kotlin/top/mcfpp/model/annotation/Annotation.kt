@@ -5,6 +5,18 @@ import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 import java.io.Serializable
+import java.lang.reflect.Modifier
+import java.util.Collections
+import java.util.IdentityHashMap
+import top.mcfpp.analysis.CompilerValue
+import top.mcfpp.type.TypeId
+import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.compound.RawPreparationFact
+import top.mcfpp.model.property.Property
+import top.mcfpp.type.MCFPPType
+import top.mcfpp.model.Namespace
+import top.mcfpp.model.scope.GlobalScope
+import top.mcfpp.mni.expand.CompilerAnnotationFacts
 
 
 /**
@@ -45,11 +57,37 @@ abstract class Annotation : Serializable {
 
     val parents = ArrayList<Annotation>()
 
+    /**
+     * The original closed compiler arguments of this annotation. This field is transient because
+     * [CompilerValue] is a compiler graph, not a serialization contract. [argumentPayload] carries
+     * the same facts through field/library copies.
+     */
+    @Transient
+    private var boundArguments: ArrayList<CompilerValue>? = null
+
+    /** Serializable mirror used only when a copied annotation has to be projected again. */
+    private var argumentPayload: String? = null
+
     @Suppress("ConvertSecondaryConstructorToPrimary")
     internal constructor(identifier: String, namespace: String, param: ArrayList<String> = ArrayList()) {
         this.identifier = identifier
         this.namespace = namespace
         this.params.addAll(param)
+    }
+
+    /** Records the pure declaration-reader facts exactly once for this source annotation. */
+    internal fun recordCompilerArguments(arguments: List<CompilerValue>) {
+        boundArguments = ArrayList(arguments)
+        argumentPayload = CompilerAnnotationFacts.encode(arguments)
+    }
+
+    /** Immutable view; copied annotations decode their own serialized closed facts on demand. */
+    internal fun compilerArguments(): List<CompilerValue> {
+        val live = boundArguments
+        if (live != null) return Collections.unmodifiableList(ArrayList(live))
+        val payload = argumentPayload
+        if (payload.isNullOrEmpty()) return emptyList()
+        return Collections.unmodifiableList(CompilerAnnotationFacts.decode(payload))
     }
 
     internal fun on(function: Function){
@@ -78,7 +116,177 @@ abstract class Annotation : Serializable {
         parents.add(annotation)
     }
 
+    /** Reads JVM storage only. Extension code, accessors and annotation actions never run here. */
+    internal fun preparationFacts(): RawPreparationFact = checkpointDeclarationState().facts
+
+    internal fun checkpointDeclarationState(): DeclarationStateCheckpoint {
+        check(hasDeclarationStateSupport()) { "Unsupported unregistered annotation ${javaClass.name}" }
+        return captureDeclarationState(emptyList())
+    }
+
+    /** Shared admission gate for pure preparation and deep transactional consumers. */
+    internal fun hasDeclarationStateSupport(): Boolean {
+        if (javaClass in builtinDeclarationClasses) return true
+        for (registry in listOf(GlobalScope.localNamespaces, GlobalScope.importedLibNamespaces,
+            GlobalScope.libNamespaces, GlobalScope.stdNamespaces)) {
+            check(registry.javaClass == HashMap::class.java) { "Unsupported annotation namespace registry" }
+            for ((key, candidate) in registry as Map<*, *>) {
+                check(key is String && candidate is Namespace) { "Invalid annotation namespace registration" }
+                val entries = candidate.scope.annotations
+                check(entries.javaClass == HashMap::class.java || entries.javaClass == LinkedHashMap::class.java) {
+                    "Unsupported annotation registration map"
+                }
+                for ((name, target) in entries as Map<*, *>) {
+                    check(name is String && target is Class<*> && Annotation::class.java.isAssignableFrom(target)) {
+                        "Invalid annotation class registration"
+                    }
+                    if (target === javaClass) return true
+                }
+            }
+        }
+        return false
+    }
+
+    internal class DeclarationStateCheckpoint internal constructor(
+        private val owner: Annotation,
+        private val retained: List<PayloadRoot>,
+        private val restores: List<() -> Unit>,
+        val facts: RawPreparationFact,
+        val elements: List<Any>
+    ) {
+        fun restore() { restores.forEach { it() } }
+        fun captureCurrent(): DeclarationStateCheckpoint = owner.captureDeclarationState(retained)
+    }
+
+    internal class PayloadRoot internal constructor(val value: Any, val roles: List<Int>)
+
+    /* Supported extension state is deliberately finite: primitive/String values, sealed
+       compiler facts, compiler declaration references and exact standard containers of
+       these values. Static state and arbitrary closure/host graphs are outside this hook. */
+    private fun captureDeclarationState(previous: List<PayloadRoot>): DeclarationStateCheckpoint {
+        val retained = ArrayList<PayloadRoot>()
+        val elements = ArrayList<Any>()
+        val rows = ArrayList<RawPreparationFact>()
+        val restores = ArrayList<() -> Unit>()
+        val seen = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
+        val pending = ArrayDeque<Any>()
+        val roles = IdentityHashMap<Any, MutableSet<Int>>()
+        rows.add(RawPreparationFact.row(RawPreparationFact.identity(this), RawPreparationFact.identity(javaClass)))
+        fun scalar(value: Any?): RawPreparationFact? = when (value) {
+            null, is String, is Boolean, is Int, is Long -> RawPreparationFact.scalar(value)
+            is Byte -> RawPreparationFact.row(RawPreparationFact.scalar("byte"), RawPreparationFact.scalar(value.toInt()))
+            is Short -> RawPreparationFact.row(RawPreparationFact.scalar("short"), RawPreparationFact.scalar(value.toInt()))
+            is Char -> RawPreparationFact.row(RawPreparationFact.scalar("char"), RawPreparationFact.scalar(value.code))
+            is Float -> RawPreparationFact.row(RawPreparationFact.scalar("float"), RawPreparationFact.scalar(value.toRawBits()))
+            is Double -> RawPreparationFact.row(RawPreparationFact.scalar("double"), RawPreparationFact.scalar(value.toRawBits()))
+            else -> null
+        }
+        fun fact(value: Any?, role: Int = 0): RawPreparationFact {
+            scalar(value)?.let { return it }
+            check(value != null)
+            roles.getOrPut(value) { hashSetOf() }.add(role)
+            when (value) {
+                is CompilerValue, is TypeId -> {
+                    val closed = RawPreparationFact.closed(value)
+                    pending.addLast(value)
+                    return closed
+                }
+                is Annotation, is CompoundData, is MCFPPType, is Var<*>, is Function, is Property -> pending.addLast(value)
+                is List<*> -> { check(value.javaClass in annotationLists) { "Unsupported annotation list shape ${value.javaClass.name}" }; pending.addLast(value) }
+                is Map<*, *> -> { check(value.javaClass in annotationMaps) { "Unsupported annotation map shape ${value.javaClass.name}" }; pending.addLast(value) }
+                is Set<*> -> { check(value.javaClass in annotationSets) { "Unsupported annotation set shape ${value.javaClass.name}" }; pending.addLast(value) }
+                else -> error("Unsupported annotation payload ${value.javaClass.name}")
+            }
+            return RawPreparationFact.identity(value)
+        }
+        // No extension getter is consulted, including for the base class fields.
+        var type: Class<*>? = javaClass
+        while (type != null && Annotation::class.java.isAssignableFrom(type)) {
+            for (field in type.declaredFields.sortedBy { it.name }) {
+                if (Modifier.isStatic(field.modifiers)) continue
+                check(!field.isSynthetic) { "Unsupported captured annotation field ${field.name}" }
+                check(field.trySetAccessible()) { "Cannot access annotation storage ${field.name}" }
+                val value = field.get(this)
+                val role = if (field.declaringClass == Annotation::class.java) when (field.name) {
+                    "params" -> 1
+                    "parents" -> 2
+                    else -> 0
+                } else 0
+                val captured = fact(value, role)
+                rows.add(RawPreparationFact.row(RawPreparationFact.identity(field.declaringClass),
+                    RawPreparationFact.scalar(field.name), captured))
+                restores.add { if (field.get(this) !== value) field.set(this, value) }
+            }
+            type = type.superclass
+        }
+        previous.forEach { root -> root.roles.forEach { fact(root.value, it) } }
+        while (pending.isNotEmpty()) {
+            val value = pending.removeFirst()
+            if (!seen.add(value)) continue
+            retained.add(PayloadRoot(value, roles[value]!!.toList()))
+            when (value) {
+                is List<*> -> {
+                    val items = value.toList()
+                    if (1 in roles[value]!!) check(items.all { it is String }) { "Invalid annotation parameter" }
+                    if (2 in roles[value]!!) check(items.all { it is Annotation }) { "Invalid annotation parent" }
+                    val facts = items.map { fact(it) }
+                    rows.add(RawPreparationFact.row(RawPreparationFact.identity(value), RawPreparationFact.sequence(facts)))
+                    when (value.javaClass) {
+                        ArrayList::class.java, java.util.LinkedList::class.java -> restores.add {
+                            @Suppress("UNCHECKED_CAST") val target = value as MutableList<Any?>
+                            target.clear(); target.addAll(items)
+                        }
+                        annotationFixedList -> restores.add {
+                            @Suppress("UNCHECKED_CAST") val target = value as MutableList<Any?>
+                            items.forEachIndexed { index, item -> target[index] = item }
+                        }
+                    }
+                }
+                is Map<*, *> -> {
+                    // Reading entries performs no rehash. Keys must have compiler-independent hashing.
+                    val entries = value.entries.map { it.key to it.value }
+                    val facts = entries.map { (key, item) ->
+                        val keyFact = scalar(key) ?: error("Unsupported annotation map key")
+                        RawPreparationFact.row(keyFact, fact(item))
+                    }
+                    rows.add(RawPreparationFact.row(RawPreparationFact.identity(value), RawPreparationFact.unordered(facts)))
+                    if (value.javaClass == HashMap::class.java || value.javaClass == LinkedHashMap::class.java) restores.add {
+                        @Suppress("UNCHECKED_CAST") val target = value as MutableMap<Any?, Any?>
+                        target.clear(); entries.forEach { (key, item) -> target[key] = item }
+                    }
+                }
+                is Set<*> -> {
+                    val items = value.toList()
+                    val facts = items.map { scalar(it) ?: error("Unsupported annotation set element") }
+                    rows.add(RawPreparationFact.row(RawPreparationFact.identity(value), RawPreparationFact.unordered(facts)))
+                    if (value.javaClass == HashSet::class.java || value.javaClass == LinkedHashSet::class.java) restores.add {
+                        @Suppress("UNCHECKED_CAST") val target = value as MutableSet<Any?>
+                        target.clear(); target.addAll(items)
+                    }
+                }
+                else -> elements.add(value)
+            }
+        }
+        return DeclarationStateCheckpoint(this, Collections.unmodifiableList(retained), restores,
+            RawPreparationFact.sequence(rows), Collections.unmodifiableList(elements))
+    }
+
     companion object {
+        private val builtinDeclarationClasses = setOf<Class<*>>(top.mcfpp.mni.annotation.ConcreteOnly::class.java,
+            top.mcfpp.mni.annotation.DataOnly::class.java, top.mcfpp.mni.annotation.Dynamic::class.java,
+            top.mcfpp.mni.annotation.From::class.java, top.mcfpp.mni.annotation.Load::class.java,
+            top.mcfpp.mni.annotation.MCFPPEntity::class.java, top.mcfpp.mni.annotation.Name::class.java,
+            top.mcfpp.mni.annotation.NoExternalWrites::class.java, top.mcfpp.mni.annotation.NoInstance::class.java,
+            top.mcfpp.mni.annotation.Tick::class.java, top.mcfpp.mni.annotation.To::class.java,
+            top.mcfpp.mni.annotation.WritesReceiver::class.java)
+        private val annotationFixedList = java.util.Arrays.asList(1, 2).javaClass
+        private val annotationLists = setOf<Class<*>>(ArrayList::class.java, java.util.LinkedList::class.java,
+            annotationFixedList, emptyList<Any>().javaClass, listOf(1).javaClass, Collections.emptyList<Any>().javaClass,
+            java.util.List.of(1).javaClass, java.util.List.of(1, 2, 3).javaClass)
+        private val annotationMaps = setOf<Class<*>>(HashMap::class.java, LinkedHashMap::class.java,
+            emptyMap<Any, Any>().javaClass, mapOf(1 to 2).javaClass, Collections.emptyMap<Any, Any>().javaClass)
+        private val annotationSets = setOf<Class<*>>(HashSet::class.java, LinkedHashSet::class.java,
+            emptySet<Any>().javaClass, setOf(1).javaClass, Collections.emptySet<Any>().javaClass)
         fun build(clazz: Class<out Annotation>, args: ArrayList<Any>): Annotation? {
             //比对参数
             try {

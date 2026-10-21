@@ -49,8 +49,8 @@ class NBTTypeTest {
     fun listAPITest2(){
         val test = """
             func main(){
-                dynamic l: list<int> = [1,2,3,4]
-                dynamic l1: list<int> = [5,6,7]
+                external l: list<int> = [1,2,3,4]
+                external l1: list<int> = [5,6,7]
                 l.addAll(l1)
                 l.insert(0,114514)
                 l.removeAt(1)

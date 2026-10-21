@@ -22,7 +22,6 @@ class MCFPPGenericDataTemplateType(
         val declaration = typeId.constructor as? TypeId.Declaration ?: return
         val prototype = when (declaration.kind) {
             "template" -> GlobalScope.getCanonicalTemplate(declaration.namespace, declaration.name)
-            "interface" -> GlobalScope.getCanonicalTemplate(declaration.namespace, declaration.name, true)
             else -> null
         } as? GenericDataTemplate ?: return
         if (prototype.getType().typeId != declaration) return

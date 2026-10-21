@@ -25,6 +25,7 @@ import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.ParameterMatcher
 import top.mcfpp.model.Generic
+import top.mcfpp.mni.expand.MacroCallPipeline
 import top.mcfpp.model.scope.FileScope
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.type.*
@@ -38,13 +39,6 @@ import top.mcfpp.util.NBTUtil.toNBTDouble
 
 /** Internal migration boundary for scalar, erased and collection IR, without mutable Var-based analysis. */
 object PrimitiveCompiler {
-    /** null means the parameter is not written; false means only its contents are transferred. */
-    private fun staticTransfer(effect: Effect, place: Place): Boolean? = when (effect) {
-        Effect.Pure, Effect.ReadsRuntime -> null
-        Effect.Unknown -> true
-        is Effect.Writes -> if (effect.places.none { it.overlaps(place) }) null else
-            (effect.places - effect.contents).any { it.overlaps(place) && it.path.size <= place.path.size }
-    }
     private class Unsupported : RuntimeException()
     private class Invalid(val diagnostic: String, val recoverDeclaration: Boolean = true) : RuntimeException()
     private val int = MCFPPBaseType.Int.typeId
@@ -265,12 +259,6 @@ object PrimitiveCompiler {
                 is Instruction.MapMember -> if (!instruction.operation.query) check(instruction.receiver.place, contents = true, declaration = instruction.declaration)
                 is Instruction.DictionaryMember -> if (instruction.operation != DictionaryOperation.CONTAINS_KEY)
                     check(instruction.receiver.place, contents = true, declaration = instruction.declaration)
-                is Instruction.Call -> for (index in instruction.staticParameters) {
-                    val place = instruction.argumentPlaces.getOrNull(index) ?: continue
-                    staticTransfer(instruction.effect, place)?.let { root -> check(place, contents = !root,
-                        declaration = instruction.argumentDeclarations.getOrNull(index),
-                        rebindsDeclaration = instruction.argumentRebindings.getOrNull(index) ?: place.path.isEmpty()) }
-                }
                 else -> Unit
             }
         }
@@ -450,7 +438,7 @@ object PrimitiveCompiler {
                     val existing = function.scope.getVar(parameter.identifier) ?: throw Unsupported()
                     existing.symbol ?: Symbol(SymbolId.fresh(), parameter.identifier, type.typeId, mutable = true)
                 }
-                val symbol = if (parameter.isStatic) declaration.copy(forceRuntime = true) else declaration
+                val symbol = declaration
                 symbols[symbol.name] = symbol
                 visible[symbol.name] = symbol
                 declaredHere.add(symbol.name)
@@ -506,7 +494,6 @@ object PrimitiveCompiler {
             if (current.terminator == null) terminate(Terminator.Return(null))
             return TypedIR(0, blocks.map { BasicBlock(it.id, it.instructions, it.terminator ?: Terminator.Unreachable) }, runtimeResults.toSet(),
                 function.normalParams.map { symbols.getValue(it.identifier).id },
-                function.normalParams.filter { it.isStatic }.map { symbols.getValue(it.identifier).id }.toSet(),
                 declarations = symbols.values.associateBy { it.id }, boundTypes = types.toMap())
         }
         private fun scoped(block: Parser.BlockContext, bindings: Map<String, Symbol> = emptyMap()) {
@@ -657,7 +644,7 @@ object PrimitiveCompiler {
             val modifier = context.fieldModifier()?.start?.text
             val storedName = if (depth == 0) name else "\$local_${context.start.tokenIndex}_$name"
             val symbol = Symbol(declarationIds.getOrPut(context.start.tokenIndex, SymbolId::fresh), name,
-                type, modifier != "const", forceRuntime = modifier == "dynamic")
+                type, modifier != "const", forceRuntime = context.fieldModifier()?.EXTERNAL() != null)
             symbols[storedName] = symbol
             visible[name] = symbol
             instructions += Instruction.Declare(symbol)
@@ -980,6 +967,10 @@ object PrimitiveCompiler {
             return value
         }
         private fun call(context: Parser.FunctionCallContext): ValueRef {
+            // This compiler is exploratory: it may not complete declarations, run a macro host or
+            // publish a transaction. Recognize the macro from pure metadata and fall back to the
+            // legacy body compiler before any argument expression is visited.
+            if (MacroCallPipeline.isPotentialMacro(context, function)) unsupported()
             if (context.arguments().readOnlyArgs() != null) unsupported()
             val args = context.arguments().normalArgs().expressionList()?.expression().orEmpty().map { boundValue(expression(it)) }.toMutableList()
             val name = context.namespaceID().text.splitNamespaceID()
@@ -1031,8 +1022,6 @@ object PrimitiveCompiler {
                 args += ValueRef.Constant(constant.type, constant.payload)
             }
             target.normalParams.forEachIndexed { index, parameter ->
-                if (parameter.isStatic && args[index].type == int && parameter.type.typeId == float)
-                    invalid("A static float parameter requires a float argument; promotion cannot write back to int")
                 args[index] = promote(args[index], parameter.type.typeId)
             }
             calls[target.declarationId] = target
@@ -1048,11 +1037,7 @@ object PrimitiveCompiler {
                 Place(symbol.id).also { place -> origins[it] = place; locations[it] = Location(place) }
             }
             instructions += Instruction.Call(result, target.declarationId, args, target.runtimeEffect, type,
-                args.map { value -> (value as? ValueRef.Result)?.let { origins[it.instruction] } },
-                target.normalParams.map { it.type.typeId }, target.normalParams.indices.filter { target.normalParams[it].isStatic }.toSet(),
-                provisional, resultPlace, args.map { value -> (value as? ValueRef.Result)?.let { locations[it.instruction] } },
-                argumentDeclarations = args.map { value -> (value as? ValueRef.Result)?.let { accessDeclarations[it.instruction] } },
-                argumentRebindings = args.map { value -> value is ValueRef.Result && value.instruction in accessRebindings })
+                provisional, resultPlace)
             if (target.runtimeEffect == Effect.Unknown) knowledge.replaceAll { _, _ -> TypeKnowledge.Unknown }
             val actual = if (type == any && !exploratory) (valueTypes[context.start.tokenIndex] as? TypeKnowledge.Exact)?.type else null
             if (actual != null && result != null) { register(actual); provenResults[result] = actual }
@@ -1316,8 +1301,7 @@ object PrimitiveCompiler {
                 is Instruction.Convert -> references(instruction.value)
                 is Instruction.View -> references(instruction.value)
                 is Instruction.Construct -> instruction.parts.values.flatMap { references(it) }.toSet()
-                is Instruction.Call -> instruction.arguments.flatMap { references(it) }.toSet() +
-                    instruction.argumentLocations.filterNotNull().flatMap { locationReferences(it) }
+                is Instruction.Call -> instruction.arguments.flatMap { references(it) }.toSet()
                 is Instruction.ListMember -> locationReferences(instruction.receiver) +
                     listOfNotNull(instruction.argument, instruction.index).flatMap { references(it) }
                 is Instruction.DictionaryMember -> locationReferences(instruction.receiver) +
@@ -1662,32 +1646,9 @@ object PrimitiveCompiler {
                 val destination = internal("result_$id", 1)
                 emit(Commands.dataSetFrom(destination, NBTPath.stack.intIndex(0).memberIndex("return")))
             }
-            target.normalParams.forEachIndexed { index, parameter ->
-                if (!parameter.isStatic) return@forEachIndexed
-                val argument = instruction.argumentPlaces.getOrNull(index) ?: return@forEachIndexed
-                if (staticTransfer(instruction.effect, argument) == null) return@forEachIndexed
-                val destination = internal("static_${id}_$index", 1)
-                val score = physical(target.scope.getVar(parameter.identifier)!!)
-                if (score == null) emit(Commands.dataSetFrom(destination, NBTPath.stack.intIndex(0).memberIndex(parameter.identifier)))
-                else commands += "execute store result ${destination.toCommandPart()} ${if (parameter.type.typeId == bool) "byte" else "int"} 1 run scoreboard players get $score"
-            }
             emit(Commands.stackOut())
             for ((value, location) in saved)
                 commands += "execute store result score $value run data get ${location.toCommandPart()} 1"
-            target.normalParams.forEachIndexed { index, parameter ->
-                if (!parameter.isStatic) return@forEachIndexed
-                val destination = instruction.argumentPlaces.getOrNull(index) ?: return@forEachIndexed
-                if (staticTransfer(instruction.effect, destination) == null) return@forEachIndexed
-                val source = internal("static_${id}_$index")
-                val location = instruction.argumentLocations.getOrNull(index) ?: Location(destination)
-                if (nbt(symbols.getValue(destination.root).declaredType) || destination.path.isNotEmpty()) emit(Commands.dataSetFrom(address(location), source))
-                else {
-                    commands += "execute store result score ${place(destination)} run data get ${source.toCommandPart()} 1"
-                    scorePlaces.add(destination)
-                }
-                materializedPlaces.add(destination)
-                initialized.add(destination)
-            }
             instruction.result?.let { result ->
                 val location = internal("result_$id")
                 if (nbt(instruction.returnType!!)) nbtResults[result] = location
@@ -1759,7 +1720,6 @@ object PrimitiveCompiler {
             ).firstOrNull { namespace ->
                 var found = namespace.scope.functions.values.flatten().any(::containsFunction)
                 namespace.scope.forEachTemplate { if (contains(it)) found = true }
-                namespace.scope.forEachInterface { if (contains(it)) found = true }
                 namespace.scope.forEachObject { if (it is top.mcfpp.model.compound.DataTemplate && contains(it)) found = true }
                 found
             }?.scope

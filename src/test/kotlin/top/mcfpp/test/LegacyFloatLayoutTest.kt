@@ -89,9 +89,9 @@ class LegacyFloatLayoutTest {
     @Test fun parsedLegacyComparisonsWorkOnTargetsWithoutFunctionReturns() {
         MCFPPStringTest.readFromString("""
             func main(){
-                dynamic left = -1.25
-                dynamic right = -1.5
-                dynamic result = left > right
+                external left = -1.25
+                external right = -1.5
+                external result = left > right
             }
         """.trimIndent(), version = "1.20.1")
         assertEquals(0, Project.errorCount)
@@ -107,7 +107,7 @@ class LegacyFloatLayoutTest {
         assertTrue(MCFloat(Float.NaN).isError)
         assertEquals(2, Project.errorCount)
         assertTrue(Function.currFunction.commands.isEmpty())
-        MCFPPStringTest.readFromString("func main(){ dynamic invalid = 9999999999999999999999999999999999999999.0; }", version = "1.20.1")
+        MCFPPStringTest.readFromString("func main(){ external invalid = 9999999999999999999999999999999999999999.0; }", version = "1.20.1")
         assertTrue(Project.errorCount > 0)
     }
 }

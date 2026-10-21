@@ -1,180 +1,175 @@
-![MCFPP](https://user-images.githubusercontent.com/90548686/236462051-b901f99c-bdef-435c-8ca2-0dda37b25285.png)
-
+![](https://user-images.githubusercontent.com/90548686/236462051-b901f99c-bdef-435c-8ca2-0dda37b25285.png)
 [简体中文](./README_CN.md)
+------------
+# Introduction
 
-# MCFPP
+MCFPP is a new object-oriented language that compiles into Minecraft data packs. It aims to simplify data pack creation with syntax similar to C-based languages, incorporating common programming concepts for convenience.
 
-MCFPP is a programming language that compiles into Minecraft data packs. It combines familiar control flow with typed data templates, generic functions, Minecraft commands, and a Java/Kotlin native interface that runs during compilation.
+**Note: This project is in early development. Features may change, and library functions are incomplete.**
 
-**MCFPP is in early development. This README describes the current `kotlin-latest` source; released compilers and existing projects may use older syntax.**
+## Quick Start
 
-## Quick start
+[MCFPP API](https://www.mcfpp.top)
 
-Build the compiler with **JDK 21** and the bundled Gradle wrapper:
+Build with JDK 21 using `./gradlew build` (`./gradlew.bat build` on Windows).
 
-```shell
-# Windows
-.\gradlew.bat build
-# Linux / macOS
-./gradlew build
-```
+[Type system specification](./docs/type-system/specification.md) · [Migration status and guide](./docs/type-system/migration.md)
 
-The executable JAR is written to `build/libs/MCFPP-1.0.2-SNAPSHOT.jar`. Create this project:
+## [Future Plans](./TODO_CN.md)
 
-```text
-hello/
-  mcfpp.json
-  src/
-    main.mcfpp
-```
+* [ ] Code optimization
+* [ ] Basic library
 
-`mcfpp.json`:
+## Related Projects
 
-```json
-{
-  "version": "26.3",
-  "sourcePath": "src",
-  "targetPath": "build",
-  "namespace": "hello",
-  "description": "My first MCFPP data pack"
-}
-```
+### [MCSharp](https://github.com/Voziv/MCSharp)
 
-`src/main.mcfpp`:
+MCSharp is a CSharp library for data pack development, now discontinued due to technical issues. MCFPP inherits some of its ideas.
+
+### [JustMCF](https://github.com/XiLaiTL/JustMCF)
+
+JustMCF simplifies mcfunction projects, allowing both original and streamlined commands for efficiency.
+
+## Features
+
+### Basic Logic Statements
 
 ```mcfpp
-namespace hello;
-
-func greet() {
-  /say Hello Minecraft!
-}
-```
-
-Run the compiler **from the `hello` directory**; explicit relative source/output paths are resolved from the working directory:
-
-```shell
-java -jar /path/to/MCFPP-1.0.2-SNAPSHOT.jar mcfpp.json
-```
-
-Copy the generated `build/mcfpp` data pack into your world's `datapacks` directory, reload the world, and run `/function hello:greet`.
-
-Read the [English documentation](https://www.mcfpp.top/en/quickstart/) or [Chinese documentation](https://www.mcfpp.top/zh/quickstart/) for the full tutorial.
-
-## Language examples
-
-### Variables, functions, and control flow
-
-Variables use `var name as Type`, or infer their type from an initializer. Functions require parentheses, even with no parameters; return types follow `:`.
-
-```mcfpp
-func add(a as int, b as int): int {
-  return a + b;
-}
-
-func calculate() {
-  dynamic var count as int = 0;
-  while (count < 3) {
-    count += 1;
-  }
-  if (count == 3) {
-    print(add(count, 2));
+func example(){
+  external i: int = 1
+  if(i > 0){
+    execute(as = @s) {
+      /say Hello Minecraft!
+    }
   }
 }
 ```
 
-Statements end with a newline or semicolon. Continue an expression by placing its operator at the end of the previous line. Compound assignments `+=`, `-=`, `*=`, `/=`, and `%=` are supported; `++` and `--` are unavailable.
-
-### Data templates and generics
-
-Use `data` for structured values, with explicit `var` fields, constructors, and methods. Use `object data` for singleton or companion members. The former `class` syntax is unavailable in the current parser.
+### Object-Oriented Programming
 
 ```mcfpp
-/// # Box
-/// Stores a value of the supplied type.
-data Box<T as type> {
-  var value as T;
-
-  constructor(value as T) {
-    this.value = value;
+data Example{
+  var i: int {
+    get {
+      return field * 2
+    }
+    set {
+      field = value
+    }
   }
 
-  func read(): T {
-    return this.value;
+  constructor(i: int){
+    this.i = i
+  }
+
+  func print(){
+    print(this.i)
+  }
+}
+```
+
+### Library Calls
+
+```mcfpp
+import mcfpp.lang:*
+
+func example(){
+    var i: float = 1.5
+    var out: int
+    out = toInt(i)
+    print(out)
+}
+```
+
+### Generics
+
+`<T>` declares a readonly type parameter; explicit `<T: type>` is also supported. Readonly value parameters use `<N: int>`. Ordinary values cannot have type `type`; `var t: type = int` is invalid.
+
+```mcfpp
+data Example<T>{
+  var i: T
+
+  constructor(i: T){
+    this.i = i
+  }
+
+  public func print(){
+    print(this.i)
   }
 }
 
-func example() {
-  var box = Box<int>(5);
-  print(box.read());
+func test<T>(i: T){
+    print(i)
 }
 ```
 
-Parameters inside `<...>` require complete compile-time values. `type` is allowed in these parameter declarations; ordinary variables, fields, function parameters, and return values cannot hold type values.
-
-### Type views and numeric conversions
-
-`object` is the static supertype; `any` erases the public type. `as` creates a view of the same data location: it does not copy an object, call a constructor, or convert a number. Use conversion functions for numeric conversion:
+### Direct Use of Minecraft Commands
 
 ```mcfpp
-func convert() {
-  var number as int = 3;
-  var fraction as float = toFloat(number);
-  var whole as int = toInt(fraction);
-  print(whole);
+var qwq = "Minecraft"
+
+func test(){
+  /execute as @a run say Hello ${qwq}!
 }
 ```
 
-`const` prevents reassignment after initialization; it does not require a compile-time value or freeze the contents of a mutable container. `dynamic` requires a usable runtime representation.
+## Functions, comments, and fields
 
-### Minecraft commands
-
-A line starting with a single `/` after indentation is a Minecraft command. Use `${expression}` for interpolation:
+Variables, named parameters, and fields use `:` for type annotations, such as `var x: int`. Declare `const x = 1` and `external x: int = 1` directly, without `var`; variable imports retain `import var`. Function return types use `:`. Ordinary comments start with `//`; documentation comments start with `///` and contain Markdown. Consecutive documentation lines form one block. A single space after `///` is a separator; further indentation and Markdown markers are preserved. Fields in `data`, `object data`, and anonymous `data` bodies use `var` or `const`.
 
 ```mcfpp
-func announce() {
-  var name = "Minecraft";
-  /execute as @a run say Hello ${name}!
+/// # Counter
+/// Stores the current count, with **bold** and `code` documentation.
+data Counter {
+  // Fields use var or const
+  var value: int = 0
+  func read(): int { return this.value }
 }
 ```
 
-Put a division operator on the preceding line when splitting division across lines. Ordinary comments start with `//`; Markdown documentation comments start with `///`. Consecutive documentation lines form one block. The old `#`, `##`, `#{…}#`, and `###` comment forms are unavailable.
+Declare shared contracts with `abstract data Name` and bodyless methods with `abstract func read(): int;`. Concrete children must implement inherited abstract methods. The `interface` and `data abstract` declarations have been removed. Replace the `dynamic` variable keyword with `external`, which still requires runtime storage.
 
-## Minecraft targets
+The old `->` return marker and `#`, `##`, `#{…}#`, and `###` comments are no longer accepted. Version directives `#if/#elif/#else/#endif` retain their syntax.
 
-Set `version` in the project configuration. One compilation produces one target data pack. Targets include `1.21`, `1.21.1`–`1.21.8`, `26.1`–`26.3`, and [earlier releases listed in the compiler](./src/main/kotlin/top/mcfpp/command/TargetCapabilities.kt). A recognized target does not guarantee that every standard-library API works on it.
+## Line breaks and arithmetic expressions
 
-For `26.3`, float arithmetic uses native number providers and NBT floats. Earlier targets use XiaoDouMathLib. The storage formats differ and existing persisted values are not automatically migrated. See the [float backend notes](./docs/float-providers-26.3.md).
-
-Version directives select source before parsing:
+Newlines or semicolons separate statements; the final statement before `}` needs no semicolon. Keep semicolons between same-line statements and in SNBT arrays. Parentheses are optional around `if`, `else if`, `while`, and `do ... while` conditions, which must have type `bool`. An expression can continue on the next line when its operator ends the current line. A line starting with a single `/` after optional whitespace is a vanilla Minecraft command; put a division operator on the previous line when splitting division across lines.
 
 ```mcfpp
-#if MC >= 26.3
-func backend() {
-  /say Native float backend
+func calculate(){
+  var x = 12 /
+    3
+  x += 2
+  x *= 3
+  var opposite = -x
+  /say Calculation complete
+}
+```
+
+Compound assignments `+=`, `-=`, `*=`, `/=`, and `%=` read the target, apply the corresponding operation, and write the result back. `++` and `--` are not supported.
+
+## Compile for a Minecraft version
+
+Set the target version in `mcfpp.json`, for example `"version": "26.3"`. Each build produces one data pack for that target; change `version` and build again for another version. Targets `26.1`, `26.2`, `26.3`, and the previously supported older versions are available.
+
+Targeting `26.3` automatically uses native number providers and NBT floats for float arithmetic, comparisons, compound assignments, and integer conversions. Earlier targets keep XiaoDouMathLib. See the [26.3 float backend notes](docs/float-providers-26.3.md) for the implementation and storage migration details.
+
+```mcfpp
+#if MC >= 26.1
+func greet(){
+  /say 26.1 or newer
+}
+#elif MC >= 1.21.6
+func greet(){
+  /say 1.21.6 to 1.21.8
 }
 #else
-func backend() {
-  /say Legacy float backend
+func greet(){
+  /say older version
 }
 #endif
 ```
 
-`#if/#elif/#else/#endif` may be nested and surround imports, declarations, or statements. Conditions compare `MC` with a full version using `==`, `!=`, `<`, `<=`, `>`, or `>=`; logical combinations are unavailable. Version directives are separate from comments.
+Directives may be nested and can surround imports, declarations, or function statements. A condition compares `MC` with a version using `==`, `!=`, `<`, `<=`, `>`, or `>=`; logical combinations are not supported. Versions are compared component by component. Spell older versions in full, such as `1.21.6`, rather than `21.6`. Ordinary comments use `//`.
 
-## Development and implementation status
-
-`gradlew build` builds the compiler and runs its checks. After parser, type metadata, or MNI changes, regenerate the bundled library with `gradlew regenerateStdlib`, then run `gradlew check`.
-
-The current native interface accepts a single `NativeCallContext` parameter. Libraries from an older metadata format must be recompiled; the current format is **MCFL77**.
-
-- [Type system specification](./docs/type-system/specification.md)
-- [Migration guide](./docs/type-system/migration.md)
-- [Architecture and implementation boundaries](./docs/type-system/architecture-migration-report-2026-10-09.md)
-- [Verification methods](./docs/type-system/verification.md)
-- [Roadmap](./TODO_CN.md)
-
-Exceptions/effects, tasks, generators, and lambdas are **design proposals**, not implemented language features. Their documents under `docs/` describe future work.
-
-## Related projects
-
-[MCSharp](https://github.com/Voziv/MCSharp) and [JustMCF](https://github.com/XiLaiTL/JustMCF) explore other approaches to Minecraft data pack development.
+For more syntax information, refer to the [MCFPP API](https://www.mcfpp.top).

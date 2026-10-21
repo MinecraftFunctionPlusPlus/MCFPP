@@ -349,6 +349,48 @@ open class Command: Serializable {
         return c
     }
 
+    /** Compiler savepoint; unlike clone(), this preserves shared part identities and their state. */
+    internal fun checkpointCommandState(): () -> Unit {
+        check(javaClass == Command::class.java || javaClass == Comment::class.java) {
+            "Command journal cannot capture ${javaClass.name}"
+        }
+        val parts = commandParts.toList()
+        val partRestores: List<() -> Unit> = parts.map { part ->
+            when (part) {
+                is CommandPart -> {
+                    val text = part.command
+                    val restore: () -> Unit = { part.command = text }
+                    restore
+                }
+                is MacroPart -> {
+                    val value = part.v
+                    val restore: () -> Unit = { part.v = value }
+                    restore
+                }
+                is SelectorGuardPart -> ({ Unit })
+                else -> error("Command journal cannot capture part ${part.javaClass.name}")
+            }
+        }
+        val savedTags = tags.toList()
+        val points = HashMap(replacePoint)
+        val completed = isCompleted
+        return {
+            partRestores.forEach { it() }
+            commandParts.clear(); commandParts.addAll(parts)
+            tags.clear(); tags.addAll(savedTags)
+            replacePoint.clear(); replacePoint.putAll(points)
+            isCompleted = completed
+        }
+    }
+
+    internal fun journalValues(): List<Var<*>> = commandParts.mapNotNull {
+        when (it) {
+            is MacroPart -> it.v
+            is SelectorGuardPart -> it.value
+            else -> null
+        }
+    }
+
     fun removeLast(): Command {
         commandParts.removeLast()
         return this

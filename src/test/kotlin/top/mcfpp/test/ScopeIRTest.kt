@@ -47,7 +47,7 @@ class ScopeIRTest {
                 if(true){ var value = value + 1; captured = value; }
                 if(true){ var temporary = 1; }
                 var temporary = 9
-                dynamic result = choose(true)*1000 + choose(false)*100 + value*10 + captured
+                external result = choose(true)*1000 + choose(false)*100 + value*10 + captured
             }
         """)
         assertEquals(2345, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -66,7 +66,7 @@ class ScopeIRTest {
                     source[0] = 9
                 }
                 if(true){ var source = [11,12]; source[1] = 13; }
-                dynamic result = source[0]*10 + view[1]
+                external result = source[0]*10 + view[1]
             }
         """, "1.20.2")
         assertEquals(53, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -88,7 +88,7 @@ class ScopeIRTest {
                     sum += value
                 }
                 do { var value = 2; sum += value; } while(false)
-                dynamic result = recurse(3)*1000 + sum*10 + value
+                external result = recurse(3)*1000 + sum*10 + value
             }
         """, "1.20.1")
         assertEquals(9630, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -112,7 +112,7 @@ class ScopeIRTest {
             "func duplicate(value: int){ var value = 2; }\nfunc main(){ duplicate(1); }",
             "func main(){ if(true){ var value = 1; var value = 2; }; }",
             "func main(){ for(value : 1 .. 2){ var value = 3; }; }",
-            "func main(){ if(true){ var inside = 1; }; dynamic result = inside; }")) {
+            "func main(){ if(true){ var inside = 1; }; external result = inside; }")) {
             MCFPPStringTest.readFromString(source, version = "26.3")
             assertTrue(Project.errorCount > 0, source)
         }

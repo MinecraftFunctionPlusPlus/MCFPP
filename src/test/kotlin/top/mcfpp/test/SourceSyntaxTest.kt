@@ -49,7 +49,10 @@ class SourceSyntaxTest {
                 operator -(other: Box): int = example.Native.subtract
             }
             object data Defaults { var value: int = 1; }
-            interface Readable { var value: int; abstract func read(): int; }
+            abstract data Readable { var value: int; abstract func read(): int; }
+            abstract data Generic<T> { abstract func read(): T; }
+            final data Finished {}
+            func runtime(){ external explicit: int = 1; external inferred = 2; external empty: int; }
         """.trimIndent()
         assertEquals(emptyList(), errors(source))
         assertEquals(emptyList(), errors("// Comment-only file\n\n"))
@@ -79,6 +82,9 @@ class SourceSyntaxTest {
     @Test fun rejectsRetiredSyntax() {
         for (source in listOf(
             "func old()->int { return 1; }",
+            "interface Readable { abstract func read(): int; }",
+            "data abstract Readable {}",
+            "func sample(){ dynamic value = 1; }",
             "# ordinary comment\nfunc sample(){}",
             "#{ old documentation }#\nfunc sample(){}",
             "data Box { value as int; }",
@@ -87,5 +93,10 @@ class SourceSyntaxTest {
             "object data Box { value as int; }",
             "func sample(){ var box as data { value as int; }; }"
         )) assertTrue(errors(source).isNotEmpty(), source)
+    }
+
+    @Test fun retiredKeywordsCanBeUsedAsIdentifiers() {
+        assertEquals(emptyList(), errors("func sample(){ var dynamic = 1; var interface = 2; }"))
+        assertEquals(mcfppLexer.EXTERNAL, mcfppLexer(CharStreams.fromString("external")).nextToken().type)
     }
 }

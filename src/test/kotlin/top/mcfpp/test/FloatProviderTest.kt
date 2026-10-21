@@ -139,8 +139,8 @@ class FloatProviderTest {
     @Test
     fun nativeArithmeticPreservesOperandsAndNestedResults() {
         val (_, commands) = compile("""
-            dynamic a: float = 8.5
-            dynamic b: float = 2.0
+            external a: float = 8.5
+            external b: float = 2.0
             var sum = a + b
             var difference = a - b
             var product = a * b
@@ -165,7 +165,7 @@ class FloatProviderTest {
     @Test
     fun compoundAssignmentsAndSignedRemaindersUseNativeProviders() {
         val (_, commands) = compile("""
-            dynamic a: float = -8.5
+            external a: float = -8.5
             a += 0.5
             a -= 2.0
             a *= 1.5
@@ -182,8 +182,8 @@ class FloatProviderTest {
     @Test
     fun comparisonsCheckFloatBoundsWithoutIntegerRounding() {
         val (function, commands) = compile("""
-            dynamic a: float = -0.125
-            dynamic b: float = -0.125
+            external a: float = -0.125
+            external b: float = -0.125
             var gt = a > b
             var lt = a < b
             var ge = a >= b
@@ -205,8 +205,8 @@ class FloatProviderTest {
     @Test
     fun conversionsTruncateNegativeFloatsTowardsZeroAndAllowMixedIntegers() {
         val (function, commands) = compile("""
-            dynamic f: float = -1.75
-            dynamic i: int = 3
+            external f: float = -1.75
+            external i: int = 3
             var truncated = toInt(f)
             var converted = toFloat(i)
             var sum = f + i
@@ -243,7 +243,7 @@ class FloatProviderTest {
     @Test
     fun legacyTargetsKeepTheMathLibraryAndNativeTargetsDoNotEnableIt() {
         for (version in listOf("26.2", "1.21.8", "26.3", "26.2", "26.3")) {
-            val (_, commands) = compile("dynamic a: float = 1.5; a += 0.5;", version)
+            val (_, commands) = compile("external a: float = 1.5; a += 0.5;", version)
             val enabled = Project.modules.any { module -> module.packages.any { it.key.id == "math.float" && it.value } }
             val load = Project.projectLoad.commands.analyzeAll().joinToString("\n")
             if (version == "26.3") {
@@ -260,7 +260,7 @@ class FloatProviderTest {
 
     @Test
     fun nonStorageAndDynamicIndexSourcesAreCopiedBeforeEvaluation() {
-        val (function, _) = compile("dynamic a: float = 1.5;")
+        val (function, _) = compile("external a: float = 1.5;")
         function.runInFunction {
             val entityValue = MCFloat("entity_float").apply {
                 nbtPath = NBTPath(EntitySource(SelectorVar(EntitySelector('s')))).memberIndex("data").memberIndex("value")
@@ -295,7 +295,7 @@ class FloatProviderTest {
     fun exportedDatapackUses121AndOmitsFloatLibrary() {
         val output = Files.createTempDirectory("mcfpp-native-float-")
         try {
-            MCFPPStringTest.readFromString("func arithmetic(){ dynamic f: float = 1.5; f += 0.5; }",
+            MCFPPStringTest.readFromString("func arithmetic(){ external f: float = 1.5; f += 0.5; }",
                 version = "26.3", targetPath = output.toString())
             assertEquals(0, Project.errorCount)
             val pack = output.resolve("debug")
@@ -314,15 +314,11 @@ class FloatProviderTest {
             func half(value: float): float {
                 return value / 2.0
             }
-            func doubleValue(static value: float) {
-                value *= 2.0
-            }
             func arithmetic(){
-                dynamic a: float = 8.0
-                dynamic b: float = 4.0
+                external a: float = 8.0
+                external b: float = 4.0
                 var sum = half(a) + half(b)
                 var nested = half(half(a))
-                doubleValue(a)
             }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
@@ -349,7 +345,7 @@ class FloatProviderTest {
         val machine = FloatMachine(flattened)
         assertEquals(6f, machine.data["storage mcfpp:system stack_frame[1].sum"])
         assertEquals(2f, machine.data["storage mcfpp:system stack_frame[1].nested"])
-        assertEquals(16f, machine.data["storage mcfpp:system stack_frame[1].a"])
+        assertEquals(8f, machine.data["storage mcfpp:system stack_frame[1].a"])
         assertEquals(4f, machine.data["storage mcfpp:system stack_frame[1].b"])
         assertNative(flattened)
     }

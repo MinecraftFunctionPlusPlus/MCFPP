@@ -7,6 +7,7 @@ import top.mcfpp.ProjectConfig
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.io.LibBinFormat
+import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.model.Member.AccessModifier
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
@@ -58,14 +59,14 @@ class LibMemberAccessTest {
             }
             func main(){
                 var box=Box(); var child=Child()
-                dynamic first=box.read(); dynamic second=child.readProtected()
+                external first=box.read(); external second=child.readProtected()
             }
         """, output)
         val main = consume("""
             import fixture.access:*
             func main(){
                 var box=Box(); var child=Child()
-                dynamic first=box.read(); dynamic second=child.readProtected()
+                external first=box.read(); external second=child.readProtected()
             }
         """, output)
         assertEquals(0, Project.errorCount)
@@ -74,7 +75,7 @@ class LibMemberAccessTest {
         assertEquals(6, machine.read(main.scope.getVar("second") as MCInt))
         consume("""
             import fixture.access:*
-            data Intruder:Box { func steal():int { return this.secret(); } }
+            data Intruder:Box { func steal():int { this.secret(); return 0; } }
             func main(){ var child=Intruder(); child.steal(); }
         """, output)
         assertEquals(1, Project.errorCount, "A derived receiver must not grant access to the base owner's private method")
@@ -85,14 +86,26 @@ class LibMemberAccessTest {
             namespace fixture.access
             @From<"top.mcfpp.mni.ConversionData">
             data NativeConversions {}
+            @From<"top.mcfpp.mni.ConversionData">
+            data PublicConversions {}
         """, output)
         val original = GlobalScope.localNamespaces.getValue("fixture.access").scope.getTemplate("NativeConversions")!!
-        val native = original.scope.functions.getValue("toInt").single {
+        val privateOverloads = original.scope.functions.getValue("toInt")
+        val native = privateOverloads.single {
             it.normalParams.single().type == MCFPPBaseType.Int
         }
         assertIs<NativeFunction>(native)
         // Native injection has no private-source syntax; exercise the existing model API before writing the real bin.
-        native.accessModifier = AccessModifier.PRIVATE
+        privateOverloads.forEach { it.accessModifier = AccessModifier.PRIVATE }
+        native.javaMethod = LibMemberAccessTest::class.java.getMethod("privateNativeSentinel", NativeCallContext::class.java)
+        val publicOriginal = GlobalScope.localNamespaces.getValue("fixture.access").scope.getTemplate("PublicConversions")!!
+        val publicInt = publicOriginal.scope.functions.getValue("toInt").single {
+            it.normalParams.single().type == MCFPPBaseType.Int
+        }
+        publicInt.accessModifier = AccessModifier.PRIVATE
+        assertIs<NativeFunction>(publicInt).javaMethod = LibMemberAccessTest::class.java
+            .getMethod("privateNativeSentinel", NativeCallContext::class.java)
+        privateNativeCalls = 0
         Project.genIndex()
         checkHeader(output)
         consume("""
@@ -100,6 +113,7 @@ class LibMemberAccessTest {
             func main(){ var box=NativeConversions(); box.toInt(4); }
         """, output)
         assertEquals(1, Project.errorCount)
+        assertEquals(0, privateNativeCalls, "An inaccessible native overload must never invoke its host")
         val restored = template("NativeConversions")
         assertNotSame(original, restored)
         val restoredNative = restored.scope.functions.getValue("toInt").single {
@@ -109,6 +123,28 @@ class LibMemberAccessTest {
         assertNotSame(native, restoredNative)
         assertEquals(AccessModifier.PRIVATE, restoredNative.accessModifier)
         assertSame(restored, restoredNative.owner)
+        assertEquals("privateNativeSentinel", restoredNative.javaMethod.name)
+        assertTrue(restored.scope.functions.getValue("toInt").all { it.accessModifier == AccessModifier.PRIVATE })
+
+        val publicMain = consume("""
+            import fixture.access:*
+            func main(){ var box=PublicConversions(); external fallback=box.toInt(4); external exact=box.toInt(4.5f); }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val publicTemplate = template("PublicConversions")
+        val floatOverload = publicTemplate.scope.functions.getValue("toInt").single {
+            it.normalParams.single().type == MCFPPBaseType.Float
+        }
+        assertIs<NativeFunction>(floatOverload)
+        assertEquals("toIntFromFloat", floatOverload.javaMethod.name)
+        assertSame(publicTemplate, floatOverload.owner)
+        assertEquals(AccessModifier.PRIVATE, publicTemplate.scope.functions.getValue("toInt").single {
+            it.normalParams.single().type == MCFPPBaseType.Int
+        }.accessModifier)
+        val machine = execute(publicMain, output)
+        assertEquals(4, machine.read(publicMain.scope.getVar("fallback") as MCInt))
+        assertEquals(4, machine.read(publicMain.scope.getVar("exact") as MCInt))
+        assertEquals(0, privateNativeCalls, "The private exact overload must not run when an accessible fallback exists")
     }
 
     private fun template(name: String): DataTemplate =
@@ -173,6 +209,16 @@ class LibMemberAccessTest {
             CompileSettings.foldIRConstants = settings[4]
             CompileSettings.maxWhileInline = maxInline
             output.toFile().deleteRecursively()
+        }
+    }
+
+    companion object {
+        @JvmField var privateNativeCalls = 0
+
+        @JvmStatic
+        fun privateNativeSentinel(context: NativeCallContext) {
+            privateNativeCalls++
+            context.publishResult(MCInt(4))
         }
     }
 }

@@ -65,7 +65,7 @@ class LegacyFloatIRTest {
                     value -= 0.5
                     while(value < 4.0){ value += 0.5; }
                     var negative = -value
-                    dynamic result = 0
+                    external result = 0
                     if(quotient == 1.0 && value >= 4.0 && value <= 4.0 && negative < 0.0 &&
                         value > negative && negative != value){ result = 1; }
                     /data modify storage mcfpp:system temp.decimal set from storage mcfpp:system stack_frame[0].value
@@ -87,7 +87,7 @@ class LegacyFloatIRTest {
                 var maximum = toFloat(2147483647)
                 var small = toFloat(-7s)
                 var encoded = toNBT(promoted)
-                dynamic result = 0
+                external result = 0
                 if(toInt(promoted) == 16777217 && toInt(returned) == 16777217 &&
                     toInt(maximum) == 2147483600 && toInt(small) == -7){ result = 1; }
                 /data modify storage mcfpp:system temp.promoted set from storage mcfpp:system stack_frame[0].promoted
@@ -103,24 +103,23 @@ class LegacyFloatIRTest {
         assertNotNull(function("promote").typedIR)
     }
 
-    @Test fun recursiveCallsCaptureEarlierArgumentsAndStaticWritebackSeparately() = modes {
+    @Test fun recursiveCallsCaptureEarlierArguments() = modes {
         val main = compile("""
             func sum(value: float, depth: int): float {
                 if(depth <= 0){ return value; }
                 return value + sum(value + 0.5, depth - 1)
             }
-            func change(static value: float): float { value = 10.0; return 0.5; }
             func forward(value: float, ignored: float): any { return value; }
             func main(){
                 var value = 1.25
-                var earlier = forward(value, change(value))
+                var earlier = forward(value, 0.5)
                 var total = sum(earlier, 2) + value
-                dynamic result = 0
-                if(total == 15.25 && value == 10.0 && earlier == 1.25){ result = 1; }
+                external result = 0
+                if(total == 6.5 && value == 1.25 && earlier == 1.25){ result = 1; }
             }
         """)
         assertEquals(1, result(execute(main), main))
-        for (name in listOf("sum", "change", "forward")) assertNotNull(function(name).typedIR)
+        for (name in listOf("sum", "forward")) assertNotNull(function(name).typedIR)
     }
 
     @Test fun legacyAndIRCallersKeepMultipleFloatParametersAndConsecutiveReturnsIndependent() = modes {
@@ -135,7 +134,7 @@ class LegacyFloatIRTest {
                     var right = 2.5
                     var first = mix(literal(), identity(right))
                     var second = mix(identity(4.0))
-                    dynamic result = toInt(first + second)
+                    external result = toInt(first + second)
                 }
             """, ir = !legacy)
             assertNotNull(function("identity").typedIR)
@@ -145,13 +144,13 @@ class LegacyFloatIRTest {
         }
     }
 
-    @Test fun IRCallerReadsLegacyReturnsAndStaticParametersFromTheSameCompoundABI() = modes {
+    @Test fun IRCallerReadsLegacyReturnsFromTheSameCompoundABI() = modes {
         val main = compile("""
             func oldMix(left: float, right: float): float {
                 var ignored = 6 / 2
                 return left * 10.0 + right
             }
-            func oldChange(static value: float): float {
+            func oldChange(value: float): float {
                 var ignored = 6 / 2
                 value += 1.25
                 return value
@@ -159,12 +158,12 @@ class LegacyFloatIRTest {
             func main(){
                 var value = 2.0
                 var total = oldMix(value, oldChange(value))
-                dynamic result = toInt(total * 10.0 + value)
+                external result = toInt(total * 10.0 + value)
             }
         """)
         assertNull(function("oldMix").typedIR)
         assertNull(function("oldChange").typedIR)
-        assertEquals(235, result(execute(main), main))
+        assertEquals(234, result(execute(main), main))
     }
 
     @Test fun zeroDivisionAndMultiplicationRemainCanonicalWithoutHostFolding() = modes {
@@ -173,7 +172,7 @@ class LegacyFloatIRTest {
                 var quotient = 1.0 / 0.0
                 var both = 0.0 / 0.0
                 var product = 999.0 * 0.0
-                dynamic result = 0
+                external result = 0
                 if(quotient == 0.0 && both == 0.0 && product == 0.0){ result = 1; }
                 /data modify storage mcfpp:system temp.zero set from storage mcfpp:system stack_frame[0].quotient
             }
@@ -207,7 +206,7 @@ class LegacyFloatIRTest {
                 /say barrier
                 var unknown = source as float
                 unknown += 0.25
-                dynamic result = toInt(unknown)
+                external result = toInt(unknown)
                 /data modify storage mcfpp:system temp.view set from storage mcfpp:system stack_frame[0].source
             }
         """)

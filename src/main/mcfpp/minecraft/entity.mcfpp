@@ -1,1 +1,1 @@
-interface SingleEntity {}
+abstract data SingleEntity {}

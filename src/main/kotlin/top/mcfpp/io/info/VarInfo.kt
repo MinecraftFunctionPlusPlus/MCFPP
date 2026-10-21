@@ -22,7 +22,8 @@ data class VarInfo(
     val annotations: List<Annotation>,
     val dataOnly: Boolean?,
     val readonlyValue: CompilerValue?,
-    val readonlyTypes: Map<TypeId, MCFPPType>
+    val readonlyTypes: Map<TypeId, MCFPPType>,
+    val isFinal: Boolean = false
 ) {
     fun get(owner: DataTemplate?): Var<*> {
         val value = if (readonlyValue != null) {
@@ -39,9 +40,11 @@ data class VarInfo(
         value.accessModifier = accessModifier
         value.isStatic = isStatic
         value.isConst = isConst
+        value.isFinal = isFinal
         value.nullable = nullable
-        value.annotations.addAll(annotations)
+        value.annotations.addAll(top.mcfpp.model.property.Property.copyAnnotations(annotations))
         if (value is MCNumber<*> && dataOnly != null) value.isDataOnly = dataOnly
+        if (value is top.mcfpp.core.lang.OnScoreboard && dataOnly != null) value.isDataOnly = dataOnly
         value.declaredParentTemplate = owner
         if (readonlyValue == null) value.bindDeclaration(forceRuntime = forceRuntime)
         return value
@@ -55,8 +58,9 @@ data class VarInfo(
             } else null
             return VarInfo(value.identifier, value.type, value.accessModifier, value.isStatic,
                 value.isConst, value.nullable, value.symbol?.forceRuntime == true,
-                ArrayList(value.annotations), (value as? MCNumber<*>)?.isDataOnly, frozen,
-                if (readonly) LinkedHashMap(StorageAccess.boundTypes(value)) else emptyMap())
+                top.mcfpp.model.property.Property.copyAnnotations(value.annotations),
+                (value as? top.mcfpp.core.lang.OnScoreboard)?.isDataOnly ?: (value as? MCNumber<*>)?.isDataOnly, frozen,
+                if (readonly) LinkedHashMap(StorageAccess.boundTypes(value)) else emptyMap(), value.isFinal)
         }
     }
 }

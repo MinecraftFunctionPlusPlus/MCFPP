@@ -39,12 +39,12 @@ class ConversionIRTest {
         for (version in listOf("26.3", "1.20.1")) {
             val main = compile("""
                 func main(){
-                    dynamic input = 65535
+                    external input = 65535
                     var small = toByte(input)
                     var medium = toShort(input)
                     var wide = toLong(input)
                     var precise = toDouble(input)
-                    dynamic result = toInt(small) + toInt(medium) + input
+                    external result = toInt(small) + toInt(medium) + input
                     /data modify storage mcfpp:system temp.small set from storage mcfpp:system stack_frame[0].small
                     /data modify storage mcfpp:system temp.medium set from storage mcfpp:system stack_frame[0].medium
                     /data modify storage mcfpp:system temp.wide set from storage mcfpp:system stack_frame[0].wide
@@ -70,7 +70,7 @@ class ConversionIRTest {
             func main(){
                 var value = sum(3)
                 while(value < 2.5){ value += 0.5; }
-                dynamic result = toInt(value) + toInt(expose())
+                external result = toInt(value) + toInt(expose())
             }
         """)
         assertEquals(1, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -80,11 +80,11 @@ class ConversionIRTest {
         val main = compile("""
             func forward(value: nbt): nbt { return value; }
             func main(){
-                dynamic source = 12s
+                external source = 12s
                 var encoded = toNBT(source)
                 source = 3s
                 var returned = forward(toNBT(toLong(9007199254740993L)))
-                dynamic result = (toNBT(7) as int) + toInt(source)
+                external result = (toNBT(7) as int) + toInt(source)
                 /data modify storage mcfpp:system temp.encoded set from storage mcfpp:system stack_frame[0].encoded
                 /data modify storage mcfpp:system temp.returned set from storage mcfpp:system stack_frame[0].returned
             }
@@ -100,7 +100,7 @@ class ConversionIRTest {
             func main(){
                 var wide = toInt(17L)
                 var precise = toInt(-1.8d)
-                dynamic result = wide + precise
+                external result = wide + precise
             }
         """, "1.20.1")
         assertEquals(15, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -123,7 +123,7 @@ class ConversionIRTest {
     @Test fun userFunctionsNamedLikeConversionsKeepTheirOwnBehavior() = modes {
         val main = compile("""
             func toInt(value: int): int { return value + 10; }
-            func main(){ dynamic result = toInt(2); }
+            func main(){ external result = toInt(2); }
         """)
         assertEquals(12, execute(main).read(main.scope.getVar("result") as MCInt))
         assertTrue(main.typedIR!!.blocks.flatMap { it.instructions }.any { it is Instruction.Call })
@@ -138,7 +138,7 @@ class ConversionIRTest {
                     ${if (legacy) "var ignored = 6 / 2;" else ""}
                     var small = narrow(65535)
                     var tiny = narrowByte(128)
-                    dynamic result = toInt(small) + toInt(tiny)
+                    external result = toInt(small) + toInt(tiny)
                 }
             """.trimIndent(), version = "26.3")
             assertEquals(0, Project.errorCount)

@@ -11,7 +11,7 @@ data class NamespaceInfo (
     var enums: ArrayList<EnumInfo>,
     var objectDataInfo: ArrayList<AbstractTemplateInfo<*>>,
     var aliases: HashMap<String, MCFPPType>,
-    var interfaces: ArrayList<AbstractTemplateInfo<*>>
+    var macros: ArrayList<MacroFunctionInfo> = arrayListOf()
 ): ModelInfo<Namespace>{
     override fun get(): Namespace {
         val namespace = Namespace(identifier)
@@ -30,11 +30,8 @@ data class NamespaceInfo (
             val template = t.get()
             namespace.scope.addObject(template.identifier, template)
         }
-        for (info in interfaces) {
-            val template = info.get()
-            namespace.scope.addInterface(template.identifier, template)
-        }
         for ((name, target) in aliases) namespace.scope.putResolvedAlias(name, target)
+        namespace.restoreMacroDeclarations(macros)
         return namespace
     }
 
@@ -65,7 +62,7 @@ data class NamespaceInfo (
                 enums,
                 objects,
                 HashMap(namespace.scope.resolvedAliases()),
-                ArrayList(namespace.scope.interfaces.values.map { AbstractTemplateInfo.from(it) })
+                ArrayList(namespace.macroDeclarations())
             )
         }
     }

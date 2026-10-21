@@ -34,24 +34,21 @@ class UnifiedValueContractTest {
             "while(flag){value=4;};",
             "while(flag){value=4;break;}; value=9;",
             "do {value=4;} while(flag);",
-            "if(flag){value=4;}; dynamic observed=value;",
-            "value=1;replace(value);",
+            "if(flag){value=4;}; external observed=value;",
             "var source=1;const alias=source as int;alias=2;",
-            "var source=1;const alias=source as int;replace(alias);",
             "const source=1;var alias=source as int;alias=2;"
         )
         for (fold in listOf(false, true)) {
             CompileSettings.foldIRConstants = fold
             for (body in rejected) {
-                compile("func replace(static target: int){target=4;}\n" +
-                    "func reject(flag: bool){const value: int; $body}\nfunc main(){}")
+                compile("func reject(flag: bool){const value: int; $body}\nfunc main(){}")
                 assertTrue(Project.errorCount > 0, "fold=$fold: $body")
             }
         }
     }
 
     @Test
-    fun constFirstAssignmentAndMutableContentsWorkAcrossCallsAndLibraryReloads() = isolated { output ->
+    fun constFirstAssignmentAndMutableContentsWorkAcrossLibraryReloads() = isolated { output ->
         val body = """
             const answer: int
             var marker=0
@@ -61,23 +58,21 @@ class UnifiedValueContractTest {
             values[0]=answer
             const shared=values as list<int>
             shared[0]=answer
-            append(shared)
-            return values[0]+values[1]+marker
+            return values[0]+marker
         """.trimIndent()
         for (ir in listOf(false, true)) for (fold in listOf(false, true)) {
             CompileSettings.foldIRConstants = fold
-            val declarations = "namespace fixture.const_values;\nfunc append(static values: list<int>){values[0]+=1;values.add(8);}\n" +
+            val declarations = "namespace fixture.const_values;\n" +
                 if (ir) "func choose(flag: bool):int {$body}" else "data Box {func choose(flag: bool):int {$body}}"
             val receiver = if (ir) "" else "box."
             val main = "func main(){${if (ir) "" else "var box=Box();"}" +
-                "dynamic result=${receiver}choose(true)*100+${receiver}choose(false);}"
+                "external result=${receiver}choose(true)*100+${receiver}choose(false);}"
             roundTrip(declarations, main, output.resolve("const-$ir-$fold")) { entry, machine ->
                 val function = if (ir) namespace("fixture.const_values").scope.functions.getValue("choose").single()
                     else (entry.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("choose").single()
                 if (ir) assertNotNull(function.typedIR) else assertNull(function.typedIR)
                 assertTrue(function.compiledFunctions.isEmpty())
-                assertTrue(declaration("fixture.const_values", "append").compiledFunctions.isEmpty())
-                assertEquals(1415, machine.read(entry.scope.getVar("result") as MCInt))
+                assertEquals(506, machine.read(entry.scope.getVar("result") as MCInt))
             }
         }
     }
@@ -118,7 +113,7 @@ class UnifiedValueContractTest {
         """.trimIndent()
         val main = """
             func main(){
-                dynamic label="first";dynamic coordinate=4
+                external label="first";external coordinate=4
                 var original=build(label,coordinate)
                 var copied=original
                 var shared=original as entity
@@ -178,8 +173,8 @@ class UnifiedValueContractTest {
                 return count
             }
         """.trimIndent()
-        val main = "func main(){var child=Child();dynamic result=inspect(child,7);dynamic direct=choose(child);" +
-            "dynamic iteration=iterateClosed(false);dynamic earlyIteration=iterateClosed(true);}"
+        val main = "func main(){var child=Child();external result=inspect(child,7);external direct=choose(child);" +
+            "external iteration=iterateClosed(false);external earlyIteration=iterateClosed(true);}"
         for (fold in listOf(false, true)) {
             CompileSettings.foldIRConstants = fold
             roundTrip(declarations, main, output.resolve("formals-$fold")) { entry, machine ->
@@ -228,34 +223,24 @@ class UnifiedValueContractTest {
                 }
                 return 0
             }
-            func condition(static count: int,limit: int):bool {
-                count+=1;return count<limit
-            }
-            func observe(limit: int):int {
-                var count=0;var iterations=0
-                while(condition(count,limit)){iterations+=1;}
-                return count*10+iterations
-            }
         """.trimIndent()
         for (version in listOf("26.3", "1.20.2", "1.20.1"))
             for (ir in listOf(false, true)) for (fold in listOf(false, true)) {
             CompileSettings.foldIRConstants = fold
             val declarations = "namespace fixture.range_values;\n" + if (ir) body else
-                "data Box {${body.replace("while(condition(", "while(this.condition(")}}"
+                "data Box {$body}"
             val receiver = if (ir) "" else "box."
             val main = "func main(){${if (ir) "" else "var box=Box();"}" +
-                "dynamic start=1;dynamic finish=5;" +
-                "dynamic result=${receiver}iterate(start,finish)*100+${receiver}natural(start,3)*10+${receiver}early(start,finish);" +
-                "dynamic empty=${receiver}natural(3,1);" +
-                "dynamic branchResult=${receiver}nested(start,finish);" +
-                "dynamic alternative=${receiver}nested(2,finish);" +
-                "dynamic last=${receiver}nested(3,finish);" +
-                "dynamic skipped=${receiver}observe(1);" +
-                "dynamic completed=${receiver}observe(3);}"
+                "external start=1;external finish=5;" +
+                "external result=${receiver}iterate(start,finish)*100+${receiver}natural(start,3)*10+${receiver}early(start,finish);" +
+                "external empty=${receiver}natural(3,1);" +
+                "external branchResult=${receiver}nested(start,finish);" +
+                "external alternative=${receiver}nested(2,finish);" +
+                "external last=${receiver}nested(3,finish);}"
             roundTrip(declarations, main, output.resolve("ranges-$version-$ir-$fold"), version = version) { entry, machine ->
                 val functions = if (ir) namespace("fixture.range_values").scope.functions
                     else (entry.scope.getVar("box") as DataTemplateObject).templateType.scope.functions
-                for (name in listOf("iterate", "natural", "early", "nested", "condition", "observe")) {
+                for (name in listOf("iterate", "natural", "early", "nested")) {
                     val function = functions.getValue(name).single()
                     if (ir) assertNotNull(function.typedIR) else assertNull(function.typedIR)
                     assertTrue(function.compiledFunctions.isEmpty())
@@ -265,8 +250,6 @@ class UnifiedValueContractTest {
                 assertEquals(33, machine.read(entry.scope.getVar("branchResult") as MCInt))
                 assertEquals(43, machine.read(entry.scope.getVar("alternative") as MCInt))
                 assertEquals(63, machine.read(entry.scope.getVar("last") as MCInt))
-                assertEquals(10, machine.read(entry.scope.getVar("skipped") as MCInt))
-                assertEquals(32, machine.read(entry.scope.getVar("completed") as MCInt))
             }
         }
     }
@@ -296,7 +279,7 @@ class UnifiedValueContractTest {
             val main = """
                 func main(){
                     ${if (ir) "" else "var box=Box();"}
-                    dynamic zero=0.0;var negative=-zero
+                    external zero=0.0;var negative=-zero
                     var original=${if (ir) "" else "box."}pack(negative)
                     var copied=original
                     var shared=original as dict<dict<any>>
@@ -331,7 +314,7 @@ class UnifiedValueContractTest {
                 var copied=relay(original)
                 var shared=original as vec3
                 shared[1]=9
-                dynamic result=values[1]*100+copied[1]*10+copied[0]
+                external result=values[1]*100+copied[1]*10+copied[0]
             }
         """.trimIndent()
         for (fold in listOf(false, true)) {

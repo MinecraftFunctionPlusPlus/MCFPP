@@ -19,8 +19,27 @@ import top.mcfpp.lib.EncodedChatComponent
 import top.mcfpp.lib.ListChatComponent
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.SbObject
+import top.mcfpp.lib.ChatComponent
+import top.mcfpp.lib.ChatComponentStyle
+import top.mcfpp.lib.PlainChatComponent
+import top.mcfpp.lib.TranslatableChatComponent
+import top.mcfpp.lib.ScoreChatComponent
+import top.mcfpp.lib.SelectorChatComponent
+import top.mcfpp.lib.KeybindChatComponent
+import top.mcfpp.lib.NBTChatComponent
+import top.mcfpp.lib.ColorStyle
+import top.mcfpp.lib.BoldStyle
+import top.mcfpp.lib.ItalicStyle
+import top.mcfpp.lib.UnderlineStyle
+import top.mcfpp.lib.StrikethroughStyle
+import top.mcfpp.lib.ObfuscatedStyle
+import top.mcfpp.lib.InsertionStyle
+import top.mcfpp.lib.ClickEventStyle
+import top.mcfpp.lib.HoverEventShowTextStyle
+import top.mcfpp.lib.HoverEventShowEntityStyle
 import top.mcfpp.model.compound.ObjectCompoundData
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.property.Property
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.collection.ListTag
@@ -29,6 +48,8 @@ import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.TempPool
+import java.util.Collections
+import java.util.IdentityHashMap
 
 /** A live address adapter. Facts and synchronization caches contain immutable values/layouts. */
 class StorageBinding(
@@ -56,6 +77,37 @@ class StoredData(val root: Place, var path: NBTPath, private var initialize: (()
     private val registers = mutableMapOf<Pair<Location, TypeId>, StorageLayout.Scoreboard>()
     private val childLayouts = mutableMapOf<Place, StorageLayout>()
     private val sources = mutableMapOf<SymbolId, StoredData>()
+    internal fun retainedSources(): List<StoredData> = sources.values.toList()
+
+    internal fun checkpointStorageState(): () -> Unit {
+        val savedPath = path
+        val savedInitialize = initialize
+        val savedLayout = layout.checkpointCopy()
+        val savedFacts = facts.fork()
+        val restoreVersions = versions.checkpoint()
+        val savedTypes = LinkedHashMap(types)
+        val savedDeclarations = LinkedHashMap(declarations)
+        val savedRegisters = LinkedHashMap(registers)
+        val savedChildren = childLayouts.mapValues { (_, value) -> value.checkpointCopy() }
+        val savedSources = LinkedHashMap(sources)
+        return {
+            path = savedPath
+            initialize = savedInitialize
+            layout = savedLayout
+            facts.replaceWith(savedFacts)
+            restoreVersions()
+            types.clear()
+            types.putAll(savedTypes)
+            declarations.clear()
+            declarations.putAll(savedDeclarations)
+            registers.clear()
+            registers.putAll(savedRegisters)
+            childLayouts.clear()
+            childLayouts.putAll(savedChildren)
+            sources.clear()
+            sources.putAll(savedSources)
+        }
+    }
     internal fun retainSource(source: StoredData) { if (source !== this) sources[source.root.root] = source }
     internal fun inheritSources(source: StoredData) { sources.putAll(source.sources); retainSource(source) }
     internal fun source(place: Place): StoredData? = if (place.root == root.root) this else sources[place.root]
@@ -182,8 +234,188 @@ class StoredData(val root: Place, var path: NBTPath, private var initialize: (()
     }
 }
 
+/**
+ * An in-memory compiler savepoint. Both before and prepared-after states can be restored repeatedly.
+ * Commands, function/scope publication, diagnostics and temporary-name allocation belong to the
+ * composing journal. The caller must enroll its existing adapters (including scope members).
+ */
+internal class StorageCheckpoint internal constructor(
+    private val enrolled: List<Any>,
+    private val restoreActions: List<() -> Unit>
+) {
+    fun restore() { restoreActions.forEach { it() } }
+
+    /** Includes the original enrollment as well as any producers/bindings now reachable from it. */
+    fun captureCurrent(): StorageCheckpoint = StorageAccess.checkpointGraph(enrolled)
+}
+
 /** Central boundary between Place/TypedView and the remaining Var-based backends. */
 object StorageAccess {
+    /** Capture without ensure/read/getter calls, allocations of program identities, or materialization. */
+    internal fun checkpoint(values: Iterable<Var<*>>, stores: Iterable<StoredData> = emptyList()): StorageCheckpoint =
+        checkpointGraph(values.toList() + stores.toList())
+
+    internal fun checkpointGraph(roots: Iterable<Any>): StorageCheckpoint {
+        val pending = ArrayDeque<Any>()
+        roots.forEach(pending::addLast)
+        val seen = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
+        val enrolled = arrayListOf<Any>()
+        val adapters = arrayListOf<() -> Unit>()
+        val paths = arrayListOf<() -> Unit>()
+        val producers = arrayListOf<() -> Unit>()
+        while (pending.isNotEmpty()) {
+            val current = pending.removeFirst()
+            if (!seen.add(current)) continue
+            enrolled += current
+            when (current) {
+                is Var<*> -> {
+                    adapters += current.checkpointStorageState()
+                    current.storageBinding?.data?.let(pending::addLast)
+                    (current.parent as? Var<*>)?.let(pending::addLast)
+                    pending.addLast(current.nbtPath)
+                    if (current is MCFloat) {
+                        listOf(current.sign, current.int0, current.int1, current.exp).forEach(pending::addLast)
+                    }
+                    if (current is MCNumber<*>) pending.addLast(current.sbObject)
+                    if (current is ScoreBool) pending.addLast(current.boolObject)
+                    if (current is PropertyVar) {
+                        pending.addLast(current.field)
+                        pending.addLast(current.caller)
+                        pending.addLast(current.property)
+                    }
+                }
+                is SbObject -> {
+                    val name = current.name
+                    val criterion = current.criterion
+                    val display = current.display
+                    display?.let(pending::addLast)
+                    adapters += {
+                        current.name = name
+                        current.criterion = criterion
+                        current.display = display
+                    }
+                }
+                is Property -> {
+                    val parent = current.parent
+                    val declaredParent = current.declaredParentTemplate
+                    val access = current.accessModifier
+                    val finalFlag = current.isFinal
+                    val staticFlag = current.isStatic
+                    val inheritedFlag = current.isInherited
+                    parent?.let(pending::addLast)
+                    adapters += {
+                        current.parent = parent
+                        current.declaredParentTemplate = declaredParent
+                        current.accessModifier = access
+                        current.isFinal = finalFlag
+                        current.isStatic = staticFlag
+                        current.isInherited = inheritedFlag
+                    }
+                }
+                is ChatComponent -> {
+                    val styles = current.styles.toList()
+                    styles.forEach(pending::addLast)
+                    adapters += {
+                        current.styles.clear()
+                        current.styles.addAll(styles)
+                    }
+                    when (current) {
+                        is ListChatComponent -> {
+                            val components = current.components.toList()
+                            components.forEach(pending::addLast)
+                            adapters += {
+                                current.components.clear()
+                                current.components.addAll(components)
+                            }
+                        }
+                        is PlainChatComponent -> {
+                            val value = current.value
+                            adapters += { current.value = value }
+                        }
+                        is TranslatableChatComponent -> current.args?.let { arguments ->
+                            adapters += checkpointChatArguments(arguments)
+                            arguments.forEach(pending::addLast)
+                        }
+                        is ScoreChatComponent -> pending.addLast(current.value)
+                        is SelectorChatComponent -> current.separator?.let(pending::addLast)
+                        is NBTChatComponent -> {
+                            pending.addLast(current.nbt)
+                            current.separator?.let(pending::addLast)
+                        }
+                        is EncodedChatComponent, is KeybindChatComponent -> Unit
+                        else -> error("Storage journal cannot capture chat component " + current.javaClass.name)
+                    }
+                }
+                is ChatComponentStyle -> when (current) {
+                    is HoverEventShowTextStyle -> pending.addLast(current.content)
+                    is HoverEventShowEntityStyle -> {
+                        current.name?.let(pending::addLast)
+                        pending.addLast(current.uuid)
+                    }
+                    is ColorStyle, is BoldStyle, is ItalicStyle, is UnderlineStyle,
+                    is StrikethroughStyle, is ObfuscatedStyle, is InsertionStyle, is ClickEventStyle -> Unit
+                    else -> error("Storage journal cannot capture chat style " + current.javaClass.name)
+                }
+                is StoredData -> {
+                    producers += current.checkpointStorageState()
+                    pending.addLast(current.path)
+                    current.retainedSources().forEach(pending::addLast)
+                }
+                is NBTPath -> {
+                    val source = current.source
+                    when (source) {
+                        is top.mcfpp.lib.EntitySource -> pending.addLast(source.entity)
+                        is top.mcfpp.lib.BlockSource -> pending.addLast(source.pos)
+                        is top.mcfpp.lib.StorageSource -> Unit
+                        else -> error("Storage journal cannot capture NBT source ${source.javaClass.name}")
+                    }
+                    val segments = current.pathList.toList()
+                    segments.forEach(pending::addLast)
+                    paths += {
+                        current.source = source
+                        current.pathList.clear()
+                        current.pathList.addAll(segments)
+                    }
+                }
+                is top.mcfpp.lib.IntPath -> pending.addLast(current.value)
+                is top.mcfpp.lib.MemberPath -> {
+                    val value = current.value
+                    pending.addLast(value)
+                    paths += { current.value = value }
+                }
+                is top.mcfpp.lib.NBTPredicatePath -> pending.addLast(current.value)
+                is top.mcfpp.lib.IteratorPath -> Unit
+                else -> error("Storage journal cannot capture metadata " + current.javaClass.name)
+            }
+        }
+        return StorageCheckpoint(enrolled.toList(), adapters + paths + producers)
+    }
+
+    /**
+     * args is a host-supplied List rather than an owned ArrayList. Support standard concrete
+     * lists whose mutation contract is known; a read-only view of unknown backing state is rejected.
+     */
+    private fun checkpointChatArguments(arguments: List<ChatComponent>): () -> Unit {
+        return when (arguments.javaClass.name) {
+            "java.util.ArrayList", "java.util.LinkedList" -> {
+                val saved = arguments.toList()
+                val mutable = arguments as MutableList<ChatComponent>
+                val restore: () -> Unit = { mutable.clear(); mutable.addAll(saved) }
+                restore
+            }
+            "java.util.Arrays\$ArrayList" -> {
+                val saved = arguments.toList()
+                val mutable = arguments as MutableList<ChatComponent>
+                val restore: () -> Unit = { saved.forEachIndexed { index, component -> mutable[index] = component } }
+                restore
+            }
+            "kotlin.collections.EmptyList", "java.util.Collections\$EmptyList",
+            "java.util.Collections\$SingletonList", "java.util.ImmutableCollections\$List12",
+            "java.util.ImmutableCollections\$ListN" -> ({ })
+            else -> error("Storage journal cannot capture chat argument list " + arguments.javaClass.name)
+        }
+    }
+
     fun flowSnapshot(values: Iterable<Var<*>>): Map<StoredData, FlowFacts> =
         values.mapNotNull { value -> value.storageBinding?.also { binding ->
             value.symbol?.let { binding.data.declarations.putIfAbsent(binding.place, it) }
@@ -1263,8 +1495,7 @@ object StorageAccess {
         }
         val incoming = original.data.facts.withoutValues()
         val errors = Project.errorCount
-        binding.data.materialize(binding.place)
-        encodeTo(binding.path, source)
+        if (!writePhysicalLayout(binding, source)) return
         if (Project.errorCount != errors) return
         binding.data.types.putAll(original.data.types)
         binding.data.inheritSources(original.data)
@@ -1282,6 +1513,49 @@ object StorageAccess {
         val result = writePayload(target, source)
         if (!result.isError && Project.errorCount == errors) EffectAnalysis.recordWrite(ensure(target).place)
         return result
+    }
+
+    /**
+     * Write through the target's actual physical layout. Scoreboard-backed variables are
+     * not NBT locations: projecting them through binding.path leaves the original score
+     * unchanged while writing an unrelated temporary storage path.
+     */
+    private fun writePhysicalLayout(binding: StorageBinding, source: Var<*>): Boolean {
+        val layout = binding.data.layoutAt(binding.place)
+        // The primary scoreboard/float components are only the current frame. A binding
+        // rebased to another frame must keep using its offset NBT address, matching the
+        // existing intRegister/legacyFloatRegisters direct-primary condition.
+        val primary = binding.place == binding.data.root && binding.location.frameOffset == 0
+        when (layout) {
+            is StorageLayout.Scoreboard -> {
+                val operand = if (primary) when (source) {
+                    is MCInt -> intRegister(source)
+                    is ScoreBool -> booleanRegister(source)
+                    else -> null
+                } else null
+                if (operand == null) {
+                    binding.data.materialize(binding.place)
+                    encodeTo(binding.path, source)
+                } else emit(Command("scoreboard players operation ${layout.player} ${layout.objective} = " +
+                    "${operand.player} ${operand.objective}"))
+                return true
+            }
+            is StorageLayout.LegacyFloat -> {
+                val components = if (primary) (source as? MCFloat)?.let(::legacyFloatRegisters) else null
+                if (components == null) {
+                    binding.data.materialize(binding.place)
+                    encodeTo(binding.path, source)
+                } else components.zip(layout.components).forEach { (from, to) ->
+                    emit(Command("scoreboard players operation ${to.player} ${to.objective} = ${from.player} ${from.objective}"))
+                }
+                return true
+            }
+            else -> {
+                binding.data.materialize(binding.place)
+                encodeTo(binding.path, source)
+                return true
+            }
+        }
     }
 
     private fun writePayload(target: Var<*>, source: Var<*>): Var<*> {
@@ -1388,8 +1662,8 @@ object StorageAccess {
         if (!static) {
             if (binding.place == binding.data.root && source.storageBinding?.data !== binding.data)
                 binding.data.overwriteRoot()
-            binding.data.materialize(binding.place)
-            encodeTo(binding.path, source)
+            if (!writePhysicalLayout(binding, source))
+                return target.clone().apply { isError = true }
         }
         val writtenDescriptor = (sourceAccess?.type as? TypeKnowledge.Exact)?.type
             ?.let(sourcePlace.data.types::get) ?: actualType(source)

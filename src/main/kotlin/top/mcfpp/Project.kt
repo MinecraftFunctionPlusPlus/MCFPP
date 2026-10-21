@@ -2,6 +2,7 @@ package top.mcfpp
 
 import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
+import com.google.gson.JsonObject
 import com.ibm.icu.impl.data.ResourceReader
 import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.ParserRuleContext
@@ -9,6 +10,7 @@ import org.antlr.v4.runtime.tree.ParseTree
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.apache.tools.zip.ZipFile
+import org.stringtemplate.v4.compiler.STParser
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.MCFPPFieldVisitor
 import top.mcfpp.command.Command
@@ -31,7 +33,14 @@ import top.mcfpp.model.compound.ObjectDataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionTag
 import top.mcfpp.model.scope.GlobalScope
+import top.mcfpp.mni.expand.ExpansionBudget
+import top.mcfpp.mni.expand.TemplateProcessorRunner
+import top.mcfpp.mni.expand.invalidateExpansionSessions
+import top.mcfpp.type.MCFPPDataTemplateType
+import top.mcfpp.type.MCFPPType
+import top.mcfpp.type.TypeId
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.StringHelper.splitNamespaceID
 import top.mcfpp.util.Module
 import top.mcfpp.util.ModuleType
 import top.mcfpp.util.Utils
@@ -54,6 +63,20 @@ object Project {
     private var logger: Logger = LogManager.getLogger("mcfpp")
 
     var config = ProjectConfig()
+
+    /**
+     * The single macro-expansion budget of the current compilation unit.
+     *
+     * Every source macro call in one [init] cycle shares this object, including nested child
+     * sessions. [init] replaces it with a fresh budget, so repeated compilations never reuse
+     * counts. Project savepoints retain the owning object itself; allocations consumed by a
+     * failed expansion are deliberately not refunded.
+     */
+    private var macroExpansionBudgetSlot: ExpansionBudget? = null
+
+    /** Create the compilation-unit budget lazily only for callers that did not run [init]. */
+    internal fun macroExpansionBudget(): ExpansionBudget =
+        macroExpansionBudgetSlot ?: config.newExpansionBudget().also { macroExpansionBudgetSlot = it }
 
     val ctx: ArrayDeque<ParserRuleContext> = ArrayDeque()
 
@@ -109,11 +132,19 @@ object Project {
      */
     var warningCount = 0
 
-    lateinit var projectTick : Function
-
-    lateinit var projectLoad : Function
-
-    lateinit var projectInit : Function
+    // Nullable backing slots let a compiler savepoint restore the pre-readProject state too.
+    private var projectTickSlot: Function? = null
+    private var projectLoadSlot: Function? = null
+    private var projectInitSlot: Function? = null
+    var projectTick: Function
+        get() = projectTickSlot ?: throw UninitializedPropertyAccessException("lateinit property projectTick has not been initialized")
+        set(value) { projectTickSlot = value }
+    var projectLoad: Function
+        get() = projectLoadSlot ?: throw UninitializedPropertyAccessException("lateinit property projectLoad has not been initialized")
+        set(value) { projectLoadSlot = value }
+    var projectInit: Function
+        get() = projectInitSlot ?: throw UninitializedPropertyAccessException("lateinit property projectInit has not been initialized")
+        set(value) { projectInitSlot = value }
 
     /**
      * 常量池
@@ -126,6 +157,12 @@ object Project {
     val macroFunction : LinkedHashMap<String, String> = LinkedHashMap()
 
     private val anonymousTemplates = arrayListOf<DataTemplate>()
+    private val pendingTemplateContracts = arrayListOf<DataTemplate>()
+    private var templateSignatureCollectionDepth = 0
+    private var completingTemplateContracts = false
+    private var inheritanceHeaderSnapshot = emptySet<TypeId>()
+    private val invalidInheritanceHeaders = hashSetOf<TypeId>()
+    private val boundTemplateParents = hashSetOf<TypeId>()
     internal var templateDeclarationsReady = false
         private set
 
@@ -189,77 +226,72 @@ object Project {
         constants.clear()
         macroFunction.clear()
         anonymousTemplates.clear()
+        pendingTemplateContracts.clear()
+        templateSignatureCollectionDepth = 0
+        completingTemplateContracts = false
+        inheritanceHeaderSnapshot = emptySet()
+        invalidInheritanceHeaders.clear()
+        boundTemplateParents.clear()
         templateDeclarationsReady = false
         modules.clear()
         classLoader = Thread.currentThread().contextClassLoader
         files.clear()
+        // Invalidate expansions from the previous initialization directly. A transactional
+        // ProjectStateJournal may restore stageProcessor's callback lists, so relying on one
+        // lazily installed INIT callback would allow stale sessions to survive a later init.
+        invalidateExpansionSessions()
+        // Processor demand and metadata policy belong to one compilation unit too.
+        TemplateProcessorRunner.reset()
+        // A compilation unit owns exactly one budget. Reinitialization starts a new unit even
+        // when Project.config keeps the same limits, so old node/depth counts cannot leak in.
+        macroExpansionBudgetSlot = config.newExpansionBudget()
         stageProcessor[compileStage.ordinal].forEach { it() }
     }
 
-    fun readConfig(path: String): ProjectConfig{
+    /** Macro precedence: JSON, config args, then this invocation's CLI overrides.
+     * Legacy flags retain CLI-before-config-args ordering in main/parseCompilerArgs.
+     */
+    internal fun readConfig(options: CompilerOptions): ProjectConfig{
         val config = ProjectConfig()
         //工程信息读取
         try {
+            val qwq = options.file
             //读取json
-            logger.debug("Reading project from file \"$path\"")
-            val reader = FileReader(path)
-            val qwq = File(path).absoluteFile
+            LogProcessor.rawDebug(logger, "Reading project from file \"${qwq.absolutePath}\"")
             config.name = qwq.name.substring(0, qwq.name.lastIndexOf('.'))
             config.root = qwq.parentFile.toPath()
-            val json = reader.readText()
-            //解析json
+            val json = qwq.readText()
+            // 解析json
             val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
 
-            //根目录
-            if(jsonObject.containsKey("root")){
-                config.root = Path(jsonObject.getString("root"))
-                jsonObject.remove("root")
-            }
+            // 根目录
+            (jsonObject.remove("root") as? String)?.let { config.root = Path(it) }
 
-            //源代码根目录
-            if(jsonObject.containsKey("sourcePath")){
-                config.sourcePath = Path(jsonObject.getString("sourcePath"))
-                jsonObject.remove("sourcePath")
-            }
+            // 源代码根目录
+            (jsonObject.remove("sourcePath") as? String)?.let { config.sourcePath = Path(it) }
 
-            //版本
-            if(jsonObject.containsKey("version")){
-                config.version = jsonObject.getString("version")
-                jsonObject.remove("version")
-            }
+            // 版本
+            (jsonObject.remove("version") as? String)?.let { config.version = it }
 
-            //描述
-            if(jsonObject.containsKey("description")){
-                config.description = jsonObject.getString("description")
-                jsonObject.remove("description")
-            }
+            // 描述
+            (jsonObject.remove("description") as? String)?.let { config.description = it }
 
-            //默认命名空间
-            if(jsonObject.containsKey("namespace")){
-                config.rootNamespace = jsonObject.getString("namespace")
-                jsonObject.remove("namespace")
-            }
+            // 默认命名空间
+            (jsonObject.remove("namespace") as? String)?.let { config.rootNamespace = it }
 
             //调用库
-            if(jsonObject.containsKey("jars")){
-                val jarsJson: JSONArray = jsonObject.getJSONArray("jars")
-                for (i in 0..<jarsJson.size) {
-                    config.jars.add(jarsJson.getString(i))
+            jsonObject.getJSONArray("jars")?.let {
+                for (i in it.indices) {
+                    it.getString(i)?.let(config.jars::add)
                 }
                 jsonObject.remove("jars")
             }
 
             //输出目录
-            if(jsonObject.containsKey("targetPath")){
-                config.targetPath = Path(jsonObject.getString("targetPath"))
-                jsonObject.remove("targetPath")
-            }
+            (jsonObject.remove("targetPath") as? String)?.let { config.targetPath = Path(it) }
 
             //是否生成数据包
-            if(jsonObject.containsKey("noDatapack")){
-                config.noDatapack = jsonObject.getBoolean("noDatapack")
-                jsonObject.remove("noDatapack")
-            }
+            (jsonObject.remove("noDatapack") as? Boolean)?.let { config.noDatapack = it }
 
             //注释等级
             if(jsonObject.containsKey("commentLevel")){
@@ -278,10 +310,24 @@ object Project {
                 jsonObject.remove("copyImport")
             }
 
+            if (jsonObject.containsKey("macroExpansion")) {
+                val options = jsonObject.getJSONObject("macroExpansion")
+                options.getInteger("maxDepth")?.let {
+                    config.macroExpansion = config.macroExpansion.copy(maxDepth = it)
+                }
+                options.getInteger("maxNodes")?.let {
+                    config.macroExpansion = config.macroExpansion.copy(maxNodes = it)
+                }
+                options.getBoolean("dump")?.let {
+                    config.macroExpansion = config.macroExpansion.copy(dump = it)
+                }
+                jsonObject.remove("macroExpansion")
+            }
+
             //编译参数
             if(jsonObject.containsKey("args")){
                 val compileArgsJson = jsonObject.getJSONArray("args")
-                parseArgs(compileArgsJson.toList(String::class.java))
+                // TODO json里面能不能定义编译器参数呢。。。
                 jsonObject.remove("args")
             }
 
@@ -296,10 +342,12 @@ object Project {
             }
 
         } catch (e: Exception) {
-            LogProcessor.error("Error while reading project from file \"$path\"")
-            e.printStackTrace()
+            LogProcessor.error("Error while reading project from file \"${options.file.absolutePath}\"")
+            LogProcessor.captureStackTrace(e)
         }
 
+        // 编译器cli参数中的 marco 配置会覆写项目配置
+        config.macroExpansion = MacroExpansionConfig(options.macroMaxDepth, options.macroMaxNodes, options.dumpMacroExpansion)
         return config
     }
 
@@ -510,8 +558,6 @@ object Project {
             scope.forEachFunction(::restoreFunction)
             scope.template.values.forEach(::restoreCompound)
             scope.genericTemplate.values.forEach(::restoreCompound)
-            scope.interfaces.values.forEach(::restoreCompound)
-            scope.genericInterfaces.values.forEach(::restoreCompound)
             scope.objects.forEach(::restoreCompound)
         }
     }
@@ -519,10 +565,10 @@ object Project {
     internal fun resolveImportedTemplateParents() {
         for (namespace in GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values) {
             val scope = namespace.scope
-            for (template in scope.template.values + scope.interfaces.values + scope.objects.filterIsInstance<DataTemplate>()) {
-                if (template !is GenericDataTemplate && template.parentID.isNotEmpty()) {
-                    template.resolveDeclaredParents()
-                    template.flatExtends()
+            for (template in scope.template.values + scope.genericTemplate.values +
+                scope.objects.filterIsInstance<DataTemplate>()) {
+                if (template.hasRestoredParentTypes || template !is GenericDataTemplate && template.parentID.isNotEmpty()) {
+                    resolveTemplateInheritance(template)
                 }
             }
         }
@@ -533,16 +579,16 @@ object Project {
      */
     fun indexType(){
         compileStage = CompileStage.INDEX_TYPE
-        logger.debug("Generate Type Index...")
+        LogProcessor.rawDebug(logger, "Generate Type Index...")
         resolveImportedTemplateParents()
         //解析文件
         for (file in files) {
             try {
                 file.indexType()
             } catch (e: Exception) {
-                logger.error("Error while generate type index in file \"$file\"")
-                errorCount++
-                e.printStackTrace()
+                LogProcessor.rawError(logger, "Error while generate type index in file \"$file\"")
+                LogProcessor.recordProjectError()
+                LogProcessor.captureStackTrace(e)
             }
             GlobalScope.importedLibNamespaces.clear()
         }
@@ -552,9 +598,9 @@ object Project {
             try {
                 file.runCommand()
             } catch (e: Exception) {
-                logger.error("Error while generate run command in file \"$file\"")
-                errorCount++
-                e.printStackTrace()
+                LogProcessor.rawError(logger, "Error while generate run command in file \"$file\"")
+                LogProcessor.recordProjectError()
+                LogProcessor.captureStackTrace(e)
             }
             GlobalScope.importedLibNamespaces.clear()
         }
@@ -577,15 +623,15 @@ object Project {
      */
     fun resolveField() {
         compileStage = CompileStage.RESOLVE_FIELD
-        logger.debug("Generate Function Index...")
+        LogProcessor.rawDebug(logger, "Generate Function Index...")
         //解析文件
         for (file in files) {
             try {
                 file.resolveField()
             } catch (e: IOException) {
-                logger.error("Error while generate function index in file \"$file\"")
-                errorCount++
-                e.printStackTrace()
+                LogProcessor.rawError(logger, "Error while generate function index in file \"$file\"")
+                LogProcessor.recordProjectError()
+                LogProcessor.captureStackTrace(e)
             }
             GlobalScope.importedLibNamespaces.clear()
         }
@@ -598,15 +644,15 @@ object Project {
 
     fun runAnnotation(){
         compileStage = CompileStage.RUN_ANNOTATION
-        logger.debug("Run Annotation...")
+        LogProcessor.rawDebug(logger, "Run Annotation...")
         //解析文件
         for (file in files) {
             try {
                 file.runAnnotation()
             } catch (e: IOException) {
-                logger.error("Error while run annotation in file \"$file\"")
-                errorCount++
-                e.printStackTrace()
+                LogProcessor.rawError(logger, "Error while run annotation in file \"$file\"")
+                LogProcessor.recordProjectError()
+                LogProcessor.captureStackTrace(e)
             }
             GlobalScope.importedLibNamespaces.clear()
         }
@@ -614,62 +660,423 @@ object Project {
     }
 
     fun completeTemplateDeclarations() {
+        if (compileStage == CompileStage.READ_LIB) return
         val namespaces = GlobalScope.localNamespaces.values + GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values
         val declarations = namespaces.flatMap { namespace ->
             val scope = namespace.scope
-            scope.template.values + scope.genericTemplate.values + scope.interfaces.values +
-                scope.genericInterfaces.values + scope.objects.filterIsInstance<DataTemplate>()
+            scope.template.values + scope.genericTemplate.values +
+                scope.objects.filterIsInstance<DataTemplate>()
         }
         val functions = namespaces.flatMap { it.scope.functions.values.flatten() } +
             declarations.flatMap { it.constructors + it.scope.functions.values.flatten() }
+        // Revoke old evidence at the start of this explicit declaration pass, including
+        // instances already materialized while loading a library or resolving a signature.
+        (declarations.filterNot { it is GenericDataTemplate } +
+            declarations.filterIsInstance<GenericDataTemplate>().flatMap { it.materializedInstances() } +
+            anonymousTemplates).forEach(::requestTemplateCompletion)
+        prepareTemplateInheritanceHeaders()
+        declarations.forEach(::resolveTemplateInheritance)
         declarations.filterIsInstance<GenericDataTemplate>().forEach { declaration ->
-            val file = declaration.restoreDeclarationEnvironment()
-            if (file == null) declaration.prepareHeader()
-            else file.withDeclarationContext { declaration.prepareHeader() }
+            templateCompletionStage(declaration) {
+                val file = declaration.restoreDeclarationEnvironment()
+                if (file == null) declaration.prepareHeader()
+                else file.withDeclarationContext { declaration.prepareHeader() }
+            }
         }
         functions.forEach { function ->
-            function.normalParams.forEach { it.type.tryResolve() }
-            function.returnType.tryResolve()
+            templateCompletionStage(function.owner as? DataTemplate) {
+                function.normalParams.forEach { it.type.tryResolve() }
+                function.returnType.tryResolve()
+            }
         }
         val templates = GlobalScope.localNamespaces.values.flatMap { it.scope.template.values + it.scope.objects.filterIsInstance<DataTemplate>() }.filterNot { it is GenericDataTemplate } +
             (GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values)
-                .flatMap { it.scope.template.values + it.scope.interfaces.values + it.scope.objects.filterIsInstance<DataTemplate>() }
-                .filter { it !is GenericDataTemplate && it.parentID.isNotEmpty() } +
-            declarations.filterIsInstance<GenericDataTemplate>().flatMap { it.compiledTemplates.values.toList() }
-        val completed = hashSetOf<DataTemplate>()
-        fun complete(template: DataTemplate) {
-            if (!completed.add(template)) return
-            template.parent.filterIsInstance<DataTemplate>().filter { it in templates || it in anonymousTemplates }.forEach(::complete)
-            template.flatExtends()
-            MCFPPFieldVisitor().completeTemplateFields(template)
-            template.applyDeclarationAnnotations()
+                .flatMap { it.scope.template.values + it.scope.objects.filterIsInstance<DataTemplate>() }
+                .filter { it !is GenericDataTemplate && (it.parentID.isNotEmpty() || it.hasRestoredParentTypes) } +
+            declarations.filterIsInstance<GenericDataTemplate>().flatMap { it.materializedInstances() }
+        (templates + anonymousTemplates).forEach { template ->
+            pendingTemplateContracts.add(template)
         }
-        templates.forEach(::complete)
-        var index = 0
-        while (index < anonymousTemplates.size) complete(anonymousTemplates[index++])
-        (functions + completed.flatMap { it.constructors + it.scope.functions.values.flatten() }).forEach {
-            it.normalParams.forEach { param -> param.type.tryResolve() }
-            it.returnType.tryResolve()
-            it.refreshTemplateSignature()
-            it.validateDefaultDeclarations()
-        }
+        completePendingTemplateContracts(functions)
         templateDeclarationsReady = true
+        // A caller that has already entered the annotation/source compilation stages owns the
+        // same barrier: processors run once here, after every declaration signature is complete.
+        // Declaration-only checks never execute annotation processors.
+        if (compileStage == CompileStage.RUN_ANNOTATION || compileStage == CompileStage.COMPILE)
+            TemplateProcessorRunner.run()
+    }
+
+    /** Nested anonymous/generic bodies must finish collecting declarations before any contract check. */
+    internal fun <T> collectingTemplateSignatures(action: () -> T): T {
+        templateSignatureCollectionDepth++
+        var collected = false
+        try {
+            val result = action()
+            collected = true
+            return result
+        } finally {
+            templateSignatureCollectionDepth--
+            if (collected && templateDeclarationsReady && templateSignatureCollectionDepth == 0)
+                completePendingTemplateContracts()
+        }
+    }
+
+    internal fun registerTemplateContract(template: DataTemplate) {
+        requestTemplateCompletion(template)
+        enqueueTemplateContract(template)
+    }
+
+    /** Explicit preparation owns this declaration-only barrier, including detached canonical roots.
+     * Initial projects have not run the global declaration pass yet; queue registration alone is
+     * therefore not completion evidence. Keep collection closed until every requested shell exists.
+     */
+    internal fun completePreparedTemplateDeclarations(collect: () -> List<DataTemplate>) {
+        check(compileStage != CompileStage.READ_LIB) { "Declaration completion cannot run while reading a library" }
+        check(!completingTemplateContracts && templateSignatureCollectionDepth == 0) {
+            "Declaration completion requires the outer declaration barrier"
+        }
+        val roots: List<DataTemplate>
+        templateSignatureCollectionDepth++
+        try {
+            roots = collect()
+            roots.forEach { template ->
+                check(template !is GenericDataTemplate) { "Complete a concrete template binding, not its generic prototype" }
+                if (!template.hasCompletedDeclaration && pendingTemplateContracts.none { it === template })
+                    registerTemplateContract(template)
+            }
+        } finally { templateSignatureCollectionDepth-- }
+        completePendingTemplateContracts()
+        check(roots.all { it.hasCompletedDeclaration && !it.hasDeclarationCompletionFailure }) {
+            "The declaration barrier did not complete every requested template"
+        }
+    }
+
+    private fun requestTemplateCompletion(template: DataTemplate) {
+        (template as? top.mcfpp.model.compound.CompiledGenericDataTemplate)?.let { it.originTemplate.revokeCompletedMaterialization(it) }
+        template.requestDeclarationCompletion()
+    }
+
+    /** Recursive signature resolution may reuse an in-flight canonical model, never its cache entry. */
+    internal fun isTemplateCompletionQueued(template: DataTemplate): Boolean =
+        completingTemplateContracts || pendingTemplateContracts.any { it === template }
+
+    private fun enqueueTemplateContract(template: DataTemplate) {
+        pendingTemplateContracts.add(template)
+        if (templateDeclarationsReady && templateSignatureCollectionDepth == 0)
+            completePendingTemplateContracts()
+    }
+
+    /** One barrier for source declarations and concrete bindings created after the source pass. */
+    private fun completePendingTemplateContracts(extraFunctions: List<Function> = emptyList()) {
+        if (compileStage == CompileStage.READ_LIB || completingTemplateContracts || templateSignatureCollectionDepth != 0) return
+        completingTemplateContracts = true
+        val attempts = java.util.IdentityHashMap<DataTemplate, Long>()
+        var succeeded = false
+        try {
+            val completed = arrayListOf<DataTemplate>()
+            val completedIds = hashSetOf<TypeId>()
+            val functions = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Function, Boolean>())
+            val resolved = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Function, Boolean>())
+            val refreshed = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Function, Boolean>())
+            functions.addAll(extraFunctions)
+            while (true) {
+                val roots = pendingTemplateContracts.filter { it.inheritanceIdentity !in completedIds }
+                    .distinctBy { it.inheritanceIdentity }
+                pendingTemplateContracts.clear()
+                val additions = completeTemplateInheritance(roots, completed, attempts)
+                completed.addAll(additions)
+                completedIds.addAll(additions.map { it.inheritanceIdentity })
+                additions.forEach { functions.addAll(it.constructors + it.scope.functions.values.flatten()) }
+                functions.filter { resolved.add(it) }.forEach { function ->
+                    templateCompletionStage(function.owner as? DataTemplate) {
+                        function.normalParams.forEach { it.type.tryResolve() }
+                        function.returnType.tryResolve()
+                    }
+                }
+                // Resolving a signature or initializer can introduce another anonymous type
+                // or concrete generic binding. Complete those before refreshing/checking.
+                if (pendingTemplateContracts.any { it.inheritanceIdentity !in completedIds }) continue
+                functions.filter { refreshed.add(it) }.forEach { function ->
+                    templateCompletionStage(function.owner as? DataTemplate) {
+                        function.refreshTemplateSignature()
+                        function.validateDefaultDeclarations()
+                    }
+                }
+                if (pendingTemplateContracts.none { it.inheritanceIdentity !in completedIds }) break
+            }
+            var contractsValid = true
+            completed.forEach { template ->
+                if (template.hasDeclarationCompletionFailure) {
+                    contractsValid = false
+                    return@forEach
+                }
+                (template as? top.mcfpp.model.compound.CompiledGenericDataTemplate)?.let { instance ->
+                    templateCompletionStage(instance) { instance.originTemplate.bindMaterializedOrigins(instance) }
+                }
+                val file = template.restoreDeclarationEnvironment()
+                val valid = if (file == null) template.validateInheritance()
+                else file.withDeclarationContext { template.validateInheritance() }
+                // Diagnostics are deduplicated by the model. Recompute validity on every attempt.
+                if (!valid) contractsValid = false
+            }
+            // A specialization can already have entered the legacy map before an earlier stage
+            // reported an error. An otherwise empty pending queue is not a completion proof.
+            // Invalid raw parent headers deliberately never materialize a parent graph. Its
+            // otherwise valid empty graph must not erase the header's failed validity evidence.
+            val headersValid = attempts.keys.all(::hasValidTemplateInheritance)
+            succeeded = headersValid && contractsValid && errorCount == 0 &&
+                attempts.all { (template, generation) -> template.canCompleteDeclaration(generation) }
+        } finally {
+            attempts.forEach { (template, generation) ->
+                template.finishDeclarationCompletion(generation, succeeded)
+            }
+            attempts.keys.filterIsInstance<top.mcfpp.model.compound.CompiledGenericDataTemplate>().forEach { instance ->
+                instance.originTemplate.finishMaterialization(instance)
+            }
+            completingTemplateContracts = false
+        }
+    }
+
+    /** A failed barrier withholds every proof, but only the failing stage's owner needs rollback. */
+    private fun templateCompletionStage(owner: DataTemplate?, action: () -> Unit) {
+        // A failed stage can leave its pending annotations and adapters partially consumed.
+        // Only restoring the owner's checkpoint authorizes another mutating attempt.
+        if (owner?.hasDeclarationCompletionFailure == true) return
+        if (owner == null) action() else owner.declarationCompletionStage(action)
     }
 
     fun registerAnonymousTemplate(template: DataTemplate) {
+        requestTemplateCompletion(template)
         anonymousTemplates.add(template)
-        if (templateDeclarationsReady) {
-            template.flatExtends()
-            MCFPPFieldVisitor().completeTemplateFields(template)
-            template.applyDeclarationAnnotations()
-            (template.constructors + template.scope.functions.values.flatten()).forEach { it.refreshTemplateSignature() }
+        resolveTemplateInheritance(template)
+        enqueueTemplateContract(template)
+    }
+
+    /** Returns only an anonymous template already registered with this project. */
+    internal fun findRegisteredAnonymousTemplate(identity: TypeId): DataTemplate? =
+        anonymousTemplates.firstOrNull { it.inheritanceIdentity == identity }
+
+    private fun templateDeclarations(): List<DataTemplate> =
+        (GlobalScope.localNamespaces.values + GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values).flatMap {
+            it.scope.template.values + it.scope.genericTemplate.values +
+                it.scope.objects.filterIsInstance<DataTemplate>()
+        }.distinctBy { it.inheritanceIdentity }
+
+    /** Check declaration heads before resolving arguments, which may instantiate another generic head. */
+    internal fun prepareTemplateInheritanceHeaders() {
+        val declarations = templateDeclarations() + anonymousTemplates
+        val snapshot = declarations.mapTo(hashSetOf()) { it.inheritanceIdentity }
+        if (snapshot == inheritanceHeaderSnapshot) return
+        inheritanceHeaderSnapshot = snapshot
+        val edges = declarations.associate { declaration ->
+            val file = declaration.restoreDeclarationEnvironment()
+            val resolve = {
+                declaration.parentID.mapNotNull { name ->
+                    val (namespace, identifier) = name.substringBefore('<').splitNamespaceID()
+                    GlobalScope.getData(namespace, identifier) ?: file?.unsolvedImports?.entries?.firstNotNullOfOrNull { (importedNamespace, importedName) ->
+                        if ((namespace == null || namespace == importedNamespace) && (importedName == "*" || importedName == identifier))
+                            GlobalScope.getUnsolvedImportNamespace(importedNamespace)?.scope?.getDeclaredType(identifier) as? DataTemplate
+                        else null
+                    }
+                }
+            }
+            val parents = if (file == null) resolve() else file.withDeclarationContext(resolve)
+            declaration.inheritanceIdentity to parents
+        }
+        val states = hashMapOf<TypeId, Int>()
+        for (root in declarations) {
+            if (states[root.inheritanceIdentity] == 2) continue
+            val stack = arrayListOf(root to edges[root.inheritanceIdentity].orEmpty().iterator())
+            states[root.inheritanceIdentity] = 1
+            while (stack.isNotEmpty()) {
+                val (current, parents) = stack.last()
+                if (!parents.hasNext()) {
+                    states[current.inheritanceIdentity] = 2
+                    stack.removeAt(stack.lastIndex)
+                    continue
+                }
+                val parent = parents.next()
+                when (states[parent.inheritanceIdentity]) {
+                    1 -> {
+                        val start = stack.indexOfFirst { it.first.inheritanceIdentity == parent.inheritanceIdentity }
+                        val cycle = stack.drop(start).map { it.first } + parent
+                        if (cycle.any { it.inheritanceIdentity !in invalidInheritanceHeaders }) {
+                            LogProcessor.error("Cyclic inheritance: " + cycle.joinToString(" -> ") { it.namespaceID })
+                        }
+                        invalidInheritanceHeaders.addAll(cycle.map { it.inheritanceIdentity })
+                    }
+                    2 -> Unit
+                    else -> {
+                        states[parent.inheritanceIdentity] = 1
+                        stack.add(parent to edges[parent.inheritanceIdentity].orEmpty().iterator())
+                    }
+                }
+            }
         }
     }
 
-    private val preparedObjectInitializers = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<DataTemplate, Boolean>())
+    internal fun hasValidTemplateInheritance(template: DataTemplate): Boolean {
+        prepareTemplateInheritanceHeaders()
+        val declaration = (template as? top.mcfpp.model.compound.CompiledGenericDataTemplate)?.originTemplate ?: template
+        return declaration.inheritanceIdentity !in invalidInheritanceHeaders
+    }
+
+    internal fun invalidateTemplateParentBinding(template: DataTemplate) {
+        boundTemplateParents.remove(template.inheritanceIdentity)
+    }
+
+    internal fun resolveTemplateInheritance(template: DataTemplate) {
+        // Includes may refer to declarations restored by a later include. Even an empty
+        // early graph is not evidence that this declaration's parents have been bound.
+        if (compileStage == CompileStage.READ_LIB) return
+        // Requeueing and resetting diagnostics do not undo a failed mutating stage. Its
+        // private checkpoint must restore the owner before any parent resolution is retried.
+        if (template.hasDeclarationCompletionFailure) return
+        if (!hasValidTemplateInheritance(template)) {
+            requestTemplateCompletion(template)
+            return
+        }
+        if (template.inheritanceIdentity in boundTemplateParents && !template.hasPendingParentTypes) return
+        // Restoring a specialized parent may queue a freshly materialized declaration. Its
+        // barrier must wait until this complete parent list has either committed or failed.
+        collectingTemplateSignatures {
+            (template as? top.mcfpp.model.compound.CompiledGenericDataTemplate)?.let { it.originTemplate.revokeCompletedMaterialization(it) }
+            val errorsBefore = errorCount
+            val resolved = template.declarationCompletionStage { resolveTemplateParents(template) }
+            if (resolved && errorCount == errorsBefore) boundTemplateParents.add(template.inheritanceIdentity)
+        }
+    }
+
+    private fun resolveTemplateParents(template: DataTemplate): Boolean {
+        val errorsBefore = errorCount
+        val restoredParents = template.hasPendingParentTypes
+        if (restoredParents && !template.resolveDeclaredParents()) return false
+        if (template is GenericDataTemplate) {
+            val file = template.restoreDeclarationEnvironment()
+            if (file == null) template.prepareHeader() else file.withDeclarationContext { template.prepareHeader() }
+        } else if (!restoredParents && template.parentID.isNotEmpty() && !template.resolveDeclaredParents()) return false
+        return errorCount == errorsBefore
+    }
+
+    /** Complete parent fields before children without depending on source order or recursion depth. */
+    internal fun completeTemplateInheritance(roots: List<DataTemplate>, previous: List<DataTemplate> = emptyList()): ArrayList<DataTemplate> {
+        return completeTemplateInheritance(roots, previous, null)
+    }
+
+    private fun completeTemplateInheritance(roots: List<DataTemplate>, previous: List<DataTemplate>,
+                                            attempts: java.util.IdentityHashMap<DataTemplate, Long>?): ArrayList<DataTemplate> {
+        val completed = arrayListOf<DataTemplate>()
+        val states = previous.associate { it.inheritanceIdentity to 2 }.toMutableMap()
+        for (root in roots) {
+            if (root is GenericDataTemplate || states[root.inheritanceIdentity] == 2) continue
+            if (attempts != null && !attempts.containsKey(root)) {
+                (root as? top.mcfpp.model.compound.CompiledGenericDataTemplate)?.let { it.originTemplate.revokeCompletedMaterialization(it) }
+                attempts[root] = root.beginDeclarationCompletion()
+            }
+            resolveTemplateInheritance(root)
+            val stack = arrayListOf(root to root.parent.filterIsInstance<DataTemplate>().iterator())
+            states[root.inheritanceIdentity] = 1
+            while (stack.isNotEmpty()) {
+                val (current, parents) = stack.last()
+                if (!parents.hasNext()) {
+                    templateCompletionStage(current) {
+                        current.flatExtends()
+                        MCFPPFieldVisitor().completeTemplateFields(current)
+                        current.applyDeclarationAnnotations()
+                    }
+                    completed.add(current)
+                    states[current.inheritanceIdentity] = 2
+                    stack.removeAt(stack.lastIndex)
+                    continue
+                }
+                val parent = parents.next()
+                if (parent is GenericDataTemplate) continue
+                when (states[parent.inheritanceIdentity]) {
+                    1 -> {
+                        val start = stack.indexOfFirst { it.first.inheritanceIdentity == parent.inheritanceIdentity }
+                        templateCompletionStage(current) {
+                            LogProcessor.error("Cyclic inheritance: " + (stack.drop(start).map { it.first } + parent).joinToString(" -> ") { it.namespaceID })
+                            current.unExtends(parent)
+                        }
+                    }
+                    2 -> Unit
+                    else -> {
+                        if (attempts != null && !attempts.containsKey(parent)) {
+                            (parent as? top.mcfpp.model.compound.CompiledGenericDataTemplate)?.let { it.originTemplate.revokeCompletedMaterialization(it) }
+                            attempts[parent] = parent.beginDeclarationCompletion()
+                        }
+                        resolveTemplateInheritance(parent)
+                        states[parent.inheritanceIdentity] = 1
+                        stack.add(parent to parent.parent.filterIsInstance<DataTemplate>().iterator())
+                    }
+                }
+            }
+        }
+        return completed
+    }
+
+    /** Known final identity collection: a savepoint can inspect it without host collection callbacks. */
+    internal class InitializerSet : AbstractMutableSet<DataTemplate>() {
+        private val members = java.util.IdentityHashMap<DataTemplate, Boolean>()
+        override val size: Int get() = members.size
+        override fun iterator(): MutableIterator<DataTemplate> = members.keys.iterator()
+        override fun add(element: DataTemplate): Boolean = members.put(element, true) == null
+        override fun contains(element: DataTemplate): Boolean = members.containsKey(element)
+        override fun remove(element: DataTemplate): Boolean = members.remove(element) != null
+        override fun clear() = members.clear()
+    }
+
+    private val preparedObjectInitializers = InitializerSet()
     private val objectInitializerBodies = java.util.IdentityHashMap<DataTemplate, Function>()
     private val objectInitializerDependencies = java.util.IdentityHashMap<DataTemplate, MutableSet<DataTemplate>>()
     private val activeObjectInitializers = arrayListOf<DataTemplate>()
+
+    /** Raw compiler-owned relationships only. Reading this hook never completes a declaration. */
+    internal class JournalState internal constructor(
+        val anonymous: ArrayList<DataTemplate>,
+        val pending: ArrayList<DataTemplate>,
+        val signatureDepth: Int,
+        val completing: Boolean,
+        val headers: Set<TypeId>,
+        val invalidHeaders: HashSet<TypeId>,
+        val boundParents: HashSet<TypeId>,
+        val ready: Boolean,
+        val preparedObjects: MutableSet<DataTemplate>,
+        val initializerBodies: java.util.IdentityHashMap<DataTemplate, Function>,
+        val initializerDependencies: java.util.IdentityHashMap<DataTemplate, MutableSet<DataTemplate>>,
+        val activeObjects: ArrayList<DataTemplate>,
+        val sourceFiles: ArrayList<MCFPPFile>,
+        val entryFunctions: List<Function>,
+        /** The compilation-unit budget owner; its consumed counts belong to the budget itself. */
+        val expansionBudget: ExpansionBudget?,
+        private val restoreSlots: () -> Unit
+    ) {
+        fun restore() = restoreSlots()
+    }
+
+    internal fun journalState(): JournalState {
+        val depth = templateSignatureCollectionDepth
+        val completing = completingTemplateContracts
+        val headers = inheritanceHeaderSnapshot
+        val ready = templateDeclarationsReady
+        val tick = projectTickSlot
+        val load = projectLoadSlot
+        val init = projectInitSlot
+        val expansionBudget = macroExpansionBudgetSlot
+        val savedLogger = logger
+        return JournalState(anonymousTemplates, pendingTemplateContracts, depth, completing, headers,
+            invalidInheritanceHeaders, boundTemplateParents, ready, preparedObjectInitializers,
+            objectInitializerBodies, objectInitializerDependencies, activeObjectInitializers, files,
+            listOfNotNull(tick, load, init), expansionBudget) {
+            templateSignatureCollectionDepth = depth
+            completingTemplateContracts = completing
+            inheritanceHeaderSnapshot = headers
+            templateDeclarationsReady = ready
+            projectTickSlot = tick; projectLoadSlot = load; projectInitSlot = init
+            macroExpansionBudgetSlot = expansionBudget
+            logger = savedLogger
+        }
+    }
 
     private fun actualObjects(): List<DataTemplate> {
         val declarations = linkedMapOf<Pair<String, String>, DataTemplate>()
@@ -691,7 +1098,7 @@ object Project {
         val dependent = activeObjectInitializers.lastOrNull()
         if (dependent != null && dependent !== template) {
             objectInitializerDependencies.getOrPut(dependent) {
-                java.util.Collections.newSetFromMap(java.util.IdentityHashMap<DataTemplate, Boolean>())
+                InitializerSet()
             }.add(template)
             if (activeObjectInitializers.any { it === template }) {
                 LogProcessor.error("Cyclic object initialization dependency: '${dependent.identifier}' and '${template.identifier}'")
@@ -730,6 +1137,10 @@ object Project {
     fun compile() {
         compileStage = CompileStage.COMPILE
         completeTemplateDeclarations()
+        // Every field and inheritance signature in every source file is complete. Processors now
+        // run once in original source order; generated signatures enter the ordinary call index
+        // before any source or generated body is checked.
+        if (templateDeclarationsReady) TemplateProcessorRunner.run()
         prepareObjectInitializers()
         //工程文件编译
         //解析文件
@@ -738,9 +1149,9 @@ object Project {
             try {
                 file.compile()
             } catch (e: IOException) {
-                logger.error("Error while compiling file \"$file\"")
-                errorCount++
-                e.printStackTrace()
+                LogProcessor.rawError(logger, "Error while compiling file \"$file\"")
+                LogProcessor.recordProjectError()
+                LogProcessor.captureStackTrace(e)
             }
         }
         stageProcessor[compileStage.ordinal].forEach { it() }
@@ -752,8 +1163,8 @@ object Project {
     @InsertCommand
     fun optimization() {
         compileStage = CompileStage.OPTIMIZATION
-        logger.debug("Optimizing...")
-        logger.debug("Adding scoreboards declare in mcfpp:load function")
+        LogProcessor.rawDebug(logger, "Optimizing...")
+        LogProcessor.rawDebug(logger, "Adding scoreboards declare in mcfpp:load function")
 
         //向load函数中添加记分板初始化命令
         projectLoad.runInFunction {
@@ -810,16 +1221,16 @@ object Project {
                             }
                         }
                         f.commands.add(0, Commands.stackIn())
-                        logger.debug("Find entrance function: {} {}", f.tags, f.identifier)
+                        LogProcessor.rawDebug(logger, "Find entrance function: {} {}", f.tags, f.identifier)
                     }
                 }
             }
         }
         if (!hasEntrance && !CompileSettings.isLib) {
-            logger.warn("No valid entrance function in Project ${config.rootNamespace}")
-            warningCount++
+            LogProcessor.rawWarn(logger, "No valid entrance function in Project ${config.rootNamespace}")
+            LogProcessor.recordProjectWarning()
         }
-        logger.info("Complete compiling project " + config.root.name + " with [$errorCount] error and [$warningCount] warning")
+        LogProcessor.rawInfo(logger, "Complete compiling project " + config.root.name + " with [$errorCount] error and [$warningCount] warning")
         stageProcessor[compileStage.ordinal].forEach { it() }
     }
 

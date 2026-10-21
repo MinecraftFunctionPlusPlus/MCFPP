@@ -34,37 +34,17 @@ class LoopIRTest {
     @Test fun doWhileTestsAfterTheBodyAndContinueRunsTheCondition() = modes {
         for (version in listOf("26.3", "1.20.2", "1.20.1")) {
             val main = compile("""
-                func check(static count: int): bool { count += 1; return count < 3; }
                 func main(){
                     var count = 0
                     var sum = 0
-                    do { sum += 10; if(count == 1){ continue; }; sum += 1; } while(check(count))
+                    do { count += 1; sum += 10; if(count == 2){ continue; }; sum += 1; } while(count < 3)
                     var value: any = true
                     do { value = 2; } while(false)
-                    dynamic result = sum*100 + count*10 + value
+                    external result = sum*100 + count*10 + value
                 }
             """, version)
             assertEquals(3232, execute(main).read(main.scope.getVar("result") as MCInt))
         }
-    }
-
-    @Test fun rangeBoundsAreCapturedOnceAndLoopVariablesAreIndependentCopies() = modes {
-        val main = compile("""
-            func start(static limit: int): int { limit = 3; return 1; }
-            func end(static limit: int): int { var result = limit; limit = 0; return result; }
-            func main(){
-                var limit = 0
-                var count = 0
-                var index = 50
-                for(index : start(limit) .. end(limit)){
-                    count += index
-                    index = 99
-                    limit = 100
-                }
-                dynamic result = count*100 + index
-            }
-        """)
-        assertEquals(650, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun nestedRangeLoopsHaveIndependentScopesBreakAndContinueTargets() = modes {
@@ -79,7 +59,7 @@ class LoopIRTest {
                     }
                     sum += index*10
                 }
-                dynamic result = sum
+                external result = sum
             }
         """, "1.20.1")
         assertEquals(46, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -96,7 +76,7 @@ class LoopIRTest {
                 var sum = 0
                 for(value : 2147483646 .. 2147483647){ sum += 1; }
                 for(value : -2147483648 .. -2147483647){ sum += 1; }
-                dynamic result = sum*100 + count(5,4)*10 + count(2147483647,2147483647)
+                external result = sum*100 + count(5,4)*10 + count(2147483647,2147483647)
             }
         """, "1.20.2")
         assertEquals(401, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -110,7 +90,7 @@ class LoopIRTest {
                 return 99
             }
             func first(): int { do { return 7; } while(true); }
-            func main(){ dynamic result = recurse(4)*10 + first(); }
+            func main(){ external result = recurse(4)*10 + first(); }
         """)
         assertEquals(107, execute(main).read(main.scope.getVar("result") as MCInt))
     }
@@ -122,7 +102,7 @@ class LoopIRTest {
             "func main(){ for(value : 1 ..){ }; }",
             "func main(){ for(value : true .. 3){ }; }",
             "func bad(first: any){ for(value : first .. 3){ }; }\nfunc main(){ bad(1); }",
-            "func main(){ for(value : 1 .. 2){ }; dynamic outside = value; }")) {
+            "func main(){ for(value : 1 .. 2){ }; external outside = value; }")) {
             MCFPPStringTest.readFromString(source, version = "26.3")
             assertTrue(Project.errorCount > 0, source)
         }

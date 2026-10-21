@@ -16,7 +16,34 @@ class FileScope: SimpleLibScope(){
     /**
      * 此文件所在的命名空间。文件域可以访问到整个命名空间中的内容
      */
-    lateinit var namespaceField: NamespaceScope
+    private var namespaceFieldSlot: NamespaceScope? = null
+
+    var namespaceField: NamespaceScope
+        get() = namespaceFieldSlot
+            ?: throw UninitializedPropertyAccessException("lateinit property namespaceField has not been initialized")
+        set(value) { namespaceFieldSlot = value }
+
+    /** Slot identity only; namespace members are enrolled by the composing registration journal. */
+    internal class NamespaceFieldCheckpoint internal constructor(
+        elements: List<NamespaceScope>, private val restoreState: () -> Unit,
+        private val recapture: () -> NamespaceFieldCheckpoint
+    ) {
+        val elements: List<NamespaceScope> = java.util.Collections.unmodifiableList(ArrayList(elements))
+        fun restore() = restoreState()
+        fun captureCurrent(): NamespaceFieldCheckpoint = recapture()
+    }
+
+    internal fun checkpointNamespaceField(): NamespaceFieldCheckpoint = checkpointNamespaceField(emptyList())
+
+    private fun checkpointNamespaceField(retained: List<NamespaceScope>): NamespaceFieldCheckpoint {
+        // Read the raw nullable slot, including the uninitialized state, without invoking a getter.
+        val original = namespaceFieldSlot
+        val seen = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<NamespaceScope, Boolean>())
+        val elements = (retained + listOfNotNull(original)).filter { seen.add(it) }
+        return NamespaceFieldCheckpoint(elements, { namespaceFieldSlot = original }, {
+            checkpointNamespaceField(elements)
+        })
+    }
 
     /**
      * 此文件引用了的类，模板，函数等
@@ -38,14 +65,6 @@ class FileScope: SimpleLibScope(){
     private fun qualifiedScopes(namespace: String): List<NamespaceScope> =
         if (namespaceField.identifier == namespace) declarations(namespaceField)
         else importedNamespaceField[namespace]?.let(::declarations).orEmpty() + listOfNotNull(importField[namespace])
-
-    fun getAccessibleInterface(identifier: String): DataTemplate? {
-        return accessibleScopes().firstNotNullOfOrNull { it.getInterface(identifier) }
-    }
-
-    fun getAccessibleInterface(namespace:String, identifier: String): DataTemplate? {
-        return qualifiedScopes(namespace).firstNotNullOfOrNull { it.getInterface(identifier) }
-    }
 
     fun getAccessibleTemplate(identifier: String): DataTemplate? {
         return accessibleScopes().firstNotNullOfOrNull { it.getTemplate(identifier) }

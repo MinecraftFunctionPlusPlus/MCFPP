@@ -43,7 +43,7 @@ class CallShapeIRTest {
             func forward(value: dict<any>): dict<any> { return value; }
             func main(){
                 var values = forward(make())
-                dynamic result = values["row"][-1] + values["row"][0]
+                external result = values["row"][-1] + values["row"][0]
             }
         """, "1.20.1")
         assertEquals(11, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -54,46 +54,13 @@ class CallShapeIRTest {
         assertEquals(ValueKnowledge.Unknown, binding.data.facts.read(row.index(0))!!.value)
     }
 
-    @Test fun argumentsUseCapturedShapesBeforeLaterCallsReplaceTheirSource() = modes {
-        val main = compile("""
-            func replace(static value: list<any>): int { value = [false,false] as list<any>; return 0; }
-            func forward(value: list<any>, ignored: int): list<any> { return value; }
-            func main(){
-                var values = [2,9] as list<any>
-                var copied = forward(values, replace(values))
-                copied[0] = 5
-                dynamic result = copied[-1] + copied[0]
-            }
-        """)
-        assertEquals(14, execute(main).read(main.scope.getVar("result") as MCInt))
-        val binding = main.scope.getVar("values")!!.storageBinding!!
-        assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Bool.typeId), binding.data.facts.read(binding.place.index(0))!!.type)
-    }
-
-    @Test fun staticWholeReplacementCopiesNestedShapesAndForgetsObsoleteChildren() = modes {
-        val main = compile("""
-            func replace(static value: dict<any>, source: dict<any>) { value = source; }
-            func main(){
-                var values = {row:[false,false,false]} as dict<any>
-                var source = {row:[7,8]} as dict<any>
-                replace(values,source)
-                source["row"][0] = 99
-                dynamic result = values["row"][-1] + values["row"][0]
-            }
-        """)
-        assertEquals(15, execute(main).read(main.scope.getVar("result") as MCInt))
-        val binding = main.scope.getVar("values")!!.storageBinding!!
-        assertEquals(2, binding.data.facts.length(binding.place.field("row")))
-        assertNull(binding.data.facts.read(binding.place.field("row").index(2)))
-    }
-
     @Test fun branchingReturnsKeepOnlyCommonTypesAndShapes() = modes {
         val main = compile("""
             func choose(flag: bool): list<any> {
                 if(flag){ return [2,9] as list<any>; }
                 return [7] as list<any>
             }
-            func main(){ var values = choose(true); dynamic result = values[0] + 1; }
+            func main(){ var values = choose(true); external result = values[0] + 1; }
         """)
         assertEquals(3, execute(main).read(main.scope.getVar("result") as MCInt))
         val binding = main.scope.getVar("values")!!.storageBinding!!
@@ -104,23 +71,18 @@ class CallShapeIRTest {
     @Test fun arrayReturnsPreserveLengthsAcrossOrdinaryCalls() = modes {
         val main = compile("""
             func make(): IntArray { return [I; 2,9]; }
-            func main(){ var values = make(); dynamic result = values[-1]; }
+            func main(){ var values = make(); external result = values[-1]; }
         """, "1.20.1")
         assertEquals(9, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
-    @Test fun ordinaryArgumentsDoNotSelectReturnOrStaticWriteBranches() = modes {
+    @Test fun ordinaryArgumentsDoNotSelectReturnBranches() = modes {
         for (source in listOf("""
             func choose(flag: bool): list<any> {
                 if(flag){ return [2] as list<any>; }
                 return [false] as list<any>
             }
             func main(){ var values = choose(true); var result = values[0] + 1; }
-        """, """
-            func change(static value: list<any>, flag: bool) {
-                if(flag){ value = [false] as list<any>; }
-            }
-            func main(){ var values = [2] as list<any>; change(values,false); var result = values[0] + 1; }
         """)) {
             MCFPPStringTest.readFromString(source.trimIndent(), version = "26.3")
             assertTrue(Project.errorCount > 0)
@@ -134,7 +96,7 @@ class CallShapeIRTest {
                 if(depth <= 0){ return {row:[2,9]} as dict<any>; }
                 return relay(depth - 1)
             }
-            func main(){ var values = relay(3); dynamic result = values["row"][-1] + values["row"][0]; }
+            func main(){ var values = relay(3); external result = values["row"][-1] + values["row"][0]; }
         """, "1.20.1")
         assertEquals(11, execute(main).read(main.scope.getVar("result") as MCInt))
         val binding = main.scope.getVar("values")!!.storageBinding!!
@@ -152,25 +114,10 @@ class CallShapeIRTest {
                 var bounds = left(3)
                 var sum = 0
                 for(index : bounds){ sum += index - 16777216; }
-                dynamic result = sum
+                external result = sum
             }
         """, "1.20.1")
         assertEquals(3, execute(main).read(main.scope.getVar("result") as MCInt))
-    }
-
-    @Test fun recursiveStaticReplacementPreservesOutputShape() = modes {
-        val main = compile("""
-            func replace(static value: list<any>, depth: int){
-                if(depth <= 0){ value = [7,8] as list<any>; return; }
-                replace(value,depth - 1)
-            }
-            func main(){
-                var values = [false,false] as list<any>
-                replace(values,3)
-                dynamic result = values[-1] + values[0]
-            }
-        """, "1.20.1")
-        assertEquals(15, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun recursiveAlternativesAndChangedInputShapesDoNotInventProofs() = modes {
@@ -219,7 +166,7 @@ class CallShapeIRTest {
                 if(depth <= 0){ return {value:2} as dict<any>; }
                 return {value:nest(depth - 1)} as dict<any>
             }
-            func main(){ var value = nest(2); dynamic result = 1; }
+            func main(){ var value = nest(2); external result = 1; }
         """)
         assertEquals(1, execute(main).read(main.scope.getVar("result") as MCInt))
         val binding = main.scope.getVar("value")!!.storageBinding!!

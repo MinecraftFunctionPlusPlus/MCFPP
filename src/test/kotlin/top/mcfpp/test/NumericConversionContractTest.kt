@@ -52,7 +52,7 @@ class NumericConversionContractTest {
             fun body(known: Boolean): String = numericBody(known,version)
             val parameters = sources.joinToString { "${it.name}Input: ${it.name}" }
             val arguments = sources.joinToString { it.literal }
-            val main = "func main(){var box=Box();dynamic result=box.observe($arguments);dynamic knownResult=box.known();}"
+            val main = "func main(){var box=Box();external result=box.observe($arguments);external knownResult=box.known();}"
             val source = """
                 namespace fixture.numeric
                 data Box {
@@ -104,7 +104,7 @@ class NumericConversionContractTest {
                 val library=output.resolve("ir-$version-$fold.mclib")
                 val parameters=sources.joinToString {"${it.name}Input: ${it.name}"}
                 val arguments=sources.joinToString {it.literal}
-                val main="func main(){dynamic result=observe($arguments);dynamic knownResult=known();}"
+                val main="func main(){external result=observe($arguments);external knownResult=known();}"
                 val source="""
                     namespace fixture.numeric
                     func observe($parameters):int {
@@ -214,8 +214,8 @@ class NumericConversionContractTest {
         val main = """
             func main(){
                 var box=Box(); var payload=Payload(9)
-                dynamic result=box.observe(true,"quote \" slash \\",( {value:7} as nbt),payload,[B;1b,-2b],[I;3,-4],[L;5L,-6L])
-                dynamic knownResult=box.known()
+                external result=box.observe(true,"quote \" slash \\",( {value:7} as nbt),payload,[B;1b,-2b],[I;3,-4],[L;5L,-6L])
+                external knownResult=box.known()
             }
         """.trimIndent()
         val source = """
@@ -280,32 +280,32 @@ class NumericConversionContractTest {
             fun observe(name:String)= "/data modify storage fixture:boundaries $name set from storage mcfpp:system stack_frame[0].$name"
             val known=buildString {
                 integerCases.forEachIndexed { i,value ->
-                    appendLine("dynamic byte$i=toByte($value);dynamic short$i=toShort($value);")
+                    appendLine("external byte$i=toByte($value);external short$i=toShort($value);")
                     appendLine(observe("byte$i"));appendLine(observe("short$i"))
                 }
                 wideCases.forEachIndexed {i,pair ->
-                    appendLine("dynamic longInt$i=toInt(${pair.first});dynamic doubleInt$i=toInt(${pair.second});")
+                    appendLine("external longInt$i=toInt(${pair.first});external doubleInt$i=toInt(${pair.second});")
                     appendLine(observe("longInt$i"));appendLine(observe("doubleInt$i"))
-                    if(version!="1.20.1") {appendLine("dynamic rounded$i=toDouble(${pair.first});");appendLine(observe("rounded$i"))}
+                    if(version!="1.20.1") {appendLine("external rounded$i=toDouble(${pair.first});");appendLine(observe("rounded$i"))}
                     if(version=="26.3") {
-                        appendLine("dynamic longFloat$i=toFloat(${pair.first});dynamic doubleFloat$i=toFloat(${pair.second});")
+                        appendLine("external longFloat$i=toFloat(${pair.first});external doubleFloat$i=toFloat(${pair.second});")
                         appendLine(observe("longFloat$i"));appendLine(observe("doubleFloat$i"))
                     }
                 }
                 appendLine("return 7;")
             }
             val wideBody=buildString {
-                appendLine("dynamic longInt=toInt(wide);dynamic doubleInt=toInt(precise);")
+                appendLine("external longInt=toInt(wide);external doubleInt=toInt(precise);")
                 appendLine(observe("longInt"));appendLine(observe("doubleInt"))
-                if(version!="1.20.1") {appendLine("dynamic rounded=toDouble(wide);");appendLine(observe("rounded"))}
+                if(version!="1.20.1") {appendLine("external rounded=toDouble(wide);");appendLine(observe("rounded"))}
                 if(version=="26.3") {
-                    appendLine("dynamic longFloat=toFloat(wide);dynamic doubleFloat=toFloat(precise);")
+                    appendLine("external longFloat=toFloat(wide);external doubleFloat=toFloat(precise);")
                     appendLine(observe("longFloat"));appendLine(observe("doubleFloat"))
                 }
                 appendLine("return 7;")
             }
             val main=buildString {
-                appendLine("func main(){var box=Box();dynamic knownResult=box.known();")
+                appendLine("func main(){var box=Box();external knownResult=box.known();")
                 integerCases.forEachIndexed {i,value ->
                     appendLine("box.narrow($value);")
                     appendLine("/data modify storage fixture:boundaries runtimeByte$i set from storage fixture:boundaries small")
@@ -322,7 +322,7 @@ class NumericConversionContractTest {
             val source="""
                 namespace fixture.boundaries
                 data Box {
-                    func narrow(value: int):int {dynamic small=toByte(value);dynamic medium=toShort(value)
+                    func narrow(value: int):int {external small=toByte(value);external medium=toShort(value)
                         ${observe("small")}
                         ${observe("medium")}
                         return 7
@@ -415,7 +415,7 @@ class NumericConversionContractTest {
             namespace fixture.floatbounds
             ${if(ir) "" else "data Box {"}
                 func observe(value: float):int {
-                    dynamic integer=toInt(value);dynamic small=toByte(value);dynamic medium=toShort(value)
+                    external integer=toInt(value);external small=toByte(value);external medium=toShort(value)
                     /data modify storage fixture:floatbounds integer set from storage mcfpp:system stack_frame[0].integer
                     /data modify storage fixture:floatbounds small set from storage mcfpp:system stack_frame[0].small
                     /data modify storage fixture:floatbounds medium set from storage mcfpp:system stack_frame[0].medium
@@ -486,8 +486,8 @@ class NumericConversionContractTest {
                 val main=buildString {
                     appendLine("func main(){")
                     for((index,value)in values.withIndex()) {
-                        appendLine("dynamic runtime_$index=runtime(${value.first});")
-                        appendLine("dynamic known_$index=known_$index();")
+                        appendLine("external runtime_$index=runtime(${value.first});")
+                        appendLine("external known_$index=known_$index();")
                     }
                     appendLine("}")
                 }
@@ -527,7 +527,7 @@ class NumericConversionContractTest {
                 /data modify storage fixture:rawobserve observed.other set from storage mcfpp:system stack_frame[0].b
                 /data modify storage fixture:rawobserve observed.flag set from storage mcfpp:system stack_frame[0].flag
                 /scoreboard players set fixture.rawobserve_func_main_a mcfpp_default 9
-                dynamic after=a+b
+                external after=a+b
                 /data modify storage fixture:rawobserve observed.second set from storage mcfpp:system stack_frame[0].a
             }
         """.trimIndent(),version="26.3")

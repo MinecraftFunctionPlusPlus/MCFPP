@@ -64,7 +64,7 @@ class DictionaryMemberTest {
     @Test fun mergeRejectsCompilerOnlyFieldsBeforeWritingARuntimeReceiver() {
         MCFPPStringTest.readFromString("""
             func main(){
-                dynamic values: dict<any> = {first:2}
+                external values: dict<any> = {first:2}
                 values.merge({kind:int})
             }
         """.trimIndent(), version = "26.3")
@@ -82,8 +82,8 @@ class DictionaryMemberTest {
                 source["a.b"] = 9
                 var view = source as dict<any>
                 view.remove("a.b")
-                dynamic kept = source["kept"] + 0
-                dynamic absent = source.containsKey("a.b")
+                external kept = source["kept"] + 0
+                external absent = source.containsKey("a.b")
             }
         """)
         val machine = execute(main)
@@ -100,7 +100,7 @@ class DictionaryMemberTest {
             }
             func main(){
                 var source: dict<any> = {kept:2}
-                dynamic result = update(source,5)
+                external result = update(source,5)
             }
         """)
         assertEquals(12, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -132,7 +132,7 @@ class DictionaryMemberTest {
             func main(){
                 var source = {value:4} as dict<int>
                 var copied = copy(source)
-                dynamic result = copied["value"] + 1
+                external result = copied["value"] + 1
             }
         """)
         assertEquals(MCFPPDictType(MCFPPBaseType.Int).typeId, main.scope.getVar("copied")!!.type.typeId)
@@ -147,7 +147,7 @@ class DictionaryMemberTest {
             }
             func main(){
                 var source: dict<any> = {value:4}
-                dynamic result = put(source,true)
+                external result = put(source,true)
             }
         """)
         assertEquals(1, execute(main).read(main.scope.getVar("result") as ScoreBool))
@@ -161,7 +161,7 @@ class DictionaryMemberTest {
                 caller.merge(incoming)
                 var projection = caller.keyValueSet
                 caller.clear()
-                dynamic result = projection["second"] + caller.size()
+                external result = projection["second"] + caller.size()
             }
         """)
         assertEquals(7, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -200,7 +200,7 @@ class DictionaryMemberTest {
             }
             func main(){
                 var values: dict<any> = {nested:{kept:2}}
-                dynamic result = update(values,5)
+                external result = update(values,5)
             }
         """)
         assertEquals(12, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -216,7 +216,7 @@ class DictionaryMemberTest {
             func main(){
                 var values: dict<any> = {nested:{kept:2}}
                 var extra: dict<any> = {nested:{added:8},scalar:7}
-                dynamic result = update(values,extra)
+                external result = update(values,extra)
             }
         """)
         assertEquals(287, execute(main).read(main.scope.getVar("result") as MCInt))

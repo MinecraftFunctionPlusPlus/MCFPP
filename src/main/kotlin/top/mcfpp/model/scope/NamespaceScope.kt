@@ -31,6 +31,14 @@ class NamespaceScope: SimpleLibScope{
 
     private var fileFields = ArrayList<FileScope>()
 
+    /** Compiler journal slot, deliberately bypassing declaration registration and resolution. */
+    internal var journalFileFields: ArrayList<FileScope>
+        get() = fileFields
+        set(value) { fileFields = value }
+
+    internal fun checkpointFileFields(): NamespaceRelationCheckpoint<FileScope> =
+        NamespaceRelationJournal.list({ fileFields }, { fileFields = it }, { it is FileScope })
+
     val identifier : String
 
     constructor(identifier: String): super(){
@@ -125,77 +133,37 @@ class NamespaceScope: SimpleLibScope{
 
     //endregion
 
-    //region interface
-
-    override fun forEachInterface(operation: (DataTemplate) -> Any?){
-        for(`interface` in interfaces.values){
-            operation(`interface`)
-            fileFields.forEach { it.forEachInterface(operation) }
-        }
-    }
-
-    /**
-     * 获取一个接口。可能不存在
-     *
-     * @param identifier 接口的标识符
-     * @return 获取到的接口。如果不存在，则返回null
-     */
-    override fun getInterface(identifier: String): DataTemplate? {
-        return interfaces[identifier] ?: fileFields.firstOrNull { it.hasInterface(identifier) }?.getInterface(identifier)
-    }
-
-    /**
-     * 是否存在此接口
-     *
-     * @param identifier 接口的标识符
-     * @return
-     */
-    override fun hasInterface(identifier: String): Boolean {
-        return interfaces.containsKey(identifier) || fileFields.any { it.hasInterface(identifier) }
-    }
-
-    /**
-     * 是否存在此接口
-     *
-     * @param itf 接口
-     * @return
-     */
-    override fun hasInterface(itf: DataTemplate): Boolean {
-        return interfaces.containsKey(itf.identifier) || fileFields.any { it.hasInterface(itf) }
-    }
-    //endregion
 
     override fun hasDeclaredType(identifier: String): Boolean{
-        return hasEnum(identifier) || hasTemplate(identifier) || hasInterface(identifier)
+        return hasEnum(identifier) || hasTemplate(identifier)
                 || fileFields.any { it.hasDeclaredType(identifier) }
     }
 
     override fun hasDeclaredType(type: CompoundData): Boolean{
         val identifier = type.identifier
-        return hasEnum(identifier) || hasTemplate(identifier) || hasInterface(identifier)
+        return hasEnum(identifier) || hasTemplate(identifier)
                 || fileFields.any { it.hasDeclaredType(identifier) }
     }
 
     override fun getDeclaredType(identifier: String): CompoundData?{
-        return getEnum(identifier) ?: getTemplate(identifier) ?: getInterface(identifier)
+        return getEnum(identifier) ?: getTemplate(identifier)
         ?: fileFields.firstOrNull { it.hasDeclaredType(identifier) }?.getDeclaredType(identifier)
     }
 
     override fun getType(key: String): MCFPPType? {
-        (getEnum(key) ?: getTemplate(key) ?: getInterface(key))?.getType()?.let { return it }
+        (getEnum(key) ?: getTemplate(key))?.getType()?.let { return it }
         if (typeAlias.containsKey(key)) return resolveAlias(key)
         return fileFields.firstOrNull { it.containType(key) }?.getType(key)
     }
 
     override fun containType(id: String): Boolean {
-        return hasEnum(id) || hasTemplate(id) || hasInterface(id) || typeAlias.containsKey(id)
+        return hasEnum(id) || hasTemplate(id) || typeAlias.containsKey(id)
                 || fileFields.any { it.containType(id) }
     }
 
     override fun forEachType(action: (MCFPPType) -> Any?) {
         forEachEnum { action(it.getType()) }
         forEachTemplate { action(it.getType()) }
-        forEachInterface { action(it.getType()) }
         typeAlias.values.forEach { action(it) }
         fileFields.forEach { it.forEachType(action) }
     }
@@ -205,7 +173,6 @@ class NamespaceScope: SimpleLibScope{
             val list = mutableListOf<MCFPPType>()
             forEachEnum { list.add(it.getType()) }
             forEachTemplate { list.add(it.getType()) }
-            forEachInterface { list.add(it.getType()) }
             list.addAll(typeAlias.values)
             fileFields.forEach { list.addAll(it.allTypes) }
             return list

@@ -7,7 +7,6 @@ import top.mcfpp.type.MCFPPType
 data class FunctionParamInfo(
     var identifier: String,
     var type: MCFPPType,
-    var isStatic: Boolean = false,
     var hasDefault: Boolean = false,
     var isReadOnly: Boolean = false,
     var defaultValue: top.mcfpp.analysis.CompilerValue? = null,
@@ -15,7 +14,7 @@ data class FunctionParamInfo(
     var defaultTypes: Map<top.mcfpp.type.TypeId, MCFPPType> = emptyMap()
 ): ModelInfo<FunctionParam>{
     override fun get(): FunctionParam {
-        return FunctionParam(type, identifier, AbstractFunctionInfo.currFunction!!, isStatic, hasDefault, isReadOnly).apply {
+        return FunctionParam(type, identifier, AbstractFunctionInfo.currFunction!!, hasDefault, isReadOnly).apply {
             this.defaultValue = this@FunctionParamInfo.defaultValue
             this.defaultContext = this@FunctionParamInfo.defaultContext
             this.defaultTypes = this@FunctionParamInfo.defaultTypes
@@ -27,7 +26,6 @@ data class FunctionParamInfo(
             return FunctionParamInfo(
                 param.identifier,
                 param.type,
-                param.isStatic,
                 param.hasDefault,
                 param.isReadOnly,
                 param.defaultValue,

@@ -81,10 +81,10 @@ class ConditionsTest {
                         return total
                     }
                     func main() {
-                        dynamic first = choose(3)
-                        dynamic second = choose(2)
-                        dynamic third = choose(1)
-                        dynamic result = sum(3)
+                        external first = choose(3)
+                        external second = choose(2)
+                        external third = choose(1)
+                        external result = sum(3)
                     }
                 """.trimIndent())
                 val machine = execute(main)
@@ -114,7 +114,7 @@ class ConditionsTest {
                     result < 9
                 return result
             }
-            func main() { dynamic result = probe(2) }
+            func main() { external result = probe(2) }
         """.trimIndent())
         assertEquals(9, execute(main).read(main.scope.getVar("result") as MCInt))
     }
@@ -128,7 +128,7 @@ class ConditionsTest {
                 var after = 1
                 do flag = false while flag
                 var tail = 2
-                dynamic result = after + tail
+                external result = after + tail
             }
         """.trimIndent()
         val parser = parser(source)

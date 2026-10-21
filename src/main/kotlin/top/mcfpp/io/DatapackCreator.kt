@@ -156,8 +156,6 @@ object DatapackCreator {
             scope.forEachFunction(::exportFunction)
             scope.template.values.forEach(::exportCompound)
             scope.genericTemplate.values.forEach(::exportCompound)
-            scope.interfaces.values.forEach(::exportCompound)
-            scope.genericInterfaces.values.forEach(::exportCompound)
             scope.objects.forEach(::exportCompound)
         }
     }
@@ -213,6 +211,9 @@ object DatapackCreator {
         namespace.value.scope.forEachTemplate {
             exportCompound(it)
         }
+        // Generic declarations have a separate registry. Their bound instances own
+        // their methods and constructor stages, and must retain those exact targets.
+        namespace.value.scope.genericTemplate.values.forEach(::exportCompound)
 
         namespace.value.scope.forEachObject {
             exportCompound(it)

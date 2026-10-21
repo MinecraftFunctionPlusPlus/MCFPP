@@ -2,6 +2,7 @@ package top.mcfpp.model
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.MNIFunction
+import top.mcfpp.io.info.MacroFunctionInfo
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.model.compound.DataTemplate
@@ -10,6 +11,7 @@ import top.mcfpp.model.compound.UnsolvedTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.GenericFunction
 import top.mcfpp.model.function.NativeFunction
+import top.mcfpp.mni.NativeSignatureValidator
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.scope.NamespaceScope
 import top.mcfpp.model.scope.SimpleScopeWithType
@@ -30,14 +32,51 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
 
     val scope : NamespaceScope = NamespaceScope(identifier)
 
+    // Libraries are read before source declarations are complete. Keep only reflection metadata here;
+    // MacroLoadingSnapshot.prepare projects it into the declaration phase's shared immutable catalog.
+    private val macros = ArrayList<MacroFunctionInfo>()
+
+    /** Project-owned discovery and source requests; processors run only at the declaration barrier. */
+    internal val templateProcessors = top.mcfpp.mni.expand.TemplateProcessorRegistry(identifier)
+
+    @JvmOverloads
+    fun registerTemplateProcessor(annotation: String, className: String, loader: ClassLoader = Project.classLoader): Boolean =
+        templateProcessors.register(annotation, className, loader)
+
+    fun registerTemplateProcessor(annotation: String, processorClass: Class<*>): Boolean =
+        templateProcessors.register(annotation, processorClass)
+
+    /** Raw compiler relation; restoration must not replay discovery or duplicate diagnostics. */
+    internal val journalMacroDeclarations: ArrayList<MacroFunctionInfo> get() = macros
+
+    internal fun checkpointMacroDeclarations(): top.mcfpp.model.scope.NamespaceRelationCheckpoint<MacroFunctionInfo> =
+        top.mcfpp.model.scope.NamespaceRelationJournal.list({ macros }, {}, { it is MacroFunctionInfo })
+
+    internal fun macroDeclarations(): List<MacroFunctionInfo> = java.util.Collections.unmodifiableList(ArrayList(macros))
+
+    internal fun restoreMacroDeclarations(declarations: Collection<MacroFunctionInfo>) {
+        for (declaration in declarations) {
+            val previous = macros.firstOrNull { it.methodDescriptor == declaration.methodDescriptor }
+            if (previous == null) macros.add(declaration)
+            else if (previous != declaration) LogProcessor.error("Conflicting macro library descriptors: ${declaration.methodDescriptor}")
+        }
+    }
+
+    /** Class discovery uses the same configured loader as legacy MNI and library restoration. */
+    @JvmOverloads
+    fun injectedBy(className: String, loader: ClassLoader = Project.classLoader) {
+        injectedBy(Class.forName(className, false, loader))
+    }
+
     override val prefix get() =  "namespace_$identifier"
 
     /**
      * 合并命名空间
      */
     fun merge(namespace: Namespace, force: Boolean = false){
+        restoreMacroDeclarations(namespace.macroDeclarations())
+        if (namespace.identifier == identifier) templateProcessors.mergeFrom(namespace.templateProcessors)
         namespace.scope.forEachFunction { scope.addFunction(it, force) }
-        namespace.scope.forEachInterface { scope.addInterface(it.identifier, it, force) }
         namespace.scope.forEachTemplate {
             if (!scope.addTemplate(it.identifier, it, force))
                 LogProcessor.error("Template has been defined: ${it.identifier} in namespace $identifier")
@@ -107,7 +146,17 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
     fun injectedBy(cls: Class<*>){
         val l = Project.currNamespace
         Project.currNamespace = this.identifier
-        val methods = cls.methods
+        try {
+            injectMethods(cls)
+        } finally {
+            Project.currNamespace = l
+        }
+    }
+
+    private fun injectMethods(cls: Class<*>) {
+        val methods = NativeSignatureValidator.methods(cls)
+        restoreMacroDeclarations(methods.mapNotNull { MacroFunctionInfo.from(it) })
+        val registration = NativeSignatureValidator.Registration()
         //获取import方法
         val simpleFieldWithType = SimpleScopeWithType.getTypeScope()
         for(method in methods){
@@ -154,10 +203,6 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
         for(method in methods){
             val mniRegister = method.getAnnotation(MNIFunction::class.java)
             if(mniRegister != null){
-                if(!Modifier.isStatic(method.modifiers)) {
-                    LogProcessor.error("MNIMethod ${method.name} in class ${cls.name} must be static")
-                    continue
-                }
                 val nf = NativeFunction(mniRegister.identifier.ifEmpty { method.name }, javaMethod = method)
                 //解析MNIMethod注解成员
                 val callerType = MCFPPType.parseFromString(mniRegister.caller, simpleFieldWithType)
@@ -170,38 +215,32 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
                 }
                 //解析MNIMethod注解成员
                 val readOnlyType = mniRegister.readOnlyParams.map {
-                    val qwq = it.splitMNIParam().first.split(" ", limit = 2)
-                    val type = MCFPPType.parseFromString(qwq.last(), simpleFieldWithType)?: run {
-                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]) + " in method ${method.name} in MNIClass ${cls.name}")
+                    val typeName = it.splitMNIParam().first
+                    MCFPPType.parseFromString(typeName, simpleFieldWithType)?: run {
+                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(typeName) + " in method ${method.name} in MNIClass ${cls.name}")
                         MCFPPBaseType.Any
                     }
-                    type to it.startsWith("static")
                 }
                 val normalType = mniRegister.normalParams.map {
-                    val qwq = it.splitMNIParam().first.split(" ", limit = 2)
-                    val type = MCFPPType.parseFromString(qwq.last(), simpleFieldWithType)?: run {
-                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]) + " in method ${method.name} in MNIClass ${cls.name}")
+                    val typeName = it.splitMNIParam().first
+                    MCFPPType.parseFromString(typeName, simpleFieldWithType)?: run {
+                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(typeName) + " in method ${method.name} in MNIClass ${cls.name}")
                         MCFPPBaseType.Any
                     }
-                    type to it.startsWith("static")
                 }
                 val returnType = MCFPPType.parseFromString(mniRegister.returnType, simpleFieldWithType)?: run {
                     LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.returnType) + " in method ${method.name} in MNIClass ${cls.name}")
                     MCFPPBaseType.Any
                 }
                 nf.returnType = returnType
-                //检查method的参数s
-                val contextAbi = method.parameterTypes.contentEquals(arrayOf(top.mcfpp.mni.NativeCallContext::class.java))
-                if(method.parameterCount != if (contextAbi) 1 else readOnlyType.size + normalType.size + 1){
-                    LogProcessor.error("Method ${method.name} in class ${cls.name} has wrong parameter count")
-                    continue
-                }
                 for(rt in readOnlyType){
-                    nf.appendReadOnlyParam(rt.first, "p${nf.paramCount()}", rt.second)
+                    nf.appendReadOnlyParam(rt, "p${nf.paramCount()}")
                 }
                 for(nt in normalType){
-                    nf.appendNormalParam(nt.first, "p${nf.paramCount()}", nt.second)
+                    nf.appendNormalParam(nt, "p${nf.paramCount()}")
                 }
+                if (!registration.accept(nf)) continue
+                nf.returnsConstWhenArgsConst = mniRegister.returnsConstWhenArgsConst
                 //有继承
                 if(mniRegister.override){
                     val result = scope.hasFunction(nf, true)
@@ -221,7 +260,6 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
                 }
             }
         }
-        Project.currNamespace = l
     }
 
     override fun toString(): String {

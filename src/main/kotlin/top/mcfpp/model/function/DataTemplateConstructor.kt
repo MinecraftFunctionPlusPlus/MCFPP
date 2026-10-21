@@ -1,13 +1,13 @@
 package top.mcfpp.model.function
 
 import top.mcfpp.Project
-import top.mcfpp.antlr.MCFPPExprVisitor
-import top.mcfpp.antlr.MCFPPFieldVisitor
 import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.analysis.TypeUsage
-import top.mcfpp.core.lang.UnknownVar
+import top.mcfpp.antlr.MCFPPExprVisitor
+import top.mcfpp.antlr.MCFPPFieldVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.antlr.mcfppParser.CurlBlockContext
+import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.StaticMemberView
@@ -19,18 +19,24 @@ import top.mcfpp.model.compound.ObjectCompoundData
 import top.mcfpp.util.LogProcessor
 import java.util.*
 
-open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext?): Function(
-    "_init_" + data.identifier.lowercase(Locale.getDefault()) + "_" + data.constructors.size,
-    data,
-    ctx
-) {
+open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext?):
+    Function(
+        "_init_" + data.identifier.lowercase(Locale.getDefault()) + "_" + data.constructors.size,
+        data,
+        ctx
+    ) {
 
     var file: MCFPPFile?
         get() = declarationFile
-        set(value) { declarationFile = value }
+        set(value) {
+            declarationFile = value
+        }
+
+    /** Selection for a later owner-stage executor; this does not invoke any parent body. */
+    internal fun initializationPlan(): ConstructorPlan.Result = ConstructorPlan.build(data)
 
     fun addParamsFromContext(ctx: mcfppParser.NormalParamsContext) {
-        val n = ctx.parameterList()?:return
+        val n = ctx.parameterList() ?: return
         for (param in n.parameter()) {
             val (p,v) = parseParam(param)
             normalParams.add(p)
@@ -39,8 +45,21 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
     }
 
     override fun invoke(normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*> {
+        if (!data.canInstantiate()) {
+            if (caller is Var<*>) caller.isError = true
+            return UnknownVar("construction_${data.identifier}").apply { type = data.getType() }
+        }
+        val errors = Project.errorCount
         if (ast == null && !needsActualBinding() && !bodyCompiled && !bodyBeingCompiled) compileBody()
+        if (Project.errorCount != errors || constructedReceiver?.isError == true) {
+            if (caller is Var<*>) caller.isError = true
+            return UnknownVar("construction_${data.identifier}").apply { type = data.getType() }
+        }
         val result = super.invoke(normalArgs, caller)
+        if (result is UnknownVar || Project.errorCount != errors) {
+            if (caller is Var<*>) caller.isError = true
+            return UnknownVar("construction_${data.identifier}").apply { type = data.getType() }
+        }
         return if (caller is DataTemplateObject) caller else result
     }
 
@@ -48,8 +67,29 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
         super.prepareBody(target)
         target.bindIncomingParameters()
         val receiver = if (data is ObjectCompoundData) StaticMemberView(data.getType())
-            else target.scope.getVar("this") as DataTemplateObject
+        else target.scope.getVar("this") as DataTemplateObject
         if (receiver is DataTemplateObject) target.constructedReceiver = receiver
+        if (receiver is DataTemplateObject) {
+            val plan = initializationPlan().plan ?: run {
+                receiver.isError = true
+                return
+            }
+            for (stage in plan.ancestors) {
+                // An implicit owner with no declaration initializers has no work to emit.
+                // In particular the universal DataObject ancestor needs no call target.
+                if (stage.constructor == null && stage.owner.preInit.isEmpty()) continue
+                if (!target.emitConstructorStage(stage.owner, stage.constructor, receiver) { body, shared ->
+                        initializeOwnerFields(stage.owner, body, shared)
+                    }
+                ) {
+                    receiver.isError = true
+                    return
+                }
+            }
+            initializeOwnerFields(data, target, receiver)
+            return
+        }
+        // Static object initialization has its own receiver and publication path.
         val initializers = linkedMapOf<String, Pair<DataTemplate, mcfppParser.ExpressionContext>>()
         val visited = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<DataTemplate, Boolean>())
         fun collect(template: DataTemplate) {
@@ -95,5 +135,19 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
             }
         }
     }
-}
 
+    private fun initializeOwnerFields(owner: DataTemplate, target: Function, receiver: DataTemplateObject) {
+        for ((name, expression) in owner.preInit) {
+            if (name in owner.deferredFields) continue
+            val errors = Project.errorCount
+            val value = target.withFieldInitializerOwner(owner) {
+                MCFPPExprVisitor().visitExpression(expression, owner.scope.getVar(name)?.type)
+            }
+            if (value is UnknownVar || value.isError || Project.errorCount != errors) continue
+            TypeUsage.ordinaryDiagnostic(value.type, StorageAccess.snapshot(value))?.let(LogProcessor::error)
+            if (Project.errorCount != errors) continue
+            val assigned = receiver.initializeDeclaredField(owner, name, value) ?: continue
+            if (assigned.isError || Project.errorCount != errors) receiver.isError = true
+        }
+    }
+}

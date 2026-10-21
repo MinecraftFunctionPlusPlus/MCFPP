@@ -19,7 +19,7 @@ class PrimitiveIRTest {
     @Test fun aRawNestedFunctionCallPreservesTheLegacyCallersBranchGuard() {
         MCFPPStringTest.readFromString("""
             func helper(){
-                dynamic flag = true
+                external flag = true
                 if(flag){
                     /say nested
                 } else {
@@ -27,7 +27,7 @@ class PrimitiveIRTest {
                 }
             }
             func main(){
-                dynamic flag = true
+                external flag = true
                 if(flag){
                     /function default.test:helper
                 } else {
@@ -86,7 +86,7 @@ class PrimitiveIRTest {
                 top.mcfpp.CompileSettings.foldIRConstants = enabled
                 val function = compile("""
                     var value = 2147483647 + 1
-                    dynamic result = value + 2
+                    external result = value + 2
                     /say first
                     result += 1
                     /say second
@@ -111,7 +111,7 @@ class PrimitiveIRTest {
             var bigger = value > 10
             var inverted = !bigger
             var combined = bigger && !inverted
-            dynamic result = combined
+            external result = combined
         """.trimIndent())
         assertEquals(CompilerValue.Typed(top.mcfpp.type.MCFPPBaseType.Int.typeId, CompilerValue.Integral(42)),
             StorageAccess.snapshot(assertNotNull(function.scope.getVar("value"))))
@@ -134,9 +134,9 @@ class PrimitiveIRTest {
         val function = compile("""
             var unrelated = 99
             var value = 0
-            dynamic condition = true
+            external condition = true
             if (condition) { value = 5; } else { value = 5; }
-            dynamic result = value + 2
+            external result = value + 2
         """.trimIndent())
         val machine = execute(function)
         assertEquals(7, machine.read(function.scope.getVar("result") as MCInt))
@@ -151,9 +151,9 @@ class PrimitiveIRTest {
         for (condition in listOf(true, false)) {
             val function = compile("""
                 var value = 0
-                dynamic condition = $condition
+                external condition = $condition
                 if (condition) { value = 5; } else if (!condition) { value = 8; } else { value = 9; }
-                dynamic result = value + 2
+                external result = value + 2
             """.trimIndent())
             assertEquals(if (condition) 7 else 10, execute(function).read(function.scope.getVar("result") as MCInt))
         }
@@ -169,7 +169,7 @@ class PrimitiveIRTest {
                 if (i == 5) { break; }
                 total += i
             }
-            dynamic result = total
+            external result = total
         """.trimIndent())
         val machine = execute(function)
         assertEquals(8, machine.read(function.scope.getVar("result") as MCInt))
@@ -178,8 +178,8 @@ class PrimitiveIRTest {
 
     @Test fun earlyReturnExcludesUnreachableWritesAndBalancesTheStack() {
         val function = compile("""
-            dynamic result = 3
-            dynamic condition = true
+            external result = 3
+            external condition = true
             if (condition) { result = 7; return; }
             result = 9
         """.trimIndent())
@@ -190,7 +190,7 @@ class PrimitiveIRTest {
         val function = compile("""
             var value = 3
             /scoreboard players set default.test_func_arithmetic_value mcfpp_default 9
-            dynamic result = value + 1
+            external result = value + 1
         """.trimIndent())
         assertEquals(10, execute(function).read(function.scope.getVar("result") as MCInt))
     }
@@ -199,7 +199,7 @@ class PrimitiveIRTest {
         val function = compile("""
             var i = 0
             while (i < 4) { i += 1; }
-            dynamic result = i
+            external result = i
             if (i == 4) { result = 7; return; }
             result = 9
         """.trimIndent(), version = "1.20")
@@ -210,8 +210,8 @@ class PrimitiveIRTest {
 
     @Test fun writesAndBooleanResultsPreserveOperandsAndUseOneDeclarationIdentity() {
         val function = compile("""
-            dynamic a = 7
-            dynamic b = -3
+            external a = 7
+            external b = -3
             var sum = a + b
             a *= 2
             var equal = sum == 4
@@ -230,7 +230,7 @@ class PrimitiveIRTest {
     }
 
     @Test fun integerOverflowFoldsWithTheSameSigned32BitResult() {
-        val function = compile("var value = 2147483647 + 1; dynamic result = value;")
+        val function = compile("var value = 2147483647 + 1; external result = value;")
         assertEquals(CompilerValue.Typed(top.mcfpp.type.MCFPPBaseType.Int.typeId, CompilerValue.Integral(Int.MIN_VALUE.toLong())),
             StorageAccess.snapshot(assertNotNull(function.scope.getVar("value"))))
         assertEquals(Int.MIN_VALUE, ScoreCommandExecutor(function.commands.analyzeAll()).read(function.scope.getVar("result") as MCInt))

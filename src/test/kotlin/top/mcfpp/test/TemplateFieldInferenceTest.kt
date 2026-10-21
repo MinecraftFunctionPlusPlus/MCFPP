@@ -2,6 +2,9 @@ package top.mcfpp.test
 
 import top.mcfpp.Project
 import top.mcfpp.core.lang.MCInt
+import top.mcfpp.core.lang.PropertyVar
+import top.mcfpp.core.lang.obj.DataTemplateObject
+import top.mcfpp.model.Member.AccessModifier
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
@@ -57,7 +60,7 @@ class TemplateFieldInferenceTest {
             func main(){
                 var first = Box(3)
                 var second = Box(6)
-                dynamic result = inspect(first)*10 + inspect(second)
+                external result = inspect(first)*10 + inspect(second)
             }
         """)
         val box = template()
@@ -80,7 +83,7 @@ class TemplateFieldInferenceTest {
             func main(){
                 var first = Box(3)
                 var second = Box(6)
-                dynamic result = first.value*10 + second.value
+                external result = first.value*10 + second.value
             }
         """)
         val value = template().scope.getVar("value")!!
@@ -130,22 +133,176 @@ class TemplateFieldInferenceTest {
         assertNotNull(parameter.getMemberVar("value", top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
     }
 
-    @Test fun annotationsApplyToCompletedFieldsAndKeepInheritedReplacementOrder() {
-        compile("""
+    @Test fun compatibleConstOverridesKeepTheirOwnInitializerAnnotationsAndInstanceContract() {
+        val main = compile("""
             @DataOnly
             data Box { var value = 4; }
-            data Parent { var value: int = 1; }
+            data Parent { const value: int = 1; }
             data Child: Parent {
                 @DataOnly
                 const value = 8
             }
-            func main(){}
+            data Sibling: Parent {}
+            func main(){var child=Child();external result=child.value;}
         """)
         assertTrue((template().scope.getVar("value") as MCInt).isDataOnly)
-        val inherited = template("Parent").scope.getVar("value")!!
-        assertSame(inherited, template("Child").scope.getVar("value"))
-        assertFalse(inherited.isConst)
-        assertTrue((inherited as MCInt).isDataOnly)
-        assertTrue(inherited.annotations.any { it is top.mcfpp.mni.annotation.DataOnly })
+        val parent = template("Parent").scope.getVar("value") as MCInt
+        val child = template("Child").scope.getVar("value") as MCInt
+        val sibling = template("Sibling").scope.getVar("value") as MCInt
+        assertNotSame(parent, child)
+        assertNotSame(parent, sibling)
+        assertSame(template("Child"), child.declaredParentTemplate)
+        assertTrue(listOf(parent, child, sibling).all { it.isConst })
+        assertFalse(parent.isDataOnly)
+        assertFalse(sibling.isDataOnly)
+        assertTrue(child.isDataOnly)
+        assertTrue(parent.annotations.isEmpty())
+        assertTrue(sibling.annotations.isEmpty())
+        assertTrue(child.annotations.any { it is top.mcfpp.mni.annotation.DataOnly })
+        val receiver = main.scope.getVar("child") as DataTemplateObject
+        val member = receiver.getMemberVar("value", AccessModifier.PUBLIC).first as PropertyVar
+        assertTrue(member.isConst)
+        assertTrue(member.field.isConst)
+        assertTrue((member.field as MCInt).isDataOnly)
+        assertFalse(member.field.symbol!!.mutable)
+        assertEquals(8, execute(main).read(main.scope.getVar("result") as MCInt))
+    }
+
+    @Test fun middleTemplateAnnotationsReachGrandchildrenWithoutChangingParentsOrSiblings() {
+        val main = compile("""
+            data Parent { var value: int = 4; }
+            @DataOnly
+            data Middle: Parent {}
+            data Grand: Middle {}
+            data Sibling: Parent {}
+            func main(){var grand=Grand();external result=grand.value;}
+        """)
+        val fields = listOf("Parent", "Middle", "Grand", "Sibling").map { template(it).scope.getVar("value") as MCInt }
+        assertEquals(listOf(false, true, true, false), fields.map { it.isDataOnly })
+        fields.forEachIndexed { i, field -> fields.drop(i + 1).forEach { assertNotSame(field, it) } }
+        val grand = main.scope.getVar("grand") as DataTemplateObject
+        assertTrue(((grand.getMemberVar("value", AccessModifier.PUBLIC).first as PropertyVar).field as MCInt).isDataOnly)
+        assertEquals(4, execute(main).read(main.scope.getVar("result") as MCInt))
+    }
+
+    @Test fun inheritedAnnotationObjectsAndTheirMutableGraphsAreIndependentThroughThreeLevels() {
+        compile("""
+            data Parent { @DataOnly var value: int = 4; }
+            data Middle: Parent {}
+            data Grand: Middle {}
+            data Sibling: Parent {}
+            func main(){}
+        """)
+        val fields = listOf("Parent", "Middle", "Grand", "Sibling").map { template(it).scope.getVar("value") as MCInt }
+        assertTrue(fields.all { it.isDataOnly })
+        val annotations = fields.map { it.annotations.single() }
+        annotations.forEachIndexed { i, annotation -> annotations.drop(i + 1).forEach { assertNotSame(annotation, it) } }
+        annotations[1].params.add("middle-only")
+        annotations[1].parents.add(top.mcfpp.mni.annotation.DataOnly())
+        assertTrue(annotations[0].params.isEmpty())
+        assertTrue(annotations[2].params.isEmpty())
+        assertTrue(annotations[3].params.isEmpty())
+        assertTrue(annotations[0].parents.isEmpty())
+        assertTrue(annotations[2].parents.isEmpty())
+        assertTrue(annotations[3].parents.isEmpty())
+
+        // Exercise the actual Serializable graph, including a mutable subclass payload,
+        // repeated references and a parent cycle, through instance member access.
+        val custom = MutableFieldAnnotation().apply { values.add("original"); parents.add(this) }
+        fields[2].annotations.add(custom)
+        fields[2].annotations.add(custom)
+        val receiver = DataTemplateObject(template("Grand"), "model-grand")
+        val instance = (receiver.getMemberVar("value", AccessModifier.PUBLIC).first as PropertyVar).field
+        val copied = instance.annotations[1] as MutableFieldAnnotation
+        assertNotSame(custom, copied)
+        assertSame(copied, instance.annotations[2])
+        assertSame(copied, copied.parents.single())
+        copied.values.add("instance-only")
+        copied.params.add("instance-only")
+        assertEquals(listOf("original"), custom.values)
+        assertTrue(custom.params.isEmpty())
+    }
+
+    @Test fun instancePropertiesAndCachedMetadataNeverRebindTheirDeclarationOrSibling() {
+        val main = compile("""
+            data Box { @DataOnly var value: int = 4; }
+            func main(){var first=Box();var second=Box();first.value=9;external result=first.value*10+second.value;}
+        """)
+        val declaration = template().scope.getProperty("value")!!
+        assertNull(declaration.parent)
+        val first = main.scope.getVar("first") as DataTemplateObject
+        val second = main.scope.getVar("second") as DataTemplateObject
+        val left = first.getMemberVar("value", AccessModifier.PUBLIC).first as PropertyVar
+        val right = second.getMemberVar("value", AccessModifier.PUBLIC).first as PropertyVar
+        assertNotSame(declaration, left.property)
+        assertNotSame(left.property, right.property)
+        assertSame(first, left.property.parent)
+        assertSame(second, right.property.parent)
+        assertNull(declaration.parent)
+        left.property.isFinal = true
+        left.field.annotations.single().params.add("first-only")
+        assertFalse(right.property.isFinal)
+        assertFalse(declaration.isFinal)
+        assertTrue(right.field.annotations.single().params.isEmpty())
+        assertTrue(template().scope.getVar("value")!!.annotations.single().params.isEmpty())
+        assertNotSame(first.instanceField.getProperty("value"), second.instanceField.getProperty("value"))
+        assertNotSame(declaration, first.instanceField.getProperty("value"))
+        assertSame(first, first.instanceField.getProperty("value")!!.parent)
+        assertTrue(first.instanceField.getVar("value")!!.annotations.isNotEmpty())
+        assertNotSame(template().scope.getVar("value")!!.annotations.single(), first.instanceField.getVar("value")!!.annotations.single())
+        assertEquals(94, execute(main).read(main.scope.getVar("result") as MCInt))
+    }
+
+    @Test fun constantInstanceWritesAreRejectedAndDoNotReplaceTheLocalInitializer() {
+        MCFPPStringTest.readFromString("""
+            data Parent { const value: int = 1; }
+            data Child: Parent { const value: int = 8; }
+            func main(){var child=Child();child.value=9;external result=child.value;}
+        """.trimIndent(), version = "26.3")
+        assertTrue(Project.errorCount > 0)
+        assertTrue(template("Child").scope.getVar("value")!!.isConst)
+        val main = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
+        assertEquals(8, execute(main).read(main.scope.getVar("result") as MCInt))
+    }
+
+    @Test fun incompatibleConstOverridesRemainRejectedWithoutChangingEitherDeclaration() {
+        MCFPPStringTest.readFromString("""
+            data Parent { var value: int = 1; }
+            data Child: Parent { @DataOnly const value: int = 8; }
+            func main(){}
+        """.trimIndent(), version = "26.3")
+        assertTrue(Project.errorCount > 0)
+        val parent = template("Parent").scope.getVar("value") as MCInt
+        val child = template("Child").scope.getVar("value") as MCInt
+        assertFalse(parent.isConst)
+        assertFalse(parent.isDataOnly)
+        assertTrue(child.isConst)
+        assertTrue(child.isDataOnly)
+    }
+
+    @Test fun nonSerializableAnnotationPayloadIsDiagnosedInsteadOfSharedOrCrashing() {
+        compile("data Box{var value:int=4;}\nfunc main(){}")
+        val field = template().scope.getVar("value")!!
+        val annotation = NonSerializableFieldAnnotation()
+        field.annotations.add(annotation)
+        val receiver = DataTemplateObject(template(), "unsupported-annotation")
+        val member = receiver.getMemberVar("value", AccessModifier.PUBLIC).first as PropertyVar
+        assertTrue(Project.errorCount > 0)
+        assertTrue(member.field.annotations.isEmpty())
+        assertSame(annotation, field.annotations.single())
+    }
+
+    class MutableFieldAnnotation : top.mcfpp.model.annotation.Annotation("MutableField", "test") {
+        val values = arrayListOf<String>()
+        override fun forField(field: top.mcfpp.core.lang.Var<*>) {}
+        override fun forFunction(function: Function) {}
+        override fun forDataTemplate(data: DataTemplate) {}
+    }
+
+    class NonSerializableFieldAnnotation : top.mcfpp.model.annotation.Annotation("NonSerializableField", "test") {
+        val payload = Any()
+        override fun forField(field: top.mcfpp.core.lang.Var<*>) {}
+        override fun forFunction(function: Function) {}
+        override fun forDataTemplate(data: DataTemplate) {}
     }
 }

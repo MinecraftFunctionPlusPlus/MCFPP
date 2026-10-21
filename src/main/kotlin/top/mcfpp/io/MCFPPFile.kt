@@ -217,7 +217,7 @@ class MCFPPFile : File {
                         argument<MCFPPFile, String>("className", string())
                             .executes {
                                 try {
-                                    val clazz = Class.forName(getString(it, "className"))
+                                    val clazz = Class.forName(getString(it, "className"), false, Project.classLoader)
                                     LogProcessor.debug("Injecting class $clazz to namespace ${it.source.namespace.identifier}")
                                     it.source.namespace.injectedBy(clazz)
                                     return@executes 1
@@ -249,6 +249,9 @@ class MCFPPFile : File {
                 LogProcessor.error("Error while searching for files: $e")
             }
 
+            // Stable multi-file order: declaration headers, processors and body checks must not
+            // depend on the host directory iteration order.
+            fileList.sortBy { it.toString() }
             return fileList
         }
 

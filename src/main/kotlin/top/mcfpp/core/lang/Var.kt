@@ -83,12 +83,16 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
 
     private val stackFrameRegex get() = Regex("^stack_frame\\[\\d+]\$\n")
 
+    @Transient
+    private var restoringStorageState = false
+
     /**
      * 变量在栈里面的位置
      */
     var stackIndex: Int = 0
         set(value) {
             field = value
+            if (restoringStorageState) return
             for (p in nbtPath.pathList){
                 if(p is MemberPath && p.value is MCString && top.mcfpp.analysis.StorageAccess.snapshot(p.value) != null && stackFrameRegex.matches((p.value as MCString).value.value)){
                     p.value = MCString(StringTag("stack_frame[$stackIndex]"))
@@ -144,6 +148,83 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     override var isFinal: Boolean = false
 
     var annotations: ArrayList<Annotation> = ArrayList()
+
+    /** Compiler journal only: retain this adapter and its binding, never clone a REF target. */
+    internal fun checkpointStorageState(): () -> Unit {
+        val savedIdentifier = identifier
+        val savedSymbol = symbol
+        val savedBinding = storageBinding
+        val savedReadVersion = storageReadVersion
+        val savedStackIndex = stackIndex
+        val savedStatic = isStatic
+        val savedConst = isConst
+        val savedTemp = isTemp
+        val savedParent = parent
+        val savedDeclaredParent = declaredParentTemplate
+        val savedAccess = accessModifier
+        val savedType = type
+        val savedError = isError
+        val savedPath = nbtPath
+        val savedNullable = nullable
+        val savedFinal = isFinal
+        val savedAnnotations = annotations
+        val savedAnnotationContents = annotations.toList()
+        val number = this as? MCNumber<*>
+        val numberName = number?.name
+        val numberObjective = number?.sbObject
+        val numberHolder = number?.holder
+        val numberDataOnly = number?.isDataOnly
+        val bool = this as? ScoreBool
+        val boolName = bool?.name
+        val boolObjective = bool?.boolObject
+        val boolDataOnly = bool?.isDataOnly
+        val float = this as? MCFloat
+        val floatComponents = float?.let { listOf(it.sign, it.int0, it.int1, it.exp) }
+        val property = this as? PropertyVar
+        val propertyField = property?.field
+        return {
+            identifier = savedIdentifier
+            symbol = savedSymbol
+            storageBinding = savedBinding
+            storageReadVersion = savedReadVersion
+            restoringStorageState = true
+            try { stackIndex = savedStackIndex } finally { restoringStorageState = false }
+            isStatic = savedStatic
+            isConst = savedConst
+            isTemp = savedTemp
+            parent = savedParent
+            declaredParentTemplate = savedDeclaredParent
+            accessModifier = savedAccess
+            type = savedType
+            isError = savedError
+            nbtPath = savedPath
+            nullable = savedNullable
+            isFinal = savedFinal
+            annotations = savedAnnotations
+            savedAnnotations.clear()
+            savedAnnotations.addAll(savedAnnotationContents)
+            if (number != null) {
+                number.name = numberName!!
+                number.sbObject = numberObjective!!
+                number.holder = numberHolder
+                number.isDataOnly = numberDataOnly!!
+            }
+            if (bool != null) {
+                bool.name = boolName!!
+                bool.boolObject = boolObjective!!
+                bool.isDataOnly = boolDataOnly!!
+            }
+            if (float != null && floatComponents != null) {
+                float.sign = floatComponents[0]
+                float.int0 = floatComponents[1]
+                float.int1 = floatComponents[2]
+                float.exp = floatComponents[3]
+            }
+            if (property != null) {
+                property.field = propertyField!!
+            }
+        }
+    }
 
     /**
      * 复制一个变量

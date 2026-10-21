@@ -23,26 +23,72 @@ import top.mcfpp.type.*
 import top.mcfpp.util.StringHelper.splitNamespaceID
 
 /** Type binding uses declaration signatures, never an executable value visitor. */
-internal class DeclarationBinding(
-    private val function: Function,
+internal class DeclarationBinding private constructor(
+    private val declarationFunction: Function?,
     private val fields: Map<String, MCFPPType>,
-    private val values: Map<String, Bound> = emptyMap(),
-    private val typeBindings: Map<String, MCFPPType> = emptyMap(),
-    private val lookupScope: top.mcfpp.model.scope.IScopeWithType = function.scope,
-    private val captureValues: Boolean = false,
-    private val literalDefaultsOnly: Boolean = false
+    private val values: Map<String, Bound>,
+    private val typeBindings: Map<String, MCFPPType>,
+    private val declarationScope: top.mcfpp.model.scope.IScopeWithType?,
+    private val captureValues: Boolean,
+    private val literalDefaultsOnly: Boolean,
+    private val preparation: DeclarationPreparationContext?,
+    private val preparedCalls: Map<Parser.FunctionCallContext, ParameterMatcher.PreparedCallFacts> = emptyMap()
 ) {
+    constructor(function: Function, fields: Map<String, MCFPPType>, values: Map<String, Bound> = emptyMap(),
+                typeBindings: Map<String, MCFPPType> = emptyMap(),
+                lookupScope: top.mcfpp.model.scope.IScopeWithType = function.scope,
+                captureValues: Boolean = false, literalDefaultsOnly: Boolean = false) :
+        this(function, fields, values, typeBindings, lookupScope, captureValues, literalDefaultsOnly, null)
+
+    constructor(preparation: DeclarationPreparationContext) :
+        this(null, emptyMap(), emptyMap(), emptyMap(), null, false, false, preparation)
+
+    /** Identity-keyed source calls retain independent readonly specializations in the same tree. */
+    constructor(preparation: DeclarationPreparationContext,
+                preparedCalls: Map<Parser.FunctionCallContext, ParameterMatcher.PreparedCallFacts>) :
+        this(null, emptyMap(), emptyMap(), emptyMap(), null, false, false, preparation,
+            java.util.Collections.unmodifiableMap(java.util.IdentityHashMap(preparedCalls)))
+
+    private val function: Function get() = checkNotNull(declarationFunction) { "Pure binding cannot enter legacy function lookup" }
+    private val lookupScope: top.mcfpp.model.scope.IScopeWithType get() =
+        checkNotNull(declarationScope) { "Pure binding cannot enter legacy scope lookup" }
     data class Bound(val type: MCFPPType, val constant: CompilerValue? = null,
                      val dependencies: Set<String> = emptySet(), val declaredTypeText: String? = null,
-                     val descriptors: Map<TypeId, MCFPPType> = emptyMap())
+                     val descriptors: Map<TypeId, MCFPPType> = emptyMap(),
+                     val superOwner: DataTemplate? = null,
+                     val headerReceiver: PreparedTemplateReservation? = null)
     class Failure(message: String) : RuntimeException(message)
-    private val template = function.owner as? DataTemplate
+    private val template = declarationFunction?.owner as? DataTemplate
     private val readonly = ((template as? top.mcfpp.model.compound.CompiledGenericDataTemplate)?.originTemplate?.readOnlyParams
-        ?.map { it.identifier }.orEmpty() + ((function as? Generic<*>)?.readOnlyParams
-        ?: (function as? NativeFunction)?.readOnlyParams.orEmpty()).map { it.identifier }).toSet()
+        ?.map { it.identifier }.orEmpty() + ((declarationFunction as? Generic<*>)?.readOnlyParams
+        ?: (declarationFunction as? NativeFunction)?.readOnlyParams.orEmpty()).map { it.identifier }).toSet()
 
-    fun expression(context: Parser.ExpressionContext): Bound = bind(context)
-    internal fun value(context: Parser.ValueContext): Bound = literal(context)
+    fun expression(context: Parser.ExpressionContext): Bound = preparationGuard(context) { bind(context) }
+    internal fun value(context: Parser.ValueContext): Bound = preparationGuard(context) { literal(context) }
+
+    private inline fun <T> preparationGuard(site: ParserRuleContext, action: () -> T): T = try {
+        preparation?.requireCurrentReader(site)
+        action()
+    }
+        catch (failure: Failure) {
+            if (preparation == null) throw failure
+            throw PreparationFactFailure(PreparationFactCode.NON_CLOSED_VALUE, preparationSpan(site), failure.message.orEmpty())
+        } catch (failure: NumberFormatException) {
+            if (preparation == null) throw failure
+            throw PreparationFactFailure(PreparationFactCode.NON_CLOSED_VALUE, preparationSpan(site), "Invalid closed numeric value")
+        }
+
+    internal fun readonly(context: Parser.ExpressionContext): Bound = requireClosed(expression(context), context)
+    internal fun readonlyValue(context: Parser.ValueContext): Bound = requireClosed(value(context), context)
+
+    private fun requireClosed(bound: Bound, site: ParserRuleContext): Bound {
+        if (bound.constant == null) throw PreparationFactFailure(PreparationFactCode.NON_CLOSED_VALUE,
+            preparationSpan(site), "Readonly value is not closed; dynamic composite values require runtime binding")
+        return bound
+    }
+
+    private fun unsupported(site: ParserRuleContext, message: String): Nothing =
+        throw PreparationFactFailure(PreparationFactCode.UNSUPPORTED_EXPRESSION, preparationSpan(site), message)
 
     private fun closedValue(argument: Bound): top.mcfpp.core.lang.Var<*> {
         val snapshot = argument.constant ?: throw Failure("Readonly declaration arguments require a complete value")
@@ -53,6 +99,12 @@ internal class DeclarationBinding(
     }
 
     internal fun constrain(value: Bound, target: MCFPPType, declaration: String? = null): Bound {
+        if (preparation != null) {
+            val proof = if (value.type.typeId == target.typeId) value.constant
+                else top.mcfpp.mni.expand.SourceConstantFacts.compilerConvert(value.constant, value.type.typeId, target.typeId)
+                    ?.let { CompilerValue.Typed(target.typeId, it) }
+            return value.copy(type = target, constant = proof, declaredTypeText = declaration ?: value.declaredTypeText)
+        }
         val snapshot = when {
             value.type == target -> value.constant
             target == MCFPPBaseType.Any || target == MCFPPBaseType.Object ->
@@ -66,7 +118,8 @@ internal class DeclarationBinding(
         return value.copy(type = target, constant = snapshot, declaredTypeText = declaration ?: value.declaredTypeText)
     }
 
-    private fun variable(name: String): Bound {
+    private fun variable(name: String, site: ParserRuleContext? = null): Bound {
+        preparation?.let { return it.variable(name, checkNotNull(site)) }
         if (literalDefaultsOnly && (name == "this" || name == "field" || name == "value" ||
                 name in fields || values.containsKey(name) || lookupVariable(name) != null ||
                 function.normalParams.any { it.identifier == name }))
@@ -120,6 +173,8 @@ internal class DeclarationBinding(
         is Parser.CastExpressionContext -> if (node.type() != null) {
             val source = bind(node.unaryExpression())
             val target = type(node.type())
+            if (preparation != null && source.type.typeId != target.typeId)
+                unsupported(node, "Readonly reinterpretation requires prepared conversion facts")
             val snapshot = source.constant?.let { frozen ->
                 var represented = frozen
                 while (represented is CompilerValue.Typed && represented.payload is CompilerValue.Typed &&
@@ -132,7 +187,17 @@ internal class DeclarationBinding(
             }
             Bound(target, snapshot, source.dependencies + dependencies(node.type()), node.type().text, source.descriptors)
         } else bind(node.unaryExpression())
-        is Parser.UnaryExpressionContext -> node.rightVarExpression()?.let(::bind) ?: bind(node.unaryExpression()).let {
+        is Parser.UnaryExpressionContext -> node.rightVarExpression()?.let(::bind)
+            ?: if (preparation != null && node.text == "-2147483648") Bound(MCFPPBaseType.Int,
+                CompilerValue.Typed(MCFPPBaseType.Int.typeId, CompilerValue.Integral(Int.MIN_VALUE.toLong())))
+            else bind(node.unaryExpression()).let {
+            if (preparation != null) {
+                val operator = if (node.EXCL() != null) top.mcfpp.mni.api.UnaryOperator.NOT else top.mcfpp.mni.api.UnaryOperator.NEGATE
+                val result = top.mcfpp.mni.expand.SourceConstantFacts.compilerUnary(operator, it.constant)
+                val type = if (node.EXCL() != null) MCFPPBaseType.Bool else it.type
+                return@let Bound(type, result?.let { value -> CompilerValue.Typed(type.typeId, value) }, it.dependencies,
+                    descriptors = it.descriptors)
+            }
             val value = (it.constant as? CompilerValue.Typed)?.payload
             val type = if (node.EXCL() != null) MCFPPBaseType.Bool else it.type
             val constant = when {
@@ -144,14 +209,17 @@ internal class DeclarationBinding(
             Bound(type, constant?.let { payload -> CompilerValue.Typed(type.typeId, payload) }, it.dependencies)
         }
         is Parser.VarWithSelectorContext -> {
+            if (preparation != null && node.jvmAccessExpression().propertyOperator().propertyOperatorExpression().isNotEmpty())
+                unsupported(node, "Property operators cannot supply readonly facts")
             var result = bind(node.jvmAccessExpression().propertyOperator().primary())
             for (selector in node.selector()) result = member(result, selector.`var`())
             result
         }
         is Parser.PrimaryContext -> when {
-            node.THIS() != null -> Bound(template?.getType() ?: throw Failure("'this' requires a declaration owner"))
-            node.SUPER() != null -> Bound(template?.parent?.filterIsInstance<DataTemplate>()?.firstOrNull()?.getType()
-                ?: throw Failure("'super' requires a parent declaration"))
+            node.THIS() != null -> preparation?.receiver(node)
+                ?: Bound(template?.getType() ?: throw Failure("'this' requires a declaration owner"))
+            node.SUPER() != null -> if (preparation != null) unsupported(node, "Super requires prepared declaration facts")
+                else superBinding { function.superDeclarationOwner() }.let { Bound(it.getType(), superOwner = it) }
             node.type() != null -> {
                 val type = type(node.type())
                 Bound(MCFPPConcreteType.Type, CompilerValue.Typed(MCFPPConcreteType.Type.typeId, CompilerValue.TypeValue(type.typeId)), dependencies(node.type()), descriptors = mapOf(type.typeId to type))
@@ -164,7 +232,7 @@ internal class DeclarationBinding(
             node.functionCall() != null -> call(node.functionCall())
             node.bucketExpression() != null -> node.bucketExpression().expression()?.let(::bind)
                 ?: throw Failure("An empty expression cannot initialize a declaration")
-            else -> suffix(variable(node.varWithSuffix().Identifier().text), node.varWithSuffix())
+            else -> suffix(variable(node.varWithSuffix().Identifier().text, node), node.varWithSuffix())
         }
         is Parser.RightVarExpressionContext -> bind(node.varWithSelector())
         else -> {
@@ -198,6 +266,8 @@ internal class DeclarationBinding(
     }
 
     private fun suffix(value: Bound, node: Parser.VarWithSuffixContext): Bound {
+        if (preparation != null && node.identifierSuffix().isNotEmpty())
+            unsupported(node, "Indexing requires prepared source location facts")
         var result = value
         for (index in node.identifierSuffix()) {
             val keyBinding = index.expression()?.let(::bind)
@@ -230,6 +300,18 @@ internal class DeclarationBinding(
     }
 
     private fun member(receiver: Bound, node: Parser.VarContext): Bound {
+        preparation?.let { context ->
+            if (node.functionCall() != null || node.bucketExpression() != null)
+                unsupported(node, "Owned header member requires a field declaration")
+            val field = context.ownedMember(receiver, node.varWithSuffix().Identifier().text, node)
+            return suffix(field, node.varWithSuffix())
+        }
+        receiver.superOwner?.let { owner ->
+            if (node.functionCall() != null) return call(node.functionCall(), receiver)
+            if (node.bucketExpression() != null) throw Failure("An expression cannot name a super member")
+            val field = superBinding { function.superField(owner, node.varWithSuffix().Identifier().text) }
+            return suffix(Bound(field.field.type), node.varWithSuffix())
+        }
         val meta = ((receiver.constant as? CompilerValue.Typed)?.payload as? CompilerValue.TypeValue)?.id?.let {
             receiver.descriptors[it] ?: MCFPPType.resolveTypeId(it)
         }
@@ -268,6 +350,7 @@ internal class DeclarationBinding(
     }
 
     private fun call(context: Parser.FunctionCallContext, receiver: Bound? = null): Bound {
+        if (preparation != null) return preparedCall(context, receiver)
         val (namespace, name) = context.namespaceID().text.splitNamespaceID()
         val arguments = context.arguments().normalArgs().expressionList()?.expression().orEmpty().map(::bind)
         arguments.firstNotNullOfOrNull { TypeUsage.ordinaryDiagnostic(it.type, it.constant) }?.let { throw Failure(it) }
@@ -297,19 +380,23 @@ internal class DeclarationBinding(
         }
         val receiverTypes = (receiver?.type as? MCFPPTypeWithGeneric)?.generic?.firstOrNull()
             ?.let { mapOf("E" to it) }.orEmpty()
+        val superTarget = receiver?.superOwner?.let { anchor ->
+            superBinding { function.selectSuper(anchor, name, readonlyArguments, arguments.map { it.type }) }
+        }
         val candidates = if (receiver == null) GlobalScope.getFunctionCandidates(namespace, name,
             function.restoreDeclarationEnvironment()?.field ?: top.mcfpp.io.MCFPPFile.currFile?.field)
-            else (owner?.scope ?: meta?.objectData?.scope ?: receiverData?.scope ?: receiver.type.instanceData.scope).getFunctionCandidates(name)
-                .fold(mutableListOf<Function>()) { declarations, candidate ->
-                    // Scope candidates are ordered from the actual owner outwards. A
-                    // member override hides its inherited signature, not other overloads.
-                    if (declarations.none { ParameterMatcher.sameSignature(it, candidate) }) declarations.add(candidate)
-                    declarations
-                }
-        val selected = ParameterMatcher.selectDeclaredTypes(candidates, name, readonlyArguments, arguments.map { it.type }, receiverTypes)
-        val target = (selected as? ParameterMatcher.TypeSelection.Selected)?.function
-            ?: throw Failure("Cannot bind function '$name' to its declared argument types")
-        if (owner != null && function.accessTo(owner) < target.accessModifier) throw Failure("Cannot access declaration method '$name'")
+            else (owner?.scope ?: meta?.objectData?.scope ?: receiverData?.scope ?: receiver.type.instanceData.scope)
+                .getFunctionCandidates(name, function)
+        val selected = superTarget?.let { ParameterMatcher.TypeSelection.Selected(it) }
+            ?: ParameterMatcher.selectDeclaredTypes(candidates, name, readonlyArguments, arguments.map { it.type }, receiverTypes)
+        val target = when (selected) {
+            is ParameterMatcher.TypeSelection.Selected -> selected.function
+            is ParameterMatcher.TypeSelection.Ambiguous -> throw Failure(ParameterMatcher.ambiguity(name, selected.functions))
+            ParameterMatcher.TypeSelection.Missing -> throw Failure("Cannot bind function '$name' to its declared argument types")
+        }
+        val declarationOwner = target.owner as? DataTemplate
+        if (declarationOwner != null && function.accessTo(declarationOwner) < target.accessModifier)
+            throw Failure("Cannot access declaration method '$name'")
         val params = (target as? Generic<*>)?.readOnlyParams ?: (target as? NativeFunction)?.readOnlyParams.orEmpty()
         val result = SpecializationPolicy.resolveDeclaredSignature(target, params, readonlyArguments, receiverTypes)?.returnType
             ?: throw Failure("Cannot bind return type '$name'")
@@ -322,6 +409,44 @@ internal class DeclarationBinding(
         }
         return Bound(result, dependencies = receiver?.dependencies.orEmpty() + readonlyArguments.flatMap { it.dependencies }, declaredTypeText = text)
     }
+
+    private fun preparedCall(context: Parser.FunctionCallContext, receiver: Bound?): Bound {
+        if (receiver != null) unsupported(context, "Member call requires prepared receiver facts")
+        val lexical = checkNotNull(preparation).lexical
+        val (namespace, name) = context.namespaceID().text.splitNamespaceID()
+        val prepared = preparedCalls[context] ?: unsupported(context, "Call '$name' has no prepared declaration batch")
+        val candidates = lexical.functions(namespace, name)
+        val cached = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Function, Boolean>())
+        candidates.forEach { cached.addAll(it.compiledFunctions.values) }
+        val declarations = candidates.filter { it !in cached }.map { CallableDeclarationId(it.declarationId) }.toSet()
+        val preparedIdentities = prepared.declarations.candidates.map { it.declaration }.toSet()
+        if (!preparedIdentities.containsAll(declarations))
+            unsupported(context, "Call '$name' does not have all original declaration candidates prepared")
+        val readonly = context.arguments().readOnlyArgs()?.expressionList()?.expression().orEmpty().map { syntax ->
+            PreparedExpressionFact.fromBound(this.readonly(syntax), preparationSpan(syntax), this)
+        }
+        val normalSyntax = context.arguments().normalArgs()
+        val arguments = normalSyntax.callArgumentList()?.callArgument()?.map { argument ->
+            if (argument.REF() != null || argument.inlineLambda() != null)
+                unsupported(argument, "Reference and inline arguments require prepared source call binding")
+            bind(argument.expression())
+        } ?: normalSyntax.expressionList()?.expression().orEmpty().map(::bind)
+        arguments.firstNotNullOfOrNull { TypeUsage.ordinaryDiagnostic(it.type, it.constant) }?.let { unsupported(context, it) }
+        val selected = ParameterMatcher.selectPreparedTypes(prepared, name, readonly, arguments.map { it.type }, declarations)
+        val signature = when (selected) {
+            is ParameterMatcher.PreparedTypeSelection.Selected -> selected.signature
+            is ParameterMatcher.PreparedTypeSelection.Ambiguous -> unsupported(context,
+                ParameterMatcher.ambiguity(name, selected.signatures.map { it.function }))
+            ParameterMatcher.PreparedTypeSelection.Missing -> unsupported(context, "No prepared signature matches call '$name'")
+        }
+        checkNotNull(preparation).requirePreparedSignature(signature, context)
+        // The body is never interpreted, including functions whose implementation returns a literal.
+        return Bound(signature.returnType, dependencies = arguments.flatMap { it.dependencies }.toSet() +
+            readonly.flatMap { it.bound.dependencies }, descriptors = prepared.declarations.types)
+    }
+
+    private inline fun <T> superBinding(action: () -> T): T = try { action() }
+        catch (failure: Function.SuperFailure) { throw Failure(failure.message ?: "Cannot bind super member") }
 
     private fun binary(node: ParseTree, operands: List<Bound>): Bound {
         val operators = (0 until node.childCount).map(node::getChild).filter { it !is ParserRuleContext }
@@ -340,6 +465,7 @@ internal class DeclarationBinding(
                 result.type in setOf(MCFPPBaseType.Int, MCFPPBaseType.Float) && next.type in setOf(MCFPPBaseType.Int, MCFPPBaseType.Float) -> MCFPPBaseType.Float
                 operation == "+" && result.type == MCFPPBaseType.String && next.type == MCFPPBaseType.String -> MCFPPBaseType.String
                 else -> {
+                    if (preparation != null) unsupported(node as ParserRuleContext, "Operator requires prepared declaration facts")
                     val selected = result.type.instanceData.getOperator(operation, next.type)
                     if (selected == null || selected is UnknownFunction) throw Failure("No declared operator '$operation' for '${result.type}' and '${next.type}'")
                     selected.returnType
@@ -348,10 +474,13 @@ internal class DeclarationBinding(
             val left = (result.constant as? CompilerValue.Typed)?.payload
             val right = (next.constant as? CompilerValue.Typed)?.payload
             val descriptors = (result.descriptors + next.descriptors).toMutableMap()
-            val constant = if (left != null && right != null) {
+            val constant = if (preparation != null && operation != "|") {
+                top.mcfpp.mni.expand.SourceConstantFacts.compilerBinary(operation, type.typeId, result.constant, next.constant)
+            } else if (left != null && right != null) {
                 if (operation == "|" && left is CompilerValue.TypeValue && right is CompilerValue.TypeValue) {
-                    val a = descriptors[left.id] ?: MCFPPType.resolveTypeId(left.id) ?: throw Failure("Unknown readonly type")
-                    val b = descriptors[right.id] ?: MCFPPType.resolveTypeId(right.id) ?: throw Failure("Unknown readonly type")
+                    val a = descriptors[left.id] ?: if (preparation == null) MCFPPType.resolveTypeId(left.id) else null
+                    val b = descriptors[right.id] ?: if (preparation == null) MCFPPType.resolveTypeId(right.id) else null
+                    if (a == null || b == null) throw Failure("Unknown readonly type")
                     val union = MCFPPUnionType(a, b)
                     descriptors[union.typeId] = union
                     CompilerValue.TypeValue(union.typeId)
@@ -377,36 +506,77 @@ internal class DeclarationBinding(
     }
 
     internal fun type(context: Parser.TypeContext): MCFPPType {
-        val body = context.typeBody()
-        typeBindings[body.text]?.let { return it }
-        body.unionType()?.let { return MCFPPUnionType(*it.type().map(::type).toTypedArray()) }
-        body.type()?.let { argument ->
-            val element = type(argument)
-            return when {
-                body.LIST() != null -> MCFPPListType(element)
-                body.IMMUTABLE_LIST() != null -> MCFPPImmutableListType(element)
-                body.DICT() != null -> MCFPPDictType(element)
-                else -> MCFPPMapType(element)
+        // The shared syntax context owns template admission and its session's canonical queue.
+        preparation?.let { return it.exportType(TypeSyntaxResolver.resolve(context, it.syntax())
+            ?: unsupported(context, "Unknown declaration type '${context.text}'"), context) }
+        val syntax = object : LegacyTypeSyntaxContext(lookupScope, function) {
+            override fun known(body: Parser.TypeBodyContext): MCFPPType? =
+                typeBindings[body.text] ?: super.known(body)
+
+            override fun invalid(site: ParserRuleContext, message: String): MCFPPType? = throw Failure(message)
+
+            override fun specialize(head: top.mcfpp.model.compound.GenericDataTemplate,
+                                    arguments: List<Parser.ExpressionContext>, site: Parser.TypeBodyContext): MCFPPType? {
+                // Bare legacy generic names retain their existing empty-argument preparation.
+                if (site.readOnlyArgs() == null) return super.specialize(head, arguments, site)
+                return head.compile(arguments.map(::bind).map(::closedValue))?.getType()
+                    ?: throw Failure("Cannot bind readonly type arguments for '${head.identifier}'")
             }
         }
-        if (body.className() != null && body.readOnlyArgs() != null) {
-            val (namespace, name) = body.className().text.splitNamespaceID()
-            val declaration = GlobalScope.getTemplate(namespace, name) ?: GlobalScope.getInterface(namespace, name)
-                ?: GlobalScope.getObject(namespace, name) as? DataTemplate
-                ?: throw Failure("Unknown declaration type '$name'")
-            val generic = declaration as? top.mcfpp.model.compound.GenericDataTemplate
-                ?: throw Failure("Ordinary declaration '$name' has no readonly parameters")
-            val arguments = body.readOnlyArgs().expressionList()?.expression().orEmpty().map(::bind).map(::closedValue)
-            return generic.compile(arguments)?.getType()
-                ?: throw Failure("Cannot bind readonly type arguments for '$name'")
-        }
-        return MCFPPType.parseFromContext(context, lookupScope, function)
+        return TypeSyntaxResolver.resolve(context, syntax)
             ?: throw Failure("Invalid declaration type '${context.text}'")
     }
 
     internal fun declaredType(type: MCFPPType): MCFPPType = when (type) {
         is UnresolvedType -> type(Parser(CommonTokenStream(mcfppLexer(CharStreams.fromString(type.originalTypeString)))).type())
-        else -> SpecializationPolicy.bind(type, typeBindings)
+        else -> if (preparation == null) SpecializationPolicy.bind(type, typeBindings) else type
+    }
+
+    /** Signature preparation never invokes an open replaceGenericParam implementation. */
+    internal fun preparedDeclaredType(declared: MCFPPType, source: top.mcfpp.mni.api.SourceSpan,
+                                      maxDepth: Int = 128): MCFPPType {
+        val context = checkNotNull(preparation) { "Prepared types require a pure declaration context" }
+        val active = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<MCFPPType, Boolean>())
+        fun reject(message: String): Nothing = throw PreparationFactFailure(PreparationFactCode.UNPREPARED_TYPE, source, message)
+        fun syntax(text: String): MCFPPType {
+            val body = sourceTypeBody(text) ?: throw PreparationFactFailure(PreparationFactCode.UNKNOWN_NAME,
+                source, "Invalid declared type syntax '$text'")
+            return try {
+                context.preparedType(TypeSyntaxResolver.resolve(body.parent as Parser.TypeContext, context.syntax(source))
+                    ?: reject("Type requires prepared declaration facts"), body, source)
+            } catch (failure: PreparationFactFailure) {
+                throw PreparationFactFailure(failure.code, source, failure.message.orEmpty(), failure.completion)
+            } catch (failure: TypeSyntaxFailure) {
+                reject(failure.message.orEmpty())
+            }
+        }
+        fun visit(value: MCFPPType, depth: Int): MCFPPType {
+            if (depth > maxDepth || !active.add(value)) reject("Declared type exceeds the preparation depth or contains a cycle")
+            try {
+                // Check exact shapes before accessing open type properties or generic collections.
+                return when (value.javaClass) {
+                    UnresolvedType::class.java -> visit(syntax((value as UnresolvedType).originalTypeString), depth + 1)
+                    MCFPPGenericParamType::class.java -> visit(syntax((value as MCFPPGenericParamType).identifier), depth + 1)
+                    MCFPPListType::class.java -> MCFPPListType(visit((value as MCFPPListType).generic.single(), depth + 1))
+                    MCFPPImmutableListType::class.java -> MCFPPImmutableListType(visit((value as MCFPPImmutableListType).generic.single(), depth + 1))
+                    MCFPPCompoundType::class.java -> MCFPPCompoundType(visit((value as MCFPPCompoundType).generic.single(), depth + 1))
+                    MCFPPDictType::class.java -> MCFPPDictType(visit((value as MCFPPDictType).generic.single(), depth + 1))
+                    MCFPPMapType::class.java -> MCFPPMapType(visit((value as MCFPPMapType).generic.single(), depth + 1))
+                    MCFPPUnionType::class.java -> MCFPPUnionType(*(value as MCFPPUnionType).types.map { visit(it, depth + 1) }.toTypedArray())
+                    MCFPPEntityType::class.java -> (value as MCFPPEntityType).let { selector ->
+                        MCFPPEntityType(selector.limit, selector.types?.let {
+                            java.util.Collections.unmodifiableList(ArrayList(it))
+                        }, selector.isName)
+                    }
+                    else -> {
+                        // The accepted leaf classes and template/alias boundary are owned by H02.
+                        val site = Parser(CommonTokenStream(mcfppLexer(CharStreams.fromString("int")))).type()
+                        context.preparedType(value, site, source)
+                    }
+                }
+            } finally { active.remove(value) }
+        }
+        return visit(declared, 0)
     }
 
     private fun dependencies(node: ParseTree): Set<String> = if (node.childCount == 0) {
@@ -497,6 +667,11 @@ internal class DeclarationBinding(
     }
 
     internal fun nbtLiteral(value: Parser.NbtValueContext): Bound {
+        val elements = value.nbtList()?.expression()?.map(::bind)
+        val members = value.nbtCompound()?.nbtKeyValuePair()?.map {
+            val key = it.key.text
+            (if (key.startsWith("\"") || key.startsWith("'")) (Tag.toNBT(key) as StringTag).value else key) to bind(it.expression())
+        }
         val type = when {
             value.nbtBool() != null -> MCFPPBaseType.Bool
             value.nbtInt() != null -> MCFPPBaseType.Int
@@ -506,8 +681,8 @@ internal class DeclarationBinding(
             value.nbtShort() != null -> MCFPPNBTType.Short
             value.nbtLong() != null -> MCFPPNBTType.Long
             value.LineString() != null -> MCFPPBaseType.String
-            value.nbtList() != null -> MCFPPListType(common(value.nbtList().expression().map(::bind)))
-            value.nbtCompound() != null -> MCFPPDictType(common(value.nbtCompound().nbtKeyValuePair().map { bind(it.expression()) }, MCFPPBaseType.Any))
+            elements != null -> MCFPPListType(common(elements))
+            members != null -> MCFPPDictType(common(members.map { it.second }, MCFPPBaseType.Any))
             value.nbtByteArray() != null -> MCFPPNBTType.ByteArray
             value.nbtIntArray() != null -> MCFPPNBTType.IntArray
             value.nbtLongArray() != null -> MCFPPNBTType.LongArray
@@ -520,15 +695,10 @@ internal class DeclarationBinding(
             value.nbtFloat() != null -> CompilerValue.FloatBits(value.text.trimEnd('f', 'F').toFloat().toRawBits())
             value.nbtDouble() != null -> CompilerValue.DoubleBits(value.text.trimEnd('d', 'D').toDouble().toRawBits())
             value.LineString() != null -> CompilerValue.Text((Tag.toNBT(value.text) as StringTag).value)
-            value.nbtList() != null -> {
-                val elements = value.nbtList().expression().map(::bind)
+            elements != null -> {
                 if (elements.all { it.constant != null }) CompilerValue.Sequence(elements.map { it.constant!! }) else null
             }
-            value.nbtCompound() != null -> {
-                val members = value.nbtCompound().nbtKeyValuePair().map {
-                    val key = it.key.text
-                    (if (key.startsWith("\"") || key.startsWith("'")) (Tag.toNBT(key) as StringTag).value else key) to bind(it.expression())
-                }
+            members != null -> {
                 if (members.all { it.second.constant != null }) CompilerValue.Record(members.associate { it.first to it.second.constant!! }) else null
             }
             value.nbtByteArray() != null || value.nbtIntArray() != null || value.nbtLongArray() != null -> {
@@ -544,7 +714,15 @@ internal class DeclarationBinding(
             }
             else -> null
         }
-        return Bound(type, payload?.let { CompilerValue.Typed(type.typeId, it) })
+        if (preparation != null && (type == MCFPPBaseType.Int && payload is CompilerValue.Integral &&
+                payload.value !in Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong() ||
+                payload is CompilerValue.FloatBits && !Float.fromBits(payload.bits).isFinite() ||
+                payload is CompilerValue.DoubleBits && !Double.fromBits(payload.bits).isFinite()))
+            unsupported(value, "Numeric value is outside its finite declared representation")
+        return Bound(type, payload?.let { CompilerValue.Typed(type.typeId, it) },
+            (elements.orEmpty() + members.orEmpty().map { it.second }).flatMap { it.dependencies }.toSet(),
+            descriptors = (elements.orEmpty() + members.orEmpty().map { it.second }).flatMap { it.descriptors.entries }
+                .associate { it.key to it.value })
     }
 
     private fun common(values: List<Bound>, empty: MCFPPType = MCFPPPrivateType.Wildcard): MCFPPType {

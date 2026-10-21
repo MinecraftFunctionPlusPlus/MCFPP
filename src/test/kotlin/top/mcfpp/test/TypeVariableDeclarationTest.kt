@@ -180,10 +180,13 @@ class TypeVariableDeclarationTest {
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0)
         val prototype = assertIs<GenericDataTemplate>(GlobalScope.localNamespaces.getValue("default.test").scope.getTemplate("Holder"))
-        val actual = prototype.compiledTemplates.values.single()
-        assertEquals(MCFPPBaseType.Int.typeId, assertIs<MCFPPTypeVar>(actual.scope.getVar("T")).value.typeId)
-        assertEquals(MCFPPBaseType.Int.typeId, actual.scope.getType("T")!!.typeId)
-        assertNull(actual.scope.getVar("selected"))
-        assertNull(actual.scope.getVar("mirrored"))
+        // A rejected type binding must not publish the specialization, its invalid member, or the
+        // declaration's result. Legal generic type bindings are covered by the successful cases.
+        assertTrue(prototype.compiledTemplates.isEmpty(), "Failed generic instantiation published a specialization")
+        assertTrue(prototype.materializedInstances().all { actual ->
+            actual.scope.getVar("selected") == null && actual.scope.getVar("mirrored") == null
+        }, "Failed generic instantiation published an invalid type-valued field")
+        val main = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
+        assertNull(main.scope.getVar("holder"), "Failed generic instantiation published its result")
     }
 }

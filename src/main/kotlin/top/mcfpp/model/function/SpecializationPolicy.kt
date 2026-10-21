@@ -44,6 +44,13 @@ object SpecializationPolicy {
 
     internal data class DeclaredSignature(val normalTypes: List<MCFPPType>, val returnType: MCFPPType)
 
+    /** Explicit preparation entry: never restores a caller/declaration scope or compiles a body. */
+    internal fun prepareDeclaredSignature(function: Function, lexical: DeclarationLexicalSnapshot,
+                                          supplied: List<PreparedExpressionFact>, source: top.mcfpp.mni.api.SourceSpan,
+                                          receiverTypes: Map<String, MCFPPType> = emptyMap(), maxDepth: Int = 128,
+                                          caller: Function? = null): PreparedCandidate =
+        PureSignaturePreparation.prepare(function, lexical, supplied, source, receiverTypes, maxDepth, caller)
+
     /** Signature queries consume immutable payloads, without constructing ordinary values. */
     internal fun resolveDeclaredSignature(function: Function, readonly: List<FunctionParam>,
                                           supplied: List<DeclarationBinding.Bound>,
@@ -158,7 +165,7 @@ object SpecializationPolicy {
         val runtimeParams = ArrayList<FunctionParam>()
         for (i in function.normalParams.indices) {
             val original = function.normalParams[i]
-            val param = FunctionParam(types[i], original.identifier, compiled, original.isStatic, original.hasDefault)
+            val param = FunctionParam(types[i], original.identifier, compiled, original.hasDefault)
             param.defaultVar = original.defaultVar
             param.defaultContext = original.defaultContext
             val storage = param.buildVar()

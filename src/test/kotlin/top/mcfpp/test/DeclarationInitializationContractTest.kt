@@ -51,10 +51,10 @@ class DeclarationInitializationContractTest {
         val main = """
             func main(){
                 var first=Box(4);var second=Box(9)
-                dynamic firstResult=first.read();dynamic secondResult=second.read()
+                external firstResult=first.read();external secondResult=second.read()
                 first.observed=7
-                dynamic changed=first.observed;dynamic computed=first.computed
-                dynamic nested=second.chained
+                external changed=first.observed;external computed=first.computed
+                external nested=second.chained
                 var erasedInt=identity(1);var erasedString=identity("other")
             }
         """
@@ -100,11 +100,11 @@ class DeclarationInitializationContractTest {
         val main = """
             func main(){
                 var first=PositionBox(4 0 0);var second=PositionBox(9 0 0)
-                dynamic firstResult=first.read();dynamic secondResult=second.read()
-                dynamic changed=first.change(7 0 0);dynamic readAgain=first.read()
-                dynamic otherAgain=second.read();dynamic erasedResult=erased(9 0 0)
-                dynamic objectFirst=PositionState.read();dynamic objectChanged=PositionState.change(7 0 0)
-                dynamic objectAgain=PositionState.read()
+                external firstResult=first.read();external secondResult=second.read()
+                external changed=first.change(7 0 0);external readAgain=first.read()
+                external otherAgain=second.read();external erasedResult=erased(9 0 0)
+                external objectFirst=PositionState.read();external objectChanged=PositionState.change(7 0 0)
+                external objectAgain=PositionState.read()
             }
         """
         roundTrip(declarations, main, output, startup=true) { function, machine ->
@@ -125,7 +125,7 @@ class DeclarationInitializationContractTest {
             namespace fixture.constfirst
             data Fixed {const first: int;constructor(value: int){this.first=value;}
                 func read():int{return first;}}
-        """, "func main(){var a=Fixed(4);var b=Fixed(9);dynamic first=a.read();dynamic second=b.read();}",output) { function,machine ->
+        """, "func main(){var a=Fixed(4);var b=Fixed(9);external first=a.read();external second=b.read();}",output) { function,machine ->
             assertEquals(4,machine.read(function.scope.getVar("first") as MCInt))
             assertEquals(9,machine.read(function.scope.getVar("second") as MCInt))
         }
@@ -173,10 +173,10 @@ class DeclarationInitializationContractTest {
         """
         val main = """
             func main(){
-                dynamic dependent=helper(true)
-                dynamic four=Settings<4>.read();dynamic nine=Settings<9>.read()
-                dynamic again=Settings<4>.read()
-                var box=Box(7);dynamic ordinary=box.read()
+                external dependent=helper(true)
+                external four=Settings<4>.read();external nine=Settings<9>.read()
+                external again=Settings<4>.read()
+                var box=Box(7);external ordinary=box.read()
             }
         """
         roundTrip(declarations,main,output, startup=true) { function,machine ->
@@ -204,8 +204,8 @@ class DeclarationInitializationContractTest {
         """
         val main="""
             func main(){var first=Box<int>(4);var second=Box<int>(9)
-                dynamic four=first.value;dynamic nine=second.value
-                first.value=7;dynamic seven=first.readHidden();dynamic userGetter=first.get_hidden();}
+                external four=first.value;external nine=second.value
+                first.value=7;external seven=first.readHidden();external userGetter=first.get_hidden();}
         """
         roundTrip(declarations,main,output) { function,machine ->
             for((name,value) in listOf("four" to 4,"nine" to 9,"seven" to 7,"userGetter" to 8))
@@ -244,12 +244,12 @@ class DeclarationInitializationContractTest {
             data Values {var bytes=[B;1b,2b];var longs=[L;4294967296L];}
         """
         val main="""
-            func main(){dynamic defaultResult=take();dynamic provided=take([9])
-                var value=9;dynamic earlierResult=earlier(4)
-                var owner=DefaultOwner(7);dynamic ownerResult=owner.read()
-                dynamic nativeDefault=sink();dynamic nativeProvided=sink([9])
-                dynamic genericDefault=genericTake<int>();dynamic genericProvided=genericTake<int>([9])
-                dynamic extensionDefault=owner.extra<int>();dynamic extensionProvided=owner.extra<int>([9])
+            func main(){external defaultResult=take();external provided=take([9])
+                var value=9;external earlierResult=earlier(4)
+                var owner=DefaultOwner(7);external ownerResult=owner.read()
+                external nativeDefault=sink();external nativeProvided=sink([9])
+                external genericDefault=genericTake<int>();external genericProvided=genericTake<int>([9])
+                external extensionDefault=owner.extra<int>();external extensionProvided=owner.extra<int>([9])
                 const count=2;var factory=Factory<-count>();var values=Values();var ranges=Ranges();var choice=Choice();}
         """
         roundTrip(declarations,main,output) { function,machine ->
@@ -311,7 +311,7 @@ class DeclarationInitializationContractTest {
                 func read():int{return observe(this.position);}}
             func select(flag: bool):int{var item=Stable(flag,4 0 0);return item.read();}
         """
-        roundTrip(declarations,"func main(){dynamic result=select(true);}",output) { function,machine ->
+        roundTrip(declarations,"func main(){external result=select(true);}",output) { function,machine ->
             assertEquals(4,machine.read(function.scope.getVar("result") as MCInt))
             assertEquals(listOf("side-effect","4 0 0"),machine.messages)
         }
@@ -331,7 +331,7 @@ class DeclarationInitializationContractTest {
             func choose(value: int):int{return 9;}
             func libraryOnly():int{return 4;}
             data Box {var value: int;constructor(value: int){this.value=value;}func read():int{return this.value;}}
-            interface Marker {abstract func read():int;}
+            abstract data Marker {abstract func read():int;}
         """
         compile("$library func main(){}",output)
         assertEquals(0,Project.errorCount)
@@ -342,15 +342,15 @@ class DeclarationInitializationContractTest {
             func choose(value: string):int{return 7;}
             data Marker {constructor(){}}
         """
-        compile("""$local func main(){dynamic localResult=choose("local");dynamic libraryResult=libraryOnly()
-            var box=Box(9);dynamic fieldResult=box.read();var alias: Alias=true;}""")
+        compile("""$local func main(){external localResult=choose("local");external libraryResult=libraryOnly()
+            var box=Box(9);external fieldResult=box.read();var alias: Alias=true;}""")
         assertEquals(0,Project.errorCount)
         val main=GlobalScope.localNamespaces.getValue("fixture.names").scope.functions.getValue("main").single()
         val machine=execute(main,output.resolve("consumer"))
         for((name,value) in listOf("localResult" to 7,"libraryResult" to 4,"fieldResult" to 9))
             assertEquals(value,machine.read(main.scope.getVar(name) as MCInt))
         assertEquals(MCFPPBaseType.Bool,main.scope.getVar("alias")!!.type)
-        assertNotNull(GlobalScope.getInterface("fixture.names","Marker"))
+        assertTrue(GlobalScope.libNamespaces.getValue("fixture.names").scope.getTemplate("Marker")!!.isAbstract)
         assertTrue(GlobalScope.getTemplate("fixture.names","Marker") === GlobalScope.localNamespaces.getValue("fixture.names").scope.getTemplate("Marker"))
         for(call in listOf("choose(4)","fixture.names:choose(4)")) {
             compile("$local func main(){var illegal=$call;}")

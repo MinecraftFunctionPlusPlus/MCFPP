@@ -4,11 +4,9 @@ import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.Token
-import top.mcfpp.antlr.MCFPPFieldVisitor
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.antlr.mcfppParser.TypeContext
-import top.mcfpp.antlr.mcfppParser.TypeBodyContext
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.analysis.CompilerValue
@@ -23,7 +21,6 @@ import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericDataTemplate
 import top.mcfpp.model.compound.GenericObjectDataTemplate
 import top.mcfpp.model.compound.CompiledGenericDataTemplate
-import top.mcfpp.model.compound.UnionDataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.scope.GlobalScope
@@ -242,36 +239,43 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         internal fun builtinTypesById(): Map<TypeId, MCFPPType> =
             typeCache.values.filter { it.typeId is TypeId.Builtin }.associateBy { it.typeId }
 
+        internal fun cachedSyntaxType(text: String): MCFPPType? = typeCache[text]
+
         internal fun resolveTypeId(id: TypeId): MCFPPType? = when (id) {
             is TypeId.Builtin -> builtinTypesById()[id]
                 ?: MCFPPPrivateType.Wildcard.takeIf { it.typeId == id }
             is TypeId.Declaration -> {
                 val scopes = listOfNotNull(GlobalScope.localNamespaces[id.namespace], GlobalScope.libNamespaces[id.namespace],
                     GlobalScope.stdNamespaces[id.namespace]).map { it.scope }
-                val scope = scopes.firstOrNull { scope -> when (id.kind) {
-                    "template" -> scope.getTemplate(id.name) != null || scope.cachedAliasTargets().filterIsInstance<MCFPPDataTemplateType>().any { it.typeId == id }
-                    "object" -> scope.getObject(id.name) != null
-                    "interface" -> scope.getInterface(id.name) != null
-                    "enum" -> scope.getEnum(id.name) != null
-                    else -> false
-                } }
-                if (id.kind == "template") {
-                    val matches = (listOfNotNull(scope?.getTemplate(id.name)?.getType() as? MCFPPDataTemplateType) +
-                        scope?.cachedAliasTargets().orEmpty().filterIsInstance<MCFPPDataTemplateType>())
-                        .filter { it.typeId == id }
-                    matches.forEach { it.tryResolve() }
+                if (id.kind in setOf("template", "object")) {
+                    // Keep namespace precedence for named/aliased declarations, then reconcile
+                    // the selected canonical model with any project-registered anonymous parent.
+                    val indexed = scopes.firstNotNullOfOrNull { scope ->
+                        val named = when (id.kind) {
+                            "template" -> scope.getTemplate(id.name)
+                            else -> scope.getObject(id.name)
+                        }
+                        (listOfNotNull(named?.getType()) + scope.cachedAliasTargets())
+                            .filter { it.typeId == id }
+                            .takeIf { it.isNotEmpty() }
+                    }.orEmpty()
+                    val anonymous = Project.findRegisteredAnonymousTemplate(id)?.getType()
+                    indexed.forEach { it.tryResolve() }
+                    anonymous?.tryResolve()
+                    fun target(type: MCFPPType): DataTemplate? = when (type) {
+                        is MCFPPDataTemplateType -> type.template
+                        else -> null
+                    }
+                    val matches = indexed + listOfNotNull(anonymous)
                     val first = matches.firstOrNull()
-                    if (first != null && matches.any { it.typeId != id || it.template !== first.template }) {
+                    if (first != null && (target(first) == null ||
+                            matches.any { it.typeId != id || target(it) !== target(first) })) {
                         LogProcessor.error("Ambiguous template identity '${id.namespace}:${id.name}'")
                         null
                     } else first
                 } else {
-                    val declaration = when (id.kind) {
-                        "interface" -> scope?.getInterface(id.name)
-                        "object" -> scope?.getObject(id.name)
-                        "enum" -> scope?.getEnum(id.name)
-                        else -> null
-                    }
+                    val declaration = if (id.kind == "enum")
+                        scopes.firstNotNullOfOrNull { it.getEnum(id.name) } else null
                     declaration?.getType()?.takeIf { it.typeId == id }
                 }
             }
@@ -304,13 +308,11 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 GlobalScope.stdNamespaces[declaration.namespace]).map { it.scope }.firstOrNull { scope -> when (declaration.kind) {
                     "template" -> scope.getTemplate(declaration.name) != null
                     "object" -> scope.getObject(declaration.name) != null
-                    "interface" -> scope.getInterface(declaration.name) != null
                     else -> false
                 } } ?: return null
             val prototype = when (declaration.kind) {
                 "template" -> scope.getTemplate(declaration.name) as? GenericDataTemplate
                 "object" -> scope.getObject(declaration.name) as? GenericObjectDataTemplate
-                "interface" -> scope.getInterface(declaration.name) as? GenericDataTemplate
                 else -> null
             } ?: return null
             if (prototype.getType().typeId != declaration) return null
@@ -469,8 +471,6 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             if(template !=null) return resolveBareTemplateType(template.getType())
             val obj = GlobalScope.getObject(nspID.first, nspID.second)
             if(obj !=null) return obj.getType()
-            val itf = GlobalScope.getInterface(nspID.first, nspID.second)
-            if(itf != null) return resolveBareTemplateType(itf.getType())
             val enum = GlobalScope.getEnum(nspID.first, nspID.second)
             if(enum != null) return enum.getType()
 
@@ -485,128 +485,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         }
 
         fun parseFromContext(ctx: TypeContext, typeScope: IScopeWithType, caller: Function? = null): MCFPPType?{
-            return parseFromContext(ctx.typeBody(), typeScope, caller)
-        }
-
-        private fun parseFromContext(ctx: TypeBodyContext, typeScope: IScopeWithType, caller: Function?): MCFPPType? {
-            typeCache[ctx.text]?.let { return it }
-            //向量
-            if(ctx.VecType() != null){
-                return MCFPPVectorType(ctx.VecType().text.substring(3).toInt())
-            }
-            //list类型
-            if(ctx.LIST() != null){
-                return if(ctx.type() != null){
-                    MCFPPListType(parseFromContext(ctx.type(), typeScope, caller)?: run {
-                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
-                        MCFPPBaseType.Any
-                    })
-                }else{
-                    MCFPPListType(MCFPPPrivateType.Wildcard)
-                }
-            }
-            //只读列表类型
-            if(ctx.IMMUTABLE_LIST() != null){
-                return MCFPPImmutableListType(ctx.type()?.let { parseFromContextNotNull(it, typeScope, caller) } ?: MCFPPPrivateType.Wildcard)
-            }
-            //dict类型
-            if(ctx.DICT()!= null){
-                if(ctx.type() != null){
-                    return MCFPPDictType(parseFromContext(ctx.type(), typeScope, caller)?: run {
-                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
-                        MCFPPBaseType.Any
-                    })
-                }else{
-                    return MCFPPDictType(MCFPPPrivateType.Wildcard)
-                }
-            }
-            //map类型
-            if(ctx.MAP()!= null){
-                if(ctx.type() != null){
-                    return MCFPPMapType(parseFromContext(ctx.type(), typeScope, caller)?: run {
-                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
-                        MCFPPBaseType.Any
-                    })
-                }else{
-                    MCFPPMapType(MCFPPPrivateType.Wildcard)
-                }
-            }
-            //selector类型
-            if(ctx.ENTITY() != null){
-                val limit = ctx.nbtInt()?.text?.toInt()
-                val types = if(ctx.LineString().size == 0) {
-                    null
-                } else{
-                    ctx.LineString().map { it.text }
-                }
-                return MCFPPEntityType(limit, types)
-            }
-            //自定义类型
-            if(ctx.className() != null){
-                if (typeScope.containType(ctx.text)) return resolveBareTemplateType(typeScope.getType(ctx.text))
-                val nspID = ctx.className().text.splitNamespaceID()
-                //数据模板
-                val template = GlobalScope.getTemplate(nspID.first, nspID.second)
-                    ?: (GlobalScope.getObject(nspID.first, nspID.second) as? DataTemplate)
-                    ?: GlobalScope.getInterface(nspID.first, nspID.second)
-                if(template != null) {
-                    if (template is top.mcfpp.model.compound.GenericDataTemplate) {
-                        val arguments = ArrayList<Var<*>>()
-                        val visitor = top.mcfpp.antlr.MCFPPReadonlyExprVisitor(lookupTypeScope = typeScope, lexicalCaller = caller)
-                        for (expression in ctx.readOnlyArgs()?.expressionList()?.expression().orEmpty()) {
-                            val value = visitor.visit(expression) ?: return null
-                            if (value.isError || value is UnknownVar) return null
-                            arguments.add(value)
-                        }
-                        return template.compile(arguments)?.getType()
-                    }
-                    if (ctx.readOnlyArgs() != null) {
-                        LogProcessor.error("Ordinary template '${template.identifier}' does not accept readonly arguments")
-                        return null
-                    }
-                    return template.getType()
-                }
-                //枚举
-                val enum = GlobalScope.getEnum(nspID.first, nspID.second)
-                if(enum != null) return enum.getType()
-            }
-            //联合数据模板类型
-            if(ctx.unionTemplateType() != null){
-                val types = ArrayList<MCFPPDataTemplateType>()
-                for (type in ctx.unionTemplateType().type()){
-                    val t = parseFromContext(type, typeScope, caller)?: run {
-                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(type.text))
-                        MCFPPBaseType.Any
-                    }
-                    if(t !is MCFPPDataTemplateType){
-                        LogProcessor.error("Union type can only be used with data template type")
-                    }else{
-                        types.add(t)
-                    }
-                }
-                return MCFPPDataTemplateType(UnionDataTemplate(types.map { it.template }), types)
-            }
-            if (ctx.unionType() != null) {
-                val alternatives = ArrayList<MCFPPType>()
-                for (alternative in ctx.unionType().type()) {
-                    val type = parseFromContext(alternative, typeScope, caller) ?: run {
-                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(alternative.text))
-                        return null
-                    }
-                    alternatives.add(type)
-                }
-                return MCFPPUnionType(*alternatives.toTypedArray())
-            }
-            //匿名内部模板
-            if(ctx.anonymousTemplateType() != null){
-                val template = MCFPPFieldVisitor().visitAnonymousTemplateType(ctx.anonymousTemplateType()) as DataTemplate
-                return template.getType()
-            }
-            //泛型类型
-            if(typeScope.containType(ctx.text)){
-                return resolveBareTemplateType(typeScope.getType(ctx.text))
-            }
-            return null
+            return TypeSyntaxResolver.resolve(ctx, LegacyTypeSyntaxContext(typeScope, caller))
         }
     }
 

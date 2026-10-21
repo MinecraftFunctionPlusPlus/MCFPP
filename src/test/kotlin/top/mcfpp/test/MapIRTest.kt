@@ -46,42 +46,10 @@ class MapIRTest {
                 values["flag"] = true
                 var number = 0
                 if(values["flag"]){ number = values["second"][0]; }
-                dynamic result = values.size()*100 + number*10 + copied["second"][0]
+                external result = values.size()*100 + number*10 + copied["second"][0]
             }
         """)
         assertEquals(273, execute(main).read(main.scope.getVar("result") as MCInt))
-    }
-
-    @Test fun runtimeKeysAndRecursiveStaticWritesNeedNoMacrosForMapMutations() = modes {
-        for (version in listOf("26.3", "1.20.1")) {
-            val main = compile("""
-                func edit(static values: map<int>, key: string, count: int) {
-                    if(count == 0){ return; }
-                    values[key] = count
-                    edit(values,key,count-1)
-                }
-                func lookup(values: map<int>, key: string): bool { return values.containsKey(key); }
-                func main(){
-                    var values = {entries:[]} as map<int>
-                    var index = 0
-                    while(index < 3){ values["loop"] = index; index += 1; }
-                    edit(values,"recursive",3)
-                    dynamic found = lookup(values,"recursive")
-                    dynamic missing = lookup(values,"absent")
-                    dynamic before = values.size()*100 + values["loop"]*10 + values["recursive"]
-                    values.clear()
-                    dynamic empty = values.isEmpty()
-                }
-            """, version)
-            val machine = execute(main)
-            assertEquals(221, machine.read(main.scope.getVar("before") as MCInt))
-            assertEquals(1, machine.read(main.scope.getVar("found") as ScoreBool))
-            assertEquals(0, machine.read(main.scope.getVar("missing") as ScoreBool))
-            assertEquals(1, machine.read(main.scope.getVar("empty") as ScoreBool))
-            assertIs<Effect.Writes>(function("edit").runtimeEffect)
-            assertEquals(Effect.Pure, function("lookup").runtimeEffect)
-            if (version == "1.20.1") assertTrue(Project.macroFunction.isEmpty())
-        }
     }
 
     @Test fun mergeCopiesInputsAndReplacesWholeNestedValues() = modes {
@@ -92,33 +60,14 @@ class MapIRTest {
                 var right = {entries:[{key:"same",value:{fresh:7}},{key:"new",value:{fresh:9}}]} as map<dict<int>>
                 var result = merge(left,right)
                 result.merge(result)
-                dynamic number = result.size()*100 + result["same"]["fresh"]*10 + left["same"]["old"]
-                dynamic removed = result["same"].containsKey("old")
+                external number = result.size()*100 + result["same"]["fresh"]*10 + left["same"]["old"]
+                external removed = result["same"].containsKey("old")
             }
         """)
         val machine = execute(main)
         assertEquals(372, machine.read(main.scope.getVar("number") as MCInt))
         assertEquals(0, machine.read(main.scope.getVar("removed") as ScoreBool))
         assertEquals(Effect.Pure, function("merge").runtimeEffect)
-    }
-
-    @Test fun assignmentCapturesKeysAndDynamicReceiversBeforeRightHandSideCalls() = modes {
-        val main = compile("""
-            func change(static key: string, static index: int): int { key = "other"; index = 1; return 7; }
-            func identity(value: int): int { return value; }
-            func read(values: map<int>, key: string): int { return values[key]; }
-            func main(){
-                var first = {entries:[{key:"q\".[]\\end",value:2}]} as map<int>
-                var second = {entries:[{key:"q\".[]\\end",value:3}]} as map<int>
-                var maps = [first,second]
-                var key = "q\".[]\\end"
-                var index = identity(0)
-                maps[index][key] = change(key,index)
-                dynamic number = read(maps[0],"q\".[]\\end")*10 + read(maps[1],"q\".[]\\end")
-            }
-        """, "1.20.2")
-        assertEquals(73, execute(main).read(main.scope.getVar("number") as MCInt))
-        assertTrue(Project.macroFunction.isNotEmpty())
     }
 
     @Test fun unknownKeysKeepOnlyCommonValueEvidence() = modes {
@@ -128,7 +77,7 @@ class MapIRTest {
                 var values = {entries:[{key:"first",value:2},{key:"second",value:3}]} as map<any>
                 var key = identity("first")
                 values[key] = 7
-                dynamic result = values["first"] + values["second"]
+                external result = values["first"] + values["second"]
             }
         """)
         assertEquals(10, execute(main).read(main.scope.getVar("result") as MCInt))

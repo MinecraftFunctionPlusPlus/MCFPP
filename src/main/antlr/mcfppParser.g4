@@ -29,6 +29,7 @@
 parser grammar mcfppParser;
 
 options {
+    // Regenerate the standard library whenever this grammar or its vocabulary changes.
     tokenVocab = mcfppLexer;
 }
 
@@ -81,7 +82,6 @@ declarations
     |   templateDeclaration
     |   objectTemplateDeclaration
     |   extensionFunctionDeclaration
-    |   interfaceDeclaration
     |   enumDeclaration
     |   annotation
     ;
@@ -137,7 +137,7 @@ compoundDeclaration
 
 //数据模板
 templateDeclaration
-    :   FINAL? NL* DATA NL* ABSTRACT? NL*
+    :   (FINAL | ABSTRACT)? NL* DATA NL*
         (compoundDeclaration
         | (declarationName NL* AS NL* type)
         )
@@ -196,11 +196,6 @@ declarationName
 
 extendName
     :   className readOnlyArgs?
-    ;
-
-//接口声明
-interfaceDeclaration
-    :   INTERFACE NL* compoundDeclaration NL* templateBody?
     ;
 
 compileTimeFuncDeclaration
@@ -270,7 +265,7 @@ fieldDeclaration
     :   (VAR | fieldModifier) NL* Identifier NL* (COLON NL* type)? NL* (ASSIGNMENT NL* expression)?
     ;
 
-fieldModifier : CONST | DYNAMIC | IMPORT NL* VAR;
+fieldModifier : CONST | EXTERNAL | IMPORT NL* VAR;
 
 functionParams
     :   readOnlyParams? NL* normalParams
@@ -291,7 +286,7 @@ parameterList
 
 //参数
 parameter
-    :   (OUT | IN)? NL* STATIC? NL* (Identifier NL* COLON NL*)? type (NL* ASSIGNMENT NL* value)?
+    :   (OUT | IN)? NL* (Identifier NL* COLON NL*)? type (NL* ASSIGNMENT NL* value)?
     ;
 
 //能作为语句的表达式
@@ -422,7 +417,24 @@ readOnlyArgs
     ;
 
 normalArgs
-    :   LPAREN NL* (expressionList NL*)? RPAREN
+    :   LPAREN NL* ((expressionList | callArgumentList) NL*)? RPAREN
+    ;
+
+// Keep expressionList first so existing visitors retain their ordinary-call tree.
+// The mixed form preserves the syntax category and order for the pure call binder.
+callArgumentList
+    :   callArgument (NL* COMMA NL* callArgument)*
+    ;
+
+callArgument
+    :   REF NL* expression
+    |   inlineLambda
+    |   expression
+    ;
+
+inlineLambda
+    :   LPAREN NL* (Identifier (NL* COMMA NL* Identifier)*)? NL* RPAREN
+        NL* DOUBLE_ARROW NL* curlBlock
     ;
 
 statement

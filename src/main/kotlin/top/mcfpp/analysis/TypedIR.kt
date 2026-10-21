@@ -43,11 +43,8 @@ sealed interface Instruction {
     data class View(val result: Int, val value: ValueRef.TypedView) : Instruction
     data class Construct(val result: Int, val place: Place, val type: TypeId, val parts: Map<PathSegment, ValueRef>, val sequence: Boolean) : Instruction
     data class Call(val result: Int?, val declaration: SymbolId, val arguments: List<ValueRef>, val effect: Effect,
-                    val returnType: TypeId? = null, val argumentPlaces: List<Place?> = emptyList(),
-                    val parameterTypes: List<TypeId> = emptyList(), val staticParameters: Set<Int> = emptySet(),
-                    val provisional: Boolean = false, val resultPlace: Place? = null,
-                    val argumentLocations: List<Location?> = emptyList(), val argumentDeclarations: List<Symbol?> = emptyList(),
-                    val argumentRebindings: List<Boolean> = emptyList()) : Instruction
+                    val returnType: TypeId? = null, val provisional: Boolean = false,
+                    val resultPlace: Place? = null) : Instruction
     data class RawCommand(val command: String) : Instruction
 }
 sealed interface Terminator {
@@ -279,57 +276,22 @@ object FlowAnalysis {
                     snapshots[instruction.result] = capture(instruction.place)
                 }
                 is Instruction.Call -> {
-                    beforeWrites[id to position] = state.fork()
-                    val denied = instruction.staticParameters.any { parameter ->
-                        val target = instruction.argumentPlaces.getOrNull(parameter) ?: return@any false
-                        val effect = instruction.effect
-                        val writes = (effect as? Effect.Writes)?.places?.filter { it.overlaps(target) }.orEmpty()
-                        if (effect != Effect.Unknown && writes.isEmpty()) return@any false
-                        val rootWrite = effect == Effect.Unknown || writes.any { written ->
-                            written.path.size <= target.path.size && (effect as Effect.Writes).contents.none { content ->
-                                content.root == written.root && content.path.size <= written.path.size &&
-                                    written.path.take(content.path.size) == content.path
-                            }
-                        }
-                        !writable(target, instruction.argumentDeclarations.getOrNull(parameter), !rootWrite,
-                            !rootWrite || instruction.argumentRebindings.getOrNull(parameter) == false)
-                    }
-                    if (denied) {
-                        val failed = ValueFacts(TypeKnowledge.Unknown, ValueKnowledge.Unknown, ValueState.ERROR)
-                        instruction.result?.let { values[it] = failed }
-                        instruction.resultPlace?.let { state.refine(it, failed) }
-                        continue
-                    }
                     val summary = callSummary(instruction, instruction.arguments.map(::evidence))
                     if (!summary.canReturn) {
                         state.reachable = false
                         break
                     }
                     val returned = summary.type
-                    val written = summary.writes
                     when (val effect = instruction.effect) {
                         is Effect.Writes -> effect.places.forEach { place ->
                             state.invalidate(place)
                             state.forgetDescendants(place)
                             state.write(place, (state.read(place) ?: ValueFacts(TypeKnowledge.Unknown, ValueKnowledge.Unknown))
-                                .copy(type = written[place] ?: TypeKnowledge.Unknown, value = ValueKnowledge.Unknown,
+                                .copy(type = TypeKnowledge.Unknown, value = ValueKnowledge.Unknown,
                                     readableLayout = null))
-                            state.copyFrom(summary.outputs, place, place, includeRoot = false)
                         }
                         Effect.Unknown -> state.barrier()
                         else -> Unit
-                    }
-                    for ((place, type) in written) {
-                        if (PathSegment.UnknownIndex in place.path) continue
-                        val affected = instruction.effect == Effect.Unknown || (instruction.effect as? Effect.Writes)?.places?.any {
-                            it.path.size <= place.path.size && it.overlaps(place)
-                        } == true
-                        if (affected) {
-                            val fact = state.read(place) ?: ValueFacts(type, ValueKnowledge.Unknown)
-                            state.refine(place, fact.copy(type = type, readableLayout = fact.readableLayout?.takeIf {
-                                fact.state == ValueState.INITIALIZED && (type as? TypeKnowledge.Exact)?.type == it
-                            }))
-                        }
                     }
                     instruction.resultPlace?.let {
                         state.forgetDescendants(it)

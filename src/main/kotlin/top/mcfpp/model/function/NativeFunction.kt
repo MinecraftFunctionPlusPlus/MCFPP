@@ -7,11 +7,13 @@ import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Native
 import top.mcfpp.mni.NativeCallContext
+import top.mcfpp.mni.NativeSignatureValidator
 import top.mcfpp.type.MCFPPNotCompiledGenericType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPTypeWithGeneric
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.ValueWrapper
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.stream.Collectors
@@ -58,8 +60,10 @@ class NativeFunction : Function, Native {
         //找到方法
         val clazz = javaMethodString.substringBeforeLast(".")
         val methodName = javaMethodString.substringAfterLast(".")
-        val clazzObject = Class.forName(clazz)
-        javaMethod = clazzObject.getMethod(methodName, NativeCallContext::class.java)
+        val clazzObject = Project.classLoader.loadClass(clazz)
+        val methods = clazzObject.methods.filter { it.name == methodName && !it.isBridge && !it.isSynthetic }
+        javaMethod = methods.singleOrNull { it.parameterTypes.contentEquals(arrayOf(NativeCallContext::class.java)) }
+            ?: methods.single()
         this.javaMethodName = name
     }
 
@@ -68,19 +72,68 @@ class NativeFunction : Function, Native {
     }
 
     fun invoke(readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, caller: CanSelectMember?): Var<*> {
-        val list = argPass(readOnlyArgs, normalArgs,caller)
+        fun failed() = UnknownVar(identifier).apply { type = returnType; isError = true }
+        if (!NativeSignatureValidator.validate(this)) return failed()
+        if (readOnlyArgs.size > readOnlyParams.size || normalArgs.size > normalParams.size) {
+            LogProcessor.error("Too many arguments for native function '$identifier'")
+            return failed()
+        }
+        val bindingErrors = Project.errorCount
+        val list = argPass(readOnlyArgs, normalArgs, caller)
+        return invokePrepared(list, readOnlyArgs + normalArgs, caller, bindingErrors,
+            receiverAlreadyAdapted = false)
+    }
+
+    /**
+     * Complete-argument entry for detached plan callers.
+     *
+     * Every declared readonly and normal parameter is already evaluated and typed by the
+     * lowering plan. This entry never completes a default, never visits a default expression
+     * and never re-runs [argPass]. A missing argument is a contract failure rather than a
+     * request to evaluate declaration code again.
+     */
+    internal fun invokeCompleteArguments(readOnlyArgs: LinkedHashMap<String, Var<*>>,
+                                         normalArgs: LinkedHashMap<String, Var<*>>,
+                                         caller: CanSelectMember?): Var<*> {
+        fun failed() = UnknownVar(identifier).apply { type = returnType; isError = true }
+        if (!NativeSignatureValidator.validate(this)) return failed()
+        val missing = readOnlyParams.map { it.identifier }.filter { it !in readOnlyArgs } +
+            normalParams.map { it.identifier }.filter { it !in normalArgs }
+        require(missing.isEmpty()) {
+            "Complete call to '$identifier' is missing declared arguments ${missing.joinToString()}; " +
+                "defaults are never completed by the complete-argument entry"
+        }
+        require(readOnlyArgs.size == readOnlyParams.size && normalArgs.size == normalParams.size) {
+            "Complete call to '$identifier' carries arguments outside its declared readonly+normal signature"
+        }
+        val errors = Project.errorCount
+        val list = ArrayList<Var<*>>(readOnlyParams.size + normalParams.size)
+        for (parameter in readOnlyParams) list.add(completeArgument(parameter, readOnlyArgs.getValue(parameter.identifier)))
+        for (parameter in normalParams) list.add(completeArgument(parameter, normalArgs.getValue(parameter.identifier)))
+        // A captured receiver is already a physical adapter over the caller's original
+        // location. Reading it again would materialize a second location or command.
+        return invokePrepared(list, list, caller, errors,
+            receiverAlreadyAdapted = true)
+    }
+
+    private fun completeArgument(parameter: FunctionParam, value: Var<*>): Var<*> =
+        if (parameter.type is MCFPPNotCompiledGenericType || value.type == parameter.type) value
+        else value.implicitCast(parameter.type)
+
+    private fun invokePrepared(list: List<Var<*>>, observedArguments: List<Var<*>>, caller: CanSelectMember?,
+                               bindingErrors: Int, receiverAlreadyAdapted: Boolean): Var<*> {
+        fun failed() = UnknownVar(identifier).apply { type = returnType; isError = true }
         val noWrites = javaMethod.isAnnotationPresent(top.mcfpp.mni.annotation.NoExternalWrites::class.java) ||
             javaMethod.declaringClass.isAnnotationPresent(top.mcfpp.mni.annotation.NoExternalWrites::class.java)
         val writesReceiver = javaMethod.isAnnotationPresent(top.mcfpp.mni.annotation.WritesReceiver::class.java)
-        val actualCaller = if (caller is top.mcfpp.core.lang.MCAny && caller !is top.mcfpp.core.lang.MCObject)
-            top.mcfpp.analysis.StorageAccess.actualView(caller) else (caller as? Var<*>)?.let(top.mcfpp.analysis.StorageAccess::read) ?: caller
-        val callEffect = top.mcfpp.analysis.EffectAnalysis.recordCall(this, normalArgs, actualCaller as? Var<*>)
+        val actualCaller = if (receiverAlreadyAdapted) caller as? Var<*>
+            else if (caller is top.mcfpp.core.lang.MCAny && caller !is top.mcfpp.core.lang.MCObject)
+                top.mcfpp.analysis.StorageAccess.actualView(caller)
+            else (caller as? Var<*>)?.let(top.mcfpp.analysis.StorageAccess::read) ?: caller
+        val callEffect = top.mcfpp.analysis.EffectAnalysis.recordCall(this, actualCaller as? Var<*>)
         val observed = if (noWrites || writesReceiver) emptyList() else top.mcfpp.analysis.StorageAccess.visibleValues(currFunction.scope) +
-            readOnlyArgs + normalArgs + listOfNotNull(actualCaller as? Var<*>)
-        if (!javaMethod.parameterTypes.contentEquals(arrayOf(NativeCallContext::class.java))) {
-            LogProcessor.error("Native function '$identifier' must use NativeCallContext")
-            return UnknownVar(identifier).apply { type = returnType; isError = true }
-        }
+            observedArguments + listOfNotNull(actualCaller as? Var<*>)
+        val usesContext = javaMethod.parameterTypes.contentEquals(arrayOf(NativeCallContext::class.java))
         val receiver = if (this.caller == MCFPPPrivateType.Void) null else {
             if (actualCaller !is Var<*>) {
                 LogProcessor.error("Native function '$identifier' requires a receiver")
@@ -88,15 +141,32 @@ class NativeFunction : Function, Native {
             }
             actualCaller
         }
-        if (list.any { it.isError } || receiver?.isError == true)
-            return UnknownVar(identifier).apply { type = returnType; isError = true }
+        if (Project.errorCount != bindingErrors || list.any { it.isError } || receiver?.isError == true)
+            return failed()
         top.mcfpp.analysis.StorageAccess.flush(observed)
         val context = NativeCallContext(Function.currFunction, receiver, list, returnType)
+        val legacyResult = if (!usesContext && returnType != MCFPPPrivateType.Void)
+            ValueWrapper(returnType.buildUnConcrete(top.mcfpp.util.TempPool.getVarIdentify()).also {
+                top.mcfpp.analysis.StorageAccess.declareReturnSlot(it)
+            }) else null
         val errors = Project.errorCount
-        val invocationArgs: List<Any?> = listOf(context)
+        val invocationArgs: List<Any?> = if (usesContext) listOf(context) else buildList {
+            context.withArguments { addAll(it) }
+            if (receiver != null) context.withAdapters { adapted, _ -> add(adapted) }
+            legacyResult?.let { add(it) }
+        }
         //一定是静态的
         try {
             javaMethod.invoke(null, *invocationArgs.toTypedArray())
+            if (Project.errorCount == errors && legacyResult != null) {
+                val result = legacyResult.get()
+                when {
+                    result.isError -> LogProcessor.error("Native function '$identifier' produced an invalid result")
+                    !ParameterMatcher.accepts(result, returnType) ->
+                        LogProcessor.error("Native function '$identifier' produced ${result.type}, expected $returnType")
+                    else -> context.publishResult(result.implicitCast(returnType))
+                }
+            }
         } catch (e: IllegalArgumentException) {
             // 参数类型或数量不匹配
             val expected = javaMethod.parameterTypes.map { it.typeName }
@@ -159,8 +229,8 @@ class NativeFunction : Function, Native {
         return list
     }
 
-    fun appendReadOnlyParam(type: MCFPPType, identifier: String, isStatic: Boolean = false) : NativeFunction {
-        readOnlyParams.add(FunctionParam(type ,identifier, this, isStatic))
+    fun appendReadOnlyParam(type: MCFPPType, identifier: String) : NativeFunction {
+        readOnlyParams.add(FunctionParam(type, identifier, this))
         return this
     }
 
@@ -172,7 +242,7 @@ class NativeFunction : Function, Native {
         n.returnType = (this.returnType as? MCFPPTypeWithGeneric)?.replaceGenericParam(genericParams) ?: this.returnType
         for(np in normalParams){
             val type = (np.type as? MCFPPTypeWithGeneric)?.replaceGenericParam(genericParams) ?: np.type
-            val p = FunctionParam(type, np.identifier, n, np.isStatic, np.hasDefault, np.isReadOnly)
+            val p = FunctionParam(type, np.identifier, n, np.hasDefault, np.isReadOnly)
             p.defaultValue = np.defaultValue
             p.defaultTypes = np.defaultTypes
             p.defaultContext = np.defaultContext
@@ -182,7 +252,7 @@ class NativeFunction : Function, Native {
         for(rp in readOnlyParams){
             if (rp.identifier in genericParams) continue
             val type = (rp.type as? MCFPPTypeWithGeneric)?.replaceGenericParam(genericParams) ?: rp.type
-            val p = FunctionParam(type, rp.identifier, n, rp.isStatic, rp.hasDefault, true)
+            val p = FunctionParam(type, rp.identifier, n, rp.hasDefault, true)
             p.defaultValue = rp.defaultValue
             p.defaultTypes = rp.defaultTypes
             p.defaultContext = rp.defaultContext

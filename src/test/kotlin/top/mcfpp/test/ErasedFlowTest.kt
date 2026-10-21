@@ -47,7 +47,7 @@ class ErasedFlowTest {
                     var value: any = 1
                     var i = 0
                     while(i < 4){ value += i; i += 1; }
-                    dynamic result = value + 2
+                    external result = value + 2
                 }
             """, version)
             assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), (main.scope.getVar("value") as MCAny).typeKnowledge)
@@ -60,7 +60,7 @@ class ErasedFlowTest {
             func main(){
                 var value: any = 1
                 var i = 0
-                while(i < 2){ dynamic result = value + 1; value = false; i += 1; }
+                while(i < 2){ external result = value + 1; value = false; i += 1; }
             }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0, "A later iteration must not bind arithmetic to the first iteration's int")
@@ -73,7 +73,7 @@ class ErasedFlowTest {
                 var value: any = 1
                 var i = 0
                 while(i < 2){ value = false; i += 1; }
-                dynamic result = (value as bool) == false
+                external result = (value as bool) == false
             }
         """)
         assertEquals(setOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.Bool.typeId),
@@ -92,7 +92,7 @@ class ErasedFlowTest {
                     if(i == 4){ break; value = false; }
                     value += i
                 }
-                dynamic result = value + 2
+                external result = value + 2
             }
         """)
         assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), (main.scope.getVar("value") as MCAny).typeKnowledge)
@@ -104,7 +104,7 @@ class ErasedFlowTest {
             func main(){
                 var value: any = 1
                 while(true){ value = false; break; }
-                dynamic result = value == false
+                external result = value == false
             }
         """)
         assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Bool.typeId), (main.scope.getVar("value") as MCAny).typeKnowledge)
@@ -124,7 +124,7 @@ class ErasedFlowTest {
                     opaque = copied
                     i += 1
                 }
-                dynamic result = value + copied + (opaque as int)
+                external result = value + copied + (opaque as int)
             }
         """)
         assertEquals(13, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -136,7 +136,7 @@ class ErasedFlowTest {
             func main(){
                 var value: any = 1
                 if(false){ value = false; }
-                dynamic result = value + 2
+                external result = value + 2
             }
         """)
         assertEquals(3, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -148,7 +148,7 @@ class ErasedFlowTest {
             func main(){
                 var value: object = 1
                 var i = 0
-                while(i < 2){ dynamic result = value + 1; i += 1; }
+                while(i < 2){ external result = value + 1; i += 1; }
             }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0)
@@ -157,11 +157,11 @@ class ErasedFlowTest {
     @Test fun returnKnowledgePreservesRuntimeConditionsAndDoesNotEvaluateTheCall() {
         MCFPPStringTest.readFromString("""
             func choose(): any {
-                dynamic condition = true
+                external condition = true
                 while(condition){ return false; }
                 return 2
             }
-            func main(){ var value = choose(); dynamic result = (value as bool) == false; }
+            func main(){ var value = choose(); external result = (value as bool) == false; }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
         val functions = GlobalScope.localNamespaces.getValue("default.test").scope.functions

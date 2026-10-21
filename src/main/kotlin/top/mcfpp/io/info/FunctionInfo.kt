@@ -39,7 +39,9 @@ data class FunctionInfo(
     var isOverride: Boolean,
     var context: CurlBlockContext?,
     val declarationEnvironment: DeclarationEnvironmentInfo?,
-    val accessModifier: Member.AccessModifier
+    val accessModifier: Member.AccessModifier,
+    val isFinal: Boolean = false,
+    val annotations: List<top.mcfpp.model.annotation.Annotation> = emptyList()
 ): AbstractFunctionInfo<Function> {
     override fun get(): Function {
         val f = Function(identifier, namespace, null)
@@ -56,6 +58,8 @@ data class FunctionInfo(
         f.isOverride = isOverride
         f.isAbstract = isAbstract
         f.accessModifier = accessModifier
+        f.isFinal = isFinal
+        f.annotations.addAll(top.mcfpp.model.property.Property.copyAnnotations(annotations))
         f.ast = context
         f.buildParamVar()
         currFunction = null
@@ -74,7 +78,9 @@ data class FunctionInfo(
                 function.isOverride,
                 function.ast,
                 DeclarationEnvironmentInfo.from(function.declarationFile) ?: function.declarationEnvironment,
-                function.accessModifier
+                function.accessModifier,
+                function.isFinal,
+                top.mcfpp.model.property.Property.copyAnnotations(function.annotations)
             )
         }
     }
@@ -91,7 +97,9 @@ data class GenericFunctionInfo(
     var tags: List<FunctionTagInfo>,
     var isOverride: Boolean,
     val declarationEnvironment: DeclarationEnvironmentInfo?,
-    val accessModifier: Member.AccessModifier
+    val accessModifier: Member.AccessModifier,
+    val isFinal: Boolean = false,
+    val annotations: List<top.mcfpp.model.annotation.Annotation> = emptyList()
 ): AbstractFunctionInfo<GenericFunction> {
     override fun get(): GenericFunction {
         val f = GenericFunction(identifier, namespace, context)
@@ -111,6 +119,8 @@ data class GenericFunctionInfo(
         f.isOverride = isOverride
         f.isAbstract = isAbstract
         f.accessModifier = accessModifier
+        f.isFinal = isFinal
+        f.annotations.addAll(top.mcfpp.model.property.Property.copyAnnotations(annotations))
         f.buildParamVar()
         currFunction = null
         return f
@@ -129,7 +139,9 @@ data class GenericFunctionInfo(
                 genericFunction.tags.map { FunctionTagInfo.from(it) },
                 genericFunction.isOverride,
                 DeclarationEnvironmentInfo.from(genericFunction.declarationFile) ?: genericFunction.declarationEnvironment,
-                genericFunction.accessModifier
+                genericFunction.accessModifier,
+                genericFunction.isFinal,
+                top.mcfpp.model.property.Property.copyAnnotations(genericFunction.annotations)
             )
         }
     }
@@ -146,7 +158,9 @@ data class NativeFunctionInfo(
     var tags: List<FunctionTagInfo>,
     var isOverride: Boolean,
     var caller: MCFPPType,
-    val accessModifier: Member.AccessModifier
+    val accessModifier: Member.AccessModifier,
+    val isFinal: Boolean = false,
+    val annotations: List<top.mcfpp.model.annotation.Annotation> = emptyList()
 ): AbstractFunctionInfo<NativeFunction> {
     override fun get(): NativeFunction {
         val data = NativeFunction.stringToMethod(methodString)
@@ -165,6 +179,8 @@ data class NativeFunctionInfo(
         f.isOverride = isOverride
         f.isAbstract = isAbstract
         f.accessModifier = accessModifier
+        f.isFinal = isFinal
+        f.annotations.addAll(top.mcfpp.model.property.Property.copyAnnotations(annotations))
         f.caller = caller
         f.buildParamVar()
         currFunction = null
@@ -184,7 +200,9 @@ data class NativeFunctionInfo(
                 function.tags.map { FunctionTagInfo.from(it) },
                 function.isOverride,
                 function.caller,
-                function.accessModifier
+                function.accessModifier,
+                function.isFinal,
+                top.mcfpp.model.property.Property.copyAnnotations(function.annotations)
             )
         }
     }
@@ -214,6 +232,8 @@ data class ExtensionFunctionInfo(
             function.isOverride = declaration.isOverride
             function.isAbstract = declaration.isAbstract
             function.accessModifier = declaration.accessModifier
+            function.isFinal = declaration.isFinal
+            function.annotations.addAll(top.mcfpp.model.property.Property.copyAnnotations(declaration.annotations))
             function.buildParamVar()
         } finally { currFunction = null }
         return function

@@ -26,9 +26,9 @@ class GenericDeclarationContractTest {
             namespace fixture.variance
             data Base {}
             data Child:Base {}
-            data abstract Producer<out T> { abstract func read():T; }
-            data abstract Consumer<in T> { abstract func accept(value: T); }
-            data abstract Nested<out T> { abstract func read():Producer<T>; }
+            abstract data Producer<out T> { abstract func read():T; }
+            abstract data Consumer<in T> { abstract func accept(value: T); }
+            abstract data Nested<out T> { abstract func read():Producer<T>; }
             data Invariant<T> {}
         """, output)
         assertEquals(0, Project.errorCount)
@@ -51,8 +51,8 @@ class GenericDeclarationContractTest {
         assertTrue(specialize("Consumer", base).isSubOf(specialize("Consumer", child)))
         assertFalse(specialize("Invariant", child).isSubOf(specialize("Invariant", base)))
         for (source in listOf(
-            "data abstract Bad<out T>{abstract func accept(value: T);}",
-            "data abstract Bad<in T>{abstract func read():T;}",
+            "abstract data Bad<out T>{abstract func accept(value: T);}",
+            "abstract data Bad<in T>{abstract func read():T;}",
             "data Invariant<T>{}\ndata abstract Bad<out T>{abstract func read():Invariant<T>;}",
             "data Invariant<T>{}\ndata Bad<out T>:Invariant<T>{}",
             "data Bad<out N: int>{}",
@@ -95,17 +95,17 @@ class GenericDeclarationContractTest {
                 var local: int
                 local=3
                 local+=2
-                dynamic localResult=local
+                external localResult=local
                 var first=Box<4>(4);var second=Box<9>(9);var third=Box<4>(8)
                 Box<4>.setValue(4);Box<9>.setValue(9)
-                dynamic firstResult=first.companionRead()
-                dynamic secondResult=second.companionRead()
-                dynamic firstOwn=Box<4>.inspect(first)
-                dynamic secondOwn=Box<9>.inspect(second)
-                dynamic thirdResult=third.read()
+                external firstResult=first.companionRead()
+                external secondResult=second.companionRead()
+                external firstOwn=Box<4>.inspect(first)
+                external secondOwn=Box<9>.inspect(second)
+                external thirdResult=third.read()
                 Shared.setValue(7)
                 var shared=Shared<2>();var otherShared=Shared<3>()
-                dynamic sharedResult=shared.read();dynamic otherSharedResult=otherShared.read()
+                external sharedResult=shared.read();external otherSharedResult=otherShared.read()
             }
         """
         compile("$declarations\n$main", output)

@@ -114,7 +114,7 @@ class VarIdentityTest {
                 if(value <= 0){ return 0; }
                 return value + ((value + 1) + sum(value - 1))
             }
-            func main(){ dynamic result = sum(4); }
+            func main(){ external result = sum(4); }
         """)
         val sum = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("sum").single()
         assertNull(sum.typedIR)

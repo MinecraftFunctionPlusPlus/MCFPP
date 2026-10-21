@@ -43,10 +43,10 @@ class DictionaryIRTest {
                         values.merge({first:7} as dict<int>)
                         i += 1
                     }
-                    dynamic present = values.containsKey("first")
-                    dynamic result = values["first"] + values["second"]
+                    external present = values.containsKey("first")
+                    external result = values["first"] + values["second"]
                     values.clear()
-                    dynamic removed = values.containsKey("first")
+                    external removed = values.containsKey("first")
                 }
             """, version)
             val machine = execute(main)
@@ -65,45 +65,13 @@ class DictionaryIRTest {
                 var nested = values["nested"] as dict<int>
                 nested["first"] = 8
                 var original = source["nested"] as dict<int>
-                dynamic result = nested["first"] + nested["second"] + original["first"]
-                dynamic preserved = values["untouched"] == true
+                external result = nested["first"] + nested["second"] + original["first"]
+                external preserved = values["untouched"] == true
             }
         """)
         val machine = execute(main)
         assertEquals(24, machine.read(main.scope.getVar("result") as MCInt))
         assertEquals(1, machine.read(main.scope.getVar("preserved") as ScoreBool))
-    }
-
-    @Test fun staticRemovalMapsItsFieldEffectAndPreservesSiblingTypes() = modes {
-        val main = compile("""
-            func erase(static values: dict<any>) { values.remove("first"); }
-            func main(){
-                var values: dict<any> = {first:2, second:9}
-                erase(values)
-                dynamic result = values["second"] + 1
-                dynamic removed = values.containsKey("first")
-            }
-        """)
-        val machine = execute(main)
-        assertEquals(10, machine.read(main.scope.getVar("result") as MCInt))
-        assertEquals(0, machine.read(main.scope.getVar("removed") as ScoreBool))
-        val erase = function("erase")
-        assertNotNull(erase.typedIR)
-        assertEquals(setOf(Place(erase.typedIR!!.parameters.single()).field("first")), assertIs<Effect.Writes>(erase.runtimeEffect).places)
-    }
-
-    @Test fun memberReceiverRetainsItsIndexAcrossArgumentEffects() = modes {
-        val main = compile("""
-            func identity(value: int): int { return value; }
-            func change(static index: int): dict<int> { index = 1; return {first:7}; }
-            func main(){
-                var values = [{first:2},{first:9}]
-                var index = identity(0)
-                values[index].merge(change(index))
-                dynamic result = values[0]["first"] + values[1]["first"]
-            }
-        """)
-        assertEquals(16, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun signaturesAndKeyCapabilitiesAreCheckedBeforeCommands() {
@@ -121,9 +89,9 @@ class DictionaryIRTest {
             func main(){
                 var values: dict<int> = {first:2}
                 values["a.b"] = 7
-                dynamic before = values.containsKey("a.b")
+                external before = values.containsKey("a.b")
                 values.remove("a.b")
-                dynamic after = values.containsKey("a.b")
+                external after = values.containsKey("a.b")
             }
         """)
         val machine = execute(main)
@@ -173,21 +141,21 @@ class DictionaryIRTest {
                     var lists: dict<list<int>> = {key:[7]}
                     var node=Node(9);var nodes: dict<Node> = {key:node}
                     var nested: dict<dict<int>> = {key:{value:11}}
-                    dynamic listResult=readList(lists)
-                    dynamic nodeResult=readNode(nodes)
-                    dynamic nestedResult=readNested(nested)
-                    var returned=returnNode(nodes);dynamic returnResult=returned.value
-                    dynamic copyResult=copyNode(nodes);dynamic originalAgain=readNode(nodes)
+                    external listResult=readList(lists)
+                    external nodeResult=readNode(nodes)
+                    external nestedResult=readNested(nested)
+                    var returned=returnNode(nodes);external returnResult=returned.value
+                    external copyResult=copyNode(nodes);external originalAgain=readNode(nodes)
                     var deep=Node(7);var next=Node(9);var third=Node(88)
                     var fourth=Node(123);var fifth=Node(456)
                     fourth.next=fifth;third.next=fourth;next.next=third;deep.next=next
                     var deepNodes: dict<Node> = {key:deep}
-                    dynamic deepDirect=readDeep(deepNodes)
-                    dynamic deepCopy=copyDeep(deepNodes)
-                    dynamic deepReturned=returnDeep(deepNodes)
-                    dynamic deepIndependent=independentDeep(deepNodes)
-                    dynamic deepOriginalAgain=readDeep(deepNodes)
-                    dynamic deepRepeated=repeatDeep(deepNodes)
+                    external deepDirect=readDeep(deepNodes)
+                    external deepCopy=copyDeep(deepNodes)
+                    external deepReturned=returnDeep(deepNodes)
+                    external deepIndependent=independentDeep(deepNodes)
+                    external deepOriginalAgain=readDeep(deepNodes)
+                    external deepRepeated=repeatDeep(deepNodes)
                 }
             """.trimIndent()
             fun check() {
@@ -287,9 +255,9 @@ class DictionaryIRTest {
 
     @Test fun compositeAccessDoesNotProveMissingFieldsOrErasedLayouts() {
         for (source in listOf(
-            "data Node { var value: int; constructor(){} }\nfunc main(){var node=Node();dynamic result=node.value;}",
-            "func reject(values: dict<any>){dynamic result=values[\"key\"][0];}\nfunc main(){}",
-            "func reject(values: dict<object>){dynamic result=values[\"key\"][0];}\nfunc main(){}"
+            "data Node { var value: int; constructor(){} }\nfunc main(){var node=Node();external result=node.value;}",
+            "func reject(values: dict<any>){external result=values[\"key\"][0];}\nfunc main(){}",
+            "func reject(values: dict<object>){external result=values[\"key\"][0];}\nfunc main(){}"
         )) {
             MCFPPStringTest.readFromString(source, version = "26.3")
             assertTrue(Project.errorCount > 0, source)

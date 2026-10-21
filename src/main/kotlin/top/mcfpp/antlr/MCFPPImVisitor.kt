@@ -251,6 +251,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext):Any? = withCompilationContext(ctx) {
         val declarationErrors = Project.errorCount
         val fieldModifier = ctx.fieldModifier()?.start?.text
+        val isExternal = ctx.fieldModifier()?.EXTERNAL() != null
         var type = ctx.type()?.let {
             MCFPPType.parseFromContextNotNull(it, Function.currFunction.scope)
         }
@@ -293,9 +294,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             LogProcessor.error("Duplicate defined variable:" + ctx.Identifier().text)
         }
         `var`.isConst = fieldModifier == "const"
-        `var`.bindDeclaration(forceRuntime = fieldModifier == "dynamic")
+        `var`.bindDeclaration(forceRuntime = isExternal)
         if (fieldModifier == "import") StorageAccess.bindIncomingParameter(`var`)
-        val stored = if (fieldModifier == "dynamic" && init != null && !top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(init)) {
+        val stored = if (isExternal && init != null && !top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(init)) {
             `var`.assignedBy(init)
         } else if (isViewInitializer(ctx.expression()) && init?.storageBinding?.view != null && init.type == type) {
             top.mcfpp.analysis.StorageAccess.adapter(type, `var`.identifier, init.storageBinding!!).apply {
@@ -304,7 +305,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             }
         } else if (init != null) `var`.assignedBy(init) else `var`
         Function.currField.putVar(`var`.identifier, stored, true)
-        if (fieldModifier == "dynamic" && !stored.isError) makeRuntime(stored)
+        if (isExternal && !stored.isError) makeRuntime(stored)
         return null
     }
 

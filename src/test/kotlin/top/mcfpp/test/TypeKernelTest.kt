@@ -25,7 +25,7 @@ class TypeKernelTest {
     @Test fun hostInteropCannotCreateOrdinaryLanguageValues() {
         MCFPPStringTest.readFromString("""
             func main(){
-                dynamic input: int = 1
+                external input: int = 1
                 var erased: any = input::jvm
                 print(erased)
             }
@@ -43,7 +43,7 @@ class TypeKernelTest {
             func arithmetic(){
                 var small = 7b
                 var wider = 300s
-                dynamic condition = true
+                external condition = true
                 if(condition){ small = 8b; } else { small = 9b; }
                 var result = toInt(small) + toInt(wider)
             }
@@ -57,7 +57,7 @@ class TypeKernelTest {
     @Test fun anyWithARuntimePredicateKeepsBoolTypeWithoutClaimingAConstant() {
         MCFPPStringTest.readFromString("""
             func arithmetic(){
-                dynamic input: bool = true
+                external input: bool = true
                 var erased: any = !input
                 var result = erased == true
             }
@@ -124,7 +124,7 @@ class TypeKernelTest {
         val b = DataTemplate("Point", "two").getType()
         assertNotEquals(a, b)
         assertEquals(a, DataTemplate("Point", "one").getType())
-        assertNotEquals<MCFPPType>(a, MCFPPInterfaceType(a.template, arrayListOf()))
+        assertNotEquals<MCFPPType>(a, top.mcfpp.model.compound.ObjectDataTemplate("Point", "one").getType())
     }
 
     @Test fun containersAreInvariantAndHaveConstructorSensitiveHashes() {
@@ -282,7 +282,7 @@ class TypeKernelTest {
     @Test fun anyKeepsActualTypeWhileForcingRuntimeValueAndPromotesThroughItsSourceType() {
         MCFPPStringTest.readFromString("""
             func arithmetic(){
-                dynamic value: any = 3
+                external value: any = 3
                 var result = value + 2
                 var promoted: float = value
             }

@@ -2,19 +2,127 @@ package top.mcfpp.analysis
 
 /** Least fixed point of external writes. Local copies do not escape through ordinary parameters. */
 object EffectAnalysis {
-    private class ActualEffects(val function: top.mcfpp.model.function.Function, val freshReceiver: Boolean) {
+    private class ActualEffects(
+        val function: top.mcfpp.model.function.Function,
+        val freshReceiver: Boolean,
+        val parent: ActualEffects?
+    ) {
         val locals = linkedSetOf<SymbolId>()
         val external = linkedSetOf<SymbolId>()
         var effect: Effect = Effect.Pure
     }
     private var actual: ActualEffects? = null
 
+    /** Effect fields are immutable; their host-supplied sets may still be mutable and shared. */
+    internal class EffectGraphSnapshot internal constructor(
+        private val restoreState: () -> Unit,
+        private val recapture: (List<Effect>) -> EffectGraphSnapshot
+    ) {
+        fun restore() = restoreState()
+        fun captureCurrent(additionalEffects: List<Effect> = emptyList()): EffectGraphSnapshot = recapture(additionalEffects)
+    }
+
+    internal fun checkpointEffectGraph(effects: List<Effect>): EffectGraphSnapshot = captureEffectGraph(emptyList(), effects)
+
+    private fun captureEffectGraph(retained: List<Effect>, additional: List<Effect>): EffectGraphSnapshot {
+        check(additional.javaClass == java.util.ArrayList::class.java || additional.javaClass.name in effectRootLists) {
+            "Effect journal cannot capture roots ${additional.javaClass.name}"
+        }
+        val seen = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Effect, Boolean>())
+        val roots = (retained + additional).filter { seen.add(it) }
+        val containers = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Any, Boolean>())
+        val restores = arrayListOf<() -> Unit>()
+        fun savePlaces(places: Set<Place>) {
+            if (!containers.add(places)) return
+            check(places.javaClass in mutableEffectSets || places.javaClass.name in immutableSets) {
+                "Effect journal cannot capture places ${places.javaClass.name}"
+            }
+            // Inspect only a known container. A Java generic lie must not reach addAll/hashCode.
+            val items = (places as Set<*>).toList()
+            for (item in items) {
+                check(item is Place) { "Effect journal requires immutable Place elements" }
+                // Place copies its list, but erased Java generics can still introduce host elements.
+                // Restore rehashes each Place, so validate without invoking any segment callbacks.
+                check((item.path as List<*>).all {
+                    it is PathSegment.Field || it is PathSegment.Index || it === PathSegment.UnknownIndex
+                }) { "Effect journal requires supported immutable Place path segments" }
+            }
+            if (places.javaClass in mutableEffectSets) {
+                @Suppress("UNCHECKED_CAST") val saved = items as List<Place>
+                @Suppress("UNCHECKED_CAST") val mutable = places as MutableSet<Place>
+                restores += { mutable.clear(); mutable.addAll(saved) }
+            }
+        }
+        for (effect in roots) when (effect) {
+            is Effect.Writes -> { savePlaces(effect.places); savePlaces(effect.contents) }
+            Effect.Pure, Effect.ReadsRuntime, Effect.Unknown -> Unit
+        }
+        // Retain the Effect roots themselves: replacing the live summary must not detach its sets.
+        // Place owns immutable path/segment copies, so no adapter or compiler object is cloned here.
+        return EffectGraphSnapshot({ restores.forEach { it() } }, { captureEffectGraph(roots, it) })
+    }
+
+    /** Opaque capability: callers can enroll functions, but cannot change active effect frames. */
+    internal class JournalSnapshot internal constructor(
+        val functions: List<top.mcfpp.model.function.Function>,
+        private val restoreState: () -> Unit,
+        private val recapture: () -> JournalSnapshot
+    ) {
+        fun restore() = restoreState()
+        fun captureCurrent(): JournalSnapshot = recapture()
+    }
+
+    internal fun checkpointActualEffects(): JournalSnapshot = captureActualEffects(emptyList(), null)
+
+    private fun captureActualEffects(retained: List<ActualEffects>, retainedGraph: EffectGraphSnapshot?): JournalSnapshot {
+        val active = actual
+        val pending = ArrayDeque<ActualEffects>().apply {
+            addAll(retained)
+            active?.let(::addLast)
+        }
+        val seen = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<ActualEffects, Boolean>())
+        val frames = arrayListOf<ActualEffects>()
+        val restores = arrayListOf<() -> Unit>()
+        val effects = arrayListOf<Effect>()
+        while (pending.isNotEmpty()) {
+            val frame = pending.removeFirst()
+            if (!seen.add(frame)) continue
+            frames.add(frame)
+            frame.parent?.let(pending::addLast)
+            val locals = frame.locals.toList()
+            val external = frame.external.toList()
+            val effect = frame.effect
+            effects.add(effect)
+            restores += {
+                frame.locals.clear(); frame.locals.addAll(locals)
+                frame.external.clear(); frame.external.addAll(external)
+                frame.effect = effect
+            }
+        }
+        val graph = retainedGraph?.captureCurrent(effects) ?: checkpointEffectGraph(effects)
+        return JournalSnapshot(java.util.Collections.unmodifiableList(frames.map { it.function }), {
+            restores.forEach { it() }
+            graph.restore()
+            actual = active
+        }, { captureActualEffects(frames, graph) })
+    }
+
+    private val mutableEffectSets = setOf<Class<*>>(java.util.HashSet::class.java, java.util.LinkedHashSet::class.java)
+    private val effectRootLists = setOf(
+        "kotlin.collections.EmptyList", "java.util.Collections\$EmptyList", "java.util.Collections\$SingletonList",
+        "java.util.Arrays\$ArrayList", "java.util.ImmutableCollections\$List12", "java.util.ImmutableCollections\$ListN"
+    )
+    private val immutableSets = setOf(
+        "kotlin.collections.EmptySet", "java.util.Collections\$EmptySet", "java.util.Collections\$SingletonSet",
+        "java.util.ImmutableCollections\$Set12", "java.util.ImmutableCollections\$SetN"
+    )
+
     /** Collect only the body actually being emitted; recursive prototypes remain unproved. */
     fun <T> withActualEffects(function: top.mcfpp.model.function.Function, freshReceiver: Boolean = false, block: () -> T): T {
         if (function.bodyCompiled || function.bodyBeingCompiled) return block()
         val previous = actual
         val errors = top.mcfpp.Project.errorCount
-        val context = ActualEffects(function, freshReceiver)
+        val context = ActualEffects(function, freshReceiver, previous)
         val own = function.scope.allVars.toSet()
         for (value in StorageAccess.visibleValues(function.scope)) {
             val root = StorageAccess.ensure(value).place.root
@@ -34,7 +142,7 @@ object EffectAnalysis {
     private fun external(context: ActualEffects, place: Place): Boolean? {
         for (parameter in context.function.normalParams) {
             val root = context.function.scope.getVar(parameter.identifier)?.storageBinding?.place?.root ?: continue
-            if (root == place.root) return parameter.isStatic
+            if (root == place.root) return false
         }
         val receiver = context.function.scope.getVar("this")?.storageBinding?.place?.root
         if (receiver == place.root) return !context.freshReceiver
@@ -60,8 +168,8 @@ object EffectAnalysis {
         context.effect = join(context.effect, observed)
     }
 
-    /** Map the completed callee summary through its real parameter and receiver bindings. */
-    fun recordCall(callee: top.mcfpp.model.function.Function, arguments: List<top.mcfpp.core.lang.Var<*>>,
+    /** Map the completed callee summary through its receiver binding. */
+    fun recordCall(callee: top.mcfpp.model.function.Function,
                    receiver: top.mcfpp.core.lang.Var<*>? = null): Effect {
         val effect = if (callee is top.mcfpp.model.function.NativeFunction) {
             val method = callee.javaMethod
@@ -77,14 +185,6 @@ object EffectAnalysis {
             recordEffect(effect); return effect
         }
         fun mapped(place: Place): Place? {
-            for ((index, parameter) in callee.normalParams.withIndex()) {
-                val formal = callee.scope.getVar(parameter.identifier)?.storageBinding?.place ?: continue
-                if (formal.root == place.root) {
-                    if (!parameter.isStatic) return null
-                    val argument = arguments.getOrNull(index)?.storageBinding?.place ?: return null
-                    return Place(argument.root, argument.path + place.path.drop(formal.path.size))
-                }
-            }
             val formal = callee.scope.getVar("this")?.storageBinding?.place
             if (formal != null && formal.root == place.root) {
                 val argument = receiver?.storageBinding?.place ?: return null
@@ -103,18 +203,6 @@ object EffectAnalysis {
     }
     fun analyze(functions: Map<SymbolId, TypedIR>): Map<SymbolId, Effect> {
         val effects = functions.keys.associateWith<SymbolId, Effect> { Effect.Pure }.toMutableMap()
-        // An acyclic path cannot be longer than all path segments in the graph together.
-        // Recursive composition beyond that bound widens to the external root.
-        val pathBound = functions.values.sumOf { ir -> ir.blocks.sumOf { block -> block.instructions.sumOf { instruction ->
-            when (instruction) {
-                is Instruction.Write -> instruction.place.path.size
-                is Instruction.DictionaryMember -> instruction.receiver.place.path.size + 1
-                is Instruction.ListMember -> instruction.receiver.place.path.size
-                is Instruction.MapMember -> instruction.receiver.place.path.size + 1
-                is Instruction.Call -> instruction.argumentPlaces.sumOf { it?.path?.size ?: 0 }
-                else -> 0
-            }
-        } } }
         var changed: Boolean
         do {
             changed = false
@@ -136,9 +224,8 @@ object EffectAnalysis {
                         else -> Effect.Pure
                     }
                     val external = if (observed is Effect.Writes)
-                        writes(observed.places.filter { it.root in ir.externalRoots }.map {
-                            if (it.path.size > pathBound) Place(it.root) else it
-                        }.toSet(), observed.contents.filter { it.root in ir.externalRoots && it.path.size <= pathBound }.toSet()) else observed
+                        writes(observed.places.filter { it.root in ir.externalRoots }.toSet(),
+                            observed.contents.filter { it.root in ir.externalRoots }.toSet()) else observed
                     effect = join(effect, external)
                 }
                 effect = join(effects.getValue(id), effect)
@@ -150,17 +237,8 @@ object EffectAnalysis {
 
     fun callEffect(call: Instruction.Call, functions: Map<SymbolId, TypedIR>, effects: Map<SymbolId, Effect>): Effect {
         if (call.provisional) return Effect.Unknown
-        val target = functions[call.declaration] ?: return call.effect
-        val effect = effects[call.declaration] ?: return Effect.Unknown
-        if (effect !is Effect.Writes) return effect
-        fun mapPlace(place: Place): Place? {
-            val parameter = target.parameters.indexOf(place.root)
-            if (parameter < 0) return place
-            val argument = call.argumentPlaces.getOrNull(parameter) ?: return null
-            return Place(argument.root, argument.path + place.path)
-        }
-        val mapped = effect.places.map { mapPlace(it) ?: return Effect.Unknown }.toSet()
-        return writes(mapped, effect.contents.mapNotNull(::mapPlace).toSet())
+        if (call.declaration !in functions) return call.effect
+        return effects[call.declaration] ?: Effect.Unknown
     }
 
     fun bind(ir: TypedIR, functions: Map<SymbolId, TypedIR>, effects: Map<SymbolId, Effect>) = ir.copy(

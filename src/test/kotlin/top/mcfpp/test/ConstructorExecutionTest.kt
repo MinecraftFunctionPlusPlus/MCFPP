@@ -46,7 +46,7 @@ class ConstructorExecutionTest {
                     var first = Box(1)
                     var second = Box(2)
                     first.value = 9
-                    dynamic result = first.value*10 + second.value
+                    external result = first.value*10 + second.value
                 }
             """, output)
             val constructor = template().constructors.single()
@@ -67,7 +67,7 @@ class ConstructorExecutionTest {
                     var first = Box()
                     first.value = 9
                     var second = Box()
-                    dynamic result = first.value*10 + second.value
+                    external result = first.value*10 + second.value
                 }
             """)
             assertEquals(94, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -111,7 +111,7 @@ class ConstructorExecutionTest {
                     var first = Box(1,1)
                     var second = Box(1,2)
                     var third = Box(2,3)
-                    dynamic result = first.value*100 + second.value*10 + third.value
+                    external result = first.value*100 + second.value*10 + third.value
                 }
             """, output)
             val constructor = template().constructors.single()
@@ -137,7 +137,7 @@ class ConstructorExecutionTest {
             func main(){
                 var first = Box(1)
                 var second = Box(2)
-                dynamic result = first.value*10 + second.value
+                external result = first.value*10 + second.value
             }
         """)
         assertEquals(35, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -154,7 +154,7 @@ class ConstructorExecutionTest {
                 var first = Box(1)
                 var second = Box(2)
                 first.setValue(9)
-                dynamic result = first.value*10 + second.value
+                external result = first.value*10 + second.value
             }
         """)
         assertEquals(92, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -179,7 +179,7 @@ class ConstructorExecutionTest {
                 var ignored = 6/2
                 var first = Box(1)
                 var second = Box(0)
-                dynamic result = choose(2)*100 + first.value*10 + second.value
+                external result = choose(2)*100 + first.value*10 + second.value
                 /say done
                 return
                 /say unreachable
@@ -208,7 +208,7 @@ class ConstructorExecutionTest {
                 var copied = source
                 var view = source as Target
                 view.setValue(9)
-                dynamic result = source.value*10 + copied.value
+                external result = source.value*10 + copied.value
             }
         """)
         val source = main.scope.getVar("source")!!

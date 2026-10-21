@@ -39,7 +39,7 @@ class BaseTest {
         val test =
             """
                 func main(){
-                    dynamic qwq: int
+                    external qwq: int
                     test(qwq)
                 }
                 
@@ -93,7 +93,7 @@ class BaseTest {
         val test =
             """
                 var i = 0
-                dynamic qwq = 1
+                external qwq = 1
                 print(i)
                 print(qwq)
             """.trimIndent()
@@ -110,7 +110,7 @@ class BaseTest {
         val test =
             """
                 func test(): int{
-                    dynamic a = 1
+                    external a = 1
                     return a
                 }
             """.trimIndent()

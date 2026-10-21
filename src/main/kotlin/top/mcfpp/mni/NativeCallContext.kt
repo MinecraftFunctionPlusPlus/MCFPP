@@ -8,9 +8,9 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.bool.BaseBool
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.model.function.Function
-import top.mcfpp.util.LogProcessor
-import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPPrivateType
+import top.mcfpp.type.MCFPPType
+import top.mcfpp.util.LogProcessor
 
 /** Explicit native call boundary; Var and global StorageAccess remain internal compatibility bridges. */
 class NativeCallContext internal constructor(
@@ -91,8 +91,12 @@ class NativeCallContext internal constructor(
                 return@runInFunction
             }
             val stored = StorageAccess.ensure(receiver)
-            val value = StorageAccess.restore(StorageAccess.actualType(receiver), payload,
-                receiver.identifier, stored.data.types)
+            val value = StorageAccess.restore(
+                StorageAccess.actualType(receiver),
+                payload,
+                receiver.identifier,
+                stored.data.types
+            )
             if (value == null) {
                 LogProcessor.error("Cannot restore native receiver payload as '${StorageAccess.actualType(receiver)}'")
                 return@runInFunction

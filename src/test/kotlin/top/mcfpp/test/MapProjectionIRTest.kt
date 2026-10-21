@@ -44,10 +44,10 @@ class MapProjectionIRTest {
                 keys[0] = "changed"
                 var number = 0
                 if(projected["flag"]){ number = projected["numbers"][-1]; }
-                dynamic result = values["numbers"][0]*100 + projected["numbers"][0]*10 + number
-                dynamic first = values.keys.indexOf("numbers")
-                dynamic direct = values.keyValueSet["numbers"][1] + 0
-                dynamic changed = values.keys.contains("changed")
+                external result = values["numbers"][0]*100 + projected["numbers"][0]*10 + number
+                external first = values.keys.indexOf("numbers")
+                external direct = values.keyValueSet["numbers"][1] + 0
+                external changed = values.keys.contains("changed")
             }
         """)
         val machine = execute(main)
@@ -69,9 +69,9 @@ class MapProjectionIRTest {
                 var keys = names(values,2)
                 var key = first(values)
                 values.clear()
-                dynamic found = keys.contains("q\".[]\\end")
-                dynamic captured = keys.contains(key)
-                dynamic empty = values.keys.contains("q\".[]\\end")
+                external found = keys.contains("q\".[]\\end")
+                external captured = keys.contains(key)
+                external empty = values.keys.contains("q\".[]\\end")
             }
         """, "1.20.1")
         val machine = execute(main)
@@ -80,21 +80,6 @@ class MapProjectionIRTest {
         assertEquals(0, machine.read(main.scope.getVar("empty") as ScoreBool))
         assertEquals(Effect.Pure, function("names").runtimeEffect)
         assertTrue(Project.macroFunction.isEmpty())
-    }
-
-    @Test fun projectionArgumentsRetainTheirValuesBeforeLaterStaticCalls() = modes {
-        val main = compile("""
-            func clear(static values: map<list<int>>): int { values.clear(); return 1; }
-            func take(value: dict<list<int>>, ignored: int): int { return value["first"][0]; }
-            func main(){
-                var values = {entries:[{key:"first",value:[2,3]}]} as map<list<int>>
-                dynamic result = take(values.keyValueSet,clear(values))
-                dynamic empty = values.isEmpty()
-            }
-        """)
-        val machine = execute(main)
-        assertEquals(2, machine.read(main.scope.getVar("result") as MCInt))
-        assertEquals(1, machine.read(main.scope.getVar("empty") as ScoreBool))
     }
 
     @Test fun dictionaryProjectionRebuildsCurrentFieldsOnLoopBackedges() = modes {
@@ -109,7 +94,7 @@ class MapProjectionIRTest {
                     values["first"] += 1
                     count += 1
                 }
-                dynamic result = sum
+                external result = sum
             }
         """, "1.20.2")
         assertEquals(9, execute(main).read(main.scope.getVar("result") as MCInt))

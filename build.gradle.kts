@@ -1,7 +1,4 @@
-import org.gradle.api.tasks.Exec
 import org.gradle.kotlin.dsl.get
-import java.nio.file.Files
-import java.util.Optional
 
 plugins {
     kotlin("jvm") version "1.9.20"
@@ -10,7 +7,6 @@ plugins {
     antlr
     id("org.jetbrains.dokka") version "1.9.20"
     java
-    cpp
     id("maven-publish")
     id("com.gradleup.shadow") version "8.3.5"
 }
@@ -62,6 +58,7 @@ dependencies {
     implementation("com.alibaba.fastjson2:fastjson2:2.0.28")
     implementation("com.esotericsoftware:kryo:5.6.2")
     implementation("top.mcfpp:nbt:1.0")
+    implementation("info.picocli:picocli:4.7.7")
     antlr("org.antlr:antlr4:4.13.1")
 }
 
@@ -113,18 +110,10 @@ tasks.jar{
     }
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 
-    from("build/dll"){
-        into("native")
-        include("**/*.dll")
-    }
-
     exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
 
     isZip64 = true
 }
-
-val jniSourceDir = file("src/main/java/top/mcfpp/jni")
-val cppSourceDir = file("src/main/cpp")
 
 tasks.withType<JavaCompile> {
     // 关键点：通过 forkOptions 设置 JVM 参数
@@ -134,68 +123,6 @@ tasks.withType<JavaCompile> {
     )
     // 确保启用 fork 模式
     options.isFork = true
-}
-
-tasks.register<JavaCompile>("generateJni") {
-    group = "build"
-    destinationDirectory.set(file("$buildDir/generated/jni"))
-    source = fileTree(jniSourceDir)
-    classpath = files()
-    options.compilerArgs = listOf("-h", "$buildDir/generated/jni")
-}
-
-tasks.register<Exec>("compileCpp") {
-    group = "build"
-    workingDir(cppSourceDir)
-
-    val osOptional = OperatingSystem.current()
-    if (osOptional.isEmpty)
-        throw RuntimeException("Failed to compile JNI source due to unsupported operating system.")
-    val os = osOptional.get()
-
-    fun dirName(): String {
-        return when (os) {
-            OperatingSystem.WINDOWS -> "win32"
-            OperatingSystem.MACOS -> "darwin"
-            OperatingSystem.LINUX -> "linux"
-        }
-    }
-    fun extName(): String {
-        return when (os) {
-            OperatingSystem.WINDOWS -> ".dll"
-            OperatingSystem.MACOS -> ".dylib"
-            OperatingSystem.LINUX -> ".so"
-        }
-    }
-
-    val outputDirStr = "$buildDir/dll"
-    val outputDir = File(outputDirStr)
-    if (!outputDir.exists()) {
-        outputDir.mkdir()
-    }
-
-    val cmdArgs = ArrayList<String>()
-    cmdArgs.addAll(listOf(
-        "g++",
-        "-fPIC",
-        "-I",
-        "${System.getProperty("java.home")}/include",
-        "-I",
-        "${System.getProperty("java.home")}/include/${dirName()}",
-        "-I",
-        "$buildDir/generated/jni",
-        "-shared",
-        "-o",
-        "$outputDirStr/native${extName()}"
-    ))
-
-    val cppPath = cppSourceDir.toPath()
-    Files.walk(cppPath)
-        .map { it.toAbsolutePath().toString() }
-        .filter { it.endsWith(".cpp") }
-        .forEach { cmdArgs.add(it) }
-
-    commandLine(cmdArgs)
 }
 
 kotlin {
@@ -258,36 +185,6 @@ publishing {
     }
 }
 
-enum class OperatingSystem {
-    WINDOWS,
-    LINUX,
-    MACOS;
-    companion object {
-        private fun isWindows(): Boolean {
-            val osName = System.getProperty("os.name")
-            return osName != null && osName.startsWith("Windows")
-        }
-
-        private fun isMacOs(): Boolean {
-            val osName = System.getProperty("os.name")
-            return osName != null && osName.startsWith("Mac")
-        }
-
-        private fun isLinux(): Boolean {
-            val osName = System.getProperty("os.name")
-            return osName != null && osName.startsWith("Linux")
-        }
-
-        fun current(): Optional<OperatingSystem> {
-            return when {
-                isWindows() -> Optional.of(WINDOWS)
-                isMacOs() -> Optional.of(MACOS)
-                isLinux() -> Optional.of(LINUX)
-                else -> Optional.empty()
-            }
-        }
-    }
-}
 // Regenerate serialized language signatures after type, parser, or MNI metadata changes.
 // Run before check; processResources then copies the updated index into the runtime output.
 tasks.register<JavaExec>("regenerateStdlib") {

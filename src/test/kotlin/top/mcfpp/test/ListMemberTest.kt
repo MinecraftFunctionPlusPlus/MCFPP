@@ -51,7 +51,7 @@ class ListMemberTest {
                 values.prependAll([1,2])
                 values.insert(-1,5)
                 values.removeAt(-2)
-                dynamic result = values[0]*1000 + values[1]*100 + values[2]*10 + values[3]
+                external result = values[0]*1000 + values[1]*100 + values[2]*10 + values[3]
             }
         """)
         assertEquals(1235, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -64,7 +64,7 @@ class ListMemberTest {
                 values.add(value)
                 return values[0]*100 + values[1]*10 + values[2]
             }
-            func main(){ dynamic result = append(7); }
+            func main(){ external result = append(7); }
         """)
         assertEquals(237, execute(main).read(main.scope.getVar("result") as MCInt))
     }
@@ -77,7 +77,7 @@ class ListMemberTest {
                 values.removeAt(-1)
                 return values[0]*10 + values[1]
             }
-            func main(){ dynamic result = edit(1,3); }
+            func main(){ external result = edit(1,3); }
         """)
         assertEquals(23, execute(main).read(main.scope.getVar("result") as MCInt))
     }
@@ -90,7 +90,7 @@ class ListMemberTest {
                 values.prependAll(extra)
                 return values[0]*1000 + values[1]*100 + values[2]*10 + values[3]
             }
-            func main(){ var extra = [1,2]; dynamic result = edit(extra,3); }
+            func main(){ var extra = [1,2]; external result = edit(extra,3); }
         """)
         assertEquals(1234, execute(main).read(main.scope.getVar("result") as MCInt))
     }
@@ -103,7 +103,7 @@ class ListMemberTest {
                 var last = values.lastIndexOf(2)
                 var found = values.contains(4)
                 values.remove(2)
-                dynamic result = first*100 + last*10 + values[0]
+                external result = first*100 + last*10 + values[0]
             }
         """)
         assertEquals(24, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -118,7 +118,7 @@ class ListMemberTest {
                 var missing = values.indexOf(9)
                 return first*1000 + last*100 + missing*10 + values[0]
             }
-            func main(){ var values = [2,4,2]; dynamic result = find(values,2); }
+            func main(){ var values = [2,4,2]; external result = find(values,2); }
         """)
         assertEquals(192, execute(main).read(main.scope.getVar("result") as MCInt))
     }
@@ -132,8 +132,8 @@ class ListMemberTest {
             func has(values: list<int>, needle: int): bool { return values.contains(needle); }
             func main(){
                 var values = [2,4,2]
-                dynamic result = edit(values,2)
-                dynamic found = has(values,4)
+                external result = edit(values,2)
+                external found = has(values,4)
             }
         """, "1.20.1")
         val machine = execute(main)
@@ -142,7 +142,7 @@ class ListMemberTest {
     }
 
     @Test fun runtimeListsRejectCompilerOnlyElementsBeforeEmittingAppendCommands() {
-        val main = compile("func main(){ dynamic values: list<any> = [2 as any]; }")
+        val main = compile("func main(){ external values: list<any> = [2 as any]; }")
         val values = main.scope.getVar("values") as NBTList
         val before = StorageAccess.ensure(values).data.facts.fork()
         val commands = main.commands.analyzeAll().filterNot { it.startsWith("#") }
@@ -183,7 +183,7 @@ class ListMemberTest {
                 view.removeAt(1)
                 return (values[0] as int)*10 + (values[1] as int)
             }
-            func main(){ dynamic result = edit(7); }
+            func main(){ external result = edit(7); }
         """)
         assertEquals(73, execute(main).read(main.scope.getVar("result") as MCInt))
     }
@@ -194,7 +194,7 @@ class ListMemberTest {
                 var values: list<any> = [toByte(1) as any,true as any,false as any]
                 return values.indexOf(needle)
             }
-            func main(){ dynamic result = find(true); }
+            func main(){ external result = find(true); }
         """)
         assertEquals(1, execute(main).read(main.scope.getVar("result") as MCInt))
     }
@@ -208,7 +208,7 @@ class ListMemberTest {
                 values.clear()
                 values.add(7)
                 var missing = values.indexOf(4)
-                dynamic result = last*100 + missing*10 + values[0]
+                external result = last*100 + missing*10 + values[0]
             }
         """)
         assertEquals(297, execute(main).read(main.scope.getVar("result") as MCInt))
@@ -229,7 +229,7 @@ class ListMemberTest {
                 values.insert(index,value)
                 return values[0]*10 + values[1]
             }
-            func main(){ dynamic result = edit(0,7); }
+            func main(){ external result = edit(0,7); }
         """)
         assertEquals(72, execute(main).read(main.scope.getVar("result") as MCInt))
     }
@@ -243,8 +243,8 @@ class ListMemberTest {
                 }
                 func main(){
                     var values = [1.0,2.0,1.0]
-                    dynamic known = values.indexOf(2.0)
-                    dynamic unknown = find(2.0)
+                    external known = values.indexOf(2.0)
+                    external unknown = find(2.0)
                 }
             """, version)
             val machine = execute(main)
@@ -258,8 +258,8 @@ class ListMemberTest {
             func find(needle: float): int { var values = [0.0]; return values.indexOf(needle); }
             func main(){
                 var values = [0.0]
-                dynamic known = values.indexOf(-0.0)
-                dynamic unknown = find(-0.0)
+                external known = values.indexOf(-0.0)
+                external unknown = find(-0.0)
             }
         """, "1.20.1")
         val machine = execute(main)

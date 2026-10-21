@@ -214,7 +214,7 @@ class ConversionTest {
                 var result = toInt(encoded) + 2
                 var wide = toLong(result)
                 var payload = toNBT(encoded)
-                dynamic erased: any = 9
+                external erased: any = 9
                 var promoted = toFloat(erased)
             }
         """.trimIndent(), version = "26.3")
