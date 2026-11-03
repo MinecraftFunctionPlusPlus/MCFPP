@@ -1,0 +1,9 @@
+schema = 1
+
+[package]
+id = "local:unpublished"
+version = "0.0.0-unpublished"
+license = "UNLICENSED"
+
+[tool]
+consumer-profile = "all"

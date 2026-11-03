@@ -1,0 +1,25 @@
+{
+	"replace": false,
+	"values": [
+		"minecraft:rabbit",
+		"#entitycls:cbox/cls1",
+		"minecraft:bee",
+		"minecraft:wolf",
+		"#entitycls:cbox/cls2",
+		"minecraft:chicken",
+		"minecraft:pig",
+		"minecraft:sheep",
+		"#entitycls:cbox/cls3",
+		"minecraft:llama",
+		"minecraft:turtle",
+		"minecraft:goat",
+		"minecraft:panda",
+		"minecraft:hoglin",
+		"minecraft:donkey",
+		"#entitycls:cbox/cls4",
+		"minecraft:zoglin",
+		"minecraft:polar_bear",
+		"minecraft:camel",
+		"minecraft:sniffer"
+	]
+}

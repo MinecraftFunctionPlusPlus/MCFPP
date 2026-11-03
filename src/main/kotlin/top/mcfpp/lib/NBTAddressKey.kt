@@ -29,8 +29,12 @@ private data class SegmentKey(val kind: String, val value: Any)
 internal fun sourceKey(source: NBTSource): Any = when (source) {
     is StorageSource -> SourceKey("storage", source.storage)
     is EntitySource -> {
-        val command = source.entity.value.toCommandPart()
-        SourceKey("entity", if (command.isMacro) DynamicSelector(command.toString(), AddressIdentity(source.entity.value)) else command.toString())
+        val bound = source.entity as? top.mcfpp.core.lang.context.BoundExecutorVar
+        if (bound != null) SourceKey("bound-entity", listOf(bound.binding.owner.session.id, bound.binding.scope.id, bound.binding.provenance))
+        else {
+            val command = source.target.toEntityTargetCommand()
+            SourceKey("entity", if (command.isMacro) DynamicSelector(command.toString(), AddressIdentity(source.entity)) else command.toString())
+        }
     }
     is BlockSource -> SourceKey("block", listOf(source.pos.x, source.pos.y, source.pos.z).map { Coordinate(it.prefix, it.number) })
     else -> AddressIdentity(source)

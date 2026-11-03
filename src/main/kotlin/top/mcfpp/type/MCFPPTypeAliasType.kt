@@ -5,7 +5,7 @@ import top.mcfpp.model.scope.IScopeWithType
 import top.mcfpp.model.compound.RawPreparationFact
 import top.mcfpp.util.LogProcessor
 
-class MCFPPTypeAliasType(val t: mcfppParser.TypeContext): MCFPPType() {
+class MCFPPTypeAliasType(val typeContext: mcfppParser.TypeContext): MCFPPType() {
     override val isValueType: Boolean get() = false
 
     @Transient private var resolving = false
@@ -54,14 +54,14 @@ class MCFPPTypeAliasType(val t: mcfppParser.TypeContext): MCFPPType() {
         if (failed) return null
         if (resolving) {
             failed = true
-            LogProcessor.error("Cyclic type alias: ${t.text}")
+            LogProcessor.error("Cyclic type alias: ${typeContext.text}")
             return null
         }
         resolving = true
         try {
-            val target = MCFPPType.parseFromContext(t, scope)
+            val target = MCFPPType.parseFromContext(typeContext, scope)
             if (target == null) {
-                if (!failed) LogProcessor.error("Undefined type in alias: ${t.text}")
+                if (!failed) LogProcessor.error("Undefined type in alias: ${typeContext.text}")
                 failed = true
             } else {
                 resolved = target

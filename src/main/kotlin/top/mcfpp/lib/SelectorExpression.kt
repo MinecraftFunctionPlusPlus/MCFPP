@@ -13,11 +13,28 @@ import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.util.TempPool
 import java.util.Collections
 
-/** Selector structure is known even when a captured operand's runtime value is not. */
-class SelectorExpression(val kind: EntitySelector.Companion.SelectorType, predicates: List<Filter>, val ownerFrame: Int = 0) {
+/** Immutable direct-target structure, including operands captured before their source changes. */
+class SelectorExpression private constructor(
+    val selectorKind: EntitySelector.Companion.SelectorType?,
+    predicates: List<Filter>,
+    val ownerFrame: Int,
+    val directTarget: DirectTarget?
+) {
+    constructor(kind: EntitySelector.Companion.SelectorType, predicates: List<Filter>, ownerFrame: Int = 0) :
+        this(kind, predicates, ownerFrame, null)
+
+    enum class DirectKind { PLAYER_NAME, UUID_TEXT }
+    data class DirectTarget(val kind: DirectKind, val operand: Operand)
+
+    /** Legacy selector-only access; direct targets never acquire a synthetic selector kind. */
+    val kind: EntitySelector.Companion.SelectorType get() = selectorKind
+        ?: error("A named or UUID entity target has no selector kind")
+
     val predicates: List<Filter> = Collections.unmodifiableList(ArrayList(predicates))
-    override fun equals(other: Any?) = other is SelectorExpression && kind == other.kind && predicates == other.predicates && ownerFrame == other.ownerFrame
-    override fun hashCode() = 31 * (31 * kind.hashCode() + predicates.hashCode()) + ownerFrame
+    override fun equals(other: Any?) = other is SelectorExpression && selectorKind == other.selectorKind &&
+        predicates == other.predicates && ownerFrame == other.ownerFrame && directTarget == other.directTarget
+    override fun hashCode() = 31 * (31 * (31 * (selectorKind?.hashCode() ?: 0) + predicates.hashCode()) + ownerFrame) +
+        (directTarget?.hashCode() ?: 0)
     data class Operand(val reference: ValueRef, val location: Location? = null) {
         fun adapter(types: Map<TypeId, MCFPPType>, owner: StoredData?, frameOffset: Int): Var<*>? {
             val type = types[reference.type] ?: MCFPPType.resolveTypeId(reference.type) ?: return null
@@ -38,8 +55,19 @@ class SelectorExpression(val kind: EntitySelector.Companion.SelectorType, predic
         }
     }
     data class Filter(val identifier: String, val reverse: Boolean, val operand: Operand)
+
+    fun target(types: Map<TypeId, MCFPPType>, binding: StorageBinding? = null): EntityTarget? {
+        val direct = directTarget ?: return selector(types, binding)?.let { EntityTarget.Selector(it) }
+        val offset = binding?.let { frame(it.path) - ownerFrame } ?: 0
+        val text = direct.operand.adapter(types, binding?.data, offset) as? MCString ?: return null
+        return when (direct.kind) {
+            DirectKind.PLAYER_NAME -> EntityTarget.PlayerName(text)
+            DirectKind.UUID_TEXT -> EntityTarget.UUIDText(text)
+        }
+    }
+
     fun selector(types: Map<TypeId, MCFPPType>, binding: StorageBinding? = null): EntitySelector? {
-        val selector = EntitySelector(kind)
+        val selector = EntitySelector(selectorKind ?: return null)
         val offset = binding?.let { frame(it.path) - ownerFrame } ?: 0
         for (filter in predicates) {
             val operand = filter.operand.adapter(types, binding?.data, offset) ?: return null
@@ -48,6 +76,13 @@ class SelectorExpression(val kind: EntitySelector.Companion.SelectorType, predic
         return selector
     }
     fun snapshot(type: TypeId): CompilerValue? {
+        directTarget?.let { direct ->
+            val constant = direct.operand.reference as? ValueRef.Constant ?: return null
+            return CompilerValue.Typed(type, CompilerValue.Record(mapOf(
+                "targetKind" to CompilerValue.Text(direct.kind.name),
+                "operand" to constant.value
+            )))
+        }
         val filters = predicates.map { filter ->
             val constant = filter.operand.reference as? ValueRef.Constant ?: return null
             CompilerValue.Record(mapOf(
@@ -57,36 +92,50 @@ class SelectorExpression(val kind: EntitySelector.Companion.SelectorType, predic
             ))
         }
         return CompilerValue.Typed(type, CompilerValue.Record(mapOf(
-            "kind" to CompilerValue.Text(kind.name), "predicates" to CompilerValue.Sequence(filters)
+            "kind" to CompilerValue.Text((selectorKind ?: return null).name), "predicates" to CompilerValue.Sequence(filters)
         )))
     }
     companion object {
+        fun capture(target: EntityTarget, ownerData: StoredData, previous: SelectorExpression? = null,
+                    actualFrame: Int = 0): SelectorExpression? = when (target) {
+            is EntityTarget.Selector -> capture(target.selector, ownerData, previous?.takeIf { it.selectorKind != null }, actualFrame)
+            is EntityTarget.PlayerName -> captureOperand(target.name, ownerData, actualFrame)?.let {
+                SelectorExpression(null, emptyList(), actualFrame, DirectTarget(DirectKind.PLAYER_NAME, it))
+            }
+            is EntityTarget.UUIDText -> captureOperand(target.uuid, ownerData, actualFrame)?.let {
+                SelectorExpression(null, emptyList(), actualFrame, DirectTarget(DirectKind.UUID_TEXT, it))
+            }
+        }
+
+        private fun captureOperand(value: Var<*>, ownerData: StoredData, actualFrame: Int): Operand? {
+            if (value.isError) return null
+            val snapshot = StorageAccess.snapshot(value)
+            if (snapshot != null) return Operand(ValueRef.Constant(value.type.typeId, snapshot))
+            val captured = StorageAccess.capture(value)
+            if (captured.isError || !StorageAccess.hasRuntimeRepresentation(captured)) return null
+            val slot = TempPool.getVarIdentify()
+            val path = NBTPath.stack.intIndex(actualFrame).memberIndex(slot)
+            StorageAccess.encodeTo(path, captured)
+            val frozen = captured.type.buildUnConcrete(slot).apply {
+                isTemp = true
+                nbtPath = path
+                StorageAccess.publishNbt(this)
+            }
+            val binding = StorageAccess.ensure(frozen)
+            val produced = StorageAccess.ensure(captured)
+            binding.data.types.putAll(produced.data.types)
+            binding.data.facts.copyFrom(produced.data.facts.withoutValues(), produced.place, binding.place, includeRoot = false)
+            ownerData.retainSource(binding.data)
+            ownerData.types.putAll(binding.data.types)
+            return Operand(ValueRef.Read(frozen.type.typeId, binding.place), binding.location)
+        }
+
         fun capture(selector: EntitySelector, ownerData: StoredData, previous: SelectorExpression? = null, actualFrame: Int = 0): SelectorExpression? {
             val owner = previous?.ownerFrame ?: actualFrame
             val filters = selector.predicates.mapIndexed { index, filter ->
                 previous?.predicates?.getOrNull(index)?.let { return@mapIndexed it }
                 if (filter is ScoresPredicate) return null
-                val snapshot = top.mcfpp.analysis.StorageAccess.snapshot(filter.v)
-                val operand = if (snapshot != null) Operand(ValueRef.Constant(filter.v.type.typeId, snapshot))
-                else {
-                    val captured = StorageAccess.capture(filter.v)
-                    if (captured.isError || !StorageAccess.hasRuntimeRepresentation(captured)) return null
-                    val slot = TempPool.getVarIdentify()
-                    val path = NBTPath.stack.intIndex(actualFrame).memberIndex(slot)
-                    StorageAccess.encodeTo(path, captured)
-                    val frozen = captured.type.buildUnConcrete(slot).apply {
-                        isTemp = true
-                        nbtPath = path
-                        StorageAccess.publishNbt(this)
-                    }
-                    val binding = StorageAccess.ensure(frozen)
-                    val produced = StorageAccess.ensure(captured)
-                    binding.data.types.putAll(produced.data.types)
-                    binding.data.facts.copyFrom(produced.data.facts.withoutValues(), produced.place, binding.place, includeRoot = false)
-                    ownerData.retainSource(binding.data)
-                    ownerData.types.putAll(binding.data.types)
-                    Operand(ValueRef.Read(frozen.type.typeId, binding.place), binding.location)
-                }
+                val operand = captureOperand(filter.v, ownerData, actualFrame) ?: return null
                 Filter(filter.identifier, (filter as? CanReverseEntitySelectorPredicate)?.reverse ?: false, operand)
             }
             return SelectorExpression(selector.selectorType, filters, owner)
@@ -109,12 +158,21 @@ class SelectorExpression(val kind: EntitySelector.Companion.SelectorType, predic
             return SelectorExpression(selector.selectorType, filters).snapshot(type)
         }
         fun restore(snapshot: CompilerValue.Typed): SelectorExpression? {
+            if (snapshot.type != MCFPPEntityType.NormalSelector.typeId && snapshot.type !is TypeId.Selector) return null
             val payload = snapshot.payload
             if (payload is CompilerValue.Text) {
                 val kind = EntitySelector.Companion.SelectorType.entries.firstOrNull { it.name == payload.value } ?: return null
                 return SelectorExpression(kind, emptyList())
             }
             val record = payload as? CompilerValue.Record ?: return null
+            (record.fields["targetKind"] as? CompilerValue.Text)?.let { targetKind ->
+                val kind = DirectKind.entries.firstOrNull { it.name == targetKind.value } ?: return null
+                val operand = record.fields["operand"] as? CompilerValue.Typed ?: return null
+                if (operand.type != MCFPPBaseType.String.typeId || operand.payload !is CompilerValue.Text) return null
+                if (record.fields.keys != setOf("targetKind", "operand")) return null
+                return SelectorExpression(null, emptyList(), 0,
+                    DirectTarget(kind, Operand(ValueRef.Constant(operand.type, operand))))
+            }
             val kindName = (record.fields["kind"] as? CompilerValue.Text)?.value ?: return null
             val kind = EntitySelector.Companion.SelectorType.entries.firstOrNull { it.name == kindName } ?: return null
             val filters = (record.fields["predicates"] as? CompilerValue.Sequence)?.elements?.map {

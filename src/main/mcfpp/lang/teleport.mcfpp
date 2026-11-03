@@ -1,0 +1,5 @@
+import mcfpp.minecraft.std:CommandResult
+
+// Targets may be ordinary entities or active context executors; bound positions retain dimension.
+func tp(target: entity, position: pos3): mcfpp.minecraft.std:CommandResult = top.mcfpp.mni.minecraft.EntityTeleportData.teleportEntitiesToPosition
+func tp(target: entity, position: ContextPosition): mcfpp.minecraft.std:CommandResult = top.mcfpp.mni.minecraft.EntityTeleportData.teleportEntitiesToContextPosition

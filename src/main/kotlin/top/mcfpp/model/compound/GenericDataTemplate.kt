@@ -29,6 +29,30 @@ import top.mcfpp.util.StringHelper.splitNamespaceID
 import java.util.Collections
 import java.util.IdentityHashMap
 
+/** Author-session directory for a restored generic declaration; no operation consumes display source. */
+interface GenericTemplateSession {
+    fun requireOpen()
+    fun readonlyType(prototype: GenericDataTemplate, index: Int): MCFPPType
+    fun readonlyType(prototype: GenericDataTemplate, index: Int, converted: List<Var<*>>): MCFPPType = readonlyType(prototype, index)
+    /** Resolve published D/B/C defaults in the author session before ordinary readonly conversion. */
+    fun completeReadonlyArguments(prototype: GenericDataTemplate, supplied: List<Var<*>>): List<Var<*>> = supplied
+    fun validateHeader(prototype: GenericDataTemplate)
+    /** A null target requests nominal parent heads; an instance has converted readonly values installed. */
+    fun parentTypes(prototype: GenericDataTemplate, target: CompiledGenericDataTemplate?): List<MCFPPDataTemplateType>
+    fun project(prototype: GenericDataTemplate, target: CompiledGenericDataTemplate): top.mcfpp.model.function.ProjectedSyntax
+    fun cloneAnnotations(recorded: List<Annotation>): top.mcfpp.model.function.TemplateAnnotationClone
+    fun cloneAnnotations(prototype: GenericDataTemplate, target: CompiledGenericDataTemplate,
+                         recorded: List<Annotation>): top.mcfpp.model.function.TemplateAnnotationClone = cloneAnnotations(recorded)
+    fun validateInferredTypes(prototype: GenericDataTemplate, target: CompiledGenericDataTemplate?, types: Map<String, MCFPPType>) {}
+    /** Restore member D/B/default/annotation facts on the actual models created from this fresh template. */
+    fun bindMembers(prototype: GenericDataTemplate, target: CompiledGenericDataTemplate, projection: top.mcfpp.model.function.ProjectedSyntax)
+    val materializesOperators: Boolean get() = false
+    /** Restore actual D7/native operator models after normal members exist, without visiting source syntax. */
+    fun bindOperators(prototype: GenericDataTemplate, target: CompiledGenericDataTemplate, projection: top.mcfpp.model.function.ProjectedSyntax) {
+        error("LIB_BODY_UNSUPPORTED: Generic template session has no operator materializer")
+    }
+}
+
 /**
  * 结构体是一种和类的语法极为相似的数据结构。在结构体中，只能有int类型的数据，或者说记分板的数据作为结构体的成员。
  *
@@ -44,6 +68,8 @@ import java.util.IdentityHashMap
  */
 open class GenericDataTemplate : DataTemplate {
 
+    @Transient var structuredSession: GenericTemplateSession? = null
+
     val ctx: mcfppParser.TemplateBodyContext
 
     @Transient
@@ -55,6 +81,7 @@ open class GenericDataTemplate : DataTemplate {
     @Transient private val materializations = LinkedHashMap<SpecializationKey, Materialization>()
     private class Materialization(val key: SpecializationKey, val model: CompiledGenericDataTemplate) {
         var origins: MaterializedOrigins? = null
+        var context: mcfppParser.TemplateBodyContext? = null
     }
     internal class MaterializedOrigins(
         fields: Map<mcfppParser.TemplateFieldDeclarationContext, Var<*>>,
@@ -69,6 +96,13 @@ open class GenericDataTemplate : DataTemplate {
     internal fun materializedInstances(): List<CompiledGenericDataTemplate> {
         val seen = Collections.newSetFromMap(IdentityHashMap<CompiledGenericDataTemplate, Boolean>())
         return Collections.unmodifiableList((compiledTemplates.values + materializations.values.map { it.model }).filter { seen.add(it) })
+    }
+    /** The closed provider remains installed so a released prototype cannot fall back to source. */
+    internal fun clearStructuredMaterializations() {
+        check(structuredSession != null) { "Only a structured generic session owns these materializations" }
+        compiledTemplates.clear()
+        materializations.clear()
+        preparedHeaders.clear()
     }
     internal fun materializedOrigins(key: SpecializationKey): MaterializedOrigins? = materializations[key]?.origins
 
@@ -148,9 +182,11 @@ open class GenericDataTemplate : DataTemplate {
         val seen = Collections.newSetFromMap(IdentityHashMap<Materialization, Boolean>())
         val records = (retained + entries.map { it.second }).filter { seen.add(it) }
         val origins = records.map { it.origins }
+        val contexts = records.map { it.context }
         val roots = buildList<Any> {
             records.forEach { entry ->
                 add(entry.model)
+                entry.context?.let(::add)
                 entry.key.arguments.forEach { add((it as SpecializationArgument.Constant).value) }
                 entry.origins?.let { origin ->
                     addAll(origin.fields.keys)
@@ -166,12 +202,14 @@ open class GenericDataTemplate : DataTemplate {
                 RawPreparationFact.row(
                     preparationKey(key),
                     RawPreparationFact.identity(value.model),
-                    RawPreparationFact.identity(value.origins)
+                    RawPreparationFact.identity(value.origins),
+                    RawPreparationFact.identity(value.context)
                 )
             }
         )
         return MaterializationCheckpoint(roots, {
             records.forEachIndexed { index, record -> record.origins = origins[index] }
+            records.forEachIndexed { index, record -> record.context = contexts[index] }
             materializations.clear()
             entries.forEach { (key, value) -> materializations[key] = value }
         }, { captureMaterializations(records) }, preparation)
@@ -231,6 +269,7 @@ open class GenericDataTemplate : DataTemplate {
         val savedVariance = varianceChecked
         val savedHeader = headerPrepared
         val savedIndex = index
+        val savedSession = structuredSession
         val headers = previousHeaders?.recapture?.invoke() ?: captureHeaderState()
         val materialized = previousMaterializations?.recapture?.invoke() ?: captureMaterializations()
         headers.elements.forEach(graph::element)
@@ -262,6 +301,7 @@ open class GenericDataTemplate : DataTemplate {
             (value.arguments as List<*>).forEach { argument ->
                 when (argument) {
                     is SpecializationArgument.Constant -> checkSpecializationPayload(argument.value)
+                    is SpecializationArgument.Borrow -> error("Scoped context borrows cannot specialize persistent template declarations")
                     SpecializationArgument.Unknown, SpecializationArgument.Error -> Unit
                     else -> error("Template checkpoint cannot capture specialization argument")
                 }
@@ -270,6 +310,7 @@ open class GenericDataTemplate : DataTemplate {
         val preparationFacts = base.preparationFacts.extended(
             linkedMapOf(
                 "generic.headerPrepared" to RawPreparationFact.scalar(savedHeader),
+                "generic.session" to RawPreparationFact.identity(savedSession),
                 "generic.varianceChecked" to RawPreparationFact.scalar(savedVariance),
                 "generic.index" to RawPreparationFact.scalar(savedIndex),
                 "generic.relations" to graph.preparationRelations(),
@@ -283,6 +324,7 @@ open class GenericDataTemplate : DataTemplate {
             varianceChecked = savedVariance
             headerPrepared = savedHeader
             index = savedIndex
+            structuredSession = savedSession
             headers.restore()
             materialized.restore()
             graph.restore()
@@ -300,6 +342,7 @@ open class GenericDataTemplate : DataTemplate {
             (key.arguments as List<*>).map { argument ->
                 when (argument) {
                     is SpecializationArgument.Constant -> RawPreparationFact.closed(argument.value)
+                    is SpecializationArgument.Borrow -> RawPreparationFact.closed(argument.identity)
                     SpecializationArgument.Unknown -> RawPreparationFact.scalar("unknown")
                     SpecializationArgument.Error -> RawPreparationFact.scalar("error")
                     else -> error("Template checkpoint cannot capture specialization argument")
@@ -336,10 +379,28 @@ open class GenericDataTemplate : DataTemplate {
     }
 
     private fun prepareHeaderInDeclarationEnvironment() {
+        structuredSession?.let { session ->
+            session.requireOpen()
+            check(parentID.isEmpty()) { "LIB_BODY_UNSUPPORTED: Restored generic parents require structural bindings" }
+            if (!varianceChecked) {
+                readOnlyParams.forEachIndexed { index, parameter -> parameter.type = session.readonlyType(this, index) }
+                session.validateHeader(this)
+                varianceChecked = true
+            }
+            if (!headerPrepared) {
+                headerPrepared = true
+                session.parentTypes(this, null).forEach { parent ->
+                    if (parent.template.isFinal) LogProcessor.error("Cannot extend final template '${parent.template.identifier}'")
+                    else if (this.parent.none { it.inheritanceIdentity == parent.typeId }) extends(parent.template)
+                }
+                if (parent.isEmpty()) extends(DataTemplate.baseDataTemplate)
+            }
+            return
+        }
         if (!varianceChecked) {
             for (param in readOnlyParams) if (param.type == null)
                 param.type = MCFPPType.parseFromString(param.typeIdentifier, scope)
-            GenericDeclarationContract.checkVariance(this)
+            checkTemplateVariance(this)
             varianceChecked = true
         }
         if (headerPrepared) return
@@ -363,15 +424,16 @@ open class GenericDataTemplate : DataTemplate {
     }
 
     protected fun bindReadonlyArguments(readOnlyArgs: List<Var<*>>): List<Var<*>>? {
-        if (readOnlyArgs.size != readOnlyParams.size) {
+        val supplied = structuredSession?.completeReadonlyArguments(this, readOnlyArgs) ?: readOnlyArgs
+        if (supplied.size != readOnlyParams.size) {
             LogProcessor.error("Readonly argument count does not match template '$identifier'")
             return null
         }
         val args = ArrayList<Var<*>>()
         for (i in readOnlyParams.indices) {
             val param = readOnlyParams[i]
-            val type = param.type
-            val argument = readOnlyArgs[i]
+            val type = structuredSession?.readonlyType(this, i, args) ?: param.type
+            val argument = supplied[i]
             if (type == null || !ParameterMatcher.accepts(argument, type) || !SpecializationKeys.isConstant(argument)) {
                 LogProcessor.error("Readonly template argument '${param.identifier}' requires a complete value of ${param.typeIdentifier}")
                 return null
@@ -409,9 +471,17 @@ open class GenericDataTemplate : DataTemplate {
     }
 
     private fun copyDeclarationAnnotations(target: CompiledGenericDataTemplate, recorded: List<Annotation>) {
-        val copied = Property.copyAnnotations(recorded)
-        target.annotations.addAll(copied)
-        target.pendingDeclarationAnnotations.addAll(copied)
+        val session = structuredSession
+        if (session != null) {
+            session.requireOpen()
+            val copied = session.cloneAnnotations(this, target, recorded)
+            target.annotations.addAll(copied.annotations)
+            target.pendingDeclarationAnnotations.addAll(copied.pending)
+        } else {
+            val copied = Property.copyAnnotations(recorded)
+            target.annotations.addAll(copied)
+            target.pendingDeclarationAnnotations.addAll(copied)
+        }
     }
 
     /** Restore only the reservation's converted facts, inside the external declaration transaction.
@@ -447,6 +517,7 @@ open class GenericDataTemplate : DataTemplate {
     }
 
     private fun compileInDeclarationEnvironment(readOnlyArgs: List<Var<*>>): CompiledGenericDataTemplate? {
+        structuredSession?.requireOpen()
         if (!Project.hasValidTemplateInheritance(this)) return null
         prepareHeader()
         val args = bindReadonlyArguments(readOnlyArgs) ?: return null
@@ -486,10 +557,17 @@ open class GenericDataTemplate : DataTemplate {
         args: List<Var<*>>,
         key: SpecializationKey
     ): CompiledGenericDataTemplate {
-        val unsupported = ctx.templateMemberDeclaration().map { it.templateMember() }.filter {
+        template.declarationFile = declarationFile
+        template.declarationEnvironment = declarationEnvironment
+        if (structuredSession != null) installReadonly(template, args)
+        val projected = structuredSession?.project(this, template)
+        val context = if (projected == null) ctx else projected.context as? mcfppParser.TemplateBodyContext
+            ?: error("LIB_BODY_UNSUPPORTED: Generic template projection has the wrong root")
+        materializations[key]?.context = context
+        val unsupported = context.templateMemberDeclaration().map { it.templateMember() }.filter {
             it.operationOverrideDeclaration() != null || it.nativeOperationOverrideDeclaration() != null
         }
-        if (unsupported.isNotEmpty()) {
+        if (unsupported.isNotEmpty() && (projected == null || structuredSession?.materializesOperators != true)) {
             unsupported.forEach { source ->
                 Project.withCompilationContext(source) {
                     LogProcessor.error("Generic template operator header has no materialization adapter")
@@ -498,8 +576,6 @@ open class GenericDataTemplate : DataTemplate {
             Project.registerTemplateContract(template)
             return template
         }
-        template.declarationFile = declarationFile
-        template.declarationEnvironment = declarationEnvironment
         template.isAbstract = isAbstract
         template.isFinal = isFinal
         template.initialize()
@@ -512,16 +588,12 @@ open class GenericDataTemplate : DataTemplate {
                 annotations.none { it === pending }
             }
         )
-        //只读属性
-        for (i in readOnlyParams.indices) {
-            StorageAccess.resolveTypeValue(args[i])?.let { type ->
-                template.scope.putType(readOnlyParams[i].identifier, type)
-            }
-            template.scope.putVar(readOnlyParams[i].identifier, args[i], false)
-            template.scope.putProperty(readOnlyParams[i].identifier, Property.buildSimpleProperty(args[i]))
-        }
+        if (structuredSession == null) installReadonly(template, args)
 
-        if (parentID.isNotEmpty()) {
+        if (structuredSession != null) {
+            structuredSession!!.parentTypes(this, template).forEach { template.extends(it.template) }
+            if (template.parent.isEmpty()) template.extends(DataTemplate.baseDataTemplate)
+        } else if (parentID.isNotEmpty()) {
             template.parentID.addAll(parentID)
             Project.resolveTemplateInheritance(template)
         } else for (parent in this.parent) {
@@ -530,13 +602,28 @@ open class GenericDataTemplate : DataTemplate {
 
         //注册
         currTemplate = template
-        MCFPPGenericDataTemplateFieldVisitor(template).visitTemplateBody(ctx)
+        MCFPPGenericDataTemplateFieldVisitor(template).visitTemplateBody(context)
         currTemplate = template
-        top.mcfpp.antlr.MCFPPAnnotationVisitor().visitTemplateBody(ctx)
-        GenericDeclarationContract.bindCompanion(template, args)
+        if (projected == null) top.mcfpp.antlr.MCFPPAnnotationVisitor().visitTemplateBody(context)
+        else {
+            structuredSession!!.bindMembers(this, template, projected)
+            if (unsupported.isNotEmpty()) structuredSession!!.bindOperators(this, template, projected)
+        }
+        bindCompanion(template, args)
         Project.registerTemplateContract(template)
 
         return template
+    }
+
+    private fun installReadonly(template: CompiledGenericDataTemplate, args: List<Var<*>>) {
+        for (i in readOnlyParams.indices) {
+            StorageAccess.resolveTypeValue(args[i])?.let { type ->
+                template.scope.putType(readOnlyParams[i].identifier, type)
+            }
+            template.scope.putVar(readOnlyParams[i].identifier, args[i], false)
+            template.scope.putProperty(readOnlyParams[i].identifier, Property.buildSimpleProperty(args[i]))
+        }
+
     }
 
     /** Source identities describe local declarations only; inherited slots retain their own owner. */
@@ -547,7 +634,15 @@ open class GenericDataTemplate : DataTemplate {
         val properties = IdentityHashMap<mcfppParser.TemplateFieldDeclarationContext, Property>()
         val functions = IdentityHashMap<ParserRuleContext, Function>()
         val offsets = hashMapOf<String, Int>()
-        for (declaration in ctx.templateMemberDeclaration()) {
+        val context = entry.context ?: ctx
+        fun ownsBody(function: Function, body: mcfppParser.CurlBlockContext?): Boolean {
+            if (function.ast === body) return true
+            val handle = function.bodyHandle ?: return false
+            val node = body?.let(top.mcfpp.model.function.StructuredBodyContexts::origin)?.node ?: return false
+            return handle.repository.body(handle).root == node
+        }
+        for ((ordinal, declaration) in context.templateMemberDeclaration().withIndex()) {
+            val prototype = ctx.templateMemberDeclaration().getOrNull(ordinal)
             val member = declaration.templateMember()
             member.templateFieldDeclaration()?.let { source ->
                 val field = template.scope.getVar(source.Identifier().text)
@@ -557,6 +652,10 @@ open class GenericDataTemplate : DataTemplate {
                 } else {
                     fields[source] = field
                     properties[source] = property
+                    prototype?.templateMember()?.templateFieldDeclaration()?.let {
+                        fields[it] = field
+                        properties[it] = property
+                    }
                 }
             }
             member.templateFunctionDeclaration()?.let { source ->
@@ -564,14 +663,14 @@ open class GenericDataTemplate : DataTemplate {
                 val index = offsets.getOrDefault(name, 0)
                 offsets[name] = index + 1
                 val function = template.scope.functions[name].orEmpty().filter { it.owner === template }.getOrNull(index)
-                if (function == null || function.ast !== source.curlBlock()) {
+                if (function == null || !ownsBody(function, source.curlBlock())) {
                     Project.withCompilationContext(source) { LogProcessor.error("Missing local function materialization: $name") }
-                } else functions[declaration] = function
+                } else { functions[declaration] = function; prototype?.let { functions[it] = function } }
             }
             member.templateConstructorDeclaration()?.let { source ->
-                val function = template.constructors.singleOrNull { it.ast === source.curlBlock() }
+                val function = template.constructors.singleOrNull { ownsBody(it, source.curlBlock()) }
                 if (function == null) Project.withCompilationContext(source) { LogProcessor.error("Missing constructor materialization") }
-                else functions[declaration] = function
+                else { functions[declaration] = function; prototype?.let { functions[it] = function } }
             }
         }
         entry.origins = MaterializedOrigins(fields, properties, functions)
@@ -594,6 +693,10 @@ class DataTemplateParam(
      * 参数类型在首次 prepareHeader 后解析；从库恢复的参数已保存该类型。
      */
     var type: MCFPPType? = null,
+
+    /**
+     * 协变，逆变和不变
+     */
     val variance: DeclarationVariance = DeclarationVariance.INVARIANT
 )
 
@@ -611,18 +714,14 @@ open class CompiledGenericDataTemplate(
             requireNotNull(scope.getVar(parameter.identifier)) { "Missing readonly binding '${parameter.identifier}'" }
         }
     protected val identity = TypeId.Specialized(
-        TypeId.Declaration(
-            when {
-                originTemplate is ObjectCompoundData -> "object"
-                else -> "template"
-            },
-            originTemplate.namespace,
-            originTemplate.identifier
-        ),
+        originTemplate.nominalIdentity,
         argumentValues
     )
 
     internal override val inheritanceIdentity: TypeId
+        get() = identity
+
+    override val nominalIdentity: TypeId
         get() = identity
 
     override fun getType(): MCFPPDataTemplateType {

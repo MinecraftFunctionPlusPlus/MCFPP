@@ -1,17 +1,17 @@
 @MCFPPEntity
 data DolphinData: EntityData, CreatureData, AIMobData, GrowableData {
-    @Name<"Moistness">
+    @Name("Moistness")
     var moistness: int
 
-    @Name<"GotFish">
+    @Name("GotFish")
     var gotFish: byte
 
-    @Name<"TreasurePosX">
+    @Name("TreasurePosX")
     var treasurePosX: int
 
-    @Name<"TreasurePosY">
+    @Name("TreasurePosY")
     var treasurePosY: int
 
-    @Name<"TreasurePosZ">
+    @Name("TreasurePosZ")
     var treasurePosZ: int
 }

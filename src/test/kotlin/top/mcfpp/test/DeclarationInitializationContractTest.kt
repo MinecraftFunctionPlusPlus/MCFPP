@@ -13,6 +13,8 @@ import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
+import top.mcfpp.test.util.compilerDiagnostics
+import top.mcfpp.test.library.LegacyAnnotationFixtures
 import top.mcfpp.test.util.ScoreCommandExecutor
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPNBTType
@@ -183,7 +185,7 @@ class DeclarationInitializationContractTest {
             for((name,value) in listOf("dependent" to 9,"four" to 4,"nine" to 9,"again" to 4,"ordinary" to 7))
                 assertEquals(value,machine.read(function.scope.getVar(name) as MCInt))
             assertEquals(listOf("initialized","initialized","initialized"),machine.messages)
-            assertEquals(1,machine.bootstrapMarkers.size)
+            assertTrue(machine.bootstrapMarkers.isEmpty(), "NBT-backed values do not need a pointer marker")
             assertEquals(0,machine.stackDepth)
             val box=function.scope.getVar("box") as DataTemplateObject
             assertEquals("fixture.startup",box.templateType.namespace)
@@ -378,14 +380,14 @@ class DeclarationInitializationContractTest {
 
     private fun roundTrip(declarations: String, main: String, output: Path, startup: Boolean=false,
                           check: (Function, ScoreCommandExecutor)->Unit) {
-        compile("$declarations\n$main", output)
-        assertEquals(0, Project.errorCount)
+        val producerMessages = compilerDiagnostics { compile("$declarations\n$main", output) }
+        assertEquals(0, Project.errorCount, producerMessages.joinToString("\n"))
         val namespace=Regex("\\bnamespace\\s+([^\\s;]+)").find(declarations)!!.groupValues[1]
         val source=GlobalScope.localNamespaces.getValue(namespace).scope.functions.getValue("main").single()
         check(source,execute(source, output.resolve("source"),startup))
         Project.config.includes=arrayListOf(output.toString())
-        compile("import $namespace:*;\n$main")
-        assertEquals(0, Project.errorCount)
+        val consumerMessages = compilerDiagnostics { compile("import $namespace:*;\n$main") }
+        assertEquals(0, Project.errorCount, consumerMessages.joinToString("\n"))
         val fresh=GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
         check(fresh,execute(fresh, output.resolve("fresh"),startup))
     }
@@ -396,7 +398,14 @@ class DeclarationInitializationContractTest {
             top.mcfpp.antlr.mcfppLexer(org.antlr.v4.runtime.CharStreams.fromString(source))))
         parser.compilationUnit()
         assertEquals(0,parser.numberOfSyntaxErrors,"Semantic contract fixtures must use valid source syntax")
-        MCFPPStringTest.readFromString(source, arrayOf(), output?.toString(), "26.3")
+        val includes = Project.config.includes.toList()
+        Project.config.includes = arrayListOf()
+        try {
+            MCFPPStringTest.readFromString(source, arrayOf(), null, "26.3", afterFileCreated = {
+                if (includes.isNotEmpty()) LegacyAnnotationFixtures.install(includes.map { Path.of(it) })
+            })
+            if (output != null && Project.errorCount == 0) LegacyAnnotationFixtures.write(output)
+        } finally { Project.config.includes = ArrayList(includes) }
     }
 
     private fun execute(main: Function, output: Path, startup: Boolean=false): ScoreCommandExecutor {
@@ -420,6 +429,6 @@ class DeclarationInitializationContractTest {
         val config=Project.config
         val ignore=CompileSettings.ignoreStdLib
         try { Project.config=ProjectConfig();CompileSettings.ignoreStdLib=true;action(output) }
-        finally { Project.config=config;CompileSettings.ignoreStdLib=ignore;output.toFile().deleteRecursively() }
+        finally { LegacyAnnotationFixtures.close();Project.config=config;CompileSettings.ignoreStdLib=ignore;output.toFile().deleteRecursively() }
     }
 }

@@ -1,5 +1,5 @@
-@From<"top.mcfpp.mni.resource.SoundEventData">
+@From("top.mcfpp.mni.resource.SoundEventData")
 data SoundEvent: ResourceID
 
-@From<"top.mcfpp.mni.resource.SoundEventObjectData">
+@From("top.mcfpp.mni.resource.SoundEventObjectData")
 object data SoundEvent: ResourceID

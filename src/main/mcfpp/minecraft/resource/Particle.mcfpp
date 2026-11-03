@@ -1,5 +1,5 @@
-@From<"top.mcfpp.mni.resource.ParticleData">
+@From("top.mcfpp.mni.resource.ParticleData")
 data Particle: ResourceID
 
-@From<"top.mcfpp.mni.resource.ParticleObjectData">
+@From("top.mcfpp.mni.resource.ParticleObjectData")
 object data Particle: ResourceID

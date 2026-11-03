@@ -1,6 +1,6 @@
 import mcfpp.minecraft.std:*
 
-@From<"top.mcfpp.mni.minecraft.BossBarData">
+@From("top.mcfpp.mni.minecraft.BossBarData")
 data BossBar: ResourceID{
 
     var name: text
@@ -20,7 +20,7 @@ data BossBar: ResourceID{
     }
 }
 
-@From<"top.mcfpp.mni.minecraft.BossBarData">
+@From("top.mcfpp.mni.minecraft.BossBarData")
 object data BossBar
 
 enum BossBarStyle{

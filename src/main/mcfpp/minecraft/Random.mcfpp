@@ -1,6 +1,6 @@
 import mcfpp.minecraft.std:*
 
-@From<"top.mcfpp.mni.minecraft.RandomData">
+@From("top.mcfpp.mni.minecraft.RandomData")
 data Random {
     private var id: string
 
@@ -8,8 +8,8 @@ data Random {
         /random reset ${this.id} 0 true true
     }
 
-    constructor(string){
-        this.id = p0
+    constructor(id: string){
+        this.id = id
         /random reset ${this.id} 0 true true
     }
 
@@ -19,5 +19,5 @@ data Random {
     }
 }
 
-@From<"top.mcfpp.mni.minecraft.RandomObjectData">
+@From("top.mcfpp.mni.minecraft.RandomObjectData")
 object data Random

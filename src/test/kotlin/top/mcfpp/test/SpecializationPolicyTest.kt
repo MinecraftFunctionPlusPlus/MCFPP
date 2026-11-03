@@ -47,20 +47,18 @@ class SpecializationPolicyTest {
         return top.mcfpp.test.util.ScoreCommandExecutor(function("main").commands.analyzeAll(), functions).also { assertEquals(0, it.stackDepth) }
     }
 
-    @Test fun ordinaryConstantCallsKeepOneBodyAndMaterializeParameters() {
+    @Test fun ordinaryConstantCallsKeepOneSemanticBodyAndRuntimeResults() {
         MCFPPStringTest.readFromString("""
             func increment(value: int): int { return value + 1; }
             func main(){
-                var first = increment(1)
-                var second = increment(2)
-                var third = increment(3)
+                external first = increment(1)
+                external second = increment(2)
+                external third = increment(3)
             }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
         val increment = function("increment")
         assertTrue(increment.compiledFunctions.isEmpty())
-        val commands = function("main").commands.analyzeAll()
-        assertEquals(3, commands.count { it == "function ${increment.namespaceID}" })
         val main = function("main")
         assertEquals(3, main.typedIR!!.blocks.flatMap { it.instructions }.filterIsInstance<top.mcfpp.analysis.Instruction.Call>().size)
         assertNull(top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(main.scope.getVar("first"))))

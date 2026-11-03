@@ -1,0 +1,73 @@
+data Box {
+    var value: int = 0;
+    constructor(value: int) { this.value = value; }
+    func add(extra: int): int { return this.value + extra; }
+    func scale(extra: int): int { return this.value * extra; }
+}
+
+func choose(flag: bool, base: int): () -> int {
+    if (flag) {
+        var plus = base + 1;
+        return { plus + 2 };
+    }
+    var doubled = base * 2;
+    return { doubled * 3 };
+}
+func apply(callback: () -> int): int { return callback(); }
+func runChoice(flag: bool, base: int): int {
+    var selected = choose(flag, base);
+    return selected();
+}
+func chooseBinary(flag: bool): (int, int) -> int {
+    if (flag) { return { a, b -> a * 10 + b }; }
+    return { a, b -> a * 100 + b };
+}
+func next(): int {
+    import var value: int;
+    /scoreboard players add dynamic_order mcfpp_default 1
+    /execute store result storage mcfpp:system stack_frame[0].value int 1 run scoreboard players get dynamic_order mcfpp_default
+    return value;
+}
+func runBinary(flag: bool): int {
+    var selected = chooseBinary(flag);
+    return selected(next(), next());
+}
+func runReceiver(flag: bool): int {
+    var left = Box(3);
+    var right = Box(8);
+    var leftMethod: (int) -> int = left.add;
+    var rightMethod: (int) -> int = right.scale;
+    left.value = 99;
+    right.value = 88;
+    var selected: (int) -> int = leftMethod;
+    if (flag) { selected = leftMethod; }
+    else { selected = rightMethod; }
+    return selected(10);
+}
+
+func main() {
+    import var runtimeFlag: bool;
+    /data modify storage mcfpp:system stack_frame[0].runtimeFlag set value 1b
+    var first = runChoice(runtimeFlag, 10);
+    var receiverFirst = runReceiver(runtimeFlag);
+    /scoreboard players set dynamic_order mcfpp_default 0
+    var orderFirst = runBinary(runtimeFlag);
+    /execute store result storage lambda:results callsFirst int 1 run scoreboard players get dynamic_order mcfpp_default
+    /data modify storage mcfpp:system stack_frame[0].runtimeFlag set value 0b
+    var second = runChoice(runtimeFlag, 20);
+    var receiverSecond = runReceiver(runtimeFlag);
+    /scoreboard players set dynamic_order mcfpp_default 0
+    var orderSecond = runBinary(runtimeFlag);
+    /execute store result storage lambda:results callsSecond int 1 run scoreboard players get dynamic_order mcfpp_default
+    var callback = choose(runtimeFlag, 7);
+    var parameter = apply(callback);
+    var repeated = callback();
+    /data modify storage lambda:results first set from storage mcfpp:system stack_frame[0].first
+    /data modify storage lambda:results second set from storage mcfpp:system stack_frame[0].second
+    /data modify storage lambda:results receiverFirst set from storage mcfpp:system stack_frame[0].receiverFirst
+    /data modify storage lambda:results receiverSecond set from storage mcfpp:system stack_frame[0].receiverSecond
+    /data modify storage lambda:results orderFirst set from storage mcfpp:system stack_frame[0].orderFirst
+    /data modify storage lambda:results orderSecond set from storage mcfpp:system stack_frame[0].orderSecond
+    /data modify storage lambda:results parameter set from storage mcfpp:system stack_frame[0].parameter
+    /data modify storage lambda:results repeated set from storage mcfpp:system stack_frame[0].repeated
+}

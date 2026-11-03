@@ -18,6 +18,9 @@ group = GROUP
 version = VERSION
 
 repositories {
+    mavenLocal {
+        content { includeGroup("moe.afox.mcfpm") }
+    }
     mavenCentral()
     maven("https://jitpack.io")
     maven("https://maven.aliyun.com/nexus/content/groups/public/")
@@ -26,6 +29,13 @@ repositories {
 }
 
 dependencies {
+    // SDK Kotlin metadata stays off the compiler's Kotlin 1.9 compile classpath.
+    val mcfpmVersion = providers.gradleProperty("mcfpm.version").orElse("0.1.0-SNAPSHOT").get()
+    runtimeOnly("moe.afox.mcfpm:core:$mcfpmVersion")
+    runtimeOnly("moe.afox.mcfpm:mcfpp-adapter:$mcfpmVersion")
+    runtimeOnly("moe.afox.mcfpm:repository-maven:$mcfpmVersion")
+    implementation("org.tomlj:tomlj:1.1.1")
+    implementation("com.fasterxml.jackson.core:jackson-core:2.20.2")
     // Kotlin
     implementation(kotlin("reflect"))
     testImplementation(kotlin("test"))
@@ -83,13 +93,22 @@ tasks.shadowJar {
     manifest {
         attributes("Main-Class" to "top.mcfpp.MCFPPKt")
     }
+    filesMatching("META-INF/services/**") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+    mergeServiceFiles()
     minimize{
         exclude(dependency("org.apache.logging.log4j:.*"))
+        // Kotlin loads the reflection implementation dynamically from the runtime.
+        exclude(dependency("org.jetbrains.kotlin:kotlin-reflect:.*"))
+        // The Java facade is reflected; its SDK and transitive runtime classes are roots.
+        exclude(dependency("moe.afox.mcfpm:.*:.*"))
     }
 }
 
 tasks.test {
     useJUnitPlatform()
+    doFirst { systemProperty("mcfpp.compiler.classpath", sourceSets.main.get().runtimeClasspath.asPath) }
 }
 
 tasks.compileTestKotlin {
@@ -139,7 +158,47 @@ tasks.withType<JavaCompile>{
 }
 
 application {
+    applicationName = "mcfpp"
     mainClass.set("top.mcfpp.MCFPPKt")
+}
+
+val sourcesJar by tasks.registering(Jar::class) {
+    archiveClassifier.set("sources")
+    from("src/main/java")
+    from("src/main/kotlin")
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
+}
+
+distributions {
+    main {
+        contents {
+            from(sourcesJar) { into("lib") }
+        }
+    }
+}
+
+tasks.register<Exec>("verifyDistribution") {
+    group = "verification"
+    description = "Compile a generic NBT reference with the standalone distribution JAR."
+    dependsOn(tasks.shadowJar)
+    val smokeRoot = layout.buildDirectory.dir("distribution-smoke")
+    val launcher = javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) }
+    doFirst {
+        val root = smokeRoot.get().asFile.apply { mkdirs() }
+        root.resolve("mcfpp.toml").writeText("""
+            schema = 1
+            name = "distribution-smoke"
+            namespace = "distribution_smoke"
+            version = "1.21.8"
+        """.trimIndent() + "\n")
+        root.resolve("src/main/mcfpp").mkdirs()
+        file("src/test/resources/distribution/nbt-reference.mcfpp")
+            .copyTo(root.resolve("src/main/mcfpp/main.mcfpp"), overwrite = true)
+        workingDir(root)
+        commandLine(launcher.get().executablePath.asFile, "-jar", tasks.shadowJar.get().archiveFile.get().asFile,
+            "build", "--offline")
+    }
 }
 
 val isSnapshotVersion = provider { project.version.toString().endsWith("-SNAPSHOT") }
@@ -158,6 +217,7 @@ publishing {
     publications {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
+            artifact(sourcesJar)
             groupId = GROUP
             artifactId = "mcfpp"
             version = VERSION
@@ -194,11 +254,11 @@ tasks.register<JavaExec>("regenerateStdlib") {
     classpath = sourceSets.main.get().runtimeClasspath
     mainClass.set("top.mcfpp.MCFPPKt")
     val indexDirectory = layout.buildDirectory.dir("stdlib-index")
-    val indexConfig = layout.buildDirectory.file("stdlib-index.json")
+    val indexConfig = layout.buildDirectory.file("stdlib-index.toml")
     doFirst {
         val configFile = indexConfig.get().asFile
         configFile.parentFile.mkdirs()
-        configFile.writeText(groovy.json.JsonOutput.toJson(mapOf(
+        configFile.writeText("schema = 1\n" + mapOf(
             "sourcePath" to file("src/main/mcfpp").absolutePath,
             "targetPath" to indexDirectory.get().asFile.absolutePath,
             "description" to "MCFPP Standard Library",
@@ -206,8 +266,8 @@ tasks.register<JavaExec>("regenerateStdlib") {
             "noDatapack" to true,
             "copyImport" to false,
             "args" to listOf("-ignoreStdLib", "-isLib", "-level=info")
-        )))
-        setArgs(listOf(configFile.absolutePath))
+        ).entries.joinToString("\n") { (key, value) -> "$key = ${groovy.json.JsonOutput.toJson(value)}" } + "\n")
+        setArgs(listOf("build", "--project", configFile.absolutePath))
     }
     doLast {
         copy {

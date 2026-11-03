@@ -19,7 +19,7 @@ open class MCFPPObjectDataTemplateType(
 ) : MCFPPDataTemplateType(template, parentType) {
     init { require(template is ObjectCompoundData) }
 
-    override val typeId: TypeId get() = TypeId.Declaration("object", template.namespace, template.identifier)
+    override val typeId: TypeId get() = template.nominalIdentity
 
     override val typeName: String
         get() = "object(${template.namespace}:${template.identifier})"

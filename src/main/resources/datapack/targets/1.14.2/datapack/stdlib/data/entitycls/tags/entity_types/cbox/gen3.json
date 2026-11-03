@@ -1,0 +1,26 @@
+{
+	"replace": false,
+	"values": [
+		"#entitycls:cbox/cls5",
+		"#entitycls:cbox/cls6",
+		"#entitycls:cbox/cls7",
+		"minecraft:leash_knot",
+		"#entitycls:cbox/cls8",
+		"minecraft:salmon",
+		"minecraft:vex",
+		"minecraft:cod",
+		"minecraft:tropical_fish",
+		"minecraft:frog",
+		"minecraft:evoker_fangs",
+		"#entitycls:cbox/cls9",
+		"#entitycls:cbox/cls10",
+		"minecraft:allay",
+		"minecraft:creeper",
+		"minecraft:blaze",
+		"#entitycls:cbox/cls11",
+		"#entitycls:cbox/cls12",
+		"minecraft:enderman",
+		"minecraft:snow_golem",
+		"minecraft:wither_skeleton"
+	]
+}

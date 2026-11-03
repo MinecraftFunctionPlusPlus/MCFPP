@@ -293,7 +293,9 @@ class TemplateFieldInferenceTest {
     }
 
     class MutableFieldAnnotation : top.mcfpp.model.annotation.Annotation("MutableField", "test") {
-        val values = arrayListOf<String>()
+        var values = arrayListOf<String>()
+            private set
+        internal fun restorePortableValues(values: ArrayList<String>) { this.values = values }
         override fun forField(field: top.mcfpp.core.lang.Var<*>) {}
         override fun forFunction(function: Function) {}
         override fun forDataTemplate(data: DataTemplate) {}

@@ -13,6 +13,18 @@ class TypeDescriptorSerializer : Serializer<MCFPPType>() {
 
     override fun write(kryo: Kryo, output: Output, value: MCFPPType) {
         when (value) {
+            is MCFPPNBTRefType -> {
+                output.writeByte(7)
+                kryo.writeClassAndObject(output, value.valueType)
+            }
+            is MCFPPFunctionType -> {
+                output.writeByte(6)
+                identities.write(kryo, output, value.typeId)
+                output.writeString(value.executionCategory.identityName)
+                output.writeInt(value.parameters.size)
+                value.parameters.forEach { kryo.writeClassAndObject(output, it) }
+                kryo.writeClassAndObject(output, value.result)
+            }
             is MCFPPTypeAliasType -> {
                 output.writeByte(5)
                 kryo.writeClassAndObject(output, requireNotNull(value.cachedTarget) { "Unresolved type alias cannot be exported" })
@@ -105,6 +117,20 @@ class TypeDescriptorSerializer : Serializer<MCFPPType>() {
             }
         }
         5 -> kryo.readClassAndObject(input) as MCFPPType
+        6 -> {
+            val identity = identities.read(kryo, input, TypeId::class.java)
+            val categoryName = input.readString()
+            val category = MCFPPFunctionType.ExecutionCategory.entries.firstOrNull { it.identityName == categoryName }
+                ?: error("Unknown function execution category: $categoryName")
+            val count = input.readInt()
+            require(count >= 0) { "Negative function parameter count" }
+            val parameters = List(count) { kryo.readClassAndObject(input) as MCFPPType }
+            val result = kryo.readClassAndObject(input) as MCFPPType
+            MCFPPFunctionType(parameters, result, category).also {
+                require(it.typeId == identity) { "Restored function declaration identity differs: $identity" }
+            }
+        }
+        7 -> MCFPPNBTRefType(kryo.readClassAndObject(input) as MCFPPType)
         else -> error("Unknown declaration descriptor encoding: $tag")
     }
 }

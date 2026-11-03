@@ -1,18 +1,18 @@
 import mcfpp.minecraft.std:*
 
-@From<"top.mcfpp.mni.minecraft.TeamData">
+@From("top.mcfpp.mni.minecraft.TeamData")
 data Team {
     var id: string
     var displayName: text
 
-    constructor(string){
-        this.id = p0
-        this.displayName = p0
+    constructor(id: string){
+        this.id = id
+        this.displayName = id
     }
 
-    constructor(string, text){
-        this.id = p0
-        this.displayName = p1
+    constructor(id: string, displayName: text){
+        this.id = id
+        this.displayName = displayName
     }
 }
 

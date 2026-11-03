@@ -1,6 +1,6 @@
 @MCFPPEntity
 data WitherData: EntityData, CreatureData, AIMobData {
 
-    @Name<"Invul">
+    @Name("Invul")
     var invul: int
 }

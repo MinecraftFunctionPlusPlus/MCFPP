@@ -1,11 +1,16 @@
 package top.mcfpp.test
 
-import com.esotericsoftware.kryo.io.Input
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
 import top.mcfpp.io.DatapackCreator
-import top.mcfpp.io.LibBinFormat
+import top.mcfpp.library.api.LibraryExport
+import top.mcfpp.library.compiler.LibraryExporter
+import top.mcfpp.library.compiler.LibraryIdentity
+import top.mcfpp.library.compiler.OwnedLibraryResource
+import top.mcfpp.library.format.LibraryWire
+import top.mcfpp.library.model.LibraryTarget
+import top.mcfpp.library.syntax.PackageKey
 import top.mcfpp.test.util.MCFPPStringTest
 import java.nio.file.Files
 import java.util.zip.ZipEntry
@@ -34,12 +39,8 @@ class LibModuleCopyTest {
             val library = output.resolve("library")
             Files.createDirectories(library)
             MCFPPStringTest.readFromString("namespace fixture.module; func marker(){}",
-                targetPath = library.toString(), version = "26.3")
+                version = "26.3")
             assertEquals(0, Project.errorCount)
-            Input(Files.newInputStream(library.resolve("bin.mclib"))).use {
-                assertEquals(LibBinFormat.MAGIC, it.readInt())
-                assertEquals(LibBinFormat.VERSION, it.readInt())
-            }
             Files.writeString(library.resolve("module.json"),
                 """{"fixture":{"base":{"fixture.module":"resources"}}}""")
             val payloads = linkedMapOf(
@@ -50,6 +51,17 @@ class LibModuleCopyTest {
                 val file = library.resolve("fixture/data/resources").resolve(relative)
                 Files.createDirectories(file.parent)
                 Files.writeString(file, content)
+            }
+            // The source loader preserves physical resource paths; module.base applies the
+            // resources -> fixture.module alias when the module is linked into the consumer.
+            val resources = payloads.map { (relative, content) ->
+                OwnedLibraryResource("datapack/fixture/data/resources/$relative", content.toByteArray(Charsets.UTF_8), "fixture")
+            }
+            LibraryExport.write(LibraryExporter.snapshotCurrentProject(
+                LibraryIdentity(PackageKey("fixture:module-copy", "1.0.0"), "mcfpp"), LibraryTarget("26.3"), resources),
+                library.resolve("bin.mclib"))
+            Files.newInputStream(library.resolve("bin.mclib")).use {
+                assertEquals(LibraryWire.CURRENT_VERSION, LibraryWire.read(it).formatVersion)
             }
             val include = if (format == "directory") library else {
                 output.resolve("fixture.$format").also { archive ->
@@ -70,10 +82,10 @@ class LibModuleCopyTest {
                 copyImport = true
             }
             val consumer = output.resolve("consumer")
-            MCFPPStringTest.readFromString("func main(){}", targetPath = consumer.toString(), version = "26.3")
+            MCFPPStringTest.readFromString("func main(){\n/function #fixture.module:load\n}", targetPath = consumer.toString(), version = "26.3")
             assertEquals(0, Project.errorCount)
             for ((relative, content) in payloads) {
-                val copied = consumer.resolve("Imports/data/fixture.module").resolve(relative)
+                val copied = consumer.resolve(Project.config.name).resolve("data/fixture.module").resolve(relative)
                 assertTrue(Files.isRegularFile(copied), "Missing $format module resource: $relative")
                 assertEquals(content, Files.readString(copied))
             }

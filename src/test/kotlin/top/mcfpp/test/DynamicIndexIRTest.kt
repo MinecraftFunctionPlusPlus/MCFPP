@@ -89,7 +89,7 @@ class DynamicIndexIRTest {
         }
     }
 
-    @Test fun namedNestedViewsKeepTheIndexSelectedWhenTheViewWasCreated() = modes {
+    @Test fun nestedViewInitializersCopyTheElementAtTheEvaluatedIndex() = modes {
         val main = compile("""
             func identity(value: int): int { return value; }
             func main(){
@@ -102,8 +102,8 @@ class DynamicIndexIRTest {
                 external result = values[0][0] + values[1][0]
             }
         """)
-        assertEquals(13, execute(main).read(main.scope.getVar("result") as MCInt))
-        assertEquals(main.scope.getVar("values")!!.storageBinding!!.data, main.scope.getVar("view")!!.storageBinding!!.data)
+        assertEquals(11, execute(main).read(main.scope.getVar("result") as MCInt))
+        assertNotSame(main.scope.getVar("values")!!.storageBinding!!.data, main.scope.getVar("view")!!.storageBinding!!.data)
     }
 
     @Test fun copyingAnUnknownSelectedCollectionJoinsItsShapeAndKeepsTheCopyIndependent() = modes {

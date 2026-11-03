@@ -174,18 +174,18 @@ class ListMemberTest {
         assertTrue(Project.macroFunction.isEmpty())
     }
 
-    @Test fun aSpliceThroughAnErasedViewPreservesKnownSiblingTypesAndCopiesSubtrees() {
+    @Test fun aSpliceThroughAnErasedViewCopyPreservesItsSourceAndSiblingTypes() {
         val main = compile("""
             func edit(value: int): int {
                 var values: list<any> = [2 as any,3 as any]
                 var view = values as list<any>
                 view.prepend(value)
                 view.removeAt(1)
-                return (values[0] as int)*10 + (values[1] as int)
+                return (values[0] as int)*100 + (view[0] as int)*10 + (view[1] as int)
             }
             func main(){ external result = edit(7); }
         """)
-        assertEquals(73, execute(main).read(main.scope.getVar("result") as MCInt))
+        assertEquals(273, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun runtimeSearchSeparatesBoolFromByteWithoutRuntimeTypeTags() {

@@ -1,0 +1,8 @@
+schema = 1
+name = "mcfpp"
+sourcePath = "project/src"
+targetPath = "project/build"
+namespace = "example.nbtreference"
+version = "26.3"
+description = "Explicit NBTRef<int> storage example"
+jars = ["../damage/build/damage-macro.jar"]

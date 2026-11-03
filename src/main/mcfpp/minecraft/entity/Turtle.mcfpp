@@ -1,10 +1,10 @@
 @MCFPPEntity
 data TurtleData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
-    @Name<"HasEgg"> var hasEgg: bool
-    @Name<"HomePosX"> var homePosx: int
-    @Name<"HomePosY"> var homePosy: int
-    @Name<"HomePosZ"> var homePosz: int
-    @Name<"TravelPosX"> var travelPosx: int
-    @Name<"TravelPosY"> var travelPosy: int
-    @Name<"TravelPosZ"> var travelPosz: int
+    @Name("HasEgg") var hasEgg: bool
+    @Name("HomePosX") var homePosx: int
+    @Name("HomePosY") var homePosy: int
+    @Name("HomePosZ") var homePosz: int
+    @Name("TravelPosX") var travelPosx: int
+    @Name("TravelPosY") var travelPosy: int
+    @Name("TravelPosZ") var travelPosz: int
 }

@@ -2,7 +2,6 @@ package top.mcfpp.io
 
 import com.alibaba.fastjson2.JSON
 import top.mcfpp.Project
-import top.mcfpp.io.FileUtils.delAllFile
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.Native
 import top.mcfpp.model.compound.CompoundData
@@ -15,7 +14,6 @@ import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.toSnakeCase
 import top.mcfpp.util.Utils
-import java.io.File
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -51,41 +49,45 @@ object DatapackCreator {
      * @param path 路径
      */
     fun createDatapack(path: String) {
-        LogProcessor.debug("Clearing output folder...")
-        //清空原输出文件夹
-        delAllFile(File("$path/${Project.config.name}"))
-
-        if(Project.config.copyImport){
-            LogProcessor.debug("Copy libs...")
-            //标准库
-            delAllFile(File("$path/Imports"))
-            //新建文件夹
-            File("$path/Imports/data").mkdirs()
-            //复制库
-            for(module in Project.modules){
-                module.extract(Paths.get(path, "Imports", "data"))
+        val output = Path.of(path).toAbsolutePath().normalize()
+        Files.createDirectories(output)
+        val stage = Files.createTempDirectory(output, ".mcfpp-packs-")
+        try {
+            generateDatapack(stage.toString())
+            val assets = Project.config.assetsPath
+            val resources = PackAssembly.read(assets)
+            val resourcePack = stage.resolve(Project.config.name + "-resources")
+            if (resources.isNotEmpty()) {
+                Files.createDirectories(resourcePack)
+                Files.writeString(resourcePack.resolve("pack.mcmeta"), PackAssembly.resourceMetadata(Project.config.version, Project.config.description))
+                resources.forEach { (relative, bytes) ->
+                    val file = resourcePack.resolve("assets").resolve(relative)
+                    Files.createDirectories(file.parent); Files.write(file, bytes)
+                }
             }
-            val importMcMetaJson = packMcMetaJson(Project.config.version, "MCFPP imports")
-            Files.write(Paths.get("$path/Imports/pack.mcmeta"), importMcMetaJson.toByteArray())
+            PackAssembly.validate(stage.resolve(Project.config.name).resolve("data"), assets)
+            PackAssembly.publish(output, stage, listOf(Project.config.name, Project.config.name + "-resources"))
+        } finally { PackAssembly.delete(stage) }
+    }
 
-        }
-
+    private fun generateDatapack(path: String) {
         LogProcessor.debug("Creating datapack...")
         //生成
         val datapackMcMetaJson = packMcMetaJson(Project.config.version, Project.config.description)
         //创建文件夹
         try {
+            val emitted = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Function, Boolean>())
             Files.createDirectories(Paths.get("$path/${Project.config.name}/data"))
             //创建pack.mcmeta
             Files.write(Paths.get("$path/${Project.config.name}/pack.mcmeta"), datapackMcMetaJson.toByteArray())
             //写入函数文件
             for(namespace in GlobalScope.localNamespaces){
-                genNamespace(Paths.get(path), namespace)
+                genNamespace(Paths.get(path), namespace, emitted)
             }
             for (namespace in GlobalScope.stdNamespaces){
-                genNamespace(Paths.get(path), namespace)
+                genNamespace(Paths.get(path), namespace, emitted)
             }
-            genCompiledLibraryFunctions(Paths.get(path))
+            genCompiledLibraryFunctions(Paths.get(path), emitted)
             //写入宏函数
             for ((function, command) in Project.macroFunction){
                 val currPath = Paths.get(path, Project.config.name, "data", "mcfpp", "function", "dynamic", "${function}.mcfunction")
@@ -103,15 +105,13 @@ object DatapackCreator {
         } catch (e: IOException) {
             throw e
         }
-        //如果有额外数据，复制并覆盖可能的重复文件
-        if(Project.config.dataPath != null){
-            LogProcessor.debug("Copying extra data...")
-            Utils.copyRecursively(Project.config.dataPath!!, Paths.get(path, Project.config.name, "data"), true)
-        }
+        PackAssembly.mergeData(Paths.get(path, Project.config.name, "data"))
+        DatapackLinker.link(Paths.get(path, Project.config.name, "data"))
     }
 
-    private fun genFunction(currPath: Path, f: Function){
-        if (f is Native) return
+    private fun genFunction(currPath: Path, f: Function, emitted: MutableSet<Function>){
+        if (f is Native || !emitted.add(f)) return
+        if (!f.bodyCompiled && f.commands.isEmpty() && f.namespace !in GlobalScope.localNamespaces) return
         f.commands.analyzeAll()
         val directory = if (f is ExtensionFunction) currPath.resolve("ex") else currPath
         val output = directory.resolve("${f.identifierWithParamType.toSnakeCase()}.mcfunction")
@@ -121,13 +121,13 @@ object DatapackCreator {
     }
 
     /** Imported bodies are generated in the consumer pack at their actual call targets. */
-    private fun genCompiledLibraryFunctions(path: Path) {
+    private fun genCompiledLibraryFunctions(path: Path, emitted: MutableSet<Function>) {
         val functions = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Function, Boolean>())
         val compounds = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<CompoundData, Boolean>())
 
-        fun exportFunction(function: Function) {
+        fun exportFunction(function: Function, generated: Boolean = false) {
             if (!functions.add(function)) return
-            if (function !is Native && function.bodyCompiled) {
+            if (function !is Native && (function.bodyCompiled || generated) && emitted.add(function)) {
                 function.commands.analyzeAll()
                 val id = function.namespaceID
                 val output = path.resolve(Project.config.name).resolve("data")
@@ -136,14 +136,17 @@ object DatapackCreator {
                 Files.createDirectories(output.parent)
                 Files.write(output, function.cmdStr.toByteArray())
             }
-            function.compiledFunctions.values.forEach(::exportFunction)
+            function.compiledFunctions.values.forEach { exportFunction(it) }
+            function.innerFunction.forEach { exportFunction(it, generated = true) }
+            function.child.filter { it is top.mcfpp.model.function.InternalFunction || it is top.mcfpp.model.function.NoStackFunction }
+                .forEach { exportFunction(it, generated = true) }
         }
 
         fun exportCompound(compound: CompoundData) {
             if (!compounds.add(compound)) return
-            compound.scope.forEachFunction(::exportFunction)
+            compound.scope.forEachFunction { exportFunction(it) }
             if (compound is DataTemplate) {
-                compound.constructors.forEach(::exportFunction)
+                compound.constructors.forEach { exportFunction(it) }
                 compound.companionObject?.let(::exportCompound)
             }
             if (compound is GenericDataTemplate) {
@@ -151,60 +154,64 @@ object DatapackCreator {
             }
         }
 
+        // The session inventory includes private declarations, initializers and tag targets
+        // which deliberately do not appear in public namespace lookup tables.
+        emitted.toList().forEach { exportFunction(it) }
+        Project.libraryImportSession?.functions()?.forEach { exportFunction(it) }
         for (namespace in GlobalScope.libNamespaces.values) {
             val scope = namespace.scope
-            scope.forEachFunction(::exportFunction)
+            scope.forEachFunction { exportFunction(it) }
             scope.template.values.forEach(::exportCompound)
             scope.genericTemplate.values.forEach(::exportCompound)
             scope.objects.forEach(::exportCompound)
         }
     }
 
-    private fun genTemplateFunction(currPath: Path, f: Function){
+    private fun genTemplateFunction(currPath: Path, f: Function, emitted: MutableSet<Function>){
         if (f is Native) return
-        genFunction(currPath, f)
-        f.compiledFunctions.values.forEach { genFunction(currPath, it) }
+        genFunction(currPath, f, emitted)
+        f.compiledFunctions.values.forEach { genFunction(currPath, it, emitted) }
     }
 
-    private fun genObject(currPath: Path, obj: CompoundData){
+    private fun genObject(currPath: Path, obj: CompoundData, emitted: MutableSet<Function>){
         //成员
         obj.scope.forEachFunction {
-            genFunction(currPath.resolve("function").resolve(obj.identifier.toSnakeCase()).resolve("static"), it)
+            genFunction(currPath.resolve("function").resolve(obj.identifier.toSnakeCase()).resolve("static"), it, emitted)
             it.compiledFunctions.values.forEach {qwq ->
-                genFunction(currPath.resolve("function").resolve(obj.identifier.toSnakeCase()).resolve("static"), qwq)
+                genFunction(currPath.resolve("function").resolve(obj.identifier.toSnakeCase()).resolve("static"), qwq, emitted)
             }
         }
         if (obj is DataTemplate) obj.constructors.forEach {
-            genTemplateFunction(currPath.resolve("function").resolve(obj.identifier.toSnakeCase()).resolve("static"), it)
+            genTemplateFunction(currPath.resolve("function").resolve(obj.identifier.toSnakeCase()).resolve("static"), it, emitted)
         }
     }
 
-    private fun genTemplate(currPath: Path, t: DataTemplate){
+    private fun genTemplate(currPath: Path, t: DataTemplate, emitted: MutableSet<Function>){
         //成员
         t.scope.forEachFunction {
-            genTemplateFunction(currPath.resolve("function").resolve(t.identifier.toSnakeCase()), it)
+            genTemplateFunction(currPath.resolve("function").resolve(t.identifier.toSnakeCase()), it, emitted)
         }
         t.constructors.forEach {
-            genTemplateFunction(currPath.resolve("function").resolve(t.identifier.toSnakeCase()), it)
+            genTemplateFunction(currPath.resolve("function").resolve(t.identifier.toSnakeCase()), it, emitted)
         }
     }
 
-    private fun genNamespace(path: Path, namespace: MutableMap.MutableEntry<String, Namespace>) {
+    private fun genNamespace(path: Path, namespace: MutableMap.MutableEntry<String, Namespace>, emitted: MutableSet<Function>) {
         val currPath = path.resolve(Project.config.name).resolve("data").resolve(namespace.key)
         val visited = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<CompoundData, Boolean>())
         fun exportCompound(compound: CompoundData) {
             if (!visited.add(compound)) return
             when (compound) {
-                is ObjectCompoundData -> genObject(currPath, compound)
-                is DataTemplate -> genTemplate(currPath, compound)
+                is ObjectCompoundData -> genObject(currPath, compound, emitted)
+                is DataTemplate -> genTemplate(currPath, compound, emitted)
             }
             if (compound is GenericDataTemplate) compound.compiledTemplates.values.forEach(::exportCompound)
         }
 
         namespace.value.scope.forEachFunction {
-            genFunction(currPath.resolve("function"), it)
+            genFunction(currPath.resolve("function"), it, emitted)
             it.compiledFunctions.values.forEach { qwq ->
-                genFunction(currPath.resolve("function"), qwq)
+                genFunction(currPath.resolve("function"), qwq, emitted)
             }
         }
 

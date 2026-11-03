@@ -1,0 +1,55 @@
+namespace example.entitycontext
+
+import mcfpp.lang:*
+
+func main() {
+    var qwq = @s
+
+    qwq.withPosCtx { posCtx ->
+        posCtx.onPassengers { psgCtx ->
+            tp(psgCtx.executor, posCtx.pos)
+        }
+    }
+    /execute if block ~ ~ ~ minecraft:stone run say after
+}
+
+// Invoke with an entity executor. Reads preserve the caller's space.
+func inspect() {
+    @s.withEntityCtx { ctx ->
+        var airFound = ctx.executor.dat.air.tryRead { air ->
+            if (toInt(air) > 0) {
+                /say air-present
+            }
+            /execute if block ~ ~ ~ minecraft:stone run say air-read
+        }
+        if (!airFound) {
+            /say air-missing
+        }
+        var pointsFound = ctx.executor.score["points"].tryRead { points ->
+            if (points == 0) {
+                /say score-zero
+            }
+        }
+        if (!pointsFound) {
+            /say score-missing
+        }
+    }
+}
+
+// A successful multi-target command and a missing target have independent results.
+func commandResults() {
+    var moved = tp(@a, 1 2 3)
+    var missed = tp(entityByName("Missing"), ~ ~ ~)
+    if (moved.result == 2) {
+        /say moved-result
+    }
+    if (moved.success) {
+        /say moved-success
+    }
+    if (missed.result == 0) {
+        /say missed-result
+    }
+    if (!missed.success) {
+        /say missed-failure
+    }
+}

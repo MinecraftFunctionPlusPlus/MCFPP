@@ -15,7 +15,13 @@ class MCFPPErrorListener : BaseErrorListener() {
         msg: String,
         e: RecognitionException?
     ) {
-        LogProcessor.syntaxError(recognizer, msg, line, charPositionInLine)
+        val diagnostic = if ((offendingSymbol as? org.antlr.v4.runtime.Token)?.type == mcfppLexer.REF)
+            LegacyReferenceSyntax.MESSAGE
+        else if ((offendingSymbol as? org.antlr.v4.runtime.Token)?.type == mcfppLexer.DOUBLE_ARROW)
+            "Legacy lambda '(args) => { ... }' is no longer supported; use '{ args -> ... }'. " +
+                "Captured locals are read-only values; return an explicit accumulated result."
+        else msg
+        LogProcessor.syntaxError(recognizer, diagnostic, line, charPositionInLine)
     }
 
 }

@@ -4,9 +4,9 @@ data PotionEffectData {
     var duration: bool?
     var id: string
 
-    @Name<"show_icon">
+    @Name("show_icon")
     var showIcon: bool?
 
-    @Name<"show_particles">
+    @Name("show_particles")
     var showParticles: bool?
 }

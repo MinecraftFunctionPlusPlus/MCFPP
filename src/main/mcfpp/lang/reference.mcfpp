@@ -1,0 +1,5 @@
+// Explicit Minecraft addresses. Parameters are captured when the reference is created.
+func scoreRef(holder: string, objective: string): ScoreRef = top.mcfpp.mni.ReferenceData.scoreRef
+func nbtStorageRef<T>(storage: string, path: string): NBTRef<T> = top.mcfpp.mni.ReferenceData.nbtStorageRef
+func nbtEntityRef<T>(target: entity, path: string): NBTRef<T> = top.mcfpp.mni.ReferenceData.nbtEntityRef
+func nbtBlockRef<T>(dimension: string, x: int, y: int, z: int, path: string): NBTRef<T> = top.mcfpp.mni.ReferenceData.nbtBlockRef

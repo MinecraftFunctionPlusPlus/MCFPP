@@ -78,7 +78,7 @@ class CollectionIRTest {
         assertTrue(Project.errorCount > 0)
     }
 
-    @Test fun nestedViewsSharePlacesWhileCopiesKeepTheirOwnElementFacts() = modes {
+    @Test fun nestedViewInitializersAndCopiesKeepIndependentElementFacts() = modes {
         val main = compile("""
             func main(){
                 var values = {field:[2,9]}
@@ -90,8 +90,8 @@ class CollectionIRTest {
                 external result = values["field"][0] + copied["field"][0] + copied["field"][1]
             }
         """)
-        assertEquals(20, execute(main).read(main.scope.getVar("result") as MCInt))
-        assertEquals(main.scope.getVar("values")!!.storageBinding!!.place, main.scope.getVar("view")!!.storageBinding!!.place)
+        assertEquals(18, execute(main).read(main.scope.getVar("result") as MCInt))
+        assertNotEquals(main.scope.getVar("values")!!.storageBinding!!.place, main.scope.getVar("view")!!.storageBinding!!.place)
         assertNotEquals(main.scope.getVar("values")!!.storageBinding!!.place, main.scope.getVar("copied")!!.storageBinding!!.place)
     }
 
@@ -154,7 +154,7 @@ class CollectionIRTest {
         assertTrue(Project.errorCount > 0)
     }
 
-    @Test fun erasedSourcesAndCollectionViewsExportOneSharedStorageRecord() {
+    @Test fun erasedSourcesAndCollectionViewInitializersExportIndependentStorage() {
         val main = compile("""
             func main(){
                 var values: any = [2,9]
@@ -164,14 +164,15 @@ class CollectionIRTest {
         """)
         val source = main.scope.getVar("values")!!.storageBinding!!
         val view = main.scope.getVar("view") as NBTList
-        assertSame(source.data, view.storageBinding!!.data)
+        assertNotSame(source.data, view.storageBinding!!.data)
         assertEquals(2, source.data.facts.length(source.place))
         assertEquals(11, execute(main).read(main.scope.getVar("result") as MCInt))
         Function.currFunction = main
         view.getByIndex(MCInt(0)).assignedBy(MCInt(6))
-        val changed = source.data.facts.read(source.place.index(0))!!
+        val changed = view.storageBinding!!.let { it.data.facts.read(it.place.index(0))!! }
         assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), changed.type)
         assertEquals(6, (StorageAccess.snapshotTag(assertIs<ValueKnowledge.Constant>(changed.value).value) as top.mcfpp.nbt.tags.primitive.IntTag).value)
+        assertEquals(2, (StorageAccess.snapshotTag(assertIs<ValueKnowledge.Constant>(source.data.facts.read(source.place.index(0))!!.value).value) as top.mcfpp.nbt.tags.primitive.IntTag).value)
     }
 
     @Test fun emptyDictionaryLiteralsKeepRuntimeIdentityAndAcceptNewFields() {
@@ -194,7 +195,7 @@ class CollectionIRTest {
                 external result = values[0][0] + copied[0][0]
             }
         """)
-        assertEquals(9, execute(main).read(main.scope.getVar("result") as MCInt))
+        assertEquals(4, execute(main).read(main.scope.getVar("result") as MCInt))
         MCFPPStringTest.readFromString("""
             func main(){ var values = [[2]]; var view = values as ImmutableList<list<int>>; view[0] = [7]; }
         """.trimIndent(), version = "26.3")

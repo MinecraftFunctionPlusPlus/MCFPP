@@ -16,11 +16,13 @@ const 的首次赋值必须在所有可达前驱上均未发生。分支或循�
 
 external 要求运行时表示，不能将编译器专用载荷强制编码为 NBT。物化保留已经证明的事实，后续运行期操作仍生成真实命令。
 
-`as` 建立同一数据位置上的解释视图。显式数值转换使用 `toInt`、`toFloat`、`toByte`、`toShort`、`toLong`、`toDouble`；编码使用 `toNBT`。能力与精度见 [转换合同](./conversions.md)。
+`as` 产生同一数据位置上的临时解释视图；赋值给变量时复制到目标的独立位置，声明初始化也遵守此规则。需要共享引用目标时使用 Ref 系列类型。显式数值转换使用 `toInt`、`toFloat`、`toByte`、`toShort`、`toLong`、`toDouble`；编码使用 `toNBT`。能力与精度见 [转换合同](./conversions.md)。
 
 泛型声明支持 `out`、`in`，默认不变；内建 list/dict/map/ImmutableList 的类型参数均保持不变，ImmutableList 的只读接口不引入协变。不提供语言星投影。同一命名空间的 data/object 名字分别唯一，明确对应的伴随对象按声明参数配对。
 
 ## 声明、初始化与调用
+
+公开的 `ref expression` 取地址语法已移除。使用 `ScoreRef`、`NBTRef<T>` 及显式地址工厂；实体的 `target.score[objective]` 和 `target.dat.field` 直接产生引用值。普通参数、返回、data/list 和普通 lambda 捕获复制引用描述，`r = otherRef` 更换描述，`r.set(value)` 写入目标。普通局部变量不开放取地址，旧 `REF int` 也不自动接受 `ScoreRef`。完整的创建、同步读取、上下文借用及迁移示例见 [引用值](./reference-values.md)。
 
 字段 RHS 的声明类型来自纯绑定与签名查询。绑定不执行用户函数或构造函数，真实初始化按实例执行一次。普通实参的已知值不改变公共参数与返回类型；编译器专用载荷在实际调用中绑定，只有 readonly 泛型实参进入特化键。
 

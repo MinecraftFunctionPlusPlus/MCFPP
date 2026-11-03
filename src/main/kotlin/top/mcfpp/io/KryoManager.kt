@@ -5,6 +5,10 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import org.antlr.v4.runtime.CommonToken
+import org.antlr.v4.runtime.CharStream
+import org.antlr.v4.runtime.CharStreams
+import org.antlr.v4.runtime.misc.Interval
+import org.antlr.v4.runtime.misc.Pair
 import org.objenesis.strategy.StdInstantiatorStrategy
 import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.io.info.DataTemplateInfo
@@ -26,6 +30,20 @@ object KryoManager {
     val kryo = Kryo().apply {
         isRegistrationRequired = false
         references = true
+        // A declaration AST needs source text for nested lambda bodies. Serialize the
+        // immutable input only; token sources/lexers and their live parser state stay out
+        // of the library. Kryo references share one source stream across its tokens.
+        addDefaultSerializer(CharStream::class.java, object : Serializer<CharStream>() {
+            override fun write(kryo: Kryo, output: Output, value: CharStream) {
+                output.writeString(value.sourceName)
+                output.writeString(if (value.size() == 0) "" else value.getText(Interval(0, value.size() - 1)))
+            }
+
+            override fun read(kryo: Kryo, input: Input, type: Class<out CharStream>): CharStream {
+                val name = input.readString()
+                return CharStreams.fromString(input.readString(), name)
+            }
+        })
         addDefaultSerializer(TypeId::class.java, TypeIdentitySerializer())
         addDefaultSerializer(MCFPPType::class.java, TypeDescriptorSerializer())
         addDefaultSerializer(CompilerValue::class.java, object : Serializer<CompilerValue>() {
@@ -33,6 +51,30 @@ object KryoManager {
             override fun write(kryo: Kryo, output: Output, value: CompilerValue) = identities.writeValue(output, value)
             override fun read(kryo: Kryo, input: Input, type: Class<out CompilerValue>) = identities.readValue(input)
         })
+        addDefaultSerializer(top.mcfpp.core.lang.context.ContextBorrowPayload::class.java,
+            object : Serializer<top.mcfpp.core.lang.context.ContextBorrowPayload>() {
+                override fun write(kryo: Kryo, output: Output, value: top.mcfpp.core.lang.context.ContextBorrowPayload) {
+                    throw IllegalArgumentException("Scoped context borrows cannot be serialized into a library")
+                }
+                override fun read(kryo: Kryo, input: Input, type: Class<out top.mcfpp.core.lang.context.ContextBorrowPayload>): top.mcfpp.core.lang.context.ContextBorrowPayload =
+                    throw IllegalArgumentException("A library cannot restore a scoped context borrow")
+            })
+        addDefaultSerializer(top.mcfpp.core.lang.context.ScopedContextVar::class.java,
+            object : Serializer<top.mcfpp.core.lang.context.ScopedContextVar<*>>() {
+                override fun write(kryo: Kryo, output: Output, value: top.mcfpp.core.lang.context.ScopedContextVar<*>) {
+                    throw IllegalArgumentException("Scoped context values cannot be serialized into a library")
+                }
+                override fun read(kryo: Kryo, input: Input, type: Class<out top.mcfpp.core.lang.context.ScopedContextVar<*>>): top.mcfpp.core.lang.context.ScopedContextVar<*> =
+                    throw IllegalArgumentException("A library cannot restore a scoped context value")
+            })
+        addDefaultSerializer(top.mcfpp.core.lang.entity.EntityDataAddress::class.java,
+            object : Serializer<top.mcfpp.core.lang.entity.EntityDataAddress>() {
+                override fun write(kryo: Kryo, output: Output, value: top.mcfpp.core.lang.entity.EntityDataAddress) {
+                    throw IllegalArgumentException("Live entity data addresses cannot be serialized into a library; use tryRead to obtain a value")
+                }
+                override fun read(kryo: Kryo, input: Input, type: Class<out top.mcfpp.core.lang.entity.EntityDataAddress>): top.mcfpp.core.lang.entity.EntityDataAddress =
+                    throw IllegalArgumentException("A library cannot restore a live entity data address")
+            })
         instantiatorStrategy = StdInstantiatorStrategy()
 
         register(DataTemplate::class.java, object : Serializer<DataTemplate>() {
@@ -174,18 +216,24 @@ object KryoManager {
                 output.writeInt(`object`.tokenIndex)
                 output.writeInt(`object`.startIndex)
                 output.writeInt(`object`.stopIndex)
+                kryo.writeClassAndObject(output, `object`.inputStream)
             }
 
             override fun read(kryo: Kryo, input: Input, type: Class<out CommonToken>): CommonToken {
                 val t = input.readInt()
-                val token = CommonToken(t)
-                token.line = input.readInt()
-                token.charPositionInLine = input.readInt()
-                token.channel = input.readInt()
-                token.text = input.readString()
-                token.tokenIndex = input.readInt()
-                token.startIndex = input.readInt()
-                token.stopIndex = input.readInt()
+                val line = input.readInt()
+                val column = input.readInt()
+                val channel = input.readInt()
+                val text = input.readString()
+                val index = input.readInt()
+                val start = input.readInt()
+                val stop = input.readInt()
+                val source = kryo.readClassAndObject(input) as CharStream?
+                val token = CommonToken(Pair(null, source), t, channel, start, stop)
+                token.line = line
+                token.charPositionInLine = column
+                token.text = text
+                token.tokenIndex = index
                 return token
             }
         })

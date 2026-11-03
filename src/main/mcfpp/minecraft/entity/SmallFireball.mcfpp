@@ -1,4 +1,4 @@
 @MCFPPEntity
 data SmallFireballData: EntityData, ProjectileData, FireballData {
-    @Name<"Item"> var item: list<ItemData>
+    @Name("Item") var item: list<ItemData>
 }

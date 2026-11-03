@@ -34,7 +34,7 @@ class MapIRTest {
         finally { CompileSettings.foldIRConstants = original }
     }
 
-    @Test fun knownKeysKeepActualTypesAndViewsFollowKeyPositionsAfterRemoval() = modes {
+    @Test fun knownKeysKeepActualTypesAndViewCopiesSurviveSourceRemoval() = modes {
         val main = compile("""
             func main(){
                 var root = {entries:[{key:"first",value:[2]},{key:"second",value:[3]}]}
@@ -49,7 +49,7 @@ class MapIRTest {
                 external result = values.size()*100 + number*10 + copied["second"][0]
             }
         """)
-        assertEquals(273, execute(main).read(main.scope.getVar("result") as MCInt))
+        assertEquals(233, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun mergeCopiesInputsAndReplacesWholeNestedValues() = modes {

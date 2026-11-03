@@ -1,0 +1,3 @@
+//> injectedBy example.mniraycast.KotlinRaycastMacro
+// Java variant: replace the Kotlin directive above with the following line.
+// //> injectedBy example.mniraycast.JavaRaycastMacro

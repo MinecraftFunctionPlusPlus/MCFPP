@@ -1,0 +1,7 @@
+schema = 1
+name = "mcfpp"
+sourcePath = "src"
+targetPath = "build"
+namespace = "example.references"
+version = "26.3"
+description = "Stored ScoreRef and NBTRef values with explicit Minecraft addresses"

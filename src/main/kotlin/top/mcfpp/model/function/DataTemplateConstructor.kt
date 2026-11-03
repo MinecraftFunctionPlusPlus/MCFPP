@@ -50,7 +50,7 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
             return UnknownVar("construction_${data.identifier}").apply { type = data.getType() }
         }
         val errors = Project.errorCount
-        if (ast == null && !needsActualBinding() && !bodyCompiled && !bodyBeingCompiled) compileBody()
+        if (!hasBody && !needsActualBinding() && !bodyCompiled && !bodyBeingCompiled) compileBody()
         if (Project.errorCount != errors || constructedReceiver?.isError == true) {
             if (caller is Var<*>) caller.isError = true
             return UnknownVar("construction_${data.identifier}").apply { type = data.getType() }

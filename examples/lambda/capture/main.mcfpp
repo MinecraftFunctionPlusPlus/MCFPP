@@ -1,0 +1,64 @@
+var globalValue: int = 1;
+
+func main() {
+    globalValue = 2;
+    external local: int = 3;
+    var frozen: () -> int = { local };
+    local = 99;
+    var first = frozen();
+    var again = frozen();
+    var globalRead: () -> int = { globalValue };
+    globalValue = 7;
+    var latest = globalRead();
+    var globalWrite: () -> void = { globalValue = 8; };
+    globalWrite();
+    var changedGlobal = globalRead();
+
+    var outer: (int) -> int = {
+        var inner: () -> int = { it + local };
+        inner()
+    };
+    local = 100;
+    var nested = outer(2);
+    var capturedFunction: () -> int = { frozen() };
+    var relayed = capturedFunction();
+
+    var shadowBase = 4;
+    var shadowing: () -> int = {
+        var before = shadowBase;
+        var shadowBase = 9;
+        before + shadowBase
+    };
+    var shadowResult = shadowing();
+
+    var loopTotal = 0;
+    for (index: 1..3) {
+        var item = index;
+        var each: () -> int = { item };
+        item = 50;
+        loopTotal = loopTotal + each();
+        loopTotal = loopTotal + each();
+    }
+
+    var contextValue = 11;
+    var probe: () -> void = {
+        var captured = contextValue;
+        /data modify storage lambda:results contextCapture set from storage mcfpp:system stack_frame[0].captured
+        /execute if entity @s[tag=context_a] run data modify storage lambda:results executor set value 1
+        /execute if entity @s[tag=context_b] run data modify storage lambda:results executor set value 2
+        /execute if dimension minecraft:overworld run data modify storage lambda:results dimension set value 1
+        /execute if dimension minecraft:the_nether run data modify storage lambda:results dimension set value 2
+        /setblock ~ ~ ~ minecraft:gold_block
+    };
+    contextValue = 90;
+    execute(pos = 21 70 3) { probe(); }
+    /execute if block 21 70 3 minecraft:gold_block run data modify storage lambda:results position set value 1
+    /data modify storage lambda:results first set from storage mcfpp:system stack_frame[0].first
+    /data modify storage lambda:results again set from storage mcfpp:system stack_frame[0].again
+    /data modify storage lambda:results latest set from storage mcfpp:system stack_frame[0].latest
+    /data modify storage lambda:results changedGlobal set from storage mcfpp:system stack_frame[0].changedGlobal
+    /data modify storage lambda:results nested set from storage mcfpp:system stack_frame[0].nested
+    /data modify storage lambda:results relayed set from storage mcfpp:system stack_frame[0].relayed
+    /data modify storage lambda:results shadowResult set from storage mcfpp:system stack_frame[0].shadowResult
+    /data modify storage lambda:results loopTotal set from storage mcfpp:system stack_frame[0].loopTotal
+}

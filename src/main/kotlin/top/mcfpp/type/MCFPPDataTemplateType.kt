@@ -75,7 +75,7 @@ open class MCFPPDataTemplateType(
         }, { checkpointPrivateState(elements) })
     }
 
-    override val typeId: TypeId get() = TypeId.Declaration("template", template.namespace, template.identifier)
+    override val typeId: TypeId get() = template.nominalIdentity
 
     override val hasRuntimeRepresentation: Boolean
         get() = runtimeFields(hashSetOf())

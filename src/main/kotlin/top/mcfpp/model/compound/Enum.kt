@@ -10,6 +10,8 @@ import top.mcfpp.type.MCFPPEnumType
 import top.mcfpp.util.LogProcessor
 
 class Enum(identifier: String, namespace: String) : CompoundData(identifier, namespace){
+    protected override val sourceNominalIdentity: top.mcfpp.type.TypeId
+        get() = top.mcfpp.type.TypeId.Declaration("enum", namespace, identifier)
 
     val sbObject : SbObject = SbObject("${namespace}.${identifier}")
 

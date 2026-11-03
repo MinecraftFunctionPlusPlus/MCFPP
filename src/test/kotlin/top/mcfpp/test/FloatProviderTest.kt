@@ -64,7 +64,7 @@ class FloatProviderTest {
     }
 
     /** Small command evaluator, with strict missing reads, to check compiled operand flow. */
-    private class FloatMachine(commands: List<String>) {
+    private class FloatMachine(commands: List<String>, private val owner: Function? = null, private val frameOffset: Int = 0) {
         val data = mutableMapOf<String, Float>()
         val scores = mutableMapOf<String, Int>()
 
@@ -133,12 +133,19 @@ class FloatProviderTest {
             }
         }
 
-        fun float(name: String) = data.getValue("storage mcfpp:system stack_frame[0].$name")
+        fun float(name: String): Float {
+            val variable = requireNotNull(owner).scope.getVar(name)!!
+            val address = StorageAccess.ensure(variable).path.toCommandPart().toString()
+            val observed = Regex("stack_frame\\[(\\d+)]").replace(address) {
+                "stack_frame[${it.groupValues[1].toInt() + frameOffset}]"
+            }
+            return data.getValue(observed)
+        }
     }
 
     @Test
     fun nativeArithmeticPreservesOperandsAndNestedResults() {
-        val (_, commands) = compile("""
+        val (function, commands) = compile("""
             external a: float = 8.5
             external b: float = 2.0
             var sum = a + b
@@ -152,7 +159,7 @@ class FloatProviderTest {
             var mixed = 2.0 + a
         """.trimIndent())
         assertNative(commands)
-        val machine = FloatMachine(commands)
+        val machine = FloatMachine(commands, function)
         val expected = mapOf("a" to 8.5f, "b" to 2f, "sum" to 10.5f, "difference" to 6.5f,
             "product" to 17f, "quotient" to 4.25f, "remainder" to 0.5f, "negated" to -8.5f,
             "nestedRight" to 6f, "nestedBoth" to (10.5f / 6.5f), "mixed" to 10.5f)
@@ -164,7 +171,7 @@ class FloatProviderTest {
 
     @Test
     fun compoundAssignmentsAndSignedRemaindersUseNativeProviders() {
-        val (_, commands) = compile("""
+        val (function, commands) = compile("""
             external a: float = -8.5
             a += 0.5
             a -= 2.0
@@ -174,7 +181,7 @@ class FloatProviderTest {
             var mixed = 1.0 - a
         """.trimIndent())
         assertNative(commands)
-        val machine = FloatMachine(commands)
+        val machine = FloatMachine(commands, function)
         assertEquals(-1.5f, machine.float("a"))
         assertEquals(2.5f, machine.float("mixed"))
     }
@@ -194,7 +201,7 @@ class FloatProviderTest {
             var constantLeft = 0.0 > a
         """.trimIndent())
         assertNative(commands)
-        val machine = FloatMachine(commands)
+        val machine = FloatMachine(commands, function)
         for ((name, expected) in mapOf("gt" to 0, "lt" to 0, "ge" to 1, "le" to 1, "eq" to 1,
             "ne" to 0, "tiny" to 1, "constantLeft" to 1)) {
             val score = function.scope.getVar(name) as top.mcfpp.core.lang.bool.ScoreBool
@@ -214,7 +221,7 @@ class FloatProviderTest {
         """.trimIndent())
         assertNative(commands)
         assertTrue(commands.any { it.contains("compute default integer {type:\"minecraft:from_float\"") })
-        val machine = FloatMachine(commands)
+        val machine = FloatMachine(commands, function)
         val truncated = function.scope.getVar("truncated") as MCInt
         assertEquals(-1, machine.scores["${truncated.name} ${truncated.sbObject}"])
         assertEquals(3f, machine.float("converted"))
@@ -342,11 +349,11 @@ class FloatProviderTest {
             }
         }
         expand(arithmetic.commands.analyzeAll())
-        val machine = FloatMachine(flattened)
-        assertEquals(6f, machine.data["storage mcfpp:system stack_frame[1].sum"])
-        assertEquals(2f, machine.data["storage mcfpp:system stack_frame[1].nested"])
-        assertEquals(8f, machine.data["storage mcfpp:system stack_frame[1].a"])
-        assertEquals(4f, machine.data["storage mcfpp:system stack_frame[1].b"])
+        val machine = FloatMachine(flattened, arithmetic, if (arithmetic.optimizedStaticFrame == null) 1 else 0)
+        assertEquals(6f, machine.float("sum"))
+        assertEquals(2f, machine.float("nested"))
+        assertEquals(8f, machine.float("a"))
+        assertEquals(4f, machine.float("b"))
         assertNative(flattened)
     }
 

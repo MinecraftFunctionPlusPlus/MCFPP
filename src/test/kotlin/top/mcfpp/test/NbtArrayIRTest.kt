@@ -36,7 +36,7 @@ class NbtArrayIRTest {
         finally { CompileSettings.foldIRConstants = original }
     }
 
-    @Test fun copiesAndViewsPreserveArrayIdentityAndAliasing() = modes {
+    @Test fun copiesAndViewInitializersKeepIndependentArrayPayloads() = modes {
         val main = compile("""
             func copy(value: any): any { return value; }
             func main(){
@@ -48,7 +48,7 @@ class NbtArrayIRTest {
                 external result = source["values"][0]*100 + source["values"][1]*10 + copied[0]
             }
         """)
-        assertEquals(732, execute(main).read(main.scope.getVar("result") as MCInt))
+        assertEquals(232, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun byteAndLongCopiesKeepExactPayloadsAcrossFrames() = modes {

@@ -45,8 +45,9 @@ object NativeSelectorOperations {
 
     private fun append(context: NativeCallContext, predicate: (Var<*>) -> EntitySelectorPredicate) = context.withAdapters { receiver, args ->
         val selector = receiver as? SelectorVar
-        if (selector == null) {
-            LogProcessor.error("Selector filters require a selector receiver")
+        val program = (selector?.entityTargetOrNull() as? EntityTarget.Selector)?.selector
+        if (selector == null || program == null) {
+            LogProcessor.error("Selector filters require an ordinary selector target; direct targets and bound executors cannot be filtered")
             return@withAdapters
         }
         val errors = Project.errorCount
@@ -63,7 +64,6 @@ object NativeSelectorOperations {
             LogProcessor.error("Selector tag/team filters require an unquoted word")
             return@withAdapters
         }
-        val program = selector.value
         program.addPredicate(filter)
         if (Project.errorCount == errors) {
             StorageAccess.updateSelector(selector, program)

@@ -13,6 +13,9 @@ public class To extends DataTemplateAnnotation {
         this.className = className;
     }
 
+    public String getClassName() { return className; }
+    public void restorePortableState(String value) { className = value; }
+
     @Override
     public void forDataTemplate(@NotNull DataTemplate data) {
         throw new UnsupportedOperationException("Not implemented yet");

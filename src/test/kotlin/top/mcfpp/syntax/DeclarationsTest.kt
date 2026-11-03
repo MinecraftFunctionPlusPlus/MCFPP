@@ -10,7 +10,7 @@ import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
 import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.annotations.MNIFunction
-import top.mcfpp.antlr.DeclarationSyntax
+import top.mcfpp.antlr.ReadonlyParamsDeclarationSyntax
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.mni.NativeCallContext
@@ -27,7 +27,7 @@ import kotlin.test.*
 import kotlin.test.Test
 
 class DeclarationsTest {
-    @Test fun acceptsColonDeclarationsAndKeepsAliasesCastsAndAnonymousParameters() {
+    @Test fun acceptsNamedParametersAndKeepsAliasesCastsAndReadonlyShorthand() {
         assertEquals(emptyList(), errors("""
             import example:Thing as Renamed
             typealias int as Integer
@@ -39,7 +39,7 @@ class DeclarationsTest {
             }
             const func fixed(value: int): int { return value; }
             func nativeValue<T, N: int>(value: T) = example.Native.value
-            func accept(Box<int, 2>, value: int) {}
+            func accept(box: Box<int, 2>, value: int) {}
             func main() {
                 var typed: int
                 var inferred = 1 as int
@@ -70,20 +70,33 @@ class DeclarationsTest {
         assertEquals(emptyList(), errors("data NumberView as int {}\nfunc main(){var value=1 as int;}"))
     }
 
-    @Test fun bareReadonlyIdentifiersAndNormalAnonymousTypesHaveDifferentMeanings() {
-        val parser = parser("<\nT\n,\nN: int\n>(\nSomeClass\n, named: int\n)")
-        val params = parser.functionParams()
-        assertEquals(0, parser.numberOfSyntaxErrors)
-        val readonly = params.readOnlyParams().parameterList().parameter()
-        assertEquals("type", DeclarationSyntax.readonlyTypeName(readonly[0]))
-        assertEquals("T", DeclarationSyntax.parameterName(readonly[0], true, "p0"))
-        assertEquals("int", DeclarationSyntax.readonlyTypeName(readonly[1]))
-        val anonymous = params.normalParams().parameterList().parameter()[0]
-        assertEquals("SomeClass", anonymous.type().text)
-        assertEquals("p0", DeclarationSyntax.parameterName(anonymous, false, "p0"))
+    @Test fun rejectsAnonymousNormalParameters() {
+        for (source in listOf(
+            "func unnamed(int) {}",
+            "func unnamed(SomeClass) {}",
+            "func unnamed(value: int, bool) {}",
+            "func unnamed<T>(T) {}",
+            "func unnamed(int = 0) = example.Native.unnamed",
+            "data Example { constructor(int) {} }"
+        )) assertTrue(errors(source).isNotEmpty(), source)
     }
 
-    @Test fun compilesMixedGenericFunctionsTemplatesConstructorsAndAnonymousValues() = isolated {
+    @Test fun readonlyTypeShorthandAndNamedNormalParametersHaveExplicitNames() {
+        val parser = parser("<\nT\n,\nN: int\n>(\nitem: SomeClass\n, named: int\n)")
+        val params = parser.functionParams()
+        assertEquals(0, parser.numberOfSyntaxErrors)
+        val readonly = params.readOnlyParams().readOnlyParameterList().readOnlyParameter()
+        assertNull(readonly[0].type())
+        assertEquals("T", readonly[0].Identifier().text)
+        assertEquals("type", ReadonlyParamsDeclarationSyntax.readonlyTypeName(readonly[0]))
+        assertEquals("T", ReadonlyParamsDeclarationSyntax.readonlyParameterName(readonly[0]))
+        assertEquals("int", ReadonlyParamsDeclarationSyntax.readonlyTypeName(readonly[1]))
+        val named = params.normalParams().parameterList().parameter()[0]
+        assertEquals("SomeClass", named.type().text)
+        assertEquals("item", named.Identifier().text)
+    }
+
+    @Test fun compilesMixedGenericFunctionsTemplatesConstructorsAndNamedParameters() = isolated {
         compile("""
             namespace fixture.declarations
             data NumberView as int {}
@@ -94,14 +107,14 @@ class DeclarationsTest {
                 constructor(value: T) { this.value = value; }
             }
             func identity<T, N: int>(value: T): T { return value; }
-            func anonymous(Plain) {}
+            func accept(value: Plain) {}
             const func fixed(value: int): int { return value + 1; }
             func main() {
                 var box = Box<int, 2>(3)
                 var inferred = identity<int, 2>(4)
                 var converted = inferred as int
                 const local = 5
-                anonymous(Plain())
+                accept(Plain())
             }
         """.trimIndent())
         val scope = GlobalScope.localNamespaces.getValue("fixture.declarations").scope
@@ -113,9 +126,9 @@ class DeclarationsTest {
         assertEquals(listOf("T", "N"), generic.readOnlyParams.map { it.identifier })
         assertEquals("T", generic.readOnlyParams[0].toString())
         assertEquals("N: int", generic.readOnlyParams[1].toString())
-        val anonymous = scope.functions.getValue("anonymous").single()
-        assertEquals("p0", anonymous.normalParams.single().identifier)
-        assertTrue(anonymous.normalParams.single().type.typeName.contains("fixture.declarations:Plain"))
+        val accept = scope.functions.getValue("accept").single()
+        assertEquals("value", accept.normalParams.single().identifier)
+        assertTrue(accept.normalParams.single().type.typeName.contains("fixture.declarations:Plain"))
         assertIs<CompileTimeFunction>(scope.functions.getValue("fixed").single())
         val main = scope.functions.getValue("main").single()
         assertEquals(MCFPPBaseType.Int, main.scope.getVar("inferred")!!.type)
@@ -140,8 +153,9 @@ class DeclarationsTest {
         assertTrue(main.scope.getVar("fixed")!!.isConst)
         assertTrue(main.scope.getVar("runtime")!!.symbol!!.forceRuntime)
         assertTrue(main.scope.getVar("inferredRuntime")!!.symbol!!.forceRuntime)
-        assertTrue(main.commands.analyzeAll().any { "runtime" in it && it.endsWith(" 3") })
-        assertTrue(main.commands.analyzeAll().any { "inferredRuntime" in it && it.endsWith(" 5") })
+        val machine = top.mcfpp.test.util.ScoreCommandExecutor(main.commands.analyzeAll())
+        assertEquals(3, machine.read(main.scope.getVar("runtime") as top.mcfpp.core.lang.MCInt))
+        assertEquals(5, machine.read(main.scope.getVar("inferredRuntime") as top.mcfpp.core.lang.MCInt))
         assertEquals(MCFPPBaseType.Int, main.scope.getVar("inferred")!!.type)
         assertNotNull(StorageAccess.snapshot(main.scope.getVar("inferred")!!))
     }

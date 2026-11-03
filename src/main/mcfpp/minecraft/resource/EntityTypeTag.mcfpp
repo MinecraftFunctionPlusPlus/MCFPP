@@ -1,5 +1,5 @@
-@From<"top.mcfpp.mni.resource.EntityTypeTagData">
+@From("top.mcfpp.mni.resource.EntityTypeTagData")
 data EntityTypeTag: ResourceID
 
-@From<"top.mcfpp.mni.resource.EntityTypeTagObjectData">
+@From("top.mcfpp.mni.resource.EntityTypeTagObjectData")
 object data EntityTypeTag: ResourceID

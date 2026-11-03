@@ -37,8 +37,12 @@ object LogProcessor {
         val source: DiagnosticSource?
     )
     internal sealed interface PublicationEvent { fun publish() }
-    internal data class Delivery(val logger: Logger, val diagnostic: CapturedDiagnostic, val attachThrowable: Boolean) : PublicationEvent {
+    internal data class Delivery(
+        val logger: Logger, val diagnostic: CapturedDiagnostic, val attachThrowable: Boolean,
+        val visible: Boolean
+    ) : PublicationEvent {
         override fun publish() {
+            if (!visible) return
             val event = diagnostic
             val thrown = event.originalThrowable.takeIf { attachThrowable }
             when (event.level) {
@@ -129,7 +133,9 @@ object LogProcessor {
 
         companion object {
             internal fun emit(severity: LogLevel, message: String, thrown: Throwable?, attach: Boolean, source: DiagnosticSource?) {
-                val delivery = Delivery(logger, CapturedDiagnostic(severity, message, thrown, source), attach)
+                // Keep semantic diagnostics even when output is muted; deferred publication uses
+                // the visibility selected when the compiler produced the diagnostic.
+                val delivery = Delivery(logger, CapturedDiagnostic(severity, message, thrown, source), attach, level <= severity)
                 val capture = captures.get().lastOrNull()
                 if (capture == null) delivery.publish() else capture.record(delivery)
             }
@@ -211,18 +217,6 @@ object LogProcessor {
     @PublishedApi internal fun diagnosticError() { captures.get().lastOrNull()?.recordError(); Project.errorCount++ }
     @PublishedApi internal fun diagnosticWarning() { captures.get().lastOrNull()?.recordWarning(); Project.warningCount++ }
 
-    fun getCtxText(): String{
-        if(Project.ctx.isNotEmpty()){
-            val text = Project.ctx.first().text
-            return if(text.length > 20){
-                text.substring(0, 20) + "..."
-            }else{
-                text
-            }
-        }
-        return ""
-    }
-
     @JvmStatic
     inline fun debug(msg: String){
         if(level > LogLevel.DEBUG) return
@@ -249,7 +243,6 @@ object LogProcessor {
 
     @JvmStatic
     inline fun warn(msg: String){
-        if(level > LogLevel.WARN) return
         if(Project.ctx.isNotEmpty()){
             emitDiagnostic(LogLevel.WARN,
                 "Warning while compiling \n" +
@@ -268,7 +261,6 @@ object LogProcessor {
 
     @JvmStatic
     inline fun warn(msg: String, e: Throwable){
-        if(level > LogLevel.WARN) return
         if(Project.ctx.isNotEmpty()){
             emitDiagnostic(LogLevel.WARN,
                 "Error while compiling " +
@@ -320,7 +312,6 @@ object LogProcessor {
 
     @JvmStatic
     inline fun error(msg: String){
-        if(level > LogLevel.ERROR) return
         if(Project.ctx.isNotEmpty()){
             emitDiagnostic(LogLevel.ERROR,
                 "Error while compiling " +
@@ -339,7 +330,6 @@ object LogProcessor {
 
     @JvmStatic
     inline fun error(msg: String, e: Throwable){
-        if(level > LogLevel.ERROR) return
         if(Project.ctx.isNotEmpty()){
             emitDiagnostic(LogLevel.ERROR,
                 "Error while compiling " +

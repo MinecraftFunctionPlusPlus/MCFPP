@@ -1,0 +1,65 @@
+func doubled(value: int): int { return value * 2; }
+
+func provide(): list<int> {
+    /scoreboard players add collection_source mcfpp_default 1
+    return [1, 2, 3, 4];
+}
+
+func consume(values: list<int>): int {
+    var offset = 10;
+    var mapped = values.map { it + offset };
+    var selected = values.filter { it % 2 == 0 };
+    var folded = values.fold(5) { accumulator, element -> accumulator + element };
+    var referenced = values.map(doubled);
+    var flags: list<bool> = values.map { it > 2 };
+    var skipped = values.fold(5, { accumulator, element ->
+        if (element == 2) { return accumulator; }
+        accumulator + element
+    });
+    values.foreach {
+        /scoreboard players add collection_visits mcfpp_default 1
+        if (it == 2) { return; }
+        var value = it;
+        /execute store result score collection_value mcfpp_default run data get storage mcfpp:system stack_frame[0].value 1
+        /scoreboard players operation collection_sum mcfpp_default += collection_value mcfpp_default
+    };
+    var mappedFirst = mapped[0];
+    var mappedLast = mapped[3];
+    var selectedFirst = selected[0];
+    var selectedLast = selected[1];
+    var referencedLast = referenced[3];
+    var selectedSize = selected.fold(0) { count, element -> count + 1 };
+    var flagLast = flags[3];
+    var empty = values.filter { it < 0 };
+    var emptyMapped = empty.map { it + 1 };
+    var emptyFold = empty.fold(17) { accumulator, element -> accumulator + element };
+    empty.foreach {
+        /scoreboard players add collection_visits mcfpp_default 100
+    };
+    /data modify storage lambda:results mapped set from storage mcfpp:system stack_frame[0].mapped
+    /data modify storage lambda:results selected set from storage mcfpp:system stack_frame[0].selected
+    /data modify storage lambda:results original set from storage mcfpp:system stack_frame[0].values
+    /data modify storage lambda:results emptyMapped set from storage mcfpp:system stack_frame[0].emptyMapped
+    /data modify storage lambda:results emptyFold set from storage mcfpp:system stack_frame[0].emptyFold
+    /data modify storage lambda:results mappedFirst set from storage mcfpp:system stack_frame[0].mappedFirst
+    /data modify storage lambda:results mappedLast set from storage mcfpp:system stack_frame[0].mappedLast
+    /data modify storage lambda:results selectedFirst set from storage mcfpp:system stack_frame[0].selectedFirst
+    /data modify storage lambda:results selectedLast set from storage mcfpp:system stack_frame[0].selectedLast
+    /data modify storage lambda:results selectedSize set from storage mcfpp:system stack_frame[0].selectedSize
+    /data modify storage lambda:results folded set from storage mcfpp:system stack_frame[0].folded
+    /data modify storage lambda:results skipped set from storage mcfpp:system stack_frame[0].skipped
+    /data modify storage lambda:results referencedLast set from storage mcfpp:system stack_frame[0].referencedLast
+    /data modify storage lambda:results flagLast set from storage mcfpp:system stack_frame[0].flagLast
+    return mappedFirst + mappedLast + folded;
+}
+
+func main() {
+    /scoreboard players set collection_source mcfpp_default 0
+    /scoreboard players set collection_visits mcfpp_default 0
+    /scoreboard players set collection_sum mcfpp_default 0
+    var result = consume(provide());
+    /data modify storage lambda:results result set from storage mcfpp:system stack_frame[0].result
+    /execute store result storage lambda:results sourceCalls int 1 run scoreboard players get collection_source mcfpp_default
+    /execute store result storage lambda:results visits int 1 run scoreboard players get collection_visits mcfpp_default
+    /execute store result storage lambda:results sum int 1 run scoreboard players get collection_sum mcfpp_default
+}

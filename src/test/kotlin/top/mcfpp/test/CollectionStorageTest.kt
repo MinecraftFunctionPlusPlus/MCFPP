@@ -27,7 +27,7 @@ class CollectionStorageTest {
         assertEquals(0, it.stackDepth)
     }
 
-    @Test fun listElementsKeepActualTypesAndKnownSiblingsAfterAWritingView() {
+    @Test fun listViewCopiesKeepActualTypesAndKnownSiblingsAfterSourceWrites() {
         val main = compile("""
             func main(){
                 var values = [2,9] as list<any>
@@ -39,12 +39,12 @@ class CollectionStorageTest {
             }
         """)
         val source = main.scope.getVar("values")!!.storageBinding!!
-        assertEquals(source.place, main.scope.getVar("view")!!.storageBinding!!.place)
+        assertNotEquals(source.place, main.scope.getVar("view")!!.storageBinding!!.place)
         assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), source.data.facts.read(source.place.index(0))!!.type)
         assertIs<ValueKnowledge.Constant>(source.data.facts.read(source.place.index(1))!!.value)
         val machine = execute(main)
         assertEquals(3, machine.read(main.scope.getVar("before") as MCInt))
-        assertEquals(14, machine.read(main.scope.getVar("result") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("result") as MCInt))
         assertEquals(9, machine.read(main.scope.getVar("preserved") as MCInt))
     }
 
@@ -60,7 +60,7 @@ class CollectionStorageTest {
             }
         """)
         assertNotEquals(main.scope.getVar("values")!!.storageBinding!!.place, main.scope.getVar("copied")!!.storageBinding!!.place)
-        assertEquals(25, execute(main).read(main.scope.getVar("result") as MCInt))
+        assertEquals(21, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun dictionaryElementsPreserveBooleanIdentityAndSiblingFacts() {
@@ -78,7 +78,7 @@ class CollectionStorageTest {
         assertIs<ValueKnowledge.Constant>(binding.data.facts.read(binding.place.field("second"))!!.value)
         val machine = execute(main)
         assertEquals(1, machine.read(main.scope.getVar("flag") as ScoreBool))
-        assertEquals(16, machine.read(main.scope.getVar("result") as MCInt))
+        assertEquals(11, machine.read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun anUnknownIndexWriteInvalidatesValuesAndWidensEachPossibleElementType() {
@@ -101,7 +101,7 @@ class CollectionStorageTest {
         assertEquals(0, Project.errorCount)
     }
 
-    @Test fun dynamicIndicesUseTheirCapturedRuntimeValueAndInvalidateAliases() {
+    @Test fun dynamicSourceWritesPreserveIndependentViewCopies() {
         for (version in listOf("26.3", "1.20.2")) {
             val main = compile("""
                 func main(){
@@ -115,7 +115,7 @@ class CollectionStorageTest {
             """, version)
             val machine = execute(main)
             assertEquals(9, machine.read(main.scope.getVar("before") as MCInt))
-            assertEquals(9, machine.read(main.scope.getVar("result") as MCInt))
+            assertEquals(11, machine.read(main.scope.getVar("result") as MCInt))
         }
     }
 
@@ -136,9 +136,9 @@ class CollectionStorageTest {
             func main(){
                 var values = [2,9] as list<any>
                 var view = values as list<any>
-                external before = (values[1] as int) + 0
+                external before = (view[1] as int) + 0
                 view[-1] = 11
-                external result = (values[1] as int) + (values[-1] as int)
+                external result = (view[1] as int) + (view[-1] as int)
             }
         """)
         val machine = execute(main)
@@ -157,7 +157,7 @@ class CollectionStorageTest {
         assertEquals(11, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
-    @Test fun replacingAWholeCollectionReseedsElementKnowledgeAndInvalidatesViews() {
+    @Test fun replacingAWholeCollectionPreservesIndependentViewCopies() {
         val main = compile("""
             func main(){
                 var values = [2,9] as list<any>
@@ -333,9 +333,9 @@ class CollectionStorageTest {
         assertEquals(CompilerValue.Typed(values.type.typeId, CompilerValue.Sequence(emptyList())), StorageAccess.snapshot(values))
         val binding = assertNotNull(values.storageBinding)
         assertEquals(0, binding.data.facts.length(binding.place))
-        val exit = main.commands.last()
-        assertEquals(top.mcfpp.command.Commands.stackOut().analyze(), exit.toString())
-        main.commands.add(main.commands.lastIndex, top.mcfpp.command.Command.buildAll(
+        val observation = if (main.commands.last().toString() == top.mcfpp.command.Commands.stackOut().analyze())
+            main.commands.lastIndex else main.commands.size
+        main.commands.add(observation, top.mcfpp.command.Command.buildAll(
             "data modify storage fixture:observation values set from", binding.path))
         val machine = execute(main)
         assertEquals(0, assertIs<top.mcfpp.nbt.tags.collection.ListTag>(machine.readNbt("fixture:observation", "values")).size)

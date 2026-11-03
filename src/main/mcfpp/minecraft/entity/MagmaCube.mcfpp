@@ -1,8 +1,8 @@
 @MCFPPEntity
 data MagmaCube: EntityData, CreatureData, AIMobData {
-    @Name<"Size">
+    @Name("Size")
     var size: int
 
-    @Name<"WasOnGround">
+    @Name("WasOnGround")
     var wasOnGround: bool
 }

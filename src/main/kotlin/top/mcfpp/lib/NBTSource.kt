@@ -3,6 +3,8 @@ package top.mcfpp.lib
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.Pos3Var
 import top.mcfpp.core.lang.entity.SelectorVar
+import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.entity.EntityTargetAccess
 import java.io.Serializable
 
 interface NBTSource: Serializable {
@@ -33,13 +35,15 @@ class StorageSource(val storage: String): NBTSource{
     }
 }
 
-class EntitySource(val entity: SelectorVar): NBTSource{
+class EntitySource(val entity: Var<*>): NBTSource{
+    val target: EntityTargetAccess get() = entity as EntityTargetAccess
+    init { require(entity is EntityTargetAccess) { "Entity NBT source requires an entity target" } }
     override fun toCommand(): Command {
-        return Command.build("entity").build(entity.value.toCommandPart())
+        return Command.build("entity").build(target.toEntityTargetCommand())
     }
 
     override fun toChatComponentPart(): Command {
-        return Command("\"entity\":\"${entity.value.toCommandPart()}\"")
+        return Command("\"entity\":\"").build(target.toEntityTargetCommand(), false).build("\"", false)
     }
 
     override fun equals(other: Any?): Boolean {

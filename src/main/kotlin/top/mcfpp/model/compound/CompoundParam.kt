@@ -81,15 +81,15 @@ class CompoundParam(
             val typeScope = SimpleScopeWithType.getTypeScope()
             //解析只读参数
             params.readOnlyParams()?.let {
-                for (param in it.parameterList()?.parameter()?: emptyList()) {
-                    val typeName = top.mcfpp.antlr.DeclarationSyntax.readonlyTypeName(param)
+                for (param in it.readOnlyParameterList()?.readOnlyParameter()?: emptyList()) {
+                    val typeName = top.mcfpp.antlr.ReadonlyParamsDeclarationSyntax.readonlyTypeName(param)
                     val type = MCFPPType.parseFromString(typeName, typeScope)?: run {
                         LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(typeName))
                         MCFPPBaseType.Any
                     }
                     r.add(type)
                     if(type == MCFPPConcreteType.Type){
-                        val name = top.mcfpp.antlr.DeclarationSyntax.parameterName(param, true, "p${r.size - 1}")
+                        val name = top.mcfpp.antlr.ReadonlyParamsDeclarationSyntax.readonlyParameterName(param)
                         typeScope.putType(name, MCFPPGenericParamType(name, arrayListOf(MCFPPBaseType.Any)))
                     }
                 }

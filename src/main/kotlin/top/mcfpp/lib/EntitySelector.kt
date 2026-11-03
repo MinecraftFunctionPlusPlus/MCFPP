@@ -14,7 +14,16 @@ import top.mcfpp.util.StringHelper.toNamespaceID
 import java.io.Serializable
 
 @Suppress("MemberVisibilityCanBePrivate", "unused")
-class EntitySelector(var selectorType: SelectorType): Serializable {
+class EntitySelector(selectorType: SelectorType): Serializable {
+
+    var selectorType: SelectorType = selectorType
+        set(value) {
+            field = value
+            onChange?.invoke(this)
+        }
+
+    @Transient
+    internal var onChange: ((EntitySelector) -> Unit)? = null
 
     private var hasXPredicate: Boolean = false
     private var hasYPredicate: Boolean = false
@@ -38,19 +47,27 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
 
     constructor(char: Char):this(fromSelectorTypeString(char))
 
-    fun getLimit(): Int{
-        if(hasLimitPredicate){
-            for (predicate in predicates) {
-                if(predicate is LimitPredicate){
-                    if(predicate.limit is MCInt && top.mcfpp.analysis.StorageAccess.snapshot(predicate.limit) != null){
-                        return (predicate.limit).value
-                    }
-                    break
-                }
-            }
+    /** The explicit limit replaces @p/@r/@n's default, even when its value is unknown. */
+    fun facts(): EntityFacts {
+        val limit = predicates.filterIsInstance<LimitPredicate>().firstOrNull()
+        val upperBound = if (limit != null) {
+            limit.limit.takeIf { top.mcfpp.analysis.StorageAccess.snapshot(it) != null }
+                ?.value?.takeIf { it > 0 }
+        } else when (selectorType) {
+            SelectorType.NEAREST_ENTITY, SelectorType.NEAREST_PLAYER,
+            SelectorType.RANDOM_PLAYER, SelectorType.SELF -> 1
+            else -> null
         }
-        return Int.MAX_VALUE
+        val knownKinds = getType().filterValues { !it }.keys.map { it.toString() }.toSet()
+            .takeIf { it.isNotEmpty() }
+        val playersOnly = selectorType == SelectorType.RANDOM_PLAYER ||
+            selectorType == SelectorType.NEAREST_PLAYER || selectorType == SelectorType.ALL_PLAYERS ||
+            knownKinds == setOf("minecraft:player")
+        return EntityFacts(upperBound, playersOnly,
+            if (playersOnly) setOf("minecraft:player") else knownKinds)
     }
+
+    fun getLimit(): Int = facts().upperBound ?: Int.MAX_VALUE
 
     private fun knownResourceId(value: DataTemplateObject): String? {
         val root = top.mcfpp.analysis.StorageAccess.snapshot(value) as? top.mcfpp.analysis.CompilerValue.Typed ?: return null
@@ -186,6 +203,9 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
                 }
             }
             is LimitPredicate -> {
+                if (top.mcfpp.analysis.StorageAccess.snapshot(predicate.limit) != null && predicate.limit.value <= 0) {
+                    LogProcessor.error("Entity selector limit must be a positive integer")
+                }
                 if(hasLimitPredicate){
                     LogProcessor.error("Duplicate limit predicate")
                 }else{
@@ -210,37 +230,13 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
                 predicates.add(predicate)
             }
         }
+        onChange?.invoke(this)
         return this
     }
 
-    fun onlyIncludingPlayers() : Boolean {
-        if(selectorType == SelectorType.RANDOM_PLAYER || selectorType == SelectorType.NEAREST_PLAYER || selectorType == SelectorType.ALL_PLAYERS){
-            return true
-        }
-        return predicates.any {
-            if (it !is TypePredicate || it.reverse) false
-            else {
-                knownResourceId(it.type) == "minecraft:player"
-            }
-        }
-    }
+    fun onlyIncludingPlayers(): Boolean = facts().playersOnly
 
-    fun selectingSingleEntity(): Boolean{
-        if(selectorType == SelectorType.NEAREST_ENTITY || selectorType == SelectorType.NEAREST_PLAYER || selectorType == SelectorType.SELF || selectorType == SelectorType.RANDOM_PLAYER){
-            return true
-        }
-        if(hasLimitPredicate){
-            for (predicate in predicates) {
-                if(predicate is LimitPredicate){
-                    if(predicate.limit is MCInt && top.mcfpp.analysis.StorageAccess.snapshot(predicate.limit) != null && predicate.limit.value == 1){
-                        return true
-                    }
-                    break
-                }
-            }
-        }
-        return false
-    }
+    fun selectingSingleEntity(): Boolean = facts().selectingSingleEntity
 
     fun clone(): EntitySelector{
         val re = EntitySelector(selectorType)

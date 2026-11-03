@@ -1,0 +1,92 @@
+func simple(depth: int): int {
+    var captured = 100 + depth;
+    var callback: (int) -> int = { value ->
+        /scoreboard players add reentry_simple mcfpp_default 1
+        var before = captured + value;
+        if (value > 0) {
+            var nested = simple(value - 1);
+            var after = captured + value;
+            return before + nested + after;
+        }
+        before
+    };
+    captured = 999;
+    return callback(depth);
+}
+
+func prefix(value: int): int { return value * 10; }
+func expression(depth: int): int {
+    var captured = 20 + depth;
+    var callback: (int) -> int = { value ->
+        /scoreboard players add reentry_expression mcfpp_default 1
+        if (value <= 0) { return captured; }
+        return prefix(value) + expression(value - 1) + captured + value;
+    };
+    return callback(depth);
+}
+
+func dynamic(depth: int): int {
+    var captured = 30 + depth;
+    var callback: (int) -> int = { value ->
+        /scoreboard players add reentry_dynamic_base mcfpp_default 1
+        captured + value
+    };
+    if (depth > 0) {
+        callback = { value ->
+            /scoreboard players add reentry_dynamic_recursive mcfpp_default 1
+            var before = captured + value;
+            var nested = dynamic(value - 1);
+            return before + nested + captured + value;
+        };
+    }
+    return callback(depth);
+}
+
+func makeCallback(value: int): () -> int {
+    return {
+        /scoreboard players add reentry_parameter_callback mcfpp_default 1
+        value
+    };
+}
+func parameter(depth: int, callback: () -> int): int {
+    /scoreboard players add reentry_parameter mcfpp_default 1
+    var first = callback();
+    if (depth <= 0) { return first; }
+    var next = makeCallback(depth);
+    var nested = parameter(depth - 1, next);
+    var after = callback();
+    return first + nested + after;
+}
+
+func main() {
+    /scoreboard players set reentry_simple mcfpp_default 0
+    /scoreboard players set reentry_expression mcfpp_default 0
+    /scoreboard players set reentry_dynamic_base mcfpp_default 0
+    /scoreboard players set reentry_dynamic_recursive mcfpp_default 0
+    /scoreboard players set reentry_parameter mcfpp_default 0
+    /scoreboard players set reentry_parameter_callback mcfpp_default 0
+    external depth: int = 2;
+    var before = 17;
+    var simpleResult = simple(depth);
+    var after = before + simpleResult;
+    var shorter = simple(depth - 1);
+    var expressionResult = expression(depth);
+    var dynamicResult = dynamic(depth);
+    var continued = after + shorter + expressionResult + dynamicResult;
+    var parameterFirst = parameter(depth, makeCallback(7));
+    var parameterSecond = parameter(depth, makeCallback(9));
+    /data modify storage lambda:results simple set from storage mcfpp:system stack_frame[0].simpleResult
+    /data modify storage lambda:results after set from storage mcfpp:system stack_frame[0].after
+    /data modify storage lambda:results shorter set from storage mcfpp:system stack_frame[0].shorter
+    /data modify storage lambda:results expression set from storage mcfpp:system stack_frame[0].expressionResult
+    /data modify storage lambda:results dynamic set from storage mcfpp:system stack_frame[0].dynamicResult
+    /data modify storage lambda:results continued set from storage mcfpp:system stack_frame[0].continued
+    /data modify storage lambda:results parameterFirst set from storage mcfpp:system stack_frame[0].parameterFirst
+    /data modify storage lambda:results parameterSecond set from storage mcfpp:system stack_frame[0].parameterSecond
+    /execute store result storage lambda:results simpleCalls int 1 run scoreboard players get reentry_simple mcfpp_default
+    /execute store result storage lambda:results expressionCalls int 1 run scoreboard players get reentry_expression mcfpp_default
+    /execute store result storage lambda:results dynamicBase int 1 run scoreboard players get reentry_dynamic_base mcfpp_default
+    /execute store result storage lambda:results dynamicRecursive int 1 run scoreboard players get reentry_dynamic_recursive mcfpp_default
+    /execute store result storage lambda:results parameterCalls int 1 run scoreboard players get reentry_parameter mcfpp_default
+    /execute store result storage lambda:results parameterCallbackCalls int 1 run scoreboard players get reentry_parameter_callback mcfpp_default
+}

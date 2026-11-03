@@ -1,12 +1,11 @@
 package top.mcfpp.test
 
-import com.esotericsoftware.kryo.io.Input
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.io.DatapackCreator
-import top.mcfpp.io.LibBinFormat
+import top.mcfpp.library.format.LibraryWire
 import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.model.Member.AccessModifier
 import top.mcfpp.model.compound.DataTemplate
@@ -84,9 +83,9 @@ class LibMemberAccessTest {
     @Test fun modelInjectedPrivateNativeAccessSurvivesRealLibraryRoundTrip() = withLibrary { output ->
         write("""
             namespace fixture.access
-            @From<"top.mcfpp.mni.ConversionData">
+            @From("top.mcfpp.mni.ConversionData")
             data NativeConversions {}
-            @From<"top.mcfpp.mni.ConversionData">
+            @From("top.mcfpp.mni.ConversionData")
             data PublicConversions {}
         """, output)
         val original = GlobalScope.localNamespaces.getValue("fixture.access").scope.getTemplate("NativeConversions")!!
@@ -158,9 +157,8 @@ class LibMemberAccessTest {
     }
 
     private fun checkHeader(output: Path) {
-        Input(Files.newInputStream(output.resolve("bin.mclib"))).use {
-            assertEquals(LibBinFormat.MAGIC, it.readInt())
-            assertEquals(LibBinFormat.VERSION, it.readInt())
+        Files.newInputStream(output.resolve("bin.mclib")).use {
+            assertEquals(LibraryWire.CURRENT_VERSION, LibraryWire.read(it).formatVersion)
         }
     }
 

@@ -1,0 +1,8 @@
+schema = 1
+name = "mcfpp"
+sourcePath = "project/src"
+targetPath = "project/build"
+namespace = "example.repeat"
+version = "26.3"
+description = "MNI repeat macro example"
+jars = ["build/repeat-macro.jar"]

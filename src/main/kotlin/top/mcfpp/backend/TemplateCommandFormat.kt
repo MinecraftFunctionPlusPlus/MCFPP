@@ -17,6 +17,7 @@ import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.primitive.IntTag
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
@@ -88,8 +89,8 @@ internal object TemplateCommandFormat {
         else {
             Function.addCommand(Commands.dataSetValue(token.nbtPath, StringTag("")))
             for (member in type.enum.members.values) {
-                val filter = CompoundTag().apply { put("type", member.data) }
-                val match = binding.path.toCommandPart().build(NbtEncoding.snbt(filter), false)
+                val filter = CompoundTag().apply { put("ordinal", IntTag(member.value)) }
+                val match = binding.path.memberIndex("type").toCommandPart().build(NbtEncoding.snbt(filter), false)
                 Function.addCommand(Command("execute if data").build(match).build("run")
                     .build(Commands.dataSetValue(token.nbtPath, StringTag(slotTokens.getValue(member.identifier)))))
             }

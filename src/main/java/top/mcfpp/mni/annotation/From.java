@@ -15,6 +15,9 @@ public class From extends DataTemplateAnnotation {
         this.className = className;
     }
 
+    public String getClassName() { return className; }
+    public void restorePortableState(String value) { className = value; }
+
     @Override
     public void forDataTemplate(@NotNull DataTemplate data) {
         try {

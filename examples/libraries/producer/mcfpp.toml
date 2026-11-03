@@ -1,0 +1,14 @@
+schema = 1
+name = "mcfpp"
+namespace = "fixture.package"
+sourcePath = "src"
+targetPath = "out"
+dataPath = "data"
+version = "26.3"
+noDatapack = true
+args = ["-ignoreStdLib", "-isLib"]
+
+[library]
+coordinate = "fixture:semantic-lib"
+version = "1.0.0"
+classifier = "mcfpp"

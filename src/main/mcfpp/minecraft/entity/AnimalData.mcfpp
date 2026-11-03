@@ -1,7 +1,7 @@
 data AnimalData{
-    @Name<"InLove">
+    @Name("InLove")
     var inLove: int
 
-    @Name<"LoveCause">
+    @Name("LoveCause")
     var loveCause: IntArray
 }

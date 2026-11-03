@@ -1,14 +1,14 @@
 @MCFPPEntity
 data ExperienceOrbData: EntityData {
-    @Name<"Age">
+    @Name("Age")
     var age: short
 
-    @Name<"Count">
+    @Name("Count")
     var count: int
 
-    @Name<"Health">
+    @Name("Health")
     var health: short
 
-    @Name<"Value">
+    @Name("Value")
     var value: short
 }

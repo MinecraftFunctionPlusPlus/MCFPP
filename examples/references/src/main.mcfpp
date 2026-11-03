@@ -1,0 +1,71 @@
+namespace example.references
+
+import mcfpp.lang:*
+
+func increment(points: ScoreRef) {
+    points.tryRead { value ->
+        points.set(value + 1)
+    }
+}
+
+func relay(reference: NBTRef<int>): NBTRef<int> {
+    return reference;
+}
+
+func observe(reference: NBTRef<int>): bool {
+    return reference.tryRead { value ->
+        if (value == 21) {
+            /say runtime-value
+        }
+    }
+}
+
+func main() {
+    /scoreboard objectives add reference_points dummy
+    const points: ScoreRef = scoreRef("#example", "reference_points")
+    points.set(0)
+    increment(points)
+    points.tryRead { value ->
+        if (value == 1) {
+            /say shared-score
+        }
+    }
+
+    /data modify storage example:references first set value 0
+    /data modify storage example:references second set value 99
+    var current: NBTRef<int> = nbtStorageRef<int>("example:references", "first")
+    const copied = current
+    current = nbtStorageRef<int>("example:references", "second")
+    copied.set(10)
+    copied.tryRead { value ->
+        if (value == 10) {
+            /say saved-storage
+        }
+    }
+
+    /data modify storage example:references selectedPath set value "runtimeValue"
+    nbtStorageRef<string>("example:references", "selectedPath").tryRead { path ->
+        var saved: list<NBTRef<int>> = [relay(nbtStorageRef<int>("example:references", path))]
+        var dynamic: NBTRef<int> = saved[0]
+        dynamic.set(21)
+        var present = observe(dynamic)
+        /data remove storage example:references runtimeValue
+        var missing = observe(dynamic)
+        if (present && !missing) {
+            /say runtime-missing
+        }
+    }
+}
+
+// Invoke as an entity to inspect its Air field in the caller's execution context.
+func inspect() {
+    @s.withEntityCtx { context ->
+        const air: NBTRef<short> = context.executor.dat.air
+        var found = air.tryRead { value ->
+            /say air-present
+        }
+        if (!found) {
+            /say air-missing
+        }
+    }
+}

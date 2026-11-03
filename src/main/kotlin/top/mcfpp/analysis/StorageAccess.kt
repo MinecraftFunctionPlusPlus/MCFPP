@@ -6,6 +6,9 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.command.FloatProviders
 import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.context.ContextBorrowing
+import top.mcfpp.core.lang.context.ContextBorrowPayload
+import top.mcfpp.core.lang.context.ContextAccessException
 import top.mcfpp.core.lang.bool.BaseBool
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.nbt.NBTBasedData
@@ -69,11 +72,15 @@ class StorageBinding(
 }
 
 class StoredData(val root: Place, var path: NBTPath, private var initialize: (() -> Unit)? = null,
-                 var layout: StorageLayout = StorageLayout.Nbt(path.source.toString(), path.toCommandPart().toString())) {
+                 var layout: StorageLayout = StorageLayout.Nbt(path.source.toString(), path.toCommandPart().toString()),
+                 internal val contextScope: top.mcfpp.core.lang.context.ContextScope? = ContextBorrowing.currentScope) {
     val facts = FlowFacts()
     val versions = StorageVersions()
     val types = mutableMapOf<TypeId, MCFPPType>()
     val declarations = mutableMapOf<Place, Symbol>()
+    /** Possible compiler-owned code targets, not a claim that the runtime value is constant. */
+    val callableTargets = mutableMapOf<Place, Set<String>>()
+    internal val callableBindings = mutableMapOf<Place, Map<String, Set<FunctionTargetResolver>>>()
     private val registers = mutableMapOf<Pair<Location, TypeId>, StorageLayout.Scoreboard>()
     private val childLayouts = mutableMapOf<Place, StorageLayout>()
     private val sources = mutableMapOf<SymbolId, StoredData>()
@@ -87,6 +94,8 @@ class StoredData(val root: Place, var path: NBTPath, private var initialize: (()
         val restoreVersions = versions.checkpoint()
         val savedTypes = LinkedHashMap(types)
         val savedDeclarations = LinkedHashMap(declarations)
+        val savedTargets = callableTargets.mapValues { it.value.toSet() }
+        val savedBindings = callableBindings.mapValues { (_, targets) -> targets.mapValues { it.value.toSet() } }
         val savedRegisters = LinkedHashMap(registers)
         val savedChildren = childLayouts.mapValues { (_, value) -> value.checkpointCopy() }
         val savedSources = LinkedHashMap(sources)
@@ -100,6 +109,10 @@ class StoredData(val root: Place, var path: NBTPath, private var initialize: (()
             types.putAll(savedTypes)
             declarations.clear()
             declarations.putAll(savedDeclarations)
+            callableTargets.clear()
+            callableTargets.putAll(savedTargets)
+            callableBindings.clear()
+            callableBindings.putAll(savedBindings)
             registers.clear()
             registers.putAll(savedRegisters)
             childLayouts.clear()
@@ -517,6 +530,44 @@ object StorageAccess {
         return publishScore(MCInt(), score)
     }
 
+    /** Probe the next actual item without depending on a command's list-length return convention. */
+    fun iterationHasElement(value: Var<*>): Var<*> {
+        if (value.type !is MCFPPListType && value.type !is MCFPPImmutableListType)
+            return error(MCFPPBaseType.Bool, "Value is not an iterable list")
+        val binding = ensure(value)
+        if (binding.data.facts.read(binding.place)?.state != ValueState.INITIALIZED)
+            return error(MCFPPBaseType.Bool, "Cannot iterate a list without an initialized producer")
+        if (!hasRuntimeRepresentation(value))
+            return error(MCFPPBaseType.Bool, "Compiler-only list iteration requires a closed element sequence")
+        binding.data.materialize(binding.place)
+        val result = ScoreBool()
+        emit(Command("scoreboard players set ${result.name} ${result.boolObject} 0"))
+        emit(Command("execute if data").build(binding.path.intIndex(0).toCommandPart())
+            .build("run scoreboard players set ${result.name} ${result.boolObject} 1"))
+        return publishBoolean(result, StorageLayout.Scoreboard(result.name, result.boolObject.toString()))
+    }
+
+    /** The runtime head is guarded by iterationHasElement; its value changes each back edge. */
+    fun iterationHead(value: Var<*>): Var<*> {
+        val type = (value.type as MCFPPTypeWithGeneric).generic.single()
+        val root = ensure(value)
+        val evidence = root.data.facts.read(root.place.unknownIndex())
+        // The existence guard dominates this read. A wildcard read expands through the
+        // known length, which has no alternatives for an empty list even in this guarded body.
+        val place = root.place.index(0)
+        val actual = if (type in erasedTypes) evidence?.type ?: TypeKnowledge.Unknown
+            else TypeKnowledge.Exact(type.typeId)
+        root.data.types[type.typeId] = type
+        root.data.facts.refine(place, ValueFacts(actual, ValueKnowledge.Unknown,
+            readableLayout = evidence?.readableLayout, reference = evidence?.reference))
+        return read(adapter(type, TempPool.getVarIdentify(), root.copy(place = place, path = root.path.intIndex(0))))
+    }
+
+    /** Only the owned capture created for for-in traversal is consumed. */
+    fun consumeIterationHead(value: Var<*>) {
+        emit(Command("data remove").build(ensure(value).path.intIndex(0).toCommandPart()))
+    }
+
     fun iterationElement(value: Var<*>, index: MCInt): Var<*> {
         val type = when (val declared = value.type) {
             is top.mcfpp.type.MCFPPListType -> declared.generic[0]
@@ -559,6 +610,7 @@ object StorageAccess {
     }
 
     fun hasActualPayload(value: Var<*>): Boolean {
+        ContextBorrowing.payload(value)?.let { return ContextBorrowing.diagnostic(value) == null }
         if (snapshot(value) != null) return true
         val binding = value.storageBinding ?: return false
         if (binding.data.facts.read(binding.place)?.state != ValueState.INITIALIZED) return false
@@ -589,14 +641,35 @@ object StorageAccess {
         return (closed as? CompilerValue.Typed)?.let(top.mcfpp.lib.SelectorExpression::restore)
     }
 
+    /** Resolve the captured access structure at its current call-frame address. */
+    fun entityTarget(binding: StorageBinding): top.mcfpp.lib.EntityTarget? =
+        selectorProgram(binding)?.target(binding.data.types, binding)
+
     fun capturePayload(type: MCFPPType, source: Var<*>, name: String,
                        sourceFrameOffset: Int = 0, targetFrame: Int = 0): Var<*>? {
+        ContextBorrowing.payload(source)?.let { payload ->
+            return try {
+                ContextBorrowing.requireUsable(payload)
+                payload.adapter(name, type).also { captured ->
+                    captured.bindDeclaration(name)
+                    captured.isTemp = true
+                }
+            } catch (failure: ContextAccessException) { error(type, failure.message.orEmpty()) }
+        }
         val binding = source.storageBinding ?: return null
         val expression = selectorProgram(binding)
         if (expression == null) {
             if (source.type != type && !source.type.isSubOf(type) && type !in erasedTypes) return null
             val closed = snapshot(source)
             if (closed == null) {
+                if (actualType(source) is MCFPPReferenceType && hasRuntimeRepresentation(source)) {
+                    val result = type.buildUnConcrete(name)
+                    result.nbtPath = NBTPath.stack.intIndex(targetFrame).memberIndex(name)
+                    encodeTo(result.nbtPath, adapter(source.type, source.identifier, inFrame(binding, sourceFrameOffset)))
+                    publishNbt(result)
+                    copyRuntimeEvidence(binding, ensure(result))
+                    return result
+                }
                 val actual = actualType(source) as? MCFPPDataTemplateType ?: return null
                 if (!hasActualPayload(source)) return null
                 val result = type.buildUnConcrete(name)
@@ -616,6 +689,7 @@ object StorageAccess {
                         target.data.registerLayout(destination.place, StorageLayout.Nbt(destination.path.source.toString(), destination.path.toCommandPart().toString()))
                         encodeTo(destination.path, input)
                         target.data.facts.copyFrom(binding.data.facts, original.place, destination.place)
+                        copyCallableEvidence(original, destination)
                     } else {
                         val captured = capturePayload(field.type, input, TempPool.getVarIdentify(), 0, targetFrame) ?: return null
                         val child = captured.storageBinding ?: return null
@@ -623,6 +697,7 @@ object StorageAccess {
                         target.data.types.putAll(child.data.types)
                         target.data.inheritSources(child.data)
                         target.data.facts.copyFrom(child.data.facts, child.place, destination.place)
+                        copyCallableEvidence(child, destination)
                     }
                 }
                 return adapter(type, name, target)
@@ -636,25 +711,27 @@ object StorageAccess {
             target.data.types.putAll(captured.data.types)
             target.data.types.putIfAbsent(type.typeId, type)
             target.data.facts.copyFrom(captured.data.facts, captured.place, target.place)
+            copyCallableEvidence(captured, target)
             return adapter(type, name, target)
         }
-        if (type !is MCFPPEntityType && type !in erasedTypes) return null
+        if (type.typeId != MCFPPEntityType.NormalSelector.typeId && type !in erasedTypes) return null
         val actualSource = inFrame(binding, sourceFrameOffset)
-        val selector = expression.selector(binding.data.types, actualSource) ?: return null
+        val entity = expression.target(binding.data.types, actualSource) ?: return null
         val symbol = Symbol(SymbolId.fresh(), name, type.typeId, mutable = true)
         val place = Place(symbol.id)
         val path = NBTPath.stack.intIndex(targetFrame).memberIndex(name)
         val data = StoredData(place, path, layout = StorageLayout.CompilerOnly)
-        val copied = top.mcfpp.lib.SelectorExpression.capture(selector, data, actualFrame = targetFrame) ?: return null
+        val copied = top.mcfpp.lib.SelectorExpression.capture(entity, data, actualFrame = targetFrame) ?: return null
         data.declarations[place] = symbol
         EffectAnalysis.declared(place)
         data.types.putAll(binding.data.types)
-        data.types.putIfAbsent(source.type.typeId, source.type)
+        val producer = actualType(source)
+        data.types.putIfAbsent(producer.typeId, producer)
         data.types.putIfAbsent(type.typeId, type)
-        data.facts.initialize(place, ValueFacts(TypeKnowledge.Exact(source.type.typeId),
+        data.facts.initialize(place, ValueFacts(TypeKnowledge.Exact(producer.typeId),
             ValueKnowledge.Program(copied)))
-        return adapter(type, name, StorageBinding(data, place, path,
-            view = ValueRef.TypedView(type.typeId, ValueRef.Read(source.type.typeId, place), place))).apply {
+        // This declaration owns a new operand copy, even when its public type is erased.
+        return adapter(type, name, StorageBinding(data, place, path)).apply {
             this.symbol = symbol
         }
     }
@@ -752,14 +829,24 @@ object StorageAccess {
         var actual = closed
         while ((actual.type in erasedTypes.map { it.typeId } || actual.type == type.typeId && type is MCFPPUnionType) && actual.payload is CompilerValue.Typed)
             actual = actual.payload as CompilerValue.Typed
-        data.facts.initialize(place, ValueFacts(TypeKnowledge.Exact(actual.type), ValueKnowledge.Constant(closed)))
+        data.facts.initialize(place, ValueFacts(TypeKnowledge.Exact(actual.type), ValueKnowledge.Constant(closed),
+            reference = previousReferenceMetadata(type, closed)))
         adapter.symbol = symbol
         adapter.storageBinding = StorageBinding(data, place, data.path)
         seedSnapshot(data, place, closed)
+        if (type is MCFPPFunctionType) {
+            val payload = closed.payload
+            val target = ((payload as? CompilerValue.Record)?.fields?.get("target") as? CompilerValue.Text)?.value
+            if (target != null) data.callableTargets[place] = setOf(target)
+        }
         return adapter
     }
 
     private fun seedSnapshot(data: StoredData, place: Place, value: CompilerValue) {
+        if (value is CompilerValue.Typed && data.types[value.type] is MCFPPFunctionType) {
+            val target = ((value.payload as? CompilerValue.Record)?.fields?.get("target") as? CompilerValue.Text)?.value
+            if (target != null) data.callableTargets[place] = setOf(target)
+        }
         var payload = value
         while (payload is CompilerValue.Typed) payload = payload.payload
         if (payload is CompilerValue.Sequence) data.facts.setLength(place, payload.elements.size)
@@ -774,10 +861,19 @@ object StorageAccess {
                 actual = actual.payload
             val type = (actual as? CompilerValue.Typed)?.type
             data.facts.initialize(childPlace, ValueFacts(type?.let(TypeKnowledge::Exact) ?: TypeKnowledge.Unknown,
-                ValueKnowledge.Constant(child)))
+                ValueKnowledge.Constant(child), reference = type?.let { data.types[it] ?: MCFPPType.resolveTypeId(it) }
+                    ?.let { previousReferenceMetadata(it, child) }))
             seedSnapshot(data, childPlace, child)
         }
     }
+
+    private fun previousReferenceMetadata(type: MCFPPType, value: CompilerValue): top.mcfpp.core.lang.ref.ReferenceMetadata? =
+        if (type is MCFPPReferenceType || value is CompilerValue.Typed &&
+            (value.type == MCFPPScoreRefType.typeId || value.type is TypeId.Applied &&
+                value.type.constructor == TypeId.Builtin("NBTRef")))
+            top.mcfpp.core.lang.ref.ReferenceValues.metadataFromSnapshot(value)
+        else if (value is CompilerValue.Typed && value.payload is CompilerValue.Typed)
+            previousReferenceMetadata(type, value.payload) else null
 
     /** Descriptor provenance belongs to the existing binding, never a process-wide cache. */
     fun boundTypes(value: Var<*>): Map<TypeId, MCFPPType> = value.storageBinding?.data?.types.orEmpty()
@@ -791,10 +887,18 @@ object StorageAccess {
 
     /** Element accesses are consumed now; no mutable adapter is retained by the collection. */
     fun listLiteral(type: MCFPPType, elements: List<Var<*>>, name: String = TempPool.getVarIdentify()): Var<*> {
+        elements.firstNotNullOfOrNull { ContextBorrowing.escapeDiagnostic(it, "a list") }?.let { return error(type, it) }
         val values = elements.map { top.mcfpp.analysis.StorageAccess.snapshot(it) }
         val types = linkedMapOf<TypeId, MCFPPType>()
         elements.forEach { types.putAll(boundTypes(it)); types[it.type.typeId] = it.type }
-        if (values.all { it != null }) return literal(type, CompilerValue.Sequence(values.filterNotNull()), name, types)
+        if (values.all { it != null }) {
+            val result = literal(type, CompilerValue.Sequence(values.filterNotNull()), name, types)
+            val binding = ensure(result)
+            elements.forEachIndexed { index, element -> element.storageBinding?.let { source ->
+                copyCallableEvidence(source, binding.copy(place = binding.place.index(index), path = binding.path.intIndex(index)))
+            } }
+            return result
+        }
         if (elements.any { it.isError || !hasRuntimeRepresentation(it) }) {
             LogProcessor.error("Runtime list literal requires physically encodable elements")
             return UnknownVar(name).apply { this.type = type }
@@ -811,6 +915,7 @@ object StorageAccess {
             source.data.materialize(source.place)
             emit(Command.buildAll("data modify", binding.path, "append from", source.path))
             binding.data.facts.copyFrom(source.data.facts, source.place, binding.place.index(index))
+            copyCallableEvidence(source, binding.copy(place = binding.place.index(index), path = binding.path.intIndex(index)))
             binding.data.inheritSources(source.data)
         }
         binding.data.facts.setLength(binding.place, elements.size)
@@ -818,11 +923,16 @@ object StorageAccess {
     }
 
     fun dictionaryLiteral(type: MCFPPType, elements: Map<String, Var<*>>, name: String = TempPool.getVarIdentify()): Var<*> {
+        elements.values.firstNotNullOfOrNull { ContextBorrowing.escapeDiagnostic(it, "a dictionary") }?.let { return error(type, it) }
         val values = elements.mapValues { top.mcfpp.analysis.StorageAccess.snapshot(it.value) }
         val types = linkedMapOf<TypeId, MCFPPType>()
         elements.values.forEach { types.putAll(boundTypes(it)); types[it.type.typeId] = it.type }
-        if (values.values.all { it != null }) return literal(type,
-            CompilerValue.Record(values.mapValues { it.value!! }), name, types)
+        if (values.values.all { it != null }) {
+            val result = literal(type, CompilerValue.Record(values.mapValues { it.value!! }), name, types)
+            val binding = ensure(result)
+            elements.forEach { (key, element) -> element.storageBinding?.let { copyCallableEvidence(it, binding.field(key)) } }
+            return result
+        }
         if (elements.values.any { it.isError || !hasRuntimeRepresentation(it) }) {
             LogProcessor.error("Runtime dictionary literal requires physically encodable fields")
             return UnknownVar(name).apply { this.type = type }
@@ -838,6 +948,7 @@ object StorageAccess {
             encodeTo(binding.path.memberIndex(key), captured)
             val source = ensure(captured)
             binding.data.facts.copyFrom(source.data.facts, source.place, binding.place.field(key))
+            copyCallableEvidence(source, binding.field(key))
             binding.data.inheritSources(source.data)
         }
         return result
@@ -977,27 +1088,37 @@ object StorageAccess {
         val previous = value.storageBinding
         check(previous == null || value.symbol?.isLiteral == true) { "Declaration already has storage" }
         val initializer = previous?.let { constantFor(value.type, it) }
+        val borrow = if (previous == null) ContextBorrowPayload.direct(value) else ContextBorrowing.payload(previous)
         value.symbol = symbol
         val place = Place(symbol.id)
-        val data = StoredData(place, value.nbtPath.clone(), layout = StorageLayout.Constant)
+        val data = StoredData(place, value.nbtPath.clone(), layout = if (borrow == null) StorageLayout.Constant else StorageLayout.CompilerOnly,
+            contextScope = symbol.contextScope)
         data.types[value.type.typeId] = value.type
         data.declarations[place] = symbol
         previous?.data?.types?.let(data.types::putAll)
         data.facts.initialize(place, ValueFacts(TypeKnowledge.Exact(value.type.typeId),
-            initializer?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown,
-            if (initializer == null) ValueState.UNINITIALIZED else ValueState.INITIALIZED))
+            borrow?.let(ValueKnowledge::Borrow) ?: initializer?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown,
+            if (initializer == null && borrow == null) ValueState.UNINITIALIZED else ValueState.INITIALIZED,
+            reference = previous?.data?.facts?.read(previous.place)?.reference))
         initializer?.let { seedSnapshot(data, place, it) }
         EffectAnalysis.declared(place)
         return StorageBinding(data, place, data.path).also { value.storageBinding = it }
     }
 
-    /** Selector mutation updates known structure while runtime operands remain unknown values. */
+    /** Selector mutation reuses already captured operands and freezes newly added ones. */
     fun updateSelector(value: top.mcfpp.core.lang.entity.SelectorVar, selector: top.mcfpp.lib.EntitySelector = value.value) {
-        val existing = value.storageBinding
+        updateEntityTarget(value, top.mcfpp.lib.EntityTarget.Selector(selector), preserveOperands = true)
+    }
+
+    /** Entity construction freezes its operands; subsequent source writes cannot retarget it. */
+    fun updateEntityTarget(value: top.mcfpp.core.lang.entity.SelectorVar, target: top.mcfpp.lib.EntityTarget,
+                           preserveOperands: Boolean = false) {
         val binding = ensure(value)
-        val expression = (top.mcfpp.lib.SelectorExpression.capture(selector, binding.data, selectorProgram(binding),
+        val expression = (top.mcfpp.lib.SelectorExpression.capture(target, binding.data,
+                if (preserveOperands) selectorProgram(binding) else null,
                 top.mcfpp.lib.SelectorExpression.frame(binding.path))) ?: run {
-            LogProcessor.error("Selector operands cannot be captured in the current storage layout")
+            LogProcessor.error("Entity target operands cannot be captured in the current storage layout")
+            value.isError = true
             return
         }
         binding.data.types[value.type.typeId] = value.type
@@ -1009,6 +1130,10 @@ object StorageAccess {
 
     /** Freeze a readonly payload into an independent compiler-only declaration. */
     internal fun freezeReadonly(value: Var<*>, name: String): Var<*>? {
+        ContextBorrowing.escapeDiagnostic(value, "a readonly specialization")?.let {
+            LogProcessor.error(it)
+            return null
+        }
         val snapshot = top.mcfpp.analysis.StorageAccess.snapshot(value) ?: return null
         val types = HashMap(value.storageBinding?.data?.types.orEmpty())
         types.putIfAbsent(value.type.typeId, value.type)
@@ -1027,6 +1152,7 @@ object StorageAccess {
             ?: frozen.type.typeId), ValueKnowledge.Constant(snapshot)))
         seedSnapshot(data, place, snapshot)
         frozen.storageBinding = StorageBinding(data, place, data.path)
+        value.storageBinding?.let { copyCallableEvidence(it, frozen.storageBinding!!) }
         return frozen
     }
 
@@ -1167,6 +1293,7 @@ object StorageAccess {
 
     /** Freeze source codecs/addresses, including partially known containers, before delayed materialization. */
     private fun frozenWriter(value: Var<*>, path: NBTPath): () -> Unit {
+        ContextBorrowing.escapeDiagnostic(value, "a runtime collection")?.let { LogProcessor.error(it); return {} }
         if (!hasRuntimeRepresentation(value)) {
             LogProcessor.error("Compiler-only value '${actualType(value)}' cannot be stored in a runtime collection")
             return {}
@@ -1247,8 +1374,15 @@ object StorageAccess {
         return adapter(type, TempPool.getVarIdentify(), root.copy(place = place, path = path)).apply { parent = container }
     }
 
+    /** A temporary access to the source Place; assigning it uses the ordinary payload copy. */
     fun view(source: Var<*>, target: MCFPPType, diagnose: Boolean = true): Var<*> {
         if (source.isError) return source
+        ContextBorrowing.payload(source)?.let { payload ->
+            return try {
+                ContextBorrowing.requireUsable(payload)
+                payload.adapter(source.identifier, target).also { it.setAs(source); it.isTemp = true }
+            } catch (failure: ContextAccessException) { error(target, failure.message.orEmpty()) }
+        }
         val compatibility = TypeRelations.checkReinterpretation(source.type, target)
         if (diagnose && compatibility is ReinterpretationCompatibility.Result.Unproven && (source !is MCAny || source is MCObject))
             LogProcessor.warn("Unproven reinterpretation from '${source.type}' to '$target': ${compatibility.reason}")
@@ -1265,6 +1399,7 @@ object StorageAccess {
         val re = adapter(target, source.identifier, binding.copy(view = ref, trustConstants = trusted))
         re.symbol = source.symbol
         re.isConst = source.isConst
+        re.isTemp = true
         if (trusted && snapshot(re) != null) {
             return read(re)
         }
@@ -1293,7 +1428,9 @@ object StorageAccess {
 
     fun adapter(type: MCFPPType, name: String, binding: StorageBinding): Var<*> {
         // A view is only an access to existing evidence, never a second literal restoration.
-        val value = type.buildUnConcrete(name)
+        val value = ContextBorrowing.payload(binding)?.let { payload ->
+            try { payload.adapter(name, type) } catch (failure: ContextAccessException) { return error(type, failure.message.orEmpty()) }
+        } ?: type.buildUnConcrete(name)
         value.type = type
         value.symbol = binding.data.declarations[binding.place]
         value.storageBinding = if (binding.view != null) binding.copy(view = ValueRef.TypedView(type.typeId,
@@ -1378,6 +1515,12 @@ object StorageAccess {
     /** Loading a register is materialization, not a logical write. */
     fun read(value: Var<*>): Var<*> {
         if (value.isError) return value
+        top.mcfpp.core.lang.entity.EntityDataAddress.selected(value)?.let { return it.bareRead() }
+        ContextBorrowing.payload(value)?.let { payload ->
+            ContextBorrowing.diagnostic(value)?.let { return error(value.type, it) }
+            return value.storageBinding?.let { adapter(value.type, value.identifier, it).apply { setAs(value) } }
+                ?: payload.adapter(value.identifier, value.type).also { it.setAs(value) }
+        }
         if (value.storageBinding == null && value.isStatic) {
             (value.declaredParentTemplate as? ObjectCompoundData)?.let { owner ->
                 value.nbtPath = owner.nbtPath.memberIndex(value.identifier)
@@ -1392,6 +1535,8 @@ object StorageAccess {
             return UnknownVar(value.identifier).apply { type = value.type; isError = true }
         }
         val version = Function.currFunction to data.versions.version(binding.place)
+        if (actualType(value).typeId == MCFPPEntityType.NormalSelector.typeId && selectorProgram(binding) == null)
+            return error(value.type, "Entity target structure is unknown at runtime; an accessible captured target is required")
         // Selector operands must be relocated from the current binding after a caller-frame rebase.
         if (selectorProgram(binding) == null &&
             value.storageReadVersion?.let { it.first === version.first && it.second == version.second } == true) return value
@@ -1465,6 +1610,7 @@ object StorageAccess {
     /** Receiver calls mutate the same payload without changing the source's nominal type. */
     fun writeReceiver(target: Var<*>, source: Var<*>) {
         if (source.isError) return
+        ContextBorrowing.escapeDiagnostic(source, "object contents")?.let { LogProcessor.error(it); return }
         val binding = target.storageBinding ?: error("Missing receiver storage binding")
         if (target.symbol?.readonly == true || binding.data.declarations.any { (place, declaration) -> declaration.readonly &&
                 place.root == binding.place.root && binding.place.path.take(place.path.size) == place.path }) {
@@ -1502,17 +1648,57 @@ object StorageAccess {
         binding.data.write(binding.place, incoming.read(original.place)!!)
         binding.data.facts.forgetDescendants(binding.place)
         binding.data.facts.copyFrom(incoming, original.place, binding.place, includeRoot = false)
+        copyCallableEvidence(original, binding)
         EffectAnalysis.recordWrite(binding.place, contents = true)
     }
 
     fun write(target: Var<*>, source: Var<*>): Var<*> {
+        if (target is top.mcfpp.core.lang.entity.EntityDataAddress) return target.write(source)
+        top.mcfpp.core.lang.entity.EntityDataAddress.selected(source)?.let { return write(target, it.bareRead()) }
+        val referenceBorrows = top.mcfpp.core.lang.ref.ReferenceValues.provenance(source)
+        if (referenceBorrows.isNotEmpty()) {
+            val binding = ensure(target)
+            val destination = (target.symbol ?: binding.data.declarations[binding.place])?.contextScope ?: binding.data.contextScope
+            try {
+                referenceBorrows.forEach { borrow ->
+                    ContextBorrowing.requireUsable(borrow)
+                    if (target.isStatic || target.parent != null || binding.place.path.isNotEmpty() || binding.view != null)
+                        throw ContextAccessException("Scoped reference values cannot escape into globals, object fields or containers")
+                    if (destination == null || !borrow.owner.scope.contains(destination))
+                        throw ContextAccessException("Scoped reference value cannot be assigned outside its lexical lifetime")
+                    destination.requireActive()
+                }
+            } catch (failure: ContextAccessException) { return error(target.type, failure.message.orEmpty()) }
+        }
         if (!canWrite(target)) {
             return UnknownVar(target.identifier).apply { type = target.type; isError = true }
         }
         val errors = Project.errorCount
-        val result = writePayload(target, source)
+        val result = ContextBorrowing.payload(source)?.let { writeBorrow(target, source, it) } ?: writePayload(target, source)
         if (!result.isError && Project.errorCount == errors) EffectAnalysis.recordWrite(ensure(target).place)
         return result
+    }
+
+    private fun writeBorrow(target: Var<*>, source: Var<*>, payload: ContextBorrowPayload): Var<*> {
+        val binding = ensure(target)
+        val declaration = target.symbol ?: binding.data.declarations[binding.place]
+        val destination = if (declaration != null) declaration.contextScope else binding.data.contextScope
+        return try {
+            ContextBorrowing.requireUsable(payload)
+            if (target.isStatic || target.parent != null || binding.place.path.isNotEmpty() || binding.view != null)
+                throw ContextAccessException("Scoped context values cannot escape into globals, object fields or containers")
+            if (target.symbol?.forceRuntime == true)
+                throw ContextAccessException("Scoped context values cannot be stored in dynamic declarations")
+            if (destination == null || !payload.owner.scope.contains(destination))
+                throw ContextAccessException("Scoped context value cannot be assigned outside its lexical lifetime")
+            destination.requireActive()
+            val result = payload.adapter(target.identifier, target.type)
+            binding.data.retainCompilerValue()
+            binding.data.types.putAll(source.storageBinding?.data?.types.orEmpty())
+            binding.data.types[target.type.typeId] = target.type
+            binding.data.write(binding.place, ValueFacts(TypeKnowledge.Exact(target.type.typeId), ValueKnowledge.Borrow(payload)))
+            result.apply { setAs(target) }
+        } catch (failure: ContextAccessException) { error(target.type, failure.message.orEmpty()) }
     }
 
     /**
@@ -1567,6 +1753,12 @@ object StorageAccess {
             return UnknownVar(target.identifier).apply { type = target.type }
         }
         val binding = ensure(target)
+        val candidates = sourcePlace.data.callableTargets.filterKeys { place ->
+            place.root == sourcePlace.place.root && place.path.take(sourcePlace.place.path.size) == sourcePlace.place.path
+        }.mapKeys { (place, _) -> Place(binding.place.root, binding.place.path + place.path.drop(sourcePlace.place.path.size)) }
+        val callableBindings = sourcePlace.data.callableBindings.filterKeys { place ->
+            place.root == sourcePlace.place.root && place.path.take(sourcePlace.place.path.size) == sourcePlace.place.path
+        }.mapKeys { (place, _) -> Place(binding.place.root, binding.place.path + place.path.drop(sourcePlace.place.path.size)) }
         if (source.type == MCFPPPrivateType.Null) {
             if (!target.nullable) {
                 LogProcessor.error("Cannot assign null to non-nullable '${target.identifier}'")
@@ -1578,16 +1770,22 @@ object StorageAccess {
                 ValueKnowledge.Constant(CompilerValue.NullValue)))
             return adapter(target.type, target.identifier, binding).apply { setAs(target) }
         }
-        if (target is top.mcfpp.core.lang.entity.SelectorVar && source is top.mcfpp.core.lang.entity.SelectorVar) {
-            val sourceBinding = source.storageBinding
-            val selector = sourceBinding?.let(::selectorProgram)
-                ?.selector(sourceBinding.data.types, sourceBinding) ?: source.value
-            val expression = top.mcfpp.lib.SelectorExpression.capture(selector, binding.data,
+        if (actualType(source).typeId == MCFPPEntityType.NormalSelector.typeId &&
+            (target.type.typeId == MCFPPEntityType.NormalSelector.typeId || target.type in erasedTypes)) {
+            val entity = entityTarget(sourcePlace) ?: return error(target.type,
+                "Entity target structure is unknown at runtime; cannot copy '${source.identifier}'")
+            val expression = top.mcfpp.lib.SelectorExpression.capture(entity, binding.data,
                 actualFrame = top.mcfpp.lib.SelectorExpression.frame(binding.path))
-                ?: return target.clone().apply { isError = true }
-            binding.data.types.putAll(source.storageBinding?.data?.types.orEmpty())
-            binding.data.types[source.type.typeId] = source.type
-            binding.data.write(binding.place, ValueFacts(TypeKnowledge.Exact(source.type.typeId),
+                ?: return error(target.type, "Entity target operands cannot be copied in the current storage layout")
+            if (binding.data.layoutAt(binding.place) != StorageLayout.CompilerOnly) {
+                if (binding.view != null) return error(target.type, "A reinterpretation view cannot change its source storage layout")
+                if (binding.place == binding.data.root) binding.data.retainCompilerValue()
+                else binding.data.registerLayout(binding.place, StorageLayout.CompilerOnly)
+            }
+            binding.data.types.putAll(sourcePlace.data.types)
+            val entityType = actualType(source)
+            binding.data.types[entityType.typeId] = entityType
+            binding.data.write(binding.place, ValueFacts(TypeKnowledge.Exact(entityType.typeId),
                 ValueKnowledge.Program(expression)))
             return adapter(target.type, target.identifier, binding).apply { setAs(target) }
         }
@@ -1678,7 +1876,19 @@ object StorageAccess {
         binding.data.write(binding.place, ValueFacts(writtenType,
             writtenSnapshot?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown,
             readableLayout = sourceAccess?.readableLayout?.takeIf { !static &&
-                (writtenType as? TypeKnowledge.Exact)?.type == it }))
+                (writtenType as? TypeKnowledge.Exact)?.type == it }, reference = sourceAccess?.reference))
+        if (target.type is MCFPPFunctionType && candidates[binding.place].isNullOrEmpty())
+            binding.data.callableTargets.remove(binding.place)
+        for ((place, ids) in candidates)
+            binding.data.callableTargets[place] = binding.data.callableTargets[place].orEmpty() + ids
+        if (PathSegment.UnknownIndex !in binding.place.path) binding.data.callableBindings.keys.removeAll { place ->
+            place.root == binding.place.root && place.path.take(binding.place.path.size) == binding.place.path
+        }
+        for ((place, targets) in callableBindings) {
+            val destination = binding.data.callableBindings[place].orEmpty().toMutableMap()
+            targets.forEach { (id, owners) -> destination[id] = destination[id].orEmpty() + owners }
+            binding.data.callableBindings[place] = destination
+        }
         if (PathSegment.UnknownIndex !in binding.place.path) {
             binding.data.facts.forgetDescendants(binding.place)
             original?.data?.let { incoming ->
@@ -1701,7 +1911,16 @@ object StorageAccess {
     }
 
     fun canWrite(target: Var<*>): Boolean {
+        if (target is top.mcfpp.core.lang.entity.EntityDataAddress) return !target.isConst
         val binding = ensure(target)
+        binding.data.declarations.entries.firstOrNull { (place, declaration) ->
+            declaration.lambdaCaptureName != null && place.root == binding.place.root &&
+                binding.place.path.take(place.path.size) == place.path
+        }?.value?.lambdaCaptureName?.let { name ->
+            LogProcessor.error("Cannot modify captured value '$name': a lambda capture is read-only; " +
+                "return a new value or accumulate explicitly (for example with fold)")
+            return false
+        }
         if (binding.data.declarations.any { (place, declaration) -> declaration.readonly &&
                 place.root == binding.place.root && binding.place.path.take(place.path.size) == place.path }) {
             LogProcessor.error("Cannot modify readonly value '${target.identifier}'")
@@ -1726,6 +1945,12 @@ object StorageAccess {
 
     fun capture(value: Var<*>): Var<*> {
         if (value.isError) return value
+        ContextBorrowing.diagnostic(value)?.let { return error(value.type, it) }
+        top.mcfpp.core.lang.entity.EntityDataAddress.selected(value)?.let { return capture(it.bareRead()) }
+        ContextBorrowing.payload(value)?.let {
+            return capturePayload(value.type, value, TempPool.getVarIdentify())
+                ?: error(value.type, "Cannot borrow scoped context value")
+        }
         val sourceBinding = ensure(value)
         val fact = sourceBinding.data.facts.readAccess(sourceBinding.place, sourceBinding.data.declarations, sourceBinding.data.types)
         if (fact?.state != ValueState.INITIALIZED) {
@@ -1754,6 +1979,52 @@ object StorageAccess {
         return captured
     }
 
+    /**
+     * Evidence accompanying an actual runtime payload copy. Only initialized layouts/types
+     * and finite code targets transfer; the destination never inherits a constant claim.
+     * Addresses are rebased by Place identity, so none refer back to the producer's frame.
+     */
+    internal fun copyRuntimeEvidence(source: StorageBinding, target: StorageBinding, includeRoot: Boolean = true) {
+        target.data.types.putAll(source.data.types)
+        target.data.facts.copyFrom(source.data.facts.withoutValues(initializedOnly = true),
+            source.place, target.place, includeRoot = includeRoot)
+        // Finite target provenance is independent of whether the root's value facts transfer.
+        copyCallableEvidence(source, target)
+    }
+
+    /** Session capabilities follow the same rebasing as finite code-target evidence. */
+    private fun copyCallableEvidence(source: StorageBinding, target: StorageBinding) {
+        for ((place, targets) in source.data.callableTargets.toList()) {
+            if (place.root != source.place.root || place.path.take(source.place.path.size) != source.place.path) continue
+            val destination = Place(target.place.root, target.place.path + place.path.drop(source.place.path.size))
+            target.data.callableTargets[destination] = target.data.callableTargets[destination].orEmpty() + targets
+        }
+        for ((place, bindings) in source.data.callableBindings.toList()) {
+            if (place.root != source.place.root || place.path.take(source.place.path.size) != source.place.path) continue
+            val destination = Place(target.place.root, target.place.path + place.path.drop(source.place.path.size))
+            val current = target.data.callableBindings[destination].orEmpty().toMutableMap()
+            bindings.forEach { (id, owners) -> current[id] = current[id].orEmpty() + owners }
+            target.data.callableBindings[destination] = current
+        }
+    }
+
+    /** Bind all callable payloads in an owned value, including nested containers, before publishing it. */
+    fun bindFunctionTargets(value: Var<*>, resolver: FunctionTargetResolver) {
+        val binding = ensure(value)
+        val targets = binding.data.callableTargets.filterKeys { place ->
+            place.root == binding.place.root && place.path.take(binding.place.path.size) == binding.place.path
+        }
+        targets.forEach { (place, ids) -> ids.forEach { id ->
+            check(resolver.resolve(id) != null) { "Function target is absent from its author session: $id" }
+            check(binding.data.callableBindings[place]?.get(id).orEmpty().all { it === resolver }) {
+                "Function target is already bound to another compilation session: $id"
+            }
+        } }
+        targets.forEach { (place, ids) ->
+            binding.data.callableBindings[place] = binding.data.callableBindings[place].orEmpty() + ids.associateWith { setOf(resolver) }
+        }
+    }
+
     private fun captureClosed(source: Var<*>, closed: CompilerValue, name: String): Var<*>? {
         val actual = actualType(source)
         var payload = if (actual is MCFPPTypeDataTemplateType && source.type == actual.typeAs)
@@ -1762,6 +2033,11 @@ object StorageAccess {
             payload = payload.payload
         val captured = restore(actual, payload, name, boundTypes(source)) ?: return null
         val binding = ensure(captured)
+        source.storageBinding?.let { copyCallableEvidence(it, binding) }
+        val reference = source.storageBinding?.let { it.data.facts.read(it.place)?.reference }
+        if (reference != null) binding.data.facts.read(binding.place)?.let {
+            binding.data.facts.refine(binding.place, it.copy(reference = reference))
+        }
         if (source.symbol?.forceRuntime == true || source.storageBinding?.let { it.data.declarations[it.place]?.forceRuntime } == true) {
             val declaration = captured.symbol!!.copy(forceRuntime = true)
             captured.symbol = declaration
@@ -1897,6 +2173,9 @@ object StorageAccess {
     }
 
     fun encodeTo(path: NBTPath, source: Var<*>) {
+        val referenceBorrows = top.mcfpp.core.lang.ref.ReferenceValues.provenance(source)
+        (if (referenceBorrows.isEmpty()) ContextBorrowing.escapeDiagnostic(source, "runtime storage")
+            else ContextBorrowing.diagnostic(source))?.let { LogProcessor.error(it); return }
         if (!hasRuntimeRepresentation(source)) {
             LogProcessor.error("Compiler-only value '${actualType(source)}' cannot be stored in an erased runtime payload")
             return
@@ -1924,6 +2203,7 @@ object StorageAccess {
 
     /** Representation follows the actual producer and immutable child evidence. */
     fun hasRuntimeRepresentation(value: Var<*>): Boolean {
+        if (ContextBorrowing.payload(value) != null) return false
         val type = actualType(value)
         if (!type.hasRuntimeRepresentation) return false
         val closed = snapshot(value)
@@ -2005,7 +2285,8 @@ object StorageAccess {
         MCFPPNBTType.LongArray.typeId -> top.mcfpp.nbt.tags.collection.LongArrayTag::class.java
         else -> when (type) {
             is MCFPPUnionType -> type.types.map(::encoding).distinct().singleOrNull()
-            is MCFPPListType, is MCFPPImmutableListType, is MCFPPCompoundType, is MCFPPDataTemplateType -> type.nbtType
+            is MCFPPListType, is MCFPPImmutableListType, is MCFPPCompoundType, is MCFPPDataTemplateType,
+            is MCFPPReferenceType -> type.nbtType
             else -> if (type in setOf(MCFPPBaseType.Int, MCFPPBaseType.Bool, MCFPPBaseType.String)) type.nbtType else null
         }
     }
@@ -2106,6 +2387,14 @@ object StorageAccess {
                 ValueRef.Read(producer.typeId, binding.place), binding.place)))
         }
         val payload = if (snapshot is CompilerValue.Typed) snapshot.payload else snapshot
+        if (type is MCFPPReferenceType) {
+            // References own extensible NBT descriptors, including backend helper IDs and
+            // captured projections. Their language identity validates T; copying a descriptor
+            // must not impose the field schema of an ordinary data template or dictionary.
+            if (snapshot !is CompilerValue.Typed || snapshot.type != type.typeId || payload !is CompilerValue.Record ||
+                !runtimeSnapshot(snapshot, types) || snapshotTag(snapshot) == null) return null
+            return initializeLiteral(type.buildUnConcrete(name), snapshot, types)
+        }
         if (type is MCFPPVectorType) {
             if (snapshot !is CompilerValue.Typed || snapshot.type != type.typeId || payload !is CompilerValue.Sequence ||
                 payload.elements.size != type.dimension) return null
@@ -2148,10 +2437,27 @@ object StorageAccess {
             if (data.snbt != NbtEncoding.snbt(member.data)) return null
             return type.build(name, member)
         }
-        if (type is MCFPPEntityType && snapshot is CompilerValue.Typed && snapshot.type == type.typeId) {
+        if (type.typeId == MCFPPEntityType.NormalSelector.typeId && snapshot is CompilerValue.Typed && snapshot.type == type.typeId) {
             val expression = top.mcfpp.lib.SelectorExpression.restore(snapshot) ?: return null
-            val selector = expression.selector(types) ?: return null
-            return top.mcfpp.core.lang.entity.SelectorVar(selector, name).takeIf { it.type.typeId == type.typeId }
+            val descriptors = types.toMutableMap()
+            val session = top.mcfpp.Project.libraryImportSession
+            fun register(identity: TypeId) {
+                if (identity !in descriptors) session?.resolveTypeIdentity(identity)?.let { descriptors[identity] = it }
+            }
+            fun collect(value: CompilerValue) {
+                when (value) {
+                    is CompilerValue.Typed -> { register(value.type); collect(value.payload) }
+                    is CompilerValue.TypeValue -> register(value.id)
+                    is CompilerValue.Sequence -> value.elements.forEach(::collect)
+                    is CompilerValue.Record -> value.fields.values.forEach(::collect)
+                    else -> Unit
+                }
+            }
+            collect(snapshot)
+            val entity = expression.target(descriptors) ?: return null
+            return top.mcfpp.core.lang.entity.SelectorVar(entity, name).also {
+                ensure(it).data.types.putAll(descriptors)
+            }.takeIf { it.type.typeId == type.typeId }
         }
         if (type is MCFPPTypeDataTemplateType) {
             val delegate = restore(type.typeAs, CompilerValue.Typed(type.typeAs.typeId, payload), name, types) ?: return null
@@ -2201,6 +2507,8 @@ object StorageAccess {
             }) return null
             return initializeLiteral(type.buildUnConcrete(name), payload, types)
         }
+        if (payload is CompilerValue.Record && type is MCFPPFunctionType)
+            return initializeLiteral(type.buildUnConcrete(name), payload, types)
         if (payload is CompilerValue.Record && type is MCFPPDictType) {
             val generic = type.generic.single()
             if (payload.fields.values.any { part ->

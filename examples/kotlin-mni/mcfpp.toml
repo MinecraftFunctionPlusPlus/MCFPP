@@ -1,0 +1,7 @@
+schema = 1
+name = "mcfpp"
+sourcePath = "project/src"
+targetPath = "project/build"
+namespace = "example.kotlin"
+version = "26.3"
+jars = ["build/libs/kotlin-mni-example.jar"]

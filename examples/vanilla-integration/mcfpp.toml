@@ -1,0 +1,18 @@
+schema = 1
+name = "vanilla_demo"
+namespace = "demo"
+version = "1.21.8"
+description = "MCFPP vanilla integration demo"
+sourcePath = "src/main/mcfpp"
+dataPath = "src/main/resources/data"
+assetsPath = "src/main/resources/assets"
+targetPath = "build"
+
+[toolchain]
+version = "java21-v1"
+
+[mni]
+enabled = false
+
+[entrypoints]
+"demo:on_use" = "demo:handleUse"

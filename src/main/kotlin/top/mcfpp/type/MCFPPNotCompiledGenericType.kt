@@ -12,6 +12,7 @@ class MCFPPNotCompiledGenericType(val type: KClass<out MCFPPType>): MCFPPType() 
         MCFPPDictType::class -> "dict"
         MCFPPMapType::class -> "map"
         MCFPPImmutableListType::class -> "ImmutableList"
+        MCFPPNBTRefType::class -> "NBTRef"
         else -> error("Unregistered type constructor: $type")
     })
 

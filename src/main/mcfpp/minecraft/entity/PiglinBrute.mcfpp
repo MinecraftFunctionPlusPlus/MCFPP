@@ -1,8 +1,8 @@
 @MCFPPEntity
 data PiglinBruteData: EntityData, CreatureData, AIMobData {
-    @Name<"IsImmuneToZombification">
+    @Name("IsImmuneToZombification")
     var isImmuneToZombification: bool
 
-    @Name<"TimeInOverworld">
+    @Name("TimeInOverworld")
     var timeInOverworld: int
 }

@@ -14,7 +14,7 @@ import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.StaticMemberView
 import top.mcfpp.io.DatapackCreator
-import top.mcfpp.io.LibBinFormat
+import top.mcfpp.library.format.LibraryWire
 import top.mcfpp.model.Member.AccessModifier
 import top.mcfpp.model.compound.ObjectDataTemplate
 import top.mcfpp.model.compound.DataTemplate
@@ -46,6 +46,29 @@ import kotlin.test.*
 import kotlin.test.Test
 
 class LibFieldAccessTest {
+    private val commandResultDefaults = """{"result":0,"success":0b}"""
+
+    /** Rebuild full expected values using explicitly paired source and receiving declarations. */
+    private class FreshTypeExpectations(vararg declarations: Pair<TypeId, TypeId>) {
+        private val identities = declarations.toMap()
+        fun type(source: TypeId): TypeId = identities[source] ?: when (source) {
+            is TypeId.Builtin, is TypeId.Selector -> source
+            is TypeId.Declaration, is TypeId.Opaque -> error("No receiving declaration paired with $source")
+            is TypeId.Applied -> TypeId.Applied(type(source.constructor), source.arguments.map(::type))
+            is TypeId.Specialized -> TypeId.Specialized(type(source.constructor), source.arguments.map(::snapshot))
+            is TypeId.Union -> TypeId.Union(source.alternatives.map(::type).toSet())
+        }
+        fun snapshot(source: CompilerValue): CompilerValue = when (source) {
+            is CompilerValue.Typed -> CompilerValue.Typed(type(source.type), snapshot(source.payload))
+            is CompilerValue.TypeValue -> CompilerValue.TypeValue(type(source.id))
+            is CompilerValue.Sequence -> CompilerValue.Sequence(source.elements.map(::snapshot))
+            is CompilerValue.Record -> CompilerValue.Record(source.fields.mapValues { snapshot(it.value) })
+            else -> source
+        }
+    }
+
+    private fun freshTypes(vararg declarations: Pair<DataTemplate, DataTemplate>) = FreshTypeExpectations(
+        *declarations.map { (source, receiving) -> source.getType().typeId to receiving.getType().typeId }.toTypedArray())
     @Test fun restoredFieldsKeepDeclarationOwnersThroughInheritanceAndNestedBodies() = withLibrary { output ->
         write("""
             namespace fixture.fields
@@ -320,8 +343,9 @@ class LibFieldAccessTest {
         assertNotSame(first, third)
         assertEquals(CompilerValue.Typed(MCFPPBaseType.Int.typeId, CompilerValue.Integral(3L)), top.mcfpp.analysis.StorageAccess.snapshot(first.args.single()))
         assertEquals(CompilerValue.Typed(MCFPPBaseType.Int.typeId, CompilerValue.Integral(5L)), top.mcfpp.analysis.StorageAccess.snapshot(third.args.single()))
-        assertEquals(firstTypeId, first.getType().typeId)
-        assertEquals(thirdTypeId, third.getType().typeId)
+        val expected = freshTypes(original to restored)
+        assertEquals(expected.type(firstTypeId), first.getType().typeId)
+        assertEquals(expected.type(thirdTypeId), third.getType().typeId)
         for (compiled in listOf(first, third)) {
             assertSame(restored, compiled.originTemplate)
             assertSame(compiled, compiled.scope.getVar("value")!!.declaredParentTemplate)
@@ -416,8 +440,9 @@ class LibFieldAccessTest {
         }
         assertSame(templates[0], templates[1])
         assertNotSame(templates[0], templates[2])
-        assertEquals(intTypeId, templates[0].getType().typeId)
-        assertEquals(boolTypeId, templates[2].getType().typeId)
+        val expected = freshTypes(original to restored)
+        assertEquals(expected.type(intTypeId), templates[0].getType().typeId)
+        assertEquals(expected.type(boolTypeId), templates[2].getType().typeId)
         for ((compiled, type) in listOf(templates[0] to MCFPPBaseType.Int, templates[2] to MCFPPBaseType.Bool)) {
             assertSame(restored, compiled.originTemplate)
             assertEquals(type, compiled.scope.getType("T"))
@@ -513,8 +538,9 @@ class LibFieldAccessTest {
         val boolParameter = assertIs<MCFPPDataTemplateType>(
             GlobalScope.libNamespaces.getValue("fixture.fields").scope.functions.getValue("readFlag").single().normalParams.single().type)
         assertSame(flag, boolParameter.template)
-        assertEquals(intTypeId, first.getType().typeId)
-        assertEquals(boolTypeId, flag.getType().typeId)
+        val expected = freshTypes(original to restored)
+        assertEquals(expected.type(intTypeId), first.getType().typeId)
+        assertEquals(expected.type(boolTypeId), flag.getType().typeId)
         assertNotEquals(sourceIntIdentifier, first.identifier)
         assertNotEquals(sourceBoolIdentifier, flag.identifier)
         for (compiled in listOf(first, flag)) {
@@ -631,7 +657,8 @@ class LibFieldAccessTest {
         val templates = listOf("first", "flag").map {
             assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar(it)).templateType)
         }
-        assertEquals(sourceTypeIds, templates.map { it.getType().typeId })
+        val expected = freshTypes(original to restored)
+        assertEquals(sourceTypeIds.map(expected::type), templates.map { it.getType().typeId })
         for ((index, compiled) in templates.withIndex()) {
             assertSame(restored, compiled.originTemplate)
             val type = if (index == 0) MCFPPBaseType.Int else MCFPPBaseType.Bool
@@ -740,8 +767,9 @@ class LibFieldAccessTest {
         assertNotSame(first, listed)
         assertSame(prototype, first.originTemplate)
         assertSame(prototype, listed.originTemplate)
-        assertEquals(sourceLeafHolderId, first.getType().typeId)
-        assertEquals(sourceListHolderId, listed.getType().typeId)
+        val expected = freshTypes(sourcePrototype to prototype, sourceLeaf to leaf)
+        assertEquals(expected.type(sourceLeafHolderId), first.getType().typeId)
+        assertEquals(expected.type(sourceListHolderId), listed.getType().typeId)
         assertSame(leaf, assertIs<MCFPPDataTemplateType>(assertIs<MCFPPTypeVar>(first.scope.getVar("T")).value).template)
         for (type in listOf(first.scope.getVar("value")!!.type,
             first.constructors.single().normalParams.single().type,
@@ -848,9 +876,10 @@ class LibFieldAccessTest {
         assertNotSame(sourceFirst, first)
         val cell = checkBundle(first, leaf, cellPrototype)
         assertNotSame(sourceCell, cell)
-        assertEquals(sourceBundleId, first.getType().typeId)
-        assertEquals(sourceCellId, cell.getType().typeId)
-        assertEquals(sourceSnapshot, top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(first.scope.getVar("Types"))))
+        val expected = freshTypes(sourceBundlePrototype to bundlePrototype, sourceCellPrototype to cellPrototype, sourceLeaf to leaf)
+        assertEquals(expected.type(sourceBundleId), first.getType().typeId)
+        assertEquals(expected.type(sourceCellId), cell.getType().typeId)
+        assertEquals(expected.snapshot(sourceSnapshot), top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(first.scope.getVar("Types"))))
         assertEquals(top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(first.scope.getVar("Types"))), top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(second.scope.getVar("Types"))))
         assertSame(first, assertIs<MCFPPDataTemplateType>(restoredScope.functions.getValue("readBundle").single().normalParams.single().type).template)
         val machine = execute(main, output)
@@ -937,10 +966,11 @@ class LibFieldAccessTest {
         assertNotSame(sourceFirst, first)
         val cell = checkHolder(first, cellPrototype)
         assertNotSame(sourceCell, cell)
-        assertEquals(sourceHolderId, first.getType().typeId)
-        assertEquals(sourceCellId, cell.getType().typeId)
-        assertEquals(sourceHolderSnapshot, top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(first.scope.getVar("T"))))
-        assertEquals(sourceCellSnapshot, top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(cell.scope.getVar("T"))))
+        val expected = freshTypes(sourceHolderPrototype to holderPrototype, sourceCellPrototype to cellPrototype)
+        assertEquals(expected.type(sourceHolderId), first.getType().typeId)
+        assertEquals(expected.type(sourceCellId), cell.getType().typeId)
+        assertEquals(expected.snapshot(sourceHolderSnapshot), top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(first.scope.getVar("T"))))
+        assertEquals(expected.snapshot(sourceCellSnapshot), top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(cell.scope.getVar("T"))))
         assertSame(first, assertIs<MCFPPDataTemplateType>(restoredScope.functions.getValue("readNested").single().normalParams.single().type).template)
         val machine = execute(main, output)
         assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
@@ -1017,7 +1047,7 @@ class LibFieldAccessTest {
         assertSame(first, second)
         assertSame(prototype, first.originTemplate)
         assertNotSame(sourceFirst, first)
-        assertEquals(sourceBoxId, first.getType().typeId)
+        assertEquals(freshTypes(sourcePrototype to prototype).type(sourceBoxId), first.getType().typeId)
         val bound = assertIs<MCFPPTypeVar>(first.scope.getVar("T"))
         assertEquals(scalar.typeId, assertIs<MCFPPUnionType>(bound.value).typeId)
         assertEquals(sourceSnapshot, top.mcfpp.analysis.StorageAccess.snapshot(bound))
@@ -1081,8 +1111,9 @@ class LibFieldAccessTest {
         assertSame(prototype, three.originTemplate)
         assertNotSame(sourceTwo, two)
         assertNotSame(sourceThree, three)
-        assertEquals(sourceTwoId, two.getType().typeId)
-        assertEquals(sourceThreeId, three.getType().typeId)
+        val expected = freshTypes(sourcePrototype to prototype)
+        assertEquals(expected.type(sourceTwoId), two.getType().typeId)
+        assertEquals(expected.type(sourceThreeId), three.getType().typeId)
         assertNotEquals(two.getType().typeId, three.getType().typeId)
         assertEquals(2, assertIs<MCFPPVectorType>(assertIs<MCFPPTypeVar>(two.scope.getVar("T")).value).dimension)
         assertEquals(3, assertIs<MCFPPVectorType>(assertIs<MCFPPTypeVar>(three.scope.getVar("T")).value).dimension)
@@ -1095,10 +1126,10 @@ class LibFieldAccessTest {
         assertEquals(9, machine.read(main.scope.getVar("threeResult") as MCInt))
     }
 
-    @Test fun frozenSelectorTypeArgumentsPreserveFiltersAcrossLibraryRoundTrip() = withLibrary { output ->
+    @Test fun entityAliasesShareTypeSpecializationsWhileTargetValuesKeepFiltersAcrossLibraryRoundTrip() = withLibrary { output ->
         write("""
             namespace fixture.fields
-            typealias entity<2,"minecraft:pig","!minecraft:cow"> as Selection
+            typealias entity as Selection
             func readSelection(arg: Box<Selection>):int { return arg.read(); }
             func readAnyEntity(arg: Box<entity>):int { return arg.read(); }
             data Box<T> {
@@ -1112,22 +1143,32 @@ class LibFieldAccessTest {
                 external anyResult=readAnyEntity(anyEntity)
             }
         """, output)
-        val filters = listOf("\"minecraft:pig\"", "\"!minecraft:cow\"")
-        val selectedId = TypeId.Selector(2, filters, false)
-        val generalId = TypeId.Selector(null, null, false)
+        val selectedId = MCFPPEntityType.NormalSelector.typeId
+        val generalId = selectedId
+        val target = top.mcfpp.core.lang.entity.SelectorVar(top.mcfpp.lib.EntitySelector('e').limit(2)
+            .type("minecraft:cow", true).type("minecraft:pig", false))
+        val targetSnapshot = assertNotNull(top.mcfpp.analysis.StorageAccess.snapshot(target))
+        val targetBytes = com.esotericsoftware.kryo.io.Output(4096)
+        top.mcfpp.io.KryoManager.kryo.writeClassAndObject(targetBytes, targetSnapshot)
+        val importedTarget = assertIs<CompilerValue>(top.mcfpp.io.KryoManager.kryo.readClassAndObject(Input(targetBytes.toBytes())))
+        val restoredTarget = assertIs<top.mcfpp.core.lang.entity.SelectorVar>(
+            top.mcfpp.analysis.StorageAccess.restore(MCFPPEntityType.NormalSelector, importedTarget, "filtered"))
+        assertEquals("@e[limit=2,type=!minecraft:cow,type=minecraft:pig]", restoredTarget.toCommandPart().toString())
+        assertEquals(2, restoredTarget.entityFacts.upperBound)
+        assertEquals(setOf("minecraft:pig"), restoredTarget.entityFacts.knownKinds)
         val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
         val sourcePrototype = assertIs<GenericDataTemplate>(sourceScope.getTemplate("Box"))
         val sourceMain = sourceScope.functions.getValue("main").single()
         val sourceSelected = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("selected")).templateType)
         val sourceGeneral = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("anyEntity")).templateType)
-        assertNotSame(sourceSelected, sourceGeneral)
+        assertSame(sourceSelected, sourceGeneral)
         val sourceModels = listOf(sourceSelected, sourceGeneral)
         val expectedIds = listOf(selectedId, generalId)
         for ((model, expected) in sourceModels.zip(expectedIds)) {
             assertSame(sourcePrototype, model.originTemplate)
             val type = assertIs<MCFPPEntityType>(assertIs<MCFPPTypeVar>(model.scope.getVar("T")).value)
-            assertEquals(expected.limit, type.limit)
-            assertEquals(expected.entities, type.types)
+            assertNull(type.limit)
+            assertNull(type.types)
             assertFalse(type.isName)
             assertEquals(expected, type.typeId)
         }
@@ -1135,8 +1176,8 @@ class LibFieldAccessTest {
         assertSame(sourceGeneral, assertIs<MCFPPDataTemplateType>(sourceScope.functions.getValue("readAnyEntity").single().normalParams.single().type).template)
         val sourceIds = sourceModels.map { it.getType().typeId }
         val sourceSnapshots = sourceModels.map { assertNotNull(top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(it.scope.getVar("T")))) }
-        assertNotEquals(sourceIds[0], sourceIds[1])
-        assertNotEquals(sourceSnapshots[0], sourceSnapshots[1])
+        assertEquals(sourceIds[0], sourceIds[1])
+        assertEquals(sourceSnapshots[0], sourceSnapshots[1])
 
         val main = consume("""
             import fixture.fields:*
@@ -1152,15 +1193,16 @@ class LibFieldAccessTest {
         assertNotSame(sourcePrototype, prototype)
         val selected = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("selected")).templateType)
         val general = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("anyEntity")).templateType)
-        assertNotSame(selected, general)
+        assertSame(selected, general)
+        val expected = freshTypes(sourcePrototype to prototype)
         for ((index, model) in listOf(selected, general).withIndex()) {
             assertSame(prototype, model.originTemplate)
             assertNotSame(sourceModels[index], model)
-            assertEquals(sourceIds[index], model.getType().typeId)
-            assertEquals(sourceSnapshots[index], top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(model.scope.getVar("T"))))
+            assertEquals(expected.type(sourceIds[index]), model.getType().typeId)
+            assertEquals(expected.snapshot(sourceSnapshots[index]), top.mcfpp.analysis.StorageAccess.snapshot(assertNotNull(model.scope.getVar("T"))))
             val type = assertIs<MCFPPEntityType>(assertIs<MCFPPTypeVar>(model.scope.getVar("T")).value)
-            assertEquals(expectedIds[index].limit, type.limit)
-            assertEquals(expectedIds[index].entities, type.types)
+            assertNull(type.limit)
+            assertNull(type.types)
             assertFalse(type.isName)
             assertEquals(expectedIds[index], type.typeId)
         }
@@ -1226,7 +1268,7 @@ class LibFieldAccessTest {
         assertSame(first, second)
         assertSame(prototype, first.originTemplate)
         assertNotSame(sourceFirst, first)
-        assertEquals(sourceBoxId, first.getType().typeId)
+        assertEquals(freshTypes(sourcePrototype to prototype).type(sourceBoxId), first.getType().typeId)
         val bound = assertIs<MCFPPTypeVar>(first.scope.getVar("T"))
         assertEquals(2, assertIs<MCFPPUnionType>(bound.value).types.size)
         assertEquals(alias.typeId, assertIs<MCFPPUnionType>(bound.value).typeId)
@@ -1298,11 +1340,11 @@ class LibFieldAccessTest {
         val named = restoredScope.getTemplate(namedIdentifier)!!
         assertNotSame(named, target)
         assertNotEquals(named.getType().typeId, alias.typeId)
-        assertEquals(sourceNamed.getType().typeId, named.getType().typeId)
+        assertEquals(freshTypes(sourceNamed to named).type(sourceNamed.getType().typeId), named.getType().typeId)
         assertSame(target, assertIs<MCFPPDataTemplateType>(restoredScope.getType("Y")).template)
         assertTrue(assertIs<MCInt>(target.scope.getVar("value")).isDataOnly)
         assertNotSame(sourceTarget, target)
-        assertEquals(sourceAnonymousId, alias.typeId)
+        assertEquals(freshTypes(sourceTarget to target).type(sourceAnonymousId), alias.typeId)
         val prototype = assertIs<GenericDataTemplate>(restoredScope.getTemplate("Box"))
         assertNotSame(sourcePrototype, prototype)
         val first = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("first")).templateType)
@@ -1313,9 +1355,10 @@ class LibFieldAccessTest {
         val bound = assertIs<MCFPPTypeVar>(first.scope.getVar("T"))
         assertSame(target, assertIs<MCFPPDataTemplateType>(bound.value).template)
         assertSame(target, assertIs<MCFPPDataTemplateType>(first.scope.getType("T")).template)
-        assertEquals(sourceAnonymousId, bound.value.typeId)
-        assertEquals(sourceSnapshot, top.mcfpp.analysis.StorageAccess.snapshot(bound))
-        assertEquals(sourceBoxId, first.getType().typeId)
+        val expected = freshTypes(sourcePrototype to prototype, sourceTarget to target)
+        assertEquals(expected.type(sourceAnonymousId), bound.value.typeId)
+        assertEquals(expected.snapshot(sourceSnapshot), top.mcfpp.analysis.StorageAccess.snapshot(bound))
+        assertEquals(expected.type(sourceBoxId), first.getType().typeId)
         assertSame(first, assertIs<MCFPPDataTemplateType>(restoredScope.functions.getValue("readBox").single().normalParams.single().type).template)
         val machine = execute(main, output)
         assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
@@ -1404,7 +1447,7 @@ class LibFieldAccessTest {
             assertNotSame(sourceWrappers.getValue(typeId), wrapper)
             val template = assertIs<MCFPPDataTemplateType>(wrapper.returnType).template
             assertNotSame(sourceTemplates.getValue(typeId), template)
-            assertEquals(sourceTemplates.getValue(typeId).getType().typeId, template.getType().typeId)
+            assertEquals(freshTypes(sourcePrototype to prototype).type(sourceTemplates.getValue(typeId).getType().typeId), template.getType().typeId)
             assertEquals(sourceSnapshots.getValue(typeId), top.mcfpp.analysis.StorageAccess.snapshot(wrapper.scope.getVar("T")!!))
         }
         assertEquals(sourceKeys, relay.compiledFunctions.map { (key, wrapper) ->
@@ -1448,7 +1491,7 @@ class LibFieldAccessTest {
                 assertEquals(StorageLayout.CompilerOnly, assertNotNull(bound.storageBinding).data.layout)
                 assertEquals(listOf(snapshot), key.arguments.map { assertIs<SpecializationArgument.Constant>(it).value })
                 val typeId = assertIs<TypeId.Specialized>(compiled.getType().typeId)
-                assertEquals(TypeId.Declaration("object", "fixture.fields", "Settings"), typeId.constructor)
+                assertEquals(prototype.getType().typeId, typeId.constructor)
                 assertEquals(listOf(snapshot), typeId.arguments)
                 assertSame(compiled, assertIs<MCFPPDataTemplateType>(compiled.getType()).template)
                 assertSame(compiled, assertIs<MCFPPDataTemplateType>(MCFPPType.resolveTypeId(typeId)).template)
@@ -1484,7 +1527,7 @@ class LibFieldAccessTest {
             assertNotSame(sourceObjects.getValue(number), compiled)
             assertNotSame(sourceObjects.getValue(number).scope.functions.getValue("read").single(),
                 compiled.scope.functions.getValue("read").single())
-            assertEquals(sourceIds.getValue(number), compiled.getType().typeId)
+            assertEquals(freshTypes(sourcePrototype to prototype).type(sourceIds.getValue(number)), compiled.getType().typeId)
             assertEquals(sourceSnapshots.getValue(number), top.mcfpp.analysis.StorageAccess.snapshot(compiled.scope.getVar("N")!!))
         }
         val machine = execute(main, output)
@@ -1537,7 +1580,7 @@ class LibFieldAccessTest {
                 assertEquals(StorageLayout.CompilerOnly, assertNotNull(bound.storageBinding).data.layout)
                 assertSame(bound.value, compiled.scope.getType("T"))
                 val id = assertIs<TypeId.Specialized>(compiled.getType().typeId)
-                assertEquals(TypeId.Declaration("template", "fixture.fields", "Contract"), id.constructor)
+                assertEquals(contract.getType().typeId, id.constructor)
                 assertEquals(listOf(snapshot), id.arguments)
                 assertEquals(id.arguments, key.arguments.map { assertIs<SpecializationArgument.Constant>(it).value })
                 assertSame(compiled, assertIs<MCFPPDataTemplateType>(MCFPPType.resolveTypeId(id)).template)
@@ -1592,15 +1635,16 @@ class LibFieldAccessTest {
         assertNotSame(sourceBox, box)
         val boxes = checkBindings(contract, box, main,
             listOf(restoredScope.functions.getValue("readIntBox").single(), restoredScope.functions.getValue("readBoolBox").single()))
+        val expected = freshTypes(sourceContract to contract, sourceBox to box)
         for ((typeId, compiled) in boxes) {
             val source = sourceBoxes.getValue(typeId)
             assertNotSame(source, compiled)
-            assertEquals(source.getType().typeId, compiled.getType().typeId)
-            assertEquals(top.mcfpp.analysis.StorageAccess.snapshot(source.scope.getVar("T")!!), top.mcfpp.analysis.StorageAccess.snapshot(compiled.scope.getVar("T")!!))
+            assertEquals(expected.type(source.getType().typeId), compiled.getType().typeId)
+            assertEquals(expected.snapshot(assertNotNull(top.mcfpp.analysis.StorageAccess.snapshot(source.scope.getVar("T")!!))), top.mcfpp.analysis.StorageAccess.snapshot(compiled.scope.getVar("T")!!))
             val sourceTarget = assertIs<MCFPPDataTemplateType>(assertIs<MCFPPTypeVar>(source.scope.getVar("T")).value).template
             val target = assertIs<MCFPPDataTemplateType>(assertIs<MCFPPTypeVar>(compiled.scope.getVar("T")).value).template
             assertNotSame(sourceTarget, target)
-            assertEquals(sourceTarget.getType().typeId, target.getType().typeId)
+            assertEquals(expected.type(sourceTarget.getType().typeId), target.getType().typeId)
             assertEquals(top.mcfpp.analysis.StorageAccess.snapshot(sourceTarget.scope.getVar("T")!!), top.mcfpp.analysis.StorageAccess.snapshot(target.scope.getVar("T")!!))
             assertNotSame(sourceTarget.scope.functions.getValue("exchange").single(), target.scope.functions.getValue("exchange").single())
         }
@@ -1971,7 +2015,8 @@ class LibFieldAccessTest {
         assertEquals(0, Project.errorCount)
         val models = check(GlobalScope.libNamespaces.getValue("fixture.fields"), main, 9)
         sourceModels.zip(models).forEach { (source, restored) -> assertNotSame(source, restored) }
-        assertEquals(sourceIds.toSet(), models.take(7).map { it.getType().typeId }.toSet())
+        val expected = freshTypes(*sourceModels.take(3).zip(models.take(3)).toTypedArray())
+        assertEquals(sourceIds.map(expected::type).toSet(), models.take(7).map { it.getType().typeId }.toSet())
         val machine = execute(main, output)
         assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
         assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
@@ -2647,7 +2692,7 @@ class LibFieldAccessTest {
             val damage = (commands + bodies).filter { it.removePrefix("\$").startsWith("damage ") || it.removePrefix("\$").startsWith("execute as ") && "run damage @s" in it }
             assertEquals(2, damage.size)
             assertTrue(damage.any { it.removePrefix("\$").startsWith("damage @p ") })
-            assertTrue(damage.any { it.removePrefix("\$").startsWith("execute as @e ") && "run damage @s 2.0" in it })
+            assertTrue(damage.any { it.removePrefix("\$").startsWith("execute as @e[tag=!mcfpp_context_anchor] ") && "run damage @s 2.0" in it })
             assertTrue(macros.any { (index, _) -> commands.take(index).any { "set from storage mcfpp:system stack_frame[0].amount" in it } })
             assertTrue((commands + bodies).any { "minecraft:generic" in it || "stack_frame[0].kind.id" in it })
         }
@@ -2790,7 +2835,7 @@ class LibFieldAccessTest {
     }
 
     @Test
-    fun delegatedIntegerTemplatesCopyAndShareViewsAcrossLibraryRoundTrip() = withLibrary { output ->
+    fun delegatedIntegerTemplateViewInitializersCopyAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
             func main(){
                 var box=Box()
@@ -2816,23 +2861,24 @@ class LibFieldAccessTest {
         """, output)
         fun check(main: Function): TypeId {
             val machine = execute(main, output)
-            assertEquals(494, machine.read(main.scope.getVar("result") as MCInt))
+            assertEquals(444, machine.read(main.scope.getVar("result") as MCInt))
             val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
             assertTrue(observe.compiledFunctions.isEmpty(), "Ordinary runtime input must not specialize the body")
             val original = assertIs<top.mcfpp.core.lang.obj.TypeDataTemplateObject>(observe.scope.getVar("original"))
             val copied = assertIs<top.mcfpp.core.lang.obj.TypeDataTemplateObject>(observe.scope.getVar("copied"))
             val view = assertNotNull(observe.scope.getVar("view"))
+            assertSame(GlobalScope.getCanonicalTemplate("fixture.fields", "Seconds"), original.templateType)
             assertEquals(original.templateType.getType().typeId, original.type.typeId)
             assertEquals(original.type.typeId, copied.type.typeId)
             assertNotEquals(MCFPPBaseType.Int.typeId, original.type.typeId)
             assertNotEquals(assertNotNull(original.storageBinding).place, assertNotNull(copied.storageBinding).place)
-            assertEquals(copied.storageBinding!!.place, assertNotNull(view.storageBinding).place)
+            assertNotEquals(copied.storageBinding!!.place, assertNotNull(view.storageBinding).place)
             return original.type.typeId
         }
         val sourceId = check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
         val main = consume("import fixture.fields:*;\n$mainSource", output)
         assertEquals(0, Project.errorCount)
-        assertEquals(sourceId, check(main))
+        assertNotEquals(sourceId, check(main), "Receiving nominal Seconds owns a fresh session identity")
     }
 
     @Test
@@ -2869,6 +2915,7 @@ class LibFieldAccessTest {
             assertTrue(observe.compiledFunctions.isEmpty())
             fun wrapper(name: String) = assertIs<top.mcfpp.core.lang.obj.TypeDataTemplateObject>(observe.scope.getVar(name))
             val original = wrapper("original")
+            assertSame(GlobalScope.getCanonicalTemplate("mcfpp.minecraft", "Time"), original.templateType)
             val originalPlace = assertNotNull(original.storageBinding).place
             assertEquals(original.templateType.getType().typeId, original.type.typeId)
             assertNotEquals(MCFPPBaseType.Int.typeId, original.type.typeId)
@@ -2882,7 +2929,7 @@ class LibFieldAccessTest {
         val sourceId = check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
         val main = consume("import fixture.fields:*;\nimport mcfpp.minecraft:*;\n$mainSource", output)
         assertEquals(0, Project.errorCount)
-        assertEquals(sourceId, check(main))
+        assertNotEquals(sourceId, check(main), "Receiving standard-library Time owns a fresh session identity")
     }
 
     @Test
@@ -2981,10 +3028,10 @@ class LibFieldAccessTest {
             val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
             assertTrue(observe.compiledFunctions.isEmpty())
             val answer = assertIs<DataTemplateObject>(observe.scope.getVar("answer"))
-            val canonical = assertNotNull(GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.std"))
-                .scope.getTemplate("CommandResult")
+            val canonical = assertNotNull(assertNotNull(GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.std"))
+                .scope.getTemplate("CommandResult"))
             assertSame(canonical, answer.templateType)
-            assertEquals(TypeId.Declaration("template", "mcfpp.minecraft.std", "CommandResult"), answer.type.typeId)
+            assertEquals(canonical.getType().typeId, answer.type.typeId)
             assertTrue(answer.templateType.scope.getVar("result")!!.isConst)
             assertTrue(answer.templateType.scope.getVar("success")!!.isConst)
             val binding = assertNotNull(answer.storageBinding)
@@ -3008,7 +3055,7 @@ class LibFieldAccessTest {
             assertEquals(stores.groupValues[2], stores.groupValues[4])
             val initialize = "data modify storage ${stores.groupValues[1]} ${stores.groupValues[2]} set value "
             val initialization = commands.withIndex().single { it.value.startsWith(initialize) }
-            assertEquals(Tag.toNBT("{}"), Tag.toNBT(initialization.value.removePrefix(initialize)))
+            assertEquals(Tag.toNBT(commandResultDefaults), Tag.toNBT(initialization.value.removePrefix(initialize)))
             assertTrue(initialization.index < commands.indexOf(seed))
             assertFalse(commands.any { it == "seed" || "return run seed" in it })
             for (field in listOf("result", "success")) {
@@ -3020,7 +3067,7 @@ class LibFieldAccessTest {
         val sourceId = check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
         val main = consume("import fixture.fields:*;\n$mainSource", output)
         assertEquals(0, Project.errorCount)
-        assertEquals(sourceId, check(main))
+        assertNotEquals(sourceId, check(main), "Receiving CommandResult owns a fresh session identity")
     }
 
     @Test
@@ -3091,7 +3138,7 @@ class LibFieldAccessTest {
             for ((index, match) in direct + listOf(callIndex to macro)) {
                 assertEquals(match.groupValues[1], match.groupValues[3])
                 assertEquals(match.groupValues[2], match.groupValues[4])
-                val initializer = "data modify storage ${match.groupValues[1]} ${match.groupValues[2]} set value {}"
+                val initializer = "data modify storage ${match.groupValues[1]} ${match.groupValues[2]} set value ${commandResultDefaults}"
                 assertEquals(1, commands.take(index).count { it == initializer })
             }
             assertFalse((commands + body).any { "return run" in it || it == "seed" || it == "help" || it.startsWith("say ") })
@@ -3117,7 +3164,7 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields
             import mcfpp.minecraft.std:*
-            @From<"top.mcfpp.mni.minecraft.DatapackData">
+            @From("top.mcfpp.mni.minecraft.DatapackData")
             object data Packs
             func profileStart():CommandResult = top.mcfpp.mni.minecraft.DebugData.start
             func profileStop():CommandResult = top.mcfpp.mni.minecraft.DebugData.stop
@@ -3176,7 +3223,7 @@ class LibFieldAccessTest {
             for ((index, match) in direct + listOf(callIndex to macro)) {
                 assertEquals(match.groupValues[1], match.groupValues[3])
                 assertEquals(match.groupValues[2], match.groupValues[4])
-                val initializer = "data modify storage ${match.groupValues[1]} ${match.groupValues[2]} set value {}"
+                val initializer = "data modify storage ${match.groupValues[1]} ${match.groupValues[2]} set value ${commandResultDefaults}"
                 assertEquals(1, commands.take(index).count { it == initializer })
             }
             assertFalse((commands + body).any { "return run" in it || it.startsWith("debug ") || it.startsWith("datapack ") })
@@ -3267,7 +3314,7 @@ class LibFieldAccessTest {
                     assertEquals(ByteTag(1), displayName["interpret"])
                 }
                 assertTrue(domains.add(capture.groupValues[5]))
-                val initializer = "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}"
+                val initializer = "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value ${commandResultDefaults}"
                 assertEquals(1, commands.take(index).count { it == initializer })
                 assertFalse(body.any { "return run" in it || it.removePrefix("\$").startsWith("team ") })
             }
@@ -3289,7 +3336,7 @@ class LibFieldAccessTest {
             namespace fixture.fields
             import mcfpp.minecraft.std:*
             import mcfpp.minecraft.resource:*
-            @From<"top.mcfpp.mni.minecraft.OpData">
+            @From("top.mcfpp.mni.minecraft.OpData")
             object data Operators
             data Box {
                 func observe(name: string):int {
@@ -3361,7 +3408,7 @@ class LibFieldAccessTest {
                 assertEquals(match.groupValues[1], match.groupValues[3])
                 assertEquals(match.groupValues[2], match.groupValues[4])
                 assertTrue(capturedRoots.add(match.groupValues[2]))
-                val initializer = "data modify storage ${match.groupValues[1]} ${match.groupValues[2]} set value {}"
+                val initializer = "data modify storage ${match.groupValues[1]} ${match.groupValues[2]} set value ${commandResultDefaults}"
                 assertEquals(1, commands.take(index).count { it == initializer })
             }
             assertEquals(6, capturedRoots.size)
@@ -3402,7 +3449,7 @@ class LibFieldAccessTest {
         write("""
             namespace fixture.fields
             import mcfpp.minecraft.std:*
-            @From<"top.mcfpp.mni.minecraft.WorldborderData">
+            @From("top.mcfpp.mni.minecraft.WorldborderData")
             object data Border
             data Box {
                 func observe(amount: float,ticks: int):int {
@@ -3492,7 +3539,7 @@ class LibFieldAccessTest {
                 assertEquals(capture.groupValues[1], capture.groupValues[3])
                 assertEquals(capture.groupValues[2], capture.groupValues[4])
                 assertTrue(roots.add(capture.groupValues[2]))
-                val initializer = "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}"
+                val initializer = "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value ${commandResultDefaults}"
                 assertEquals(1, commands.take(index).count { it == initializer })
             }
             assertEquals(7, roots.size)
@@ -3607,7 +3654,7 @@ class LibFieldAccessTest {
                 assertEquals(capture.groupValues[1], capture.groupValues[3])
                 assertEquals(capture.groupValues[2], capture.groupValues[4])
                 assertTrue(roots.add(capture.groupValues[2]))
-                val initializer = "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}"
+                val initializer = "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value ${commandResultDefaults}"
                 assertEquals(1, commands.take(index).count { it == initializer })
             }
             assertEquals(7, roots.size)
@@ -3638,7 +3685,7 @@ class LibFieldAccessTest {
             namespace fixture.fields
             import mcfpp.minecraft.std:*
             import mcfpp.minecraft.other:*
-            @From<"top.mcfpp.mni.minecraft.WorldObjectData">
+            @From("top.mcfpp.mni.minecraft.WorldObjectData")
             object data FixtureWorld
             data Box {
                 func observe(duration: int):int {
@@ -3700,7 +3747,7 @@ class LibFieldAccessTest {
                 assertEquals(capture.groupValues[1], capture.groupValues[3])
                 assertEquals(capture.groupValues[2], capture.groupValues[4])
                 assertTrue(roots.add(capture.groupValues[2]))
-                val initializer = "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}"
+                val initializer = "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value ${commandResultDefaults}"
                 assertEquals(1, commands.take(index).count { it == initializer })
             }
             assertEquals(2, roots.size)
@@ -3832,7 +3879,7 @@ class LibFieldAccessTest {
                 assertEquals(capture.groupValues[1], capture.groupValues[3])
                 assertEquals(capture.groupValues[2], capture.groupValues[4])
                 assertTrue(roots.add(capture.groupValues[2]))
-                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}" })
+                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value ${commandResultDefaults}" })
             }
             assertEquals(3, roots.size)
             assertFalse(commands.any { "return run" in it || it.startsWith("random reset ") })
@@ -3944,7 +3991,7 @@ class LibFieldAccessTest {
             val stores = Regex("execute store result storage (\\S+) (\\S+)\\.result int 1 store success storage (\\S+) (\\S+)\\.success byte 1 run (.*)")
             val direct = commands.mapIndexedNotNull { index, command -> stores.matchEntire(command)?.let { index to it } }
             assertEquals(1, direct.size)
-            assertEquals("tag @e list", direct.single().second.groupValues[5])
+            assertEquals("tag @e[tag=!mcfpp_context_anchor] list", direct.single().second.groupValues[5])
             val calls = commands.mapIndexedNotNull { index, command -> Regex("function (mcfpp:dynamic/\\S+) with storage (\\S+) (\\S+)").matchEntire(command)?.let { index to it } }
             assertEquals(2, calls.size)
             val domains = mutableSetOf<String>()
@@ -3953,7 +4000,7 @@ class LibFieldAccessTest {
                 val body = functions.getValue(call.groupValues[1])
                 val capture = assertNotNull(body.singleOrNull { it.startsWith("\$execute store result") }?.removePrefix("\$")?.let(stores::matchEntire))
                 val domain = capture.groupValues[5]
-                assertTrue(domain == "tag @e add \$(arg_0)" || domain == "tag @e remove \$(arg_0)")
+                assertTrue(domain == "tag @e[tag=!mcfpp_context_anchor] add \$(arg_0)" || domain == "tag @e[tag=!mcfpp_context_anchor] remove \$(arg_0)")
                 assertTrue(domains.add(domain))
                 val prefix = "data modify storage ${call.groupValues[2]} ${call.groupValues[3]}.arg_0 set from "
                 val prep = commands.take(index).withIndex().single { it.value.startsWith(prefix) }
@@ -3965,13 +4012,13 @@ class LibFieldAccessTest {
                 assertFalse(body.any { "return run" in it || it.removePrefix("\$").startsWith("tag ") })
                 index to capture
             }
-            assertEquals(setOf("tag @e add \$(arg_0)", "tag @e remove \$(arg_0)"), domains)
+            assertEquals(setOf("tag @e[tag=!mcfpp_context_anchor] add \$(arg_0)", "tag @e[tag=!mcfpp_context_anchor] remove \$(arg_0)"), domains)
             val roots = mutableSetOf<String>()
             for ((index, capture) in direct + captures) {
                 assertEquals(capture.groupValues[1], capture.groupValues[3])
                 assertEquals(capture.groupValues[2], capture.groupValues[4])
                 assertTrue(roots.add(capture.groupValues[2]))
-                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}" })
+                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value ${commandResultDefaults}" })
             }
             assertEquals(3, roots.size)
             assertFalse(commands.any { "return run" in it || it.startsWith("tag ") })
@@ -4064,7 +4111,7 @@ class LibFieldAccessTest {
                 assertEquals(result.groupValues[1], result.groupValues[3])
                 assertEquals(result.groupValues[2], result.groupValues[4])
                 assertTrue(roots.add(result.groupValues[2]))
-                assertEquals(1, commands.take(position).count { it == "data modify storage ${result.groupValues[1]} ${result.groupValues[2]} set value {}" })
+                assertEquals(1, commands.take(position).count { it == "data modify storage ${result.groupValues[1]} ${result.groupValues[2]} set value ${commandResultDefaults}" })
             }
             assertEquals(2, roots.size)
             assertFalse((commands + body).any { "return run" in it || it.removePrefix("\$").startsWith("team ") })
@@ -4135,13 +4182,13 @@ class LibFieldAccessTest {
             val stores = Regex("execute store result storage (\\S+) (\\S+)\\.result int 1 store success storage (\\S+) (\\S+)\\.success byte 1 run (.*)")
             val direct = commands.mapIndexedNotNull { index, command -> stores.matchEntire(command)?.let { index to it } }
             assertEquals(1, direct.size)
-            assertEquals("effect clear @e", direct.single().second.groupValues[5])
+            assertEquals("effect clear @e[tag=!mcfpp_context_anchor]", direct.single().second.groupValues[5])
             val calls = commands.mapIndexedNotNull { index, command -> Regex("function (mcfpp:dynamic/\\S+) with storage (\\S+) (\\S+)").matchEntire(command)?.let { index to it } }
             val (index, call) = calls.single()
             assertEquals(1, commands.count { it == commands[index] })
             val body = functions.getValue(call.groupValues[1])
             val capture = assertNotNull(body.singleOrNull { it.startsWith("\$execute store result") }?.removePrefix("\$")?.let(stores::matchEntire))
-            assertEquals("effect clear @e \$(arg_0)", capture.groupValues[5])
+            assertEquals("effect clear @e[tag=!mcfpp_context_anchor] \$(arg_0)", capture.groupValues[5])
             val prefix = "data modify storage ${call.groupValues[2]} ${call.groupValues[3]}.arg_0 set from "
             val preparation = commands.take(index).withIndex().single { it.value.startsWith(prefix) }
             val source = preparation.value.removePrefix(prefix)
@@ -4155,7 +4202,7 @@ class LibFieldAccessTest {
                 assertEquals(result.groupValues[1], result.groupValues[3])
                 assertEquals(result.groupValues[2], result.groupValues[4])
                 assertTrue(roots.add(result.groupValues[2]))
-                assertEquals(1, commands.take(position).count { it == "data modify storage ${result.groupValues[1]} ${result.groupValues[2]} set value {}" })
+                assertEquals(1, commands.take(position).count { it == "data modify storage ${result.groupValues[1]} ${result.groupValues[2]} set value ${commandResultDefaults}" })
             }
             assertEquals(2, roots.size)
             assertFalse((commands + body).any { "return run" in it || it.removePrefix("\$").startsWith("effect clear ") })
@@ -4239,8 +4286,8 @@ class LibFieldAccessTest {
                 assertEquals(1, commands.count { it == commands[index] })
                 val body = functions.getValue(call.groupValues[1])
                 val capture = assertNotNull(body.singleOrNull { it.startsWith("\$execute store result") }?.removePrefix("\$")?.let(stores::matchEntire))
-                val timed = capture.groupValues[5] == "effect give @e \$(arg_0) \$(arg_1) \$(arg_2) \$(arg_3)"
-                if (!timed) assertEquals("effect give @e \$(arg_0) infinite \$(arg_1) \$(arg_2)", capture.groupValues[5])
+                val timed = capture.groupValues[5] == "effect give @e[tag=!mcfpp_context_anchor] \$(arg_0) \$(arg_1) \$(arg_2) \$(arg_3)"
+                if (!timed) assertEquals("effect give @e[tag=!mcfpp_context_anchor] \$(arg_0) infinite \$(arg_1) \$(arg_2)", capture.groupValues[5])
                 val slotCount = if (timed) 4 else 3
                 fun preparation(slot: Int): IndexedValue<String> {
                     val prefix = "data modify storage ${call.groupValues[2]} ${call.groupValues[3]}.arg_$slot set from "
@@ -4264,7 +4311,7 @@ class LibFieldAccessTest {
                 assertEquals(capture.groupValues[1], capture.groupValues[3])
                 assertEquals(capture.groupValues[2], capture.groupValues[4])
                 assertTrue(roots.add(capture.groupValues[2]))
-                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}" })
+                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value ${commandResultDefaults}" })
                 assertFalse(body.any { "return run" in it || it.removePrefix("\$").startsWith("effect give ") })
             }
             assertEquals(2, roots.size)
@@ -4349,7 +4396,7 @@ class LibFieldAccessTest {
                 assertEquals(capture.groupValues[1], capture.groupValues[3])
                 assertEquals(capture.groupValues[2], capture.groupValues[4])
                 assertTrue(roots.add(capture.groupValues[2]))
-                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}" })
+                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value ${commandResultDefaults}" })
             }
             assertEquals(2, roots.size)
             assertFalse(commands.any { "return run" in it || it.startsWith("ride ") || it.startsWith("function mcfpp:dynamic/") })
@@ -4451,7 +4498,7 @@ class LibFieldAccessTest {
                 assertEquals(capture.groupValues[1], capture.groupValues[3])
                 assertEquals(capture.groupValues[2], capture.groupValues[4])
                 assertTrue(roots.add(capture.groupValues[2]))
-                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}" })
+                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value ${commandResultDefaults}" })
             }
             assertEquals(6, roots.size)
             assertFalse(commands.any { "return run" in it || it.startsWith("xp ") })
@@ -4555,7 +4602,7 @@ class LibFieldAccessTest {
                 assertEquals(capture.groupValues[1], capture.groupValues[3])
                 assertEquals(capture.groupValues[2], capture.groupValues[4])
                 assertTrue(roots.add(capture.groupValues[2]))
-                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}" })
+                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value ${commandResultDefaults}" })
             }
             assertEquals(10, roots.size)
             assertFalse(commands.any { "return run" in it || it.startsWith("advancement ") })
@@ -4656,7 +4703,7 @@ class LibFieldAccessTest {
                 assertEquals(result.groupValues[1], result.groupValues[3])
                 assertEquals(result.groupValues[2], result.groupValues[4])
                 assertTrue(roots.add(result.groupValues[2]))
-                assertEquals(1, commands.take(position).count { it == "data modify storage ${result.groupValues[1]} ${result.groupValues[2]} set value {}" })
+                assertEquals(1, commands.take(position).count { it == "data modify storage ${result.groupValues[1]} ${result.groupValues[2]} set value ${commandResultDefaults}" })
             }
             assertEquals(4, roots.size)
             assertFalse((commands + body).any { "return run" in it || Regex("(clear|gamemode|ride) .*?").matches(it.removePrefix("\$")) })
@@ -4732,7 +4779,7 @@ class LibFieldAccessTest {
                 assertEquals(capture.groupValues[1], capture.groupValues[3])
                 assertEquals(capture.groupValues[2], capture.groupValues[4])
                 assertTrue(roots.add(capture.groupValues[2]))
-                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}" })
+                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value ${commandResultDefaults}" })
             }
             assertEquals(2, roots.size)
             assertFalse(commands.any { "return run" in it || it.startsWith("tp ") || it.startsWith("function mcfpp:dynamic/") })
@@ -4812,7 +4859,7 @@ class LibFieldAccessTest {
                 assertEquals(capture.groupValues[1], capture.groupValues[3])
                 assertEquals(capture.groupValues[2], capture.groupValues[4])
                 assertTrue(roots.add(capture.groupValues[2]))
-                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}" })
+                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value ${commandResultDefaults}" })
                 assertFalse(body.any { "return run" in it || it.removePrefix("\$").startsWith("execute as ") })
             }
             assertEquals(2, roots.size)
@@ -4905,7 +4952,7 @@ class LibFieldAccessTest {
                 assertEquals(capture.groupValues[1], capture.groupValues[3])
                 assertEquals(capture.groupValues[2], capture.groupValues[4])
                 assertTrue(roots.add(capture.groupValues[2]))
-                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}" })
+                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value ${commandResultDefaults}" })
                 assertFalse(body.any { "return run" in it || it.removePrefix("\$").startsWith("attribute ") })
             }
             assertEquals(4, roots.size)
@@ -4964,6 +5011,9 @@ class LibFieldAccessTest {
         }
         val sourceMain = GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single()
         val sourceModels = listOf("first", "second").map { (sourceMain.scope.getVar(it) as DataTemplateObject).templateType }
+        val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
+        val sourcePrototype = assertNotNull(sourceScope.getTemplate("Box"))
+        val sourceEnum = assertNotNull(sourceScope.getEnum("Choice"))
         val source = check(sourceMain)
         val main = consume("""
             import fixture.fields:*
@@ -4973,7 +5023,14 @@ class LibFieldAccessTest {
             }
         """, output)
         assertEquals(0, Project.errorCount)
-        assertEquals(source, check(main))
+        val receivingScope = GlobalScope.libNamespaces.getValue("fixture.fields").scope
+        val receivingPrototype = assertNotNull(receivingScope.getTemplate("Box"))
+        val receivingEnum = assertNotNull(receivingScope.getEnum("Choice"))
+        assertNotSame(sourceEnum, receivingEnum)
+        val expected = FreshTypeExpectations(
+            sourcePrototype.getType().typeId to receivingPrototype.getType().typeId,
+            sourceEnum.getType().typeId to receivingEnum.getType().typeId)
+        assertEquals(source.map { (identity, value) -> expected.type(identity) to expected.snapshot(value) }, check(main))
         for ((index, name) in listOf("first", "second").withIndex()) assertNotSame(sourceModels[index], (main.scope.getVar(name) as DataTemplateObject).templateType)
     }
 
@@ -5075,7 +5132,7 @@ class LibFieldAccessTest {
                 assertEquals(capture.groupValues[1], capture.groupValues[3])
                 assertEquals(capture.groupValues[2], capture.groupValues[4])
                 assertTrue(roots.add(capture.groupValues[2]))
-                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}" })
+                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value ${commandResultDefaults}" })
                 assertFalse(body.any { "return run" in it || it.removePrefix("\$").startsWith("attribute ") })
             }
             assertEquals(5, roots.size)
@@ -5145,13 +5202,14 @@ class LibFieldAccessTest {
             val commands = Files.readAllLines(file).map(String::trim)
             val stores = Regex("execute store result storage (\\S+) (\\S+)\\.result int 1 store success storage (\\S+) (\\S+)\\.success byte 1 run (.*)")
             val captures = commands.mapIndexedNotNull { index, command -> stores.matchEntire(command)?.let { index to it } }
-            assertEquals(listOf("tp @a 9 2 3", "tp @a ~ ~ ~ 90 0", "tp @a ^ ^ ^1 facing ~ ~1 ~", "tp @a 0 0 0 facing entity @p eyes"), captures.map { it.second.groupValues[5] })
+            // Declaring alias copies the view; its coordinate writes leave position independent.
+            assertEquals(listOf("tp @a 1 2 3", "tp @a ~ ~ ~ 90 0", "tp @a ^ ^ ^1 facing ~ ~1 ~", "tp @a 0 0 0 facing entity @p eyes"), captures.map { it.second.groupValues[5] })
             val roots = mutableSetOf<String>()
             for ((index, capture) in captures) {
                 assertEquals(capture.groupValues[1], capture.groupValues[3])
                 assertEquals(capture.groupValues[2], capture.groupValues[4])
                 assertTrue(roots.add(capture.groupValues[2]))
-                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}" })
+                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value ${commandResultDefaults}" })
             }
             assertEquals(4, roots.size)
             assertFalse(commands.any { "return run" in it || it.startsWith("tp ") || it.startsWith("function mcfpp:dynamic/") })
@@ -5328,9 +5386,8 @@ class LibFieldAccessTest {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")
         assertEquals(0, Project.errorCount, "The producer must accept legal field access")
-        Input(Files.newInputStream(output.resolve("bin.mclib"))).use {
-            assertEquals(LibBinFormat.MAGIC, it.readInt())
-            assertEquals(LibBinFormat.VERSION, it.readInt())
+        Files.newInputStream(output.resolve("bin.mclib")).use {
+            assertEquals(LibraryWire.CURRENT_VERSION, LibraryWire.read(it).formatVersion)
         }
     }
 

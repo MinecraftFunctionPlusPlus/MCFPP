@@ -221,7 +221,7 @@ class MCFPPFile : File {
                                     LogProcessor.debug("Injecting class $clazz to namespace ${it.source.namespace.identifier}")
                                     it.source.namespace.injectedBy(clazz)
                                     return@executes 1
-                                }catch (e: ClassNotFoundException){
+                                }catch (_: ClassNotFoundException){
                                     LogProcessor.error("Class not found: ${getString(it, "className")}")
                                     return@executes 0
                                 }

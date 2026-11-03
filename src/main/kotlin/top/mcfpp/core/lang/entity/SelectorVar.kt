@@ -5,10 +5,11 @@ import top.mcfpp.command.Command
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.EntitySelector
+import top.mcfpp.lib.EntityFacts
+import top.mcfpp.lib.EntityTarget
 import top.mcfpp.lib.EntitySource
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.mni.SelectorData
-import top.mcfpp.mni.annotation.MCFPPEntity
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
@@ -25,18 +26,14 @@ import top.mcfpp.util.TempPool
  * 目标选择器（Target Selector）可在无需指定确切的玩家名称或UUID的情况下在命令中选择任意玩家与实体。目标选择器变量可以选择一个或多个实体，
  * 目标选择器参数可以根据特定条件筛选目标。
  *
- * selector拥有一个可选泛型参数limit，用于限制目标选择器选择的实体数量。例如selector<1>将会选择一个实体。
- *
- * 在mcfpp中你可以直接让目标选择器作为命令函数的参数，也可以让目标选择器选择实体，得到一个实体或者一个实体列表，之后再对它们进行操作
- *
- * 在构造一个目标选择器示例的时候，目标选择器的类型是必然确定的，因此只有用于构造确定变量的构造函数
+ * 普通实体值在使用点解析目标；数量与种类事实属于值，不参与公开类型身份。
  *
  * @see top.mcfpp.core.lang.nbt.EntityUUIDVar
  */
-open class SelectorVar : Var<SelectorVar> {
+open class SelectorVar : Var<SelectorVar>, EntityTargetAccess {
 
     @Suppress("SuspiciousVarProperty")
-    override var type: MCFPPType = MCFPPEntityType()
+    override var type: MCFPPType = MCFPPEntityType.NormalSelector
 
     /**
      * 创建一个目标选择器。它的标识符和mc名相同。
@@ -44,15 +41,24 @@ open class SelectorVar : Var<SelectorVar> {
      */
     constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier)
     constructor(selector: EntitySelector, identifier: String = TempPool.getVarIdentify()) : this(identifier) {
-        type = MCFPPEntityType(selector.getLimit().takeUnless { it == Int.MAX_VALUE },
-            selector.getType().takeUnless { it.isEmpty() }?.map { if (it.value) "!${it.key}" else it.key.toString() })
         StorageAccess.updateSelector(this, selector)
     }
+    constructor(target: EntityTarget, identifier: String = TempPool.getVarIdentify()) : this(identifier) {
+        StorageAccess.updateEntityTarget(this, target)
+    }
+
+    /** Missing or incomplete payloads carry no selector or cardinality guarantee. */
+    open fun entityTargetOrNull(): EntityTarget? {
+        val binding = storageBinding ?: return null
+        return StorageAccess.entityTarget(binding)
+    }
+
+    override val entityFacts: EntityFacts get() = entityTargetOrNull()?.facts ?: EntityFacts.UNKNOWN
 
     val value: EntitySelector get() {
-        val binding = storageBinding ?: error("Selector has no initialized program")
-        return StorageAccess.selectorProgram(binding)?.selector(binding.data.types, binding)
-            ?: error("Selector has no complete accessible program")
+        val selector = (entityTargetOrNull() as? EntityTarget.Selector)?.selector
+            ?: error("Entity has no complete accessible selector program")
+        return selector.apply { onChange = { StorageAccess.updateSelector(this@SelectorVar, it) } }
     }
 
     /**
@@ -70,9 +76,7 @@ open class SelectorVar : Var<SelectorVar> {
         return this
     }
 
-    fun isPlayer(): Boolean {
-        return value.onlyIncludingPlayers()
-    }
+    fun isPlayer(): Boolean = entityFacts.playersOnly
 
     override fun explicitCast(type: MCFPPType): Var<*> {
         val qwq = super.explicitCast(type)
@@ -111,19 +115,7 @@ open class SelectorVar : Var<SelectorVar> {
     }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        if(key == "dat"){
-            val data = DataTemplateObject(getData(), "dat")
-            data.nbtPath = NBTPath(EntitySource(this))
-            return data to true
-        }
-        val p = getData().scope.getProperty(key)
-        if(p != null) return PropertyVar(p, Void, this) to true
-        val v = getData().scope.getVar(key)
-        if(v is SelectorParamMap) {
-            v.selector = this
-            return v to true
-        }
-        return null to true
+        return EntityMembers.member(this, key, accessModifier)
     }
 
     override fun getMemberFunction(
@@ -132,30 +124,7 @@ open class SelectorVar : Var<SelectorVar> {
         normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        return getData().getFunction(key, readOnlyArgs, normalArgs) to true
-    }
-
-    private fun getData(): DataTemplate {
-        val types = value.getType()
-        val excluded = ArrayList<String>()
-        var selected: DataTemplate? = null
-        for ((type, reverse) in types){
-            val name = type.identifier.toCamelCase(true) + "Data"
-            if(!reverse){
-                if (type.namespace == "minecraft") {
-                    GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.entity")?.scope?.getTemplate(name)?.getType()?.let {
-                        it.tryResolve()
-                        selected = it.template
-                    }
-                }
-            }else{
-                if (type.namespace == "minecraft") excluded.add(name)
-            }
-        }
-        val data = AllEntityDataTemplate(excluded)
-        selected?.let { data.extends(it) }
-        data.extends(MCFPPEntityType.data)
-        return data
+        return EntityMembers.data(this).getFunction(key, readOnlyArgs, normalArgs) to true
     }
 
     override fun clone(): SelectorVar {
@@ -168,7 +137,14 @@ open class SelectorVar : Var<SelectorVar> {
 
     override fun toCommandPart(): Command {
         val loaded = StorageAccess.read(this)
-        return if (loaded is SelectorVar) loaded.value.toCommandPart() else Command("")
+        return if (loaded is EntityTargetAccess) loaded.toEntityTargetCommand() else Command("")
+    }
+
+    override fun toEntityTargetCommand(): Command {
+        val target = entityTargetOrNull()
+        if (target != null) return target.toCommandPart()
+        LogProcessor.error("Entity target has no complete accessible payload; cannot resolve '$identifier'")
+        return Command("")
     }
 
     interface SelectorParamMap: Indexable {
@@ -177,30 +153,17 @@ open class SelectorVar : Var<SelectorVar> {
 
     companion object {
 
-        internal fun declarationData(type: MCFPPEntityType): DataTemplate {
-            val excluded = type.types.orEmpty().filter { it.startsWith("!minecraft:") }
-                .map { it.substringAfter(':').toCamelCase(true) + "Data" }
-            return AllEntityDataTemplate(excluded).apply {
-                type.types.orEmpty().filter { it.startsWith("minecraft:") }.forEach { name ->
-                    GlobalScope.getCanonicalTemplate("mcfpp.minecraft.entity", name.substringAfter(':').toCamelCase(true) + "Data")
-                        ?.let { extends(it) }
-                }
+        internal fun declarationData(@Suppress("UNUSED_PARAMETER") type: MCFPPEntityType): DataTemplate {
+            return AllEntityDataTemplate().apply {
                 extends(MCFPPEntityType.data)
             }
         }
 
-        private val cache = HashMap<List<String>, AllEntityDataTemplate>()
-
-        private class AllEntityDataTemplate(excluded: List<String>): DataTemplate("AllEntity","mcfpp"){
+        private class AllEntityDataTemplate: DataTemplate("AllEntity","mcfpp"){
             init {
                 GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.entity")?.scope?.getTemplate("EntityData")?.getType()?.let {
                     it.tryResolve()
                     extends(it.template)
-                }
-                GlobalScope.getTemplate { data ->
-                    data.annotations.any { it is MCFPPEntity } && data.identifier !in excluded
-                }.forEach {
-                    extends(it)
                 }
                 injectedBy(SelectorData::class.java)
                 alwaysDynamic = true

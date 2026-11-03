@@ -1,5 +1,5 @@
 @MCFPPEntity
 data CreakingData: EntityData, CreatureData, AIMobData {
-    @Name<"Home_Pos">
+    @Name("Home_Pos")
     var homePos: IntArray
 }

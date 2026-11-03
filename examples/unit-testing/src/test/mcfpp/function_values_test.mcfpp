@@ -1,0 +1,18 @@
+import mcfpp.test:*
+
+func increment(value: int): int {
+    return value + 1
+}
+
+@Test
+func functionValues() {
+    var f = { a: int -> 1 }
+    print(f(1))
+    assertEquals(1, f(1))
+
+    f = increment
+    assertEquals(3, f(2))
+
+    var reference: (int) -> int = increment
+    assertEquals(4, reference(3))
+}

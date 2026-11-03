@@ -15,6 +15,8 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
+import top.mcfpp.test.util.compilerDiagnostics
+import top.mcfpp.type.TypeId
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.*
@@ -113,8 +115,8 @@ class GenericDeclarationContractTest {
         val original = GlobalScope.getTemplate("fixture.companions", "Box")!!
         val sourceMain = GlobalScope.localNamespaces.getValue("fixture.companions").scope.functions.getValue("main").single()
         val sourceFirst = (sourceMain.scope.getVar("first") as DataTemplateObject).templateType
-        val sourceFirstId = sourceFirst.getType().typeId
-        val sourceCompanionId = sourceFirst.companionObject!!.getType().typeId
+        val sourceFirstId = assertIs<TypeId.Specialized>(sourceFirst.getType().typeId)
+        val sourceCompanionId = assertIs<TypeId.Specialized>(sourceFirst.companionObject!!.getType().typeId)
         fun initializeAndExecute(mainFunction: Function, executionOutput: Path): ScoreCommandExecutor {
             val companions = listOf("first", "second", "shared").map { name ->
                 (mainFunction.scope.getVar(name) as DataTemplateObject).templateType.companionObject!!
@@ -137,9 +139,10 @@ class GenericDeclarationContractTest {
         }
         initializeAndExecute(sourceMain, output.resolve("source"))
         Project.config.includes = arrayListOf(output.toString())
-        compile("import fixture.companions:*;\n$main")
-        assertEquals(0, Project.errorCount)
-        assertNotSame(original, GlobalScope.getTemplate("fixture.companions", "Box"))
+        val messages = compilerDiagnostics { compile("import fixture.companions:*;\n$main") }
+        assertEquals(0, Project.errorCount, messages.joinToString("\n"))
+        val receiving = assertNotNull(GlobalScope.getTemplate("fixture.companions", "Box"))
+        assertNotSame(original, receiving)
         val function = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
         val first = (function.scope.getVar("first") as DataTemplateObject).templateType as CompiledGenericDataTemplate
         val second = (function.scope.getVar("second") as DataTemplateObject).templateType as CompiledGenericDataTemplate
@@ -147,8 +150,15 @@ class GenericDeclarationContractTest {
         assertNotSame(first.companionObject, second.companionObject)
         assertEquals(AccessModifier.PRIVATE, first.getAccess(first.companionObject!!))
         assertEquals(AccessModifier.PUBLIC, first.getAccess(second.companionObject!!))
-        assertEquals(sourceFirstId, first.getType().typeId)
-        assertEquals(sourceCompanionId, first.companionObject!!.getType().typeId)
+        assertSame(receiving, first.originTemplate)
+        val receivingCompanion = assertNotNull(receiving.companionObject)
+        val companion = assertIs<CompiledGenericDataTemplate>(first.companionObject)
+        assertSame(receivingCompanion, companion.originTemplate)
+        assertEquals(TypeId.Specialized(receiving.getType().typeId, sourceFirstId.arguments), first.getType().typeId)
+        assertEquals(TypeId.Specialized(receivingCompanion.getType().typeId, sourceCompanionId.arguments), companion.getType().typeId)
+        assertNotEquals(sourceFirstId, first.getType().typeId, "Receiving Box has a fresh nominal identity with the original readonly arguments")
+        assertNotEquals(sourceCompanionId, companion.getType().typeId, "Receiving companion has a fresh nominal identity with the original readonly arguments")
+        assertNotSame(sourceFirst.companionObject, companion)
         assertNotSame(sourceFirst, first)
         val shared = (function.scope.getVar("shared") as DataTemplateObject).templateType
         val otherShared = (function.scope.getVar("otherShared") as DataTemplateObject).templateType

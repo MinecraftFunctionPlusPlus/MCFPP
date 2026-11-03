@@ -193,7 +193,7 @@ class ConstructorExecutionTest {
         assertEquals(0, machine.stackDepth)
     }
 
-    @Test fun aViewReceiverSharesWritesWithoutChangingSourceTypeOrItsIndependentCopy() {
+    @Test fun aViewReceiverInitializerCopiesWithoutChangingSourceTypeOrOtherCopies() {
         val main = compile("""
             data Source {
                 var value: int
@@ -215,7 +215,7 @@ class ConstructorExecutionTest {
         val binding = source.storageBinding!!
         assertEquals(template("Source").getType().typeId, source.type.typeId)
         assertNotEquals(TypeKnowledge.Exact(template("Target").getType().typeId), binding.data.facts.read(binding.place)!!.type)
-        assertEquals(92, execute(main, listOf(template("Source"), template("Target"))).read(main.scope.getVar("result") as MCInt))
+        assertEquals(22, execute(main, listOf(template("Source"), template("Target"))).read(main.scope.getVar("result") as MCInt))
         assertNotEquals(binding.place, main.scope.getVar("copied")!!.storageBinding!!.place)
     }
 }

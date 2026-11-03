@@ -1,0 +1,5 @@
+lock-version = 1
+resolver-version = "1"
+roots = []
+minecraft-version = "1.21.8"
+# mcfpm-project-selection-sha256=2ac0e9a8ba07bd0f293212ead925c4042977c863592546f3e87567133103535c

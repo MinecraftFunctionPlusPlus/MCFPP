@@ -18,7 +18,6 @@ import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.stream.Collectors
 import java.util.stream.Stream
-import kotlin.reflect.jvm.javaMethod
 
 
 /**
@@ -44,6 +43,10 @@ class NativeFunction : Function, Native {
 
     var returnsConstWhenArgsConst = false
 
+    /** Imported callables retain the revocable capability of their owning compilation. */
+    @Transient
+    internal var librarySessionGuard: (() -> Unit)? = null
+
     /**
      * 通过一个java方法来构造一个NativeFunction，同时手动指定mcfpp方法的名字
      *
@@ -51,7 +54,7 @@ class NativeFunction : Function, Native {
      * @param javaMethod java方法
      * @param namespace 命名空间
      */
-    constructor(name: String, namespace: String = Project.currNamespace, javaMethod: Method = Companion::defaultNativeFunction.javaMethod!!) : super(name, namespace, context = null) {
+    constructor(name: String, namespace: String = Project.currNamespace, javaMethod: Method = defaultNativeMethod) : super(name, namespace, context = null) {
         this.javaMethod = javaMethod
         this.javaMethodName = name
     }
@@ -72,6 +75,7 @@ class NativeFunction : Function, Native {
     }
 
     fun invoke(readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, caller: CanSelectMember?): Var<*> {
+        librarySessionGuard?.invoke()
         fun failed() = UnknownVar(identifier).apply { type = returnType; isError = true }
         if (!NativeSignatureValidator.validate(this)) return failed()
         if (readOnlyArgs.size > readOnlyParams.size || normalArgs.size > normalParams.size) {
@@ -95,6 +99,7 @@ class NativeFunction : Function, Native {
     internal fun invokeCompleteArguments(readOnlyArgs: LinkedHashMap<String, Var<*>>,
                                          normalArgs: LinkedHashMap<String, Var<*>>,
                                          caller: CanSelectMember?): Var<*> {
+        librarySessionGuard?.invoke()
         fun failed() = UnknownVar(identifier).apply { type = returnType; isError = true }
         if (!NativeSignatureValidator.validate(this)) return failed()
         val missing = readOnlyParams.map { it.identifier }.filter { it !in readOnlyArgs } +
@@ -235,27 +240,53 @@ class NativeFunction : Function, Native {
     }
 
     fun replaceGenericParams(genericParams: Map<String, MCFPPType>) : NativeFunction{
+        librarySessionGuard?.invoke()
         val n = NativeFunction(this.identifier, this.namespace, this.javaMethod)
-        n.caller = this.caller
+        n.librarySessionGuard = librarySessionGuard
+        n.structuredSignatureBindings = structuredSignatureBindings
+        n.declarationFile = declarationFile
+        n.declarationEnvironment = declarationEnvironment
+        n.scope.parent.clear()
+        n.scope.parent.addAll(scope.parent)
+        genericParams.forEach { (name, type) -> n.scope.putType(name, type, true) }
+        val readonly = genericParams.mapValues { (_, type) -> ClosedReadonlyBinding(top.mcfpp.type.MCFPPConcreteType.Type,
+            top.mcfpp.analysis.CompilerValue.Typed(top.mcfpp.type.MCFPPConcreteType.Type.typeId,
+                top.mcfpp.analysis.CompilerValue.TypeValue(type.typeId)), mapOf(type.typeId to type)) }
+        fun replace(type: MCFPPType): MCFPPType {
+            val retained = if (structuredSignatureBindings == null) type
+                else SpecializationPolicy.structuredType(this, type, readonly) ?: type
+            if (retained !is MCFPPTypeWithGeneric) return retained
+            val substitutions = LinkedHashMap(genericParams)
+            fun keepUnbound(value: MCFPPType) {
+                if (value is top.mcfpp.type.MCFPPGenericParamType) substitutions.putIfAbsent(value.identifier, value)
+                (value as? MCFPPTypeWithGeneric)?.generic?.forEach(::keepUnbound)
+            }
+            if (structuredSignatureBindings != null) keepUnbound(retained)
+            return retained.replaceGenericParam(substitutions)
+        }
+        n.returnsConstWhenArgsConst = returnsConstWhenArgsConst
+        n.caller = replace(this.caller)
         n.owner = this.owner
         n.accessModifier = this.accessModifier
-        n.returnType = (this.returnType as? MCFPPTypeWithGeneric)?.replaceGenericParam(genericParams) ?: this.returnType
+        n.returnType = replace(this.returnType)
         for(np in normalParams){
-            val type = (np.type as? MCFPPTypeWithGeneric)?.replaceGenericParam(genericParams) ?: np.type
+            val type = replace(np.type)
             val p = FunctionParam(type, np.identifier, n, np.hasDefault, np.isReadOnly)
             p.defaultValue = np.defaultValue
             p.defaultTypes = np.defaultTypes
             p.defaultContext = np.defaultContext
+            p.defaultBodyHandle = np.defaultBodyHandle
             n.appendNormalParam(p)
             n.scope.putVar(p.identifier, p.buildVar())
         }
         for(rp in readOnlyParams){
             if (rp.identifier in genericParams) continue
-            val type = (rp.type as? MCFPPTypeWithGeneric)?.replaceGenericParam(genericParams) ?: rp.type
+            val type = replace(rp.type)
             val p = FunctionParam(type, rp.identifier, n, rp.hasDefault, true)
             p.defaultValue = rp.defaultValue
             p.defaultTypes = rp.defaultTypes
             p.defaultContext = rp.defaultContext
+            p.defaultBodyHandle = rp.defaultBodyHandle
             n.readOnlyParams.add(p)
         }
         return n
@@ -292,11 +323,11 @@ class NativeFunction : Function, Native {
     }
 
     override fun addParamsFromContext(ctx: mcfppParser.FunctionParamsContext) {
-        val r = ctx.readOnlyParams()?.parameterList()
+        val r = ctx.readOnlyParams()?.readOnlyParameterList()
         val n = ctx.normalParams().parameterList()
         if(r == null && n == null) return
-        for (param in r?.parameter()?:ArrayList()){
-            val (p,v) = parseParam(param, isReadOnly = true)
+        for (param in r?.readOnlyParameter()?:ArrayList()){
+            val (p,v) = parseParam(param)
             readOnlyParams.add(p)
             scope.putVar(p.identifier, v)
             if (p.type == top.mcfpp.type.MCFPPConcreteType.Type)
@@ -324,6 +355,14 @@ class NativeFunction : Function, Native {
     }
 
     companion object {
+
+        // JVM reflection also works in the shaded CLI, where Kotlin callable metadata may be absent.
+        private val defaultNativeMethod: Method by lazy {
+            Companion::class.java.declaredMethods.single {
+                it.name.substringBefore('$') == "defaultNativeFunction" &&
+                    it.parameterTypes.contentEquals(arrayOf(NativeCallContext::class.java))
+            }
+        }
 
         private val primitiveTypes: MutableMap<String, Class<*>> = HashMap()
         init {

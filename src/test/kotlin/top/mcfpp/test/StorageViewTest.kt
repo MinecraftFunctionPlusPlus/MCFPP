@@ -15,7 +15,7 @@ import kotlin.test.*
 import kotlin.test.Test
 
 class StorageViewTest {
-    @Test fun coordinateMemberWritesShareViewsButLeaveOrdinaryCopiesIndependent() {
+    @Test fun coordinateViewInitializersAndOrdinaryCopiesAreIndependent() {
         val main = compile("""
             func main(){
                 var position=1 2 3
@@ -34,32 +34,33 @@ class StorageViewTest {
         val copy = assertIs<Pos3Var>(main.scope.getVar("copy"))
         val replacement = assertIs<Pos3Var>(main.scope.getVar("replacement"))
         val originalBinding = assertNotNull(position.storageBinding)
-        assertSame(originalBinding.data, assertNotNull(alias.storageBinding).data)
-        assertEquals(originalBinding.place, assertNotNull(alias.storageBinding).place)
+        val aliasBinding = assertNotNull(alias.storageBinding)
+        assertNotSame(originalBinding.data, aliasBinding.data)
+        assertNotEquals(originalBinding.place, aliasBinding.place)
         assertNotEquals(originalBinding.place, StorageAccess.ensure(copy).place)
         assertNotEquals(originalBinding.place, assertNotNull(replacement.storageBinding).place)
         val member = assertIs<PosDimension>(alias.getMemberVar("x", top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
         assertSame(alias, member.parent)
         assertEquals("x", member.identifier)
-        assertSame(originalBinding.data, assertNotNull(member.storageBinding).data)
-        assertEquals(originalBinding.place.index(0), assertNotNull(member.storageBinding).place)
+        assertSame(aliasBinding.data, assertNotNull(member.storageBinding).data)
+        assertEquals(aliasBinding.place.index(0), assertNotNull(member.storageBinding).place)
         assertEquals(originalBinding.place.index(0), assertNotNull(position.getMemberVar("x", top.mcfpp.model.Member.AccessModifier.PUBLIC).first?.storageBinding).place)
-        assertEquals(StorageAccess.snapshot(position), StorageAccess.snapshot(alias))
-        assertEquals("9 2 3", assertIs<Pos3Var>(StorageAccess.read(position)).toCommandPart().toString())
+        assertEquals("1 2 3", assertIs<Pos3Var>(StorageAccess.read(position)).toCommandPart().toString())
         assertEquals("9 2 3", assertIs<Pos3Var>(StorageAccess.read(alias)).toCommandPart().toString())
         assertEquals("1 2 3", assertIs<Pos3Var>(StorageAccess.read(copy)).toCommandPart().toString())
         assertEquals("9 8 7", assertIs<Pos3Var>(StorageAccess.read(replacement)).toCommandPart().toString())
         val pair = assertIs<Pos2Var>(main.scope.getVar("pair"))
         val pairAlias = assertIs<Pos2Var>(main.scope.getVar("pairAlias"))
         val pairBinding = assertNotNull(pair.storageBinding)
-        assertSame(pairBinding.data, assertNotNull(pairAlias.storageBinding).data)
-        assertEquals(pairBinding.place, assertNotNull(pairAlias.storageBinding).place)
+        val pairAliasBinding = assertNotNull(pairAlias.storageBinding)
+        assertNotSame(pairBinding.data, pairAliasBinding.data)
+        assertNotEquals(pairBinding.place, pairAliasBinding.place)
         val z = assertIs<PosDimension>(pairAlias.getMemberVar("z", top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
         assertSame(pairAlias, z.parent)
         assertEquals("z", z.identifier)
-        assertEquals(pairBinding.place.index(1), assertNotNull(z.storageBinding).place)
-        assertEquals(StorageAccess.snapshot(pair), StorageAccess.snapshot(pairAlias))
-        assertEquals("4 8", assertIs<Pos2Var>(StorageAccess.read(pair)).toCommandPart().toString())
+        assertEquals(pairAliasBinding.place.index(1), assertNotNull(z.storageBinding).place)
+        assertEquals("4 5", assertIs<Pos2Var>(StorageAccess.read(pair)).toCommandPart().toString())
+        assertEquals("4 8", assertIs<Pos2Var>(StorageAccess.read(pairAlias)).toCommandPart().toString())
         val unset = assertIs<Pos3Var>(main.scope.getVar("unset"))
         assertEquals(ValueState.UNINITIALIZED, StorageAccess.ensure(unset).data.facts.read(StorageAccess.ensure(unset).place)!!.state)
         assertNull(StorageAccess.snapshot(unset))
@@ -198,18 +199,19 @@ class StorageViewTest {
         function.commands.clear()
     }
 
-    @Test fun anUnusedNumericViewDoesNotConvertOrMaterializeItsSource() {
+    @Test fun aNumericViewInitializerCopiesWithoutNumericConversion() {
         val function = compile("func main(){ var value = 7; var view = value as float; }")
         val view = function.scope.getVar("view")!!
-        assertIs<ValueRef.TypedView>(view.valueRef())
-        assertEquals(function.scope.getVar("value")!!.storageBinding!!.place, view.storageBinding!!.place)
+        assertNull(view.storageBinding!!.view)
+        assertNotEquals(function.scope.getVar("value")!!.storageBinding!!.place, view.storageBinding!!.place)
         val commands = function.commands.analyzeAll().filterNot { it.startsWith("#") }
         assertEquals(1, commands.count { it.contains("set value 7") }, commands.toString())
-        assertFalse(commands.any { it.contains("from_int") || it.contains("_scoreto") || it.contains("stack_frame[0].view") }, commands.toString())
+        assertFalse(commands.any { it.contains("from_int") || it.contains("_scoreto") }, commands.toString())
+        assertTrue(commands.any { it.contains("stack_frame[0].view") && it.contains("set from") }, commands.toString())
         assertEquals(1, Project.warningCount)
     }
 
-    @Test fun templateViewsShareWritesAndPreserveSiblingFacts() {
+    @Test fun templateViewInitializersCopyWritesAndPreserveSiblingFacts() {
         val main = compile("""
             data Source { var value: int; var sibling: int; }
             data Target { var value: int; var sibling: int; }
@@ -225,11 +227,11 @@ class StorageViewTest {
             }
         """)
         val source = main.scope.getVar("source")!!
-        assertEquals(source.storageBinding!!.place, main.scope.getVar("first")!!.storageBinding!!.place)
-        assertEquals(source.storageBinding!!.place, main.scope.getVar("second")!!.storageBinding!!.place)
+        assertNotEquals(source.storageBinding!!.place, main.scope.getVar("first")!!.storageBinding!!.place)
+        assertNotEquals(source.storageBinding!!.place, main.scope.getVar("second")!!.storageBinding!!.place)
         val machine = execute(main)
         assertEquals(2, machine.read(main.scope.getVar("before") as MCInt))
-        assertEquals(14, machine.read(main.scope.getVar("result") as MCInt))
+        assertEquals(4, machine.read(main.scope.getVar("result") as MCInt))
         assertEquals(9, machine.read(main.scope.getVar("preserved") as MCInt))
         assertIs<ValueKnowledge.Constant>(source.storageBinding!!.data.facts.read(source.storageBinding!!.place.field("sibling"))!!.value)
     }
@@ -248,7 +250,7 @@ class StorageViewTest {
         val commands = main.commands.analyzeAll().joinToString("\n")
         assertFalse(commands.contains("constructor"), commands)
         assertFalse(commands.contains("missing set"), commands)
-        assertFalse(commands.contains("set from"), commands)
+        assertTrue(commands.contains("set from"), commands)
         assertEquals(1, Project.warningCount)
     }
 
@@ -279,6 +281,11 @@ class StorageViewTest {
         assertFalse(commands.contains("from_float") || commands.contains("from_int"), commands)
         val value = main.scope.getVar("value")!!
         assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), value.storageBinding!!.data.facts.read(value.storageBinding!!.place)!!.type)
+        val emitted = main.commands.analyzeAll()
+        val viewPath = StorageAccess.ensure(main.scope.getVar("view")!!).path.toCommandPart()
+        val machine = ScoreCommandExecutor(emitted.dropLast(1) +
+            "data modify storage mcfpp:system temp.copied set from $viewPath" + emitted.last())
+        assertEquals(IntTag(7), machine.readNbt("mcfpp:system", "temp.copied"))
     }
 
     @Test fun legacyFloatRejectsScalarLayoutAccessWithoutUsingNumericConversion() {

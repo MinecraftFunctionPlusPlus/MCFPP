@@ -1,5 +1,5 @@
 @MCFPPEntity
 data PigData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
-    @Name<"Saddle">
+    @Name("Saddle")
     var saddle: bool
 }

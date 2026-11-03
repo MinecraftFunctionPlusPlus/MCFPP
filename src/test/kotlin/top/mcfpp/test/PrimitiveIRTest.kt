@@ -215,7 +215,7 @@ class PrimitiveIRTest {
             var sum = a + b
             a *= 2
             var equal = sum == 4
-            var conjunction = equal && false
+            external conjunction = equal && false
             var disjunction = conjunction || equal
         """.trimIndent())
         val machine = execute(function)

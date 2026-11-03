@@ -1,0 +1,13 @@
+namespace fixture.package
+data MathBox {
+    constructor() {}
+    private func hidden(value:int):int {
+        /say installed-private-body
+        return value+1
+    }
+    func add(value:int):int { return this.hidden(value) }
+}
+func answer(value:int):int {
+    var box=MathBox()
+    return box.add(value)
+}

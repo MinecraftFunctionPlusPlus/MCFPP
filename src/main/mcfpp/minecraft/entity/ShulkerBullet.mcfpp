@@ -1,9 +1,9 @@
 @MCFPPEntity
 data ShulkerBulletData: EntityData, ProjectileData {
-    @Name<"Dir"> var dir: int
-    @Name<"Steps"> var steps: int
-    @Name<"Target"> var target: IntArray
-    @Name<"TXD"> var TXD: double
-    @Name<"TYD"> var TYD: double
-    @Name<"TZD"> var TZD: double
+    @Name("Dir") var dir: int
+    @Name("Steps") var steps: int
+    @Name("Target") var target: IntArray
+    @Name("TXD") var TXD: double
+    @Name("TYD") var TYD: double
+    @Name("TZD") var TZD: double
 }

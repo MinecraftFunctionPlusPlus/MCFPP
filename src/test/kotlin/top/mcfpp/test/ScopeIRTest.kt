@@ -54,7 +54,7 @@ class ScopeIRTest {
         assertFalse(main.scope.vars.keys.any { it.startsWith("$") })
     }
 
-    @Test fun shadowedCollectionsAndViewsRetainTheCorrectSharedPlace() = modes {
+    @Test fun shadowedCollectionsAndViewInitializersKeepIndependentPlaces() = modes {
         val main = compile("""
             func main(){
                 var source = [2,3]
@@ -66,10 +66,10 @@ class ScopeIRTest {
                     source[0] = 9
                 }
                 if(true){ var source = [11,12]; source[1] = 13; }
-                external result = source[0]*10 + view[1]
+                external result = source[0]*100 + view[0]*10 + view[1]
             }
         """, "1.20.2")
-        assertEquals(53, execute(main).read(main.scope.getVar("result") as MCInt))
+        assertEquals(223, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun recursiveCallsAndRepeatedLoopScopesKeepLocalStorageSeparate() = modes {

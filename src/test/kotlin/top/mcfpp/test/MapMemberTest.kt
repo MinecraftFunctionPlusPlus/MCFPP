@@ -56,7 +56,7 @@ class MapMemberTest {
         }
     }
 
-    @Test fun overwritingAKeyKeepsOneEntryAndViewsShareWrites() {
+    @Test fun overwritingAKeyKeepsOneEntryAndAssignedViewsAreIndependent() {
         val main = compile("""
             func main(){
                 var source = {entries:[{key:"first",value:2},{key:"second",value:3}]}
@@ -70,7 +70,8 @@ class MapMemberTest {
         """)
         val machine = execute(main)
         assertEquals(346, machine.read(main.scope.getVar("result") as MCInt))
-        assertEquals(4, machine.read(main.scope.getVar("rootValue") as MCInt))
+        assertEquals(2, machine.read(main.scope.getVar("rootValue") as MCInt),
+            "Declaring values copies the temporary view into independent storage")
     }
 
     @Test fun ordinaryMapCopiesKeepIndependentStorage() {

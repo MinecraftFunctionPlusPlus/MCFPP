@@ -1,4 +1,4 @@
-@From<"top.mcfpp.mni.minecraft.ItemPredicatePartData">
+@From("top.mcfpp.mni.minecraft.ItemPredicatePartData")
 data ItemPredicatePart
 
 data ContainPart: ItemPredicatePart {
@@ -39,10 +39,10 @@ data OrItemPredicatePart: ItemPredicatePart {
 // ========================物品谓词=====================
 /// 对应于`minecraft:item_predicate`，用于指定某个物品需要满足的特征。
 
-@From<"top.mcfpp.mni.minecraft.ItemPredicateData">
+@From("top.mcfpp.mni.minecraft.ItemPredicateData")
 data ItemPredicate {
     var parts: list<ItemPredicatePart> = []
 }
 
-@From<"top.mcfpp.mni.minecraft.ItemPredicateObjectData">
+@From("top.mcfpp.mni.minecraft.ItemPredicateObjectData")
 object data ItemPredicate

@@ -1,5 +1,5 @@
 @MCFPPEntity
 data GhastData: EntityData, CreatureData, AIMobData {
-    @Name<"ExplosionPower">
+    @Name("ExplosionPower")
     var explosionPower: bool
 }

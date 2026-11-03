@@ -1,5 +1,5 @@
-@From<"top.mcfpp.mni.resource.AdvancementData">
+@From("top.mcfpp.mni.resource.AdvancementData")
 data Advancement: ResourceID
 
-@From<"top.mcfpp.mni.resource.AdvancementObjectData">
+@From("top.mcfpp.mni.resource.AdvancementObjectData")
 object data Advancement: ResourceID

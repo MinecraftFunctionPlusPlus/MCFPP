@@ -1,7 +1,7 @@
 data NeutralData {
-    @Name<"AngryAt">
+    @Name("AngryAt")
     var angryAt: IntArray
 
-    @Name<"AngerTime">
+    @Name("AngerTime")
     var angerTime: int
 }

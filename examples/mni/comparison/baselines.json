@@ -1,0 +1,372 @@
+{
+  "schema": "mcfpp-comparison-baselines/1",
+  "note": "Literal command maps for the authored handwritten and conventional-runtime variants. The measurement driver executes these exact lines; it never treats the expected numbers as output. The MNI variant is read from the actual CLI output instead.",
+  "generatedNamespace": "example.comparison",
+  "world": {
+    "position": [0.5, 64.0, 0.5],
+    "yaw": 90.0,
+    "pitch": 0.0,
+    "block": "minecraft:stone",
+    "stoneBlocks": [[0, 64, 0], [-1, 64, 0]]
+  },
+  "scenarios": [
+    {
+      "id": "damage",
+      "domain": "damage",
+      "kernel": "example.comparison:damagecase",
+      "probes": ["health"],
+      "expected": {"health": 70},
+      "expectedBlockTests": null,
+      "expectedScores": {},
+      "variants": {
+        "handwritten": {
+          "entry": "comparison.handwritten:damagecase",
+          "functions": {
+            "comparison.handwritten:damagecase": [
+              "data modify storage mcfpp:system stack_frame prepend value {}",
+              "data modify storage mcfpp:system stack_frame[0].health set value 100",
+              "scoreboard players set #handwritten_damage comparison 100",
+              "scoreboard players remove #handwritten_damage comparison 30",
+              "scoreboard players set #handwritten_zero comparison 0",
+              "execute if score #handwritten_damage comparison < #handwritten_zero comparison run scoreboard players set #handwritten_damage comparison 0",
+              "execute store result storage mcfpp:system stack_frame[0].health int 1 run scoreboard players get #handwritten_damage comparison",
+              "data remove storage mcfpp:system stack_frame[0]"
+            ]
+          }
+        },
+        "runtime": {
+          "entry": "comparison.runtime:damagecase",
+          "functions": {
+            "comparison.runtime:damagecase": [
+              "data modify storage mcfpp:system stack_frame prepend value {}",
+              "data modify storage mcfpp:system stack_frame[0].health set value 100",
+              "data modify storage mcfpp:system stack_frame[0].amount set value 30",
+              "function comparison.runtime:damage_adapter",
+              "data remove storage mcfpp:system stack_frame[0]"
+            ],
+            "comparison.runtime:damage_adapter": [
+              "data modify storage mcfpp:system stack_frame prepend value {}",
+              "data modify storage mcfpp:system stack_frame[0].health set from storage mcfpp:system stack_frame[1].health",
+              "data modify storage mcfpp:system stack_frame[0].amount set from storage mcfpp:system stack_frame[1].amount",
+              "scoreboard players set #runtime_value comparison 0",
+              "execute store result score #runtime_value comparison run data get storage mcfpp:system stack_frame[0].health",
+              "scoreboard players set #runtime_amount comparison 0",
+              "execute store result score #runtime_amount comparison run data get storage mcfpp:system stack_frame[0].amount",
+              "function comparison.runtime:damage_clamp",
+              "execute store result storage mcfpp:system stack_frame[0].health int 1 run scoreboard players get #runtime_value comparison",
+              "data modify storage mcfpp:system stack_frame[1].health set from storage mcfpp:system stack_frame[0].health",
+              "data remove storage mcfpp:system stack_frame[0]"
+            ],
+            "comparison.runtime:damage_clamp": [
+              "execute if score #runtime_value comparison < #runtime_amount comparison run return run function comparison.runtime:damage_zero",
+              "scoreboard players operation #runtime_value comparison -= #runtime_amount comparison"
+            ],
+            "comparison.runtime:damage_zero": [
+              "scoreboard players set #runtime_value comparison 0",
+              "return 0"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "repeat",
+      "domain": "repeat",
+      "kernel": "example.comparison:repeatcase",
+      "probes": ["total"],
+      "expected": {"total": 10},
+      "expectedBlockTests": null,
+      "expectedScores": {},
+      "variants": {
+        "handwritten": {
+          "entry": "comparison.handwritten:repeatcase",
+          "functions": {
+            "comparison.handwritten:repeatcase": [
+              "data modify storage mcfpp:system stack_frame prepend value {}",
+              "data modify storage mcfpp:system stack_frame[0].total set value 0",
+              "scoreboard players set #handwritten_total comparison 0",
+              "scoreboard players add #handwritten_total comparison 1",
+              "scoreboard players add #handwritten_total comparison 2",
+              "scoreboard players add #handwritten_total comparison 3",
+              "scoreboard players add #handwritten_total comparison 4",
+              "execute store result storage mcfpp:system stack_frame[0].total int 1 run scoreboard players get #handwritten_total comparison",
+              "data remove storage mcfpp:system stack_frame[0]"
+            ]
+          }
+        },
+        "runtime": {
+          "entry": "comparison.runtime:repeatcase",
+          "functions": {
+            "comparison.runtime:repeatcase": [
+              "data modify storage mcfpp:system stack_frame prepend value {}",
+              "data modify storage mcfpp:system stack_frame[0].total set value 0",
+              "data modify storage mcfpp:system stack_frame[0].count set value 5",
+              "scoreboard players set #comparison_callback comparison 1",
+              "function comparison.runtime:repeat_adapter",
+              "data remove storage mcfpp:system stack_frame[0]"
+            ],
+            "comparison.runtime:repeat_adapter": [
+              "data modify storage mcfpp:system stack_frame prepend value {}",
+              "data modify storage mcfpp:system stack_frame[0].total set from storage mcfpp:system stack_frame[1].total",
+              "data modify storage mcfpp:system stack_frame[0].count set from storage mcfpp:system stack_frame[1].count",
+              "execute store result score #comparison_count comparison run data get storage mcfpp:system stack_frame[0].count",
+              "scoreboard players set #comparison_i comparison 0",
+              "execute store result score #comparison_total comparison run data get storage mcfpp:system stack_frame[0].total",
+              "function comparison.runtime:repeat_loop",
+              "execute store result storage mcfpp:system stack_frame[0].total int 1 run scoreboard players get #comparison_total comparison",
+              "data modify storage mcfpp:system stack_frame[1].total set from storage mcfpp:system stack_frame[0].total",
+              "data remove storage mcfpp:system stack_frame[0]"
+            ],
+            "comparison.runtime:repeat_loop": [
+              "execute if score #comparison_i comparison < #comparison_count comparison run function comparison.runtime:repeat_step"
+            ],
+            "comparison.runtime:repeat_step": [
+              "execute if score #comparison_callback comparison matches 1 run function comparison.runtime:repeat_callback",
+              "scoreboard players add #comparison_i comparison 1",
+              "function comparison.runtime:repeat_loop"
+            ],
+            "comparison.runtime:repeat_callback": [
+              "scoreboard players operation #comparison_total comparison += #comparison_i comparison"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "raycontinue",
+      "domain": "raycast",
+      "kernel": "example.comparison:raycontinuecase",
+      "probes": ["hits", "last"],
+      "expected": {"hits": 4, "last": 3},
+      "expectedBlockTests": 5,
+      "expectedScores": {},
+      "variants": {
+        "handwritten": {
+          "entry": "comparison.handwritten:raycontinuecase",
+          "functions": {
+            "comparison.handwritten:raycontinuecase": [
+              "data modify storage mcfpp:system stack_frame prepend value {}",
+              "data modify storage mcfpp:system stack_frame[0].hits set value 0",
+              "data modify storage mcfpp:system stack_frame[0].last set value -1",
+              "scoreboard players set #handwritten_hits comparison 0",
+              "scoreboard players set #handwritten_last comparison -1",
+              "scoreboard players set #handwritten_index comparison 0",
+              "execute positioned ^ ^ ^0 if block ~ ~ ~ minecraft:stone run function comparison.handwritten:ray_continue_hit",
+              "scoreboard players set #handwritten_index comparison 1",
+              "execute positioned ^ ^ ^0.5 if block ~ ~ ~ minecraft:stone run function comparison.handwritten:ray_continue_hit",
+              "scoreboard players set #handwritten_index comparison 2",
+              "execute positioned ^ ^ ^1 if block ~ ~ ~ minecraft:stone run function comparison.handwritten:ray_continue_hit",
+              "scoreboard players set #handwritten_index comparison 3",
+              "execute positioned ^ ^ ^1.5 if block ~ ~ ~ minecraft:stone run function comparison.handwritten:ray_continue_hit",
+              "scoreboard players set #handwritten_index comparison 4",
+              "execute positioned ^ ^ ^2 if block ~ ~ ~ minecraft:stone run function comparison.handwritten:ray_continue_hit",
+              "execute store result storage mcfpp:system stack_frame[0].hits int 1 run scoreboard players get #handwritten_hits comparison",
+              "execute store result storage mcfpp:system stack_frame[0].last int 1 run scoreboard players get #handwritten_last comparison",
+              "data remove storage mcfpp:system stack_frame[0]"
+            ],
+            "comparison.handwritten:ray_continue_hit": [
+              "scoreboard players add #handwritten_hits comparison 1",
+              "scoreboard players operation #handwritten_last comparison = #handwritten_index comparison"
+            ]
+          }
+        },
+        "runtime": {
+          "entry": "comparison.runtime:raycontinuecase",
+          "functions": {
+            "comparison.runtime:raycontinuecase": [
+              "data modify storage mcfpp:system stack_frame prepend value {}",
+              "data modify storage mcfpp:system stack_frame[0].hits set value 0",
+              "data modify storage mcfpp:system stack_frame[0].last set value -1",
+              "data modify storage mcfpp:system stack_frame[0].samples set value 5",
+              "scoreboard players set #comparison_strategy comparison 0",
+              "function comparison.runtime:ray_adapter",
+              "data remove storage mcfpp:system stack_frame[0]"
+            ],
+            "comparison.runtime:ray_adapter": [
+              "data modify storage mcfpp:system stack_frame prepend value {}",
+              "data modify storage mcfpp:system stack_frame[0].samples set from storage mcfpp:system stack_frame[1].samples",
+              "data modify storage mcfpp:system stack_frame[0].hits set from storage mcfpp:system stack_frame[1].hits",
+              "data modify storage mcfpp:system stack_frame[0].last set from storage mcfpp:system stack_frame[1].last",
+              "execute store result score #comparison_ray_count comparison run data get storage mcfpp:system stack_frame[0].samples",
+              "scoreboard players set #comparison_ray_i comparison 0",
+              "execute store result score #comparison_ray_hits comparison run data get storage mcfpp:system stack_frame[0].hits",
+              "execute store result score #comparison_ray_last comparison run data get storage mcfpp:system stack_frame[0].last",
+              "scoreboard players set #comparison_ray_running comparison 1",
+              "function comparison.runtime:ray_sample",
+              "execute store result storage mcfpp:system stack_frame[0].hits int 1 run scoreboard players get #comparison_ray_hits comparison",
+              "execute store result storage mcfpp:system stack_frame[0].last int 1 run scoreboard players get #comparison_ray_last comparison",
+              "data modify storage mcfpp:system stack_frame[1].hits set from storage mcfpp:system stack_frame[0].hits",
+              "data modify storage mcfpp:system stack_frame[1].last set from storage mcfpp:system stack_frame[0].last",
+              "data remove storage mcfpp:system stack_frame[0]"
+            ],
+            "comparison.runtime:ray_sample": [
+              "execute if score #comparison_ray_running comparison matches 1 if block ~ ~ ~ minecraft:stone run function comparison.runtime:ray_hit",
+              "scoreboard players add #comparison_ray_i comparison 1",
+              "execute if score #comparison_ray_running comparison matches 1 if score #comparison_ray_i comparison < #comparison_ray_count comparison positioned ^ ^ ^0.5 run function comparison.runtime:ray_sample"
+            ],
+            "comparison.runtime:ray_hit": [
+              "scoreboard players add #comparison_ray_hits comparison 1",
+              "scoreboard players operation #comparison_ray_last comparison = #comparison_ray_i comparison",
+              "execute if score #comparison_strategy comparison matches 1 run function comparison.runtime:ray_stop",
+              "execute if score #comparison_strategy comparison matches 0 run function comparison.runtime:ray_continue"
+            ],
+            "comparison.runtime:ray_stop": [
+              "scoreboard players set #comparison_ray_running comparison 0"
+            ],
+            "comparison.runtime:ray_continue": [
+              "scoreboard players set #comparison_ray_running comparison 1"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "raystop",
+      "domain": "raycast",
+      "kernel": "example.comparison:raystopcase",
+      "probes": ["hits", "last"],
+      "expected": {"hits": 1, "last": 0},
+      "expectedBlockTests": 1,
+      "expectedScores": {},
+      "variants": {
+        "handwritten": {
+          "entry": "comparison.handwritten:raystopcase",
+          "functions": {
+            "comparison.handwritten:raystopcase": [
+              "data modify storage mcfpp:system stack_frame prepend value {}",
+              "data modify storage mcfpp:system stack_frame[0].hits set value 0",
+              "data modify storage mcfpp:system stack_frame[0].last set value -1",
+              "scoreboard players set #handwritten_hits comparison 0",
+              "scoreboard players set #handwritten_last comparison -1",
+              "scoreboard players set #handwritten_running comparison 1",
+              "scoreboard players set #handwritten_index comparison 0",
+              "execute if score #handwritten_running comparison matches 1 positioned ^ ^ ^0 if block ~ ~ ~ minecraft:stone run function comparison.handwritten:ray_stop_hit",
+              "scoreboard players set #handwritten_index comparison 1",
+              "execute if score #handwritten_running comparison matches 1 positioned ^ ^ ^0.5 if block ~ ~ ~ minecraft:stone run function comparison.handwritten:ray_stop_hit",
+              "scoreboard players set #handwritten_index comparison 2",
+              "execute if score #handwritten_running comparison matches 1 positioned ^ ^ ^1 if block ~ ~ ~ minecraft:stone run function comparison.handwritten:ray_stop_hit",
+              "scoreboard players set #handwritten_index comparison 3",
+              "execute if score #handwritten_running comparison matches 1 positioned ^ ^ ^1.5 if block ~ ~ ~ minecraft:stone run function comparison.handwritten:ray_stop_hit",
+              "scoreboard players set #handwritten_index comparison 4",
+              "execute if score #handwritten_running comparison matches 1 positioned ^ ^ ^2 if block ~ ~ ~ minecraft:stone run function comparison.handwritten:ray_stop_hit",
+              "execute store result storage mcfpp:system stack_frame[0].hits int 1 run scoreboard players get #handwritten_hits comparison",
+              "execute store result storage mcfpp:system stack_frame[0].last int 1 run scoreboard players get #handwritten_last comparison",
+              "data remove storage mcfpp:system stack_frame[0]"
+            ],
+            "comparison.handwritten:ray_stop_hit": [
+              "scoreboard players add #handwritten_hits comparison 1",
+              "scoreboard players operation #handwritten_last comparison = #handwritten_index comparison",
+              "scoreboard players set #handwritten_running comparison 0"
+            ]
+          }
+        },
+        "runtime": {
+          "entry": "comparison.runtime:raystopcase",
+          "functions": {
+            "comparison.runtime:raystopcase": [
+              "data modify storage mcfpp:system stack_frame prepend value {}",
+              "data modify storage mcfpp:system stack_frame[0].hits set value 0",
+              "data modify storage mcfpp:system stack_frame[0].last set value -1",
+              "data modify storage mcfpp:system stack_frame[0].samples set value 5",
+              "scoreboard players set #comparison_strategy comparison 1",
+              "function comparison.runtime:ray_adapter",
+              "data remove storage mcfpp:system stack_frame[0]"
+            ],
+            "comparison.runtime:ray_adapter": [
+              "data modify storage mcfpp:system stack_frame prepend value {}",
+              "data modify storage mcfpp:system stack_frame[0].samples set from storage mcfpp:system stack_frame[1].samples",
+              "data modify storage mcfpp:system stack_frame[0].hits set from storage mcfpp:system stack_frame[1].hits",
+              "data modify storage mcfpp:system stack_frame[0].last set from storage mcfpp:system stack_frame[1].last",
+              "execute store result score #comparison_ray_count comparison run data get storage mcfpp:system stack_frame[0].samples",
+              "scoreboard players set #comparison_ray_i comparison 0",
+              "execute store result score #comparison_ray_hits comparison run data get storage mcfpp:system stack_frame[0].hits",
+              "execute store result score #comparison_ray_last comparison run data get storage mcfpp:system stack_frame[0].last",
+              "scoreboard players set #comparison_ray_running comparison 1",
+              "function comparison.runtime:ray_sample",
+              "execute store result storage mcfpp:system stack_frame[0].hits int 1 run scoreboard players get #comparison_ray_hits comparison",
+              "execute store result storage mcfpp:system stack_frame[0].last int 1 run scoreboard players get #comparison_ray_last comparison",
+              "data modify storage mcfpp:system stack_frame[1].hits set from storage mcfpp:system stack_frame[0].hits",
+              "data modify storage mcfpp:system stack_frame[1].last set from storage mcfpp:system stack_frame[0].last",
+              "data remove storage mcfpp:system stack_frame[0]"
+            ],
+            "comparison.runtime:ray_sample": [
+              "execute if score #comparison_ray_running comparison matches 1 if block ~ ~ ~ minecraft:stone run function comparison.runtime:ray_hit",
+              "scoreboard players add #comparison_ray_i comparison 1",
+              "execute if score #comparison_ray_running comparison matches 1 if score #comparison_ray_i comparison < #comparison_ray_count comparison positioned ^ ^ ^0.5 run function comparison.runtime:ray_sample"
+            ],
+            "comparison.runtime:ray_hit": [
+              "scoreboard players add #comparison_ray_hits comparison 1",
+              "scoreboard players operation #comparison_ray_last comparison = #comparison_ray_i comparison",
+              "execute if score #comparison_strategy comparison matches 1 run function comparison.runtime:ray_stop",
+              "execute if score #comparison_strategy comparison matches 0 run function comparison.runtime:ray_continue"
+            ],
+            "comparison.runtime:ray_stop": [
+              "scoreboard players set #comparison_ray_running comparison 0"
+            ],
+            "comparison.runtime:ray_continue": [
+              "scoreboard players set #comparison_ray_running comparison 1"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "score",
+      "domain": "score-mapping",
+      "kernel": "example.comparison:scorecase",
+      "probes": ["health", "alive"],
+      "expected": {"health": 7, "alive": 1},
+      "expectedBlockTests": null,
+      "expectedScores": {"#scores health_hp": 7, "#scores state_alive": 1},
+      "variants": {
+        "handwritten": {
+          "entry": "comparison.handwritten:scorecase",
+          "functions": {
+            "comparison.handwritten:scorecase": [
+              "data modify storage mcfpp:system stack_frame prepend value {}",
+              "data modify storage mcfpp:system stack_frame[0].health set value 7",
+              "data modify storage mcfpp:system stack_frame[0].alive set value 1",
+              "execute store result score #scores health_hp run data get storage mcfpp:system stack_frame[0].health",
+              "execute store result score #scores state_alive run data get storage mcfpp:system stack_frame[0].alive",
+              "data modify storage mcfpp:system stack_frame[0].health set value 0",
+              "data modify storage mcfpp:system stack_frame[0].alive set value 0",
+              "execute store result storage mcfpp:system stack_frame[0].health int 1 run scoreboard players get #scores health_hp",
+              "execute if score #scores state_alive matches 1.. run data modify storage mcfpp:system stack_frame[0].alive set value 1",
+              "execute if score #scores state_alive matches ..-1 run data modify storage mcfpp:system stack_frame[0].alive set value 1",
+              "execute if score #scores state_alive matches 0 run data modify storage mcfpp:system stack_frame[0].alive set value 0",
+              "data remove storage mcfpp:system stack_frame[0]"
+            ]
+          }
+        },
+        "runtime": {
+          "entry": "comparison.runtime:scorecase",
+          "functions": {
+            "comparison.runtime:scorecase": [
+              "data modify storage mcfpp:system stack_frame prepend value {}",
+              "data modify storage mcfpp:system stack_frame[0].health set value 7",
+              "data modify storage mcfpp:system stack_frame[0].alive set value 1",
+              "function comparison.runtime:score_adapter",
+              "data remove storage mcfpp:system stack_frame[0]"
+            ],
+            "comparison.runtime:score_adapter": [
+              "data modify storage mcfpp:system stack_frame prepend value {}",
+              "data modify storage mcfpp:system stack_frame[0].health set from storage mcfpp:system stack_frame[1].health",
+              "data modify storage mcfpp:system stack_frame[0].alive set from storage mcfpp:system stack_frame[1].alive",
+              "execute store result score #scores health_hp run data get storage mcfpp:system stack_frame[0].health",
+              "execute store result score #scores state_alive run data get storage mcfpp:system stack_frame[0].alive",
+              "data modify storage mcfpp:system stack_frame[0].health set value 0",
+              "data modify storage mcfpp:system stack_frame[0].alive set value 0",
+              "execute store result storage mcfpp:system stack_frame[0].health int 1 run scoreboard players get #scores health_hp",
+              "execute if score #scores state_alive matches 1.. run data modify storage mcfpp:system stack_frame[0].alive set value 1",
+              "execute if score #scores state_alive matches ..-1 run data modify storage mcfpp:system stack_frame[0].alive set value 1",
+              "execute if score #scores state_alive matches 0 run data modify storage mcfpp:system stack_frame[0].alive set value 0",
+              "data modify storage mcfpp:system stack_frame[1].health set from storage mcfpp:system stack_frame[0].health",
+              "data modify storage mcfpp:system stack_frame[1].alive set from storage mcfpp:system stack_frame[0].alive",
+              "data remove storage mcfpp:system stack_frame[0]"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

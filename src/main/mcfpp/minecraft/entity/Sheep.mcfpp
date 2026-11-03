@@ -1,5 +1,5 @@
 @MCFPPEntity
 data SheepData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
-    @Name<"Color"> var color: byte
-    @Name<"Sheared"> var sheared: bool
+    @Name("Color") var color: byte
+    @Name("Sheared") var sheared: bool
 }

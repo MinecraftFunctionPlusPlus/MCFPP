@@ -1,0 +1,9 @@
+{
+	"replace": false,
+	"values": [
+		"minecraft:experience_orb",
+		"minecraft:arrow",
+		"minecraft:spectral_arrow",
+		"minecraft:trident"
+	]
+}

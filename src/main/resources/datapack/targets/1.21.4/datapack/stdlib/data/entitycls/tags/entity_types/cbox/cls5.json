@@ -1,0 +1,10 @@
+{
+	"replace": false,
+	"values": [
+		"minecraft:block_display",
+		"minecraft:item_display",
+		"minecraft:text_display",
+		"minecraft:marker",
+		"minecraft:lightning_bolt"
+	]
+}

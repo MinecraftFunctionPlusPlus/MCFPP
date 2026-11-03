@@ -1,0 +1,8 @@
+schema = 1
+name = "mcfpp"
+sourcePath = "project/src"
+targetPath = "project/build"
+namespace = "example.score"
+version = "26.3"
+description = "MNI score mapping example"
+jars = ["build/score-mapping-macro.jar"]

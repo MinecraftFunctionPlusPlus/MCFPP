@@ -45,7 +45,7 @@ class NativeCallContext internal constructor(
     }
 
     private fun normalize(value: Var<*>): Var<*> {
-        var adapter = value
+        var adapter = if (top.mcfpp.core.lang.context.ContextBorrowing.payload(value) != null) StorageAccess.read(value) else value
         function.runInFunction {
             if (value is BaseBool && value !is ScoreBool) adapter = value.toScoreBool(false)
         }
@@ -69,6 +69,10 @@ class NativeCallContext internal constructor(
     }
 
     internal fun publishResult(value: Var<*>) {
+        top.mcfpp.core.lang.context.ContextBorrowing.escapeDiagnostic(value, "a native function return")?.let {
+            LogProcessor.error(it)
+            return
+        }
         val adapter = normalize(value)
         if (adapter.isError) return
         val binding = StorageAccess.ensure(adapter)

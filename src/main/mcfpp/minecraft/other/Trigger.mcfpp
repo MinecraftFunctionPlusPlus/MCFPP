@@ -1,7 +1,4 @@
+@From("top.mcfpp.mni.minecraft.TriggerData")
 data Trigger {
     var id: string
-
-    func enable<player: Player>(){
-        /scoreboard players enable ${player} ${this.id}/
-    }
 }

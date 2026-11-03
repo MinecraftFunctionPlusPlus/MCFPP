@@ -1,17 +1,17 @@
 @MCFPPEntity
 data PiglinData: EntityData, CreatureData, AIMobData, AnimalData {
-    @Name<"CannotHunt">
+    @Name("CannotHunt")
     var cannotHunt: bool
 
-    @Name<"Inventory">
+    @Name("Inventory")
     var inventory: list<ItemData>
 
-    @Name<"IsBaby">
+    @Name("IsBaby")
     var isBaby: bool
 
-    @Name<"IsImmuneToZombification">
+    @Name("IsImmuneToZombification")
     var isImmuneToZombification: bool
 
-    @Name<"TimeInOverworld">
+    @Name("TimeInOverworld")
     var timeInOverworld: int
 }

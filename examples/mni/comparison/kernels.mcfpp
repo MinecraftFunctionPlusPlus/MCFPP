@@ -1,0 +1,59 @@
+namespace example.comparison
+
+// One small behavior-equivalent kernel per measured scenario. All five functions are compiled
+// once by a single real CLI invocation; the comparison runner observes only these entry points.
+
+@ScoreMapping("#scores")
+data Player {
+    @Score("health_hp")
+    var health: int = 0
+
+    @Score("state_alive")
+    var alive: bool = false
+}
+
+func applyDamage(health: ScoreRef, amount: int) {
+    health.tryRead { current ->
+        if (current < amount) { health.set(0); }
+        else { health.set(current - amount); }
+    }
+}
+
+func damagecase() {
+    /scoreboard objectives add hp dummy
+    /scoreboard players set #comparison_health hp 100
+    damage(scoreRef("#comparison_health", "hp"), 30)
+}
+
+func repeatcase() {
+    // Explicit returned accumulator: 0 + 1 + 2 + 3 + 4 == 10.
+    external total: int = repeat(5, 0, { accumulator, i -> accumulator + i });
+}
+
+func raycontinuecase() {
+    // Five 0.5-block samples from the ambient origin; sample hits are not distinct blocks.
+    external hits: int = raycast(5, 0, { accumulator, i -> accumulator + 1 }, { true });
+    external last: int = raycast(5, -1, { previous, i -> i }, { true });
+}
+
+func raystopcase() {
+    // Same provider algorithm; the first real hit returns false and skips later samples.
+    external hits: int = raycast(5, 0, { accumulator, i -> accumulator + 1 }, { false });
+    external last: int = raycast(5, -1, { previous, i -> i }, { false });
+}
+
+func scorecase() {
+    // Annotation-derived save then load: int 7 round-trips, bool true saves as 1 and loads true.
+    var player = Player()
+    player.health = 7
+    player.alive = true
+    player.save()
+    player.health = 0
+    player.alive = false
+    player.load()
+    external health: int = player.health
+    external alive: int = 0
+    if (player.alive) {
+        alive = 1
+    }
+}

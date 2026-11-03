@@ -32,6 +32,12 @@ import top.mcfpp.type.TypeId
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.Utils.v
 
+/** Compiler-owned session member state participates in the declaration savepoint. */
+internal interface StructuredTemplateMemberState {
+    fun checkpoint(): () -> Unit
+    fun preparationFacts(): RawPreparationFact
+}
+
 /**
  * 结构体是一种和类的语法极为相似的数据结构。在结构体中，只能有int类型的数据，或者说记分板的数据作为结构体的成员。
  *
@@ -67,13 +73,42 @@ open class DataTemplate :
     /** Ordered library identities, resolved only after the complete include/import domain is available. */
     @Transient private val pendingParentTypes = arrayListOf<TypeId>()
     @Transient private var resolvingParentTypes = false
+    @Transient private var structuredParentResolver: (() -> List<MCFPPDataTemplateType>)? = null
+    @Transient private var structuredParentGuard: (() -> Unit)? = null
+    @Transient private var structuredParentChanged: (() -> Unit)? = null
+    @Transient private var structuredParentsPending = false
+    @Transient private val declaredFieldBindings = linkedMapOf<String, ArrayList<(Var<*>) -> Unit>>()
+    @Transient private val inheritedAccessorBindings = linkedMapOf<String, (Function) -> Function>()
+    @Transient internal var structuredMemberState: StructuredTemplateMemberState? = null
+
+    /** An inferred field is bound only after the declaration visitor has installed both real slots. */
+    internal fun whenDeclaredFieldReady(name: String, action: (Var<*>) -> Unit) {
+        val field = scope.getVar(name)
+        if (field != null && field.declaredParentTemplate === this && scope.getProperty(name) != null) action(field)
+        else declaredFieldBindings.getOrPut(name) { arrayListOf() }.add(action)
+    }
+
+    internal fun restoreInheritedAccessorBinding(name: String, resolve: (Function) -> Function) {
+        inheritedAccessorBindings[name] = resolve
+    }
     @Transient internal var hasRestoredParentTypes = false
         private set
 
     internal val pendingParentTypeIds: List<TypeId>
         get() = java.util.Collections.unmodifiableList(ArrayList(pendingParentTypes))
 
-    internal val hasPendingParentTypes: Boolean get() = pendingParentTypes.isNotEmpty()
+    internal val hasPendingParentTypes: Boolean get() = pendingParentTypes.isNotEmpty() || structuredParentsPending
+    internal val hasStructuredParentBinding: Boolean get() = structuredParentResolver != null
+
+    /** Session descriptors retain D/T ownership; resolving never falls back to consumer names. */
+    internal fun restoreStructuredParents(identities: List<TypeId>, requireOpen: () -> Unit,
+                                          resolve: () -> List<MCFPPDataTemplateType>, onResolved: (() -> Unit)? = null) {
+        structuredParentGuard = requireOpen
+        structuredParentResolver = resolve
+        structuredParentChanged = onResolved
+        deferParentTypes(identities)
+        structuredParentsPending = true
+    }
 
     /** Metadata supplies identities, never generated specialization names or mutable compiler types. */
     internal fun deferParentTypes(parents: List<TypeId>) {
@@ -88,6 +123,7 @@ open class DataTemplate :
 
     /** Resolve source expressions and restored identities through the same canonical parent binding. */
     internal fun resolveDeclaredParents(): Boolean {
+        structuredParentGuard?.invoke()
         if (Project.compileStage == Project.CompileStage.READ_LIB) return false
         if (hasDeclarationCompletionFailure) return false
         if (resolvingParentTypes) {
@@ -99,11 +135,15 @@ open class DataTemplate :
         resolvingParentTypes = true
         try {
             val file = restoreDeclarationEnvironment()
-            val restoredParentTypes = hasPendingParentTypes
+            val restoredParentTypes = hasPendingParentTypes || structuredParentsPending
             val resolve = {
                 currTemplate = this
                 val errorsBefore = Project.errorCount
-                val declarations = if (restoredParentTypes) pendingParentTypes.map { id ->
+                val declarations = if (restoredParentTypes && structuredParentResolver != null) structuredParentResolver!!.invoke().map { declared ->
+                    declared.tryResolve()
+                    val id = declared.typeId
+                    id.toString() to declared.template.takeIf { it.inheritanceIdentity == id }
+                } else if (restoredParentTypes) pendingParentTypes.map { id ->
                     val declared = MCFPPType.resolveTypeId(id) as? MCFPPDataTemplateType
                     declared?.tryResolve()
                     val parent = declared?.template
@@ -128,7 +168,10 @@ open class DataTemplate :
                         // Reuse the canonical cycle/duplicate checks; publish no partial parent graph.
                         declarations.forEach { (_, parent) -> extends(parent!!) }
                         committed = Project.errorCount == errorsBefore
-                        if (committed) pendingParentTypes.clear()
+                        if (committed) {
+                            pendingParentTypes.clear(); structuredParentsPending = false
+                            structuredParentChanged?.invoke()
+                        }
                         committed
                     } finally {
                         if (!committed) {
@@ -257,11 +300,15 @@ open class DataTemplate :
         check(
             javaClass in setOf(
                 DataTemplate::class.java,
+                TypeDataTemplate::class.java,
+                UnsolvedTemplate::class.java,
+                UnsolvedObjectTemplate::class.java,
                 ObjectDataTemplate::class.java,
                 GenericDataTemplate::class.java,
                 GenericObjectDataTemplate::class.java,
                 CompiledGenericDataTemplate::class.java,
-                CompiledGenericObjectDataTemplate::class.java
+                CompiledGenericObjectDataTemplate::class.java,
+                UnionDataTemplate::class.java
             )
         ) {
             "Cannot read preparation facts for template shape ${javaClass.name}"
@@ -301,6 +348,8 @@ open class DataTemplate :
         !declarationCompletionPoisoned &&
         ((this as? CompiledGenericDataTemplate)?.originTemplate?.hasDeclarationCompletionFailure != true) &&
         pendingParentTypes.isEmpty() &&
+        !structuredParentsPending &&
+        declaredFieldBindings.isEmpty() &&
         deferredFields.isEmpty() &&
         pendingFieldAnnotations.isEmpty() &&
         pendingDeclarationAnnotations.isEmpty() &&
@@ -330,7 +379,7 @@ open class DataTemplate :
     /**
      * 获取这个类对于的classType
      */
-    internal override val inheritanceIdentity: TypeId
+    protected override val sourceNominalIdentity: TypeId
         get() = TypeId.Declaration(
             when {
                 this is ObjectCompoundData -> "object"
@@ -416,7 +465,10 @@ open class DataTemplate :
                 added
             }
             is Property -> {
-                scope.putProperty(member.identifier, member)
+                val added = scope.putProperty(member.identifier, member)
+                val field = scope.getVar(member.identifier)
+                if (added && field != null && field.declaredParentTemplate === this) declaredFieldBindings.remove(member.identifier)?.forEach { it(field) }
+                added
             }
             else -> {
                 throw IllegalArgumentException("")
@@ -526,7 +578,8 @@ open class DataTemplate :
     }
 
     private fun restoredPropertyFunction(name: String, source: Function): Function {
-        val ownerId = source.owner?.inheritanceIdentity
+        val bound = inheritedAccessorBindings[name]?.invoke(source) ?: source
+        val ownerId = bound.owner?.inheritanceIdentity
             ?: throw InheritedFieldRestoreFailure("accessor '${source.identifier}' has no declaration owner")
         val visited = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<CompoundData, Boolean>())
         val pending = ArrayDeque<CompoundData>()
@@ -562,15 +615,15 @@ open class DataTemplate :
         }
         return declarations.filter { candidate ->
             candidate.owner === owner &&
-                ParameterMatcher.sameSignature(source, candidate) &&
-                candidate.returnType.typeId == source.returnType.typeId &&
-                candidate.isStatic == source.isStatic &&
-                (candidate is NativeFunction) == (source is NativeFunction) &&
+                ParameterMatcher.sameSignature(bound, candidate) &&
+                candidate.returnType.typeId == bound.returnType.typeId &&
+                candidate.isStatic == bound.isStatic &&
+                (candidate is NativeFunction) == (bound is NativeFunction) &&
                 (
-                    source !is NativeFunction ||
+                    bound !is NativeFunction ||
                         candidate is NativeFunction &&
-                        candidate.javaMethod == source.javaMethod &&
-                        candidate.caller.typeId == source.caller.typeId
+                        candidate.javaMethod == bound.javaMethod &&
+                        candidate.caller.typeId == bound.caller.typeId
                     )
         }.singleOrNull() ?: throw InheritedFieldRestoreFailure(
             "accessor '${source.identifier}' has no unique receiving declaration in $ownerId"
@@ -622,13 +675,20 @@ open class DataTemplate :
         if (fieldLayoutDiagnostics.add(message)) LogProcessor.error(message)
     }
 
+    private fun fieldOwnerLabel(owner: CompoundData): String = owner.inheritanceIdentity.let { identity ->
+        val source = (owner as? CompiledGenericDataTemplate)?.originTemplate ?: owner
+        if (identity is TypeId.Opaque || identity is TypeId.Specialized && identity.constructor is TypeId.Opaque)
+            "$identity (namespace=${source.namespace}, name=${source.identifier})"
+        else identity.toString()
+    }
+
     private fun validateLocalField(local: Var<*>, origins: List<CompoundDataScope.FieldOrigin>) {
         val declaration = CompoundDataScope.FieldOrigin(this, local, scope.getProperty(local.identifier))
         for (origin in origins) {
             val differences = origin.contract.replacementDifferences(declaration.contract)
             if (differences.isNotEmpty()) fieldLayoutError(
                 "Incompatible inherited field '${local.identifier}' in $namespaceID: " +
-                    "${origin.owner.inheritanceIdentity} -> $inheritanceIdentity (${differences.joinToString()})"
+                    "${fieldOwnerLabel(origin.owner)} -> ${fieldOwnerLabel(this)} (${differences.joinToString()})"
             )
         }
     }
@@ -710,7 +770,7 @@ open class DataTemplate :
             val origins = merge.origins.map { it.value }
             inheritedFieldRequirements[name] = origins
             val conflicts = merge.conflicts
-            val labels = origins.joinToString { it.owner.inheritanceIdentity.toString() }
+            val labels = origins.joinToString { fieldOwnerLabel(it.owner) }
             if (conflicts.isNotEmpty()) fieldLayoutError(
                 "Incompatible inherited field '$name' in $namespaceID from $labels (${conflicts.joinToString()})"
             )
@@ -780,6 +840,8 @@ open class DataTemplate :
         oldScopes: List<CompoundDataScope.JournalSnapshot>
     ): DeclarationStateCheckpoint {
         val graph = TemplatePrivateCapture(previous)
+        val restoreIdentity = checkpointSessionIdentity()
+        val savedIdentity = sessionIdentity
         val savedFile = declarationFile
         val savedEnvironment = declarationEnvironment
         val savedScope = scope
@@ -790,6 +852,20 @@ open class DataTemplate :
         val savedCompletionPoisoned = declarationCompletionPoisoned
         val savedResolvingParents = resolvingParentTypes
         val savedRestoredParentTypes = hasRestoredParentTypes
+        val savedParentResolver = structuredParentResolver
+        val savedParentGuard = structuredParentGuard
+        val savedParentChanged = structuredParentChanged
+        val savedStructuredPending = structuredParentsPending
+        val savedDeclaredFields = declaredFieldBindings.mapValues { it.value to ArrayList(it.value) }
+        val savedAccessorBindings = LinkedHashMap(inheritedAccessorBindings)
+        val savedMemberState = structuredMemberState
+        val restoreMemberState = savedMemberState?.checkpoint()
+        val declaredFieldFacts = RawPreparationFact.row(*declaredFieldBindings.map { (name, actions) ->
+            RawPreparationFact.row(RawPreparationFact.scalar(name), RawPreparationFact.row(*actions.map { RawPreparationFact.identity(it) }.toTypedArray()))
+        }.toTypedArray())
+        val accessorFacts = RawPreparationFact.row(*inheritedAccessorBindings.map { (name, action) ->
+            RawPreparationFact.row(RawPreparationFact.scalar(name), RawPreparationFact.identity(action))
+        }.toTypedArray())
         val savedGeneratedMetadata = ArrayList(generatedDeclarationMetadata)
         val scopes = oldScopes + savedScope.checkpointRelations()
         graph.list(pendingParentTypes, TemplatePrivateCapture.ListRole.TYPE_IDS) { g, value -> g.element(value as TypeId) }
@@ -838,10 +914,19 @@ open class DataTemplate :
             this,
             linkedMapOf(
                 "completion.generation" to RawPreparationFact.scalar(savedCompletionGeneration),
+                "nominal.session" to (savedIdentity?.let { RawPreparationFact.closed(it) } ?: RawPreparationFact.scalar(null)),
                 "completion.phase" to RawPreparationFact.scalar(savedCompletionPhase.name),
                 "completion.poisoned" to RawPreparationFact.scalar(savedCompletionPoisoned),
                 "parents.resolving" to RawPreparationFact.scalar(savedResolvingParents),
                 "parents.restored" to RawPreparationFact.scalar(savedRestoredParentTypes),
+                "parents.structured" to RawPreparationFact.identity(savedParentResolver),
+                "parents.guard" to RawPreparationFact.identity(savedParentGuard),
+                "parents.changed" to RawPreparationFact.identity(savedParentChanged),
+                "parents.structuredPending" to RawPreparationFact.scalar(savedStructuredPending),
+                "fields.bindings" to declaredFieldFacts,
+                "accessors.bindings" to accessorFacts,
+                "members.binding" to RawPreparationFact.identity(savedMemberState),
+                "members.state" to (savedMemberState?.preparationFacts() ?: RawPreparationFact.scalar(null)),
                 "layout.restored" to RawPreparationFact.scalar(savedRestored),
                 "scope" to RawPreparationFact.identity(savedScope),
                 "file" to RawPreparationFact.identity(savedFile),
@@ -861,6 +946,7 @@ open class DataTemplate :
         }
         retained.forEach { it(graph) }
         return DeclarationStateCheckpoint(graph.elements, {
+            restoreIdentity()
             declarationFile = savedFile
             declarationEnvironment = savedEnvironment
             scope = savedScope
@@ -871,10 +957,19 @@ open class DataTemplate :
             declarationCompletionPoisoned = savedCompletionPoisoned
             resolvingParentTypes = savedResolvingParents
             hasRestoredParentTypes = savedRestoredParentTypes
+            structuredParentResolver = savedParentResolver
+            structuredParentGuard = savedParentGuard
+            structuredParentChanged = savedParentChanged
+            structuredParentsPending = savedStructuredPending
+            declaredFieldBindings.clear()
+            savedDeclaredFields.forEach { (name, saved) -> saved.first.clear(); saved.first.addAll(saved.second); declaredFieldBindings[name] = saved.first }
+            inheritedAccessorBindings.clear(); inheritedAccessorBindings.putAll(savedAccessorBindings)
+            structuredMemberState = savedMemberState
             generatedDeclarationMetadata.clear()
             generatedDeclarationMetadata.addAll(savedGeneratedMetadata)
             graph.restore()
             scopes.forEach { it.restore() }
+            restoreMemberState?.invoke()
         }, {
             captureDeclarationState(graph.roots, graph.elements, scopes.map { it.captureCurrent() })
         }, preparationFacts)

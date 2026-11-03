@@ -9,11 +9,15 @@ MCFPP is a new object-oriented language that compiles into Minecraft data packs.
 
 ## Quick Start
 
+See the [project and CLI guide](docs/cli.md). Use `mcfpp init hello` and `mcfpp build`, or `mcfpp init hello --mni` for Java MNI and tests. Projects use `mcfpp.toml` and `mcfpp-packages.json`.
+
 [MCFPP API](https://www.mcfpp.top)
 
 Build with JDK 21 using `./gradlew build` (`./gradlew.bat build` on Windows).
 
 [Type system specification](./docs/type-system/specification.md) · [Migration status and guide](./docs/type-system/migration.md)
+
+[ScoreRef / NBTRef usage and migration](./docs/type-system/reference-values.md): save and pass explicit Minecraft addresses, read with synchronous `tryRead`, and write with `set`.
 
 ## [Future Plans](./TODO_CN.md)
 
@@ -150,7 +154,7 @@ Compound assignments `+=`, `-=`, `*=`, `/=`, and `%=` read the target, apply the
 
 ## Compile for a Minecraft version
 
-Set the target version in `mcfpp.json`, for example `"version": "26.3"`. Each build produces one data pack for that target; change `version` and build again for another version. Targets `26.1`, `26.2`, `26.3`, and the previously supported older versions are available.
+Set the target version in `mcfpp.toml`, for example `version = "26.3"`. Each build produces one data pack for that target; change `version` and build again for another version. Targets `26.1`, `26.2`, `26.3`, and the previously supported older versions are available.
 
 Targeting `26.3` automatically uses native number providers and NBT floats for float arithmetic, comparisons, compound assignments, and integer conversions. Earlier targets keep XiaoDouMathLib. See the [26.3 float backend notes](docs/float-providers-26.3.md) for the implementation and storage migration details.
 

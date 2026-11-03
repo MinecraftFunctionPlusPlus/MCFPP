@@ -85,6 +85,14 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
             if (!scope.addObject(it.identifier, it, force))
                 LogProcessor.error("Object has been defined: ${it.identifier} in namespace $identifier")
         }
+        namespace.scope.forEachEnum {
+            if (!scope.addEnum(it.identifier, it, force))
+                LogProcessor.error("Enum has been defined: ${it.identifier} in namespace $identifier")
+        }
+        namespace.scope.resolvedAliases().forEach { (name, target) ->
+            if (!scope.putResolvedAlias(name, target, force))
+                LogProcessor.error("Type alias has been defined: $name in namespace $identifier")
+        }
     }
 
     fun resolve(){
@@ -94,7 +102,7 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
                 t.scope.forEachFunction { resolveFunction(it) }
                 if(t.companionObject != null){
                     //find companion object
-                    top.mcfpp.model.compound.GenericDeclarationContract.pair(t, scope.getObject(t.identifier) as? DataTemplate)
+                    top.mcfpp.model.compound.pairCompanion(t, scope.getObject(t.identifier) as? DataTemplate)
                 }
             }
         }

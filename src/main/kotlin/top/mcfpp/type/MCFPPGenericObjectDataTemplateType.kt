@@ -18,6 +18,12 @@ class MCFPPGenericObjectDataTemplateType(
     override fun tryResolve() {
         if (Project.compileStage == Project.CompileStage.READ_LIB) return
         if (template is CompiledGenericObjectDataTemplate) return
+        val boundPrototype = template as? GenericObjectDataTemplate
+        if (boundPrototype?.sessionIdentity != null && boundPrototype.nominalIdentity == typeId.constructor) {
+            template = MCFPPType.resolveSpecialization(typeId, boundPrototype) ?: return
+            parentType = ArrayList(template.parent.filterIsInstance<DataTemplate>().map { it.getType() })
+            return
+        }
         val declaration = typeId.constructor as? TypeId.Declaration ?: return
         if (declaration.kind != "object") return
         val prototype = GlobalScope.getUnsolvedImportNamespace(declaration.namespace)?.scope

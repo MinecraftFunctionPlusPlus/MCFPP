@@ -11,11 +11,19 @@ MCFPP是一个能被编译为Minecraft数据包的全新的面向对象的语言
 
 ## 快速开始
 
+[统一工程与 CLI 使用指南](docs/cli.md)：`mcfpp init hello` 创建工程，`mcfpp build` 生成数据包；`mcfpp init hello --mni` 创建带 Java MNI 和测试的工程。项目配置使用 `mcfpp.toml`，依赖声明使用 `mcfpp-packages.json`。
+
 [MCFPP API](https://www.mcfpp.top)
 
 使用 JDK 21，通过 `./gradlew build`（Windows：`./gradlew.bat build`）构建。
 
 [类型规范](./docs/type-system/specification.md) · [迁移状态与指南](./docs/type-system/migration.md)
+
+[ScoreRef / NBTRef 用法与迁移](./docs/type-system/reference-values.md)：保存和传递显式 Minecraft 地址，通过同步 `tryRead` 读取、通过 `set` 写入。
+
+[预编译库作者与消费者样例](./examples/libraries/README.md)：通过本地 Maven 打包、安装并在移走作者源码后编译消费者；嵌入接口见 [编译器桥接](./docs/library/compiler-bridge.md)。
+
+标准库默认通过 `%std` 按项目 `version` 选择对应 Minecraft 目标的实际编译产物；自定义标准库路径、资源及初始化规则见 [按 Minecraft 目标使用标准库](./docs/library/compiler-bridge.md#按-minecraft-目标使用标准库)。
 
 ## [后续计划](./TODO_CN.md)
 
@@ -154,7 +162,7 @@ func calculate(){
 
 ## 按 Minecraft 版本编译
 
-在项目配置 `mcfpp.json` 中设置目标版本，例如 `"version": "26.3"`。每次编译只生成该目标版本的数据包；分别修改 `version` 并编译即可得到不同版本的输出。支持目标版本 `26.1`、`26.2`、`26.3` 及已有的旧版本。
+在项目配置 `mcfpp.toml` 中设置目标版本，例如 `version = "26.3"`。每次编译只生成该目标版本的数据包；分别修改 `version` 并编译即可得到不同版本的输出。支持目标版本 `26.1`、`26.2`、`26.3` 及已有的旧版本。
 
 目标为 `26.3` 时，浮点运算自动使用原生数值提供器及 NBT float，支持四则运算、取余、比较、复合赋值和整数转换。旧版本继续使用 XiaoDouMathLib。调研依据、实现方案和存储格式迁移说明见 [26.3 浮点后端](docs/float-providers-26.3.md)。
 

@@ -1,72 +1,72 @@
 import mcfpp.minecraft.std:*
 import mcfpp.minecraft.other:*
 
-@From<"top.mcfpp.mni.minecraft.EntityTagData">
-@From<"top.mcfpp.mni.minecraft.EntityTeamData">
-@From<"top.mcfpp.mni.minecraft.EntityEffectData">
-@From<"top.mcfpp.mni.minecraft.EntityRideData">
-@From<"top.mcfpp.mni.minecraft.PlayerXpData">
-@From<"top.mcfpp.mni.minecraft.PlayerAdvancementData">
-@From<"top.mcfpp.mni.minecraft.PlayerStateData">
-@From<"top.mcfpp.mni.minecraft.EntityTeleportData">
-@From<"top.mcfpp.mni.minecraft.PlayerMessageData">
-@From<"top.mcfpp.mni.minecraft.EntityAttributeData">
+@From("top.mcfpp.mni.minecraft.EntityTagData")
+@From("top.mcfpp.mni.minecraft.EntityTeamData")
+@From("top.mcfpp.mni.minecraft.EntityEffectData")
+@From("top.mcfpp.mni.minecraft.EntityRideData")
+@From("top.mcfpp.mni.minecraft.PlayerXpData")
+@From("top.mcfpp.mni.minecraft.PlayerAdvancementData")
+@From("top.mcfpp.mni.minecraft.PlayerStateData")
+@From("top.mcfpp.mni.minecraft.EntityTeleportData")
+@From("top.mcfpp.mni.minecraft.PlayerMessageData")
+@From("top.mcfpp.mni.minecraft.EntityAttributeData")
 data EntityData {
-    @Name<"Air">
+    @Name("Air")
     var air: short
 
-    @Name<"CustomName">
+    @Name("CustomName")
     var customName: string
 
-    @Name<"CustomNameVisible">
+    @Name("CustomNameVisible")
     var customNameVisible: bool
 
-    @Name<"FallDistance", "1.21.5">
-    @Name<"fall_distance">
+    @Name("FallDistance", "1.21.5")
+    @Name("fall_distance")
     var fallDistance: float
 
-    @Name<"Fire">
+    @Name("Fire")
     var fire: short
 
-    @Name<"Glowing">
+    @Name("Glowing")
     var glowing: bool
 
-    @Name<"HasVisualFire">
+    @Name("HasVisualFire")
     var hasVisualFire: bool
 
-    @Name<"Invulnerable">
+    @Name("Invulnerable")
     var invulnerable: bool
 
-    @Name<"Motion">
+    @Name("Motion")
     var motion: list<double>
 
-    @Name<"NoGravity">
+    @Name("NoGravity")
     var noGravity: bool
 
-    @Name<"onGround">
+    @Name("onGround")
     var onGround: bool
 
-    @Name<"Passengers">
+    @Name("Passengers")
     var passengers: list<EntityData>
 
-    @Name<"PortalCooldown">
+    @Name("PortalCooldown")
     var portalCooldown: int
 
-    @Name<"Pos">
+    @Name("Pos")
     var pos: list<double>
 
-    @Name<"Rotation">
+    @Name("Rotation")
     var rotation: list<float>
 
-    @Name<"Silent">
+    @Name("Silent")
     var silent: bool
 
-    @Name<"Tags">
+    @Name("Tags")
     var tags: list<string>
 
-    @Name<"TicksFrozen">
+    @Name("TicksFrozen")
     var ticksFrozen: int
 
-    @Name<"UUID">
+    @Name("UUID")
     var uuid: IntArray
 }

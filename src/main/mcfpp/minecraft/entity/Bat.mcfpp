@@ -1,5 +1,5 @@
 @MCFPPEntity
 data BatData: EntityData, CreatureData, AIMobData {
-    @Name<"BatFlags">
+    @Name("BatFlags")
     var batFlags: bool
 }

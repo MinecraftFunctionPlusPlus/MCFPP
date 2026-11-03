@@ -52,11 +52,11 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
     }
     
     override fun addParamsFromContext(ctx: mcfppParser.FunctionParamsContext) {
-        val r = ctx.readOnlyParams().parameterList()
+        val r = ctx.readOnlyParams().readOnlyParameterList()
         val n = ctx.normalParams().parameterList()
         if(r == null && n == null) return
-        for (param in r?.parameter().orEmpty()){
-            val (p,v) = parseParam(param, isReadOnly = true)
+        for (param in r?.readOnlyParameter().orEmpty()){
+            val (p,v) = parseParam(param)
             readOnlyParams.add(p)
             scope.putVar(p.identifier, v)
             if (p.type == top.mcfpp.type.MCFPPConcreteType.Type)

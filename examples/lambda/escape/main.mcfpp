@@ -1,0 +1,74 @@
+func make(base: int): () -> int {
+    var result: () -> int = { base };
+    return result;
+}
+
+func copiedFactory(base: int): () -> int {
+    var original: () -> int = { base + 1 };
+    var copied: () -> int = original;
+    return copied;
+}
+
+func passthrough(callback: () -> int): () -> int { return callback; }
+func plusOne(value: int): int { return value + 1; }
+func referenceFactory(): (int) -> int { return plusOne; }
+
+func nestedFactory(base: int): () -> () -> int {
+    return {
+        var offset = base + 1;
+        return { offset + base };
+    };
+}
+
+func reuse(value: int): int {
+    /scoreboard players add escape_reuse mcfpp_default 1
+    var scratch = value * 100;
+    return scratch;
+}
+
+func main() {
+    /scoreboard players set escape_reuse mcfpp_default 0
+    var first = make(3);
+    var copied: () -> int = first;
+    var noise = reuse(99);
+    var second = make(8);
+    var firstResult = first();
+    var secondResult = second();
+    var copyResult = copied();
+    var returnedCopy = copiedFactory(20);
+    var copyFactoryResult = returnedCopy();
+    var held = passthrough(first);
+    var noiseAgain = reuse(77);
+    var lateFactory = make(50);
+    var lateResult = lateFactory();
+    var heldResult = held();
+    var firstAgain = first();
+
+    var outer = nestedFactory(10);
+    var inner = outer();
+    var otherOuter = nestedFactory(20);
+    var otherInner = otherOuter();
+    var nestedResult = inner();
+    var otherNested = otherInner();
+    var innerAgain = inner();
+    var outerAgain = outer();
+    var outerAgainResult = outerAgain();
+    var reference = referenceFactory();
+    var referenceResult = reference(9);
+
+    /data modify storage lambda:results first set from storage mcfpp:system stack_frame[0].firstResult
+    /data modify storage lambda:results second set from storage mcfpp:system stack_frame[0].secondResult
+    /data modify storage lambda:results copied set from storage mcfpp:system stack_frame[0].copyResult
+    /data modify storage lambda:results copiedFactory set from storage mcfpp:system stack_frame[0].copyFactoryResult
+    /data modify storage lambda:results held set from storage mcfpp:system stack_frame[0].heldResult
+    /data modify storage lambda:results firstAgain set from storage mcfpp:system stack_frame[0].firstAgain
+    /data modify storage lambda:results late set from storage mcfpp:system stack_frame[0].lateResult
+    /data modify storage lambda:results nested set from storage mcfpp:system stack_frame[0].nestedResult
+    /data modify storage lambda:results otherNested set from storage mcfpp:system stack_frame[0].otherNested
+    /data modify storage lambda:results innerAgain set from storage mcfpp:system stack_frame[0].innerAgain
+    /data modify storage lambda:results outerAgain set from storage mcfpp:system stack_frame[0].outerAgainResult
+    /data modify storage lambda:results reference set from storage mcfpp:system stack_frame[0].referenceResult
+    /data modify storage lambda:results noise set from storage mcfpp:system stack_frame[0].noise
+    /data modify storage lambda:results noiseAgain set from storage mcfpp:system stack_frame[0].noiseAgain
+    /execute store result storage lambda:results reuses int 1 run scoreboard players get escape_reuse mcfpp_default
+}

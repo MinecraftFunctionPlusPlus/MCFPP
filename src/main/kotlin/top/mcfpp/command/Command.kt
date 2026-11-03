@@ -255,6 +255,16 @@ open class Command: Serializable {
         return this
     }
 
+    /** Direct-target validation travels with the operand through command composition and copies. */
+    fun entityTargetStringGuard(value: Var<*>, kind: top.mcfpp.lib.SelectorExpression.DirectKind): Command {
+        commandParts.add(SelectorGuardPart(value, true, kind))
+        return this
+    }
+
+    private fun prepareGuard(guard: SelectorGuardPart, source: NBTPath): Pair<Array<Command>, String> =
+        guard.targetKind?.let { top.mcfpp.backend.SelectorStringGuards.prepareEntityTarget(source, it, Function.currFunction) }
+            ?: top.mcfpp.backend.SelectorStringGuards.prepare(source, guard.word, Function.currFunction)
+
     /**
      * 将此命令以宏命令的方式调用。自动确定宏参数的路径。
      *
@@ -279,7 +289,7 @@ open class Command: Serializable {
             variables.forEach { StorageAccess.encodeTo(argumentPath.memberIndex(slots[it]!!), it) }
         }.toMutableList()
         val conditions = commandParts.filterIsInstance<SelectorGuardPart>().map { guard ->
-            val prepared = top.mcfpp.backend.SelectorStringGuards.prepare(argumentPath.memberIndex(slots.getValue(guard.value)), guard.word, Function.currFunction)
+            val prepared = prepareGuard(guard, argumentPath.memberIndex(slots.getValue(guard.value)))
             re.addAll(prepared.first)
             prepared.second
         }
@@ -300,7 +310,7 @@ open class Command: Serializable {
         Project.macroFunction[f] = "$$this"
         val preparations = ArrayList<Command>()
         val conditions = commandParts.filterIsInstance<SelectorGuardPart>().map { guard ->
-            val prepared = top.mcfpp.backend.SelectorStringGuards.prepare(nbtPath.memberIndex(guard.value.identifier), guard.word, Function.currFunction)
+            val prepared = prepareGuard(guard, nbtPath.memberIndex(guard.value.identifier))
             preparations.addAll(prepared.first)
             prepared.second
         }
@@ -439,7 +449,8 @@ open class Command: Serializable {
      */
     protected interface ICommandPart: Serializable
 
-    private data class SelectorGuardPart(val value: Var<*>, val word: Boolean): ICommandPart {
+    private data class SelectorGuardPart(val value: Var<*>, val word: Boolean,
+                                         val targetKind: top.mcfpp.lib.SelectorExpression.DirectKind? = null): ICommandPart {
         override fun toString() = ""
     }
 

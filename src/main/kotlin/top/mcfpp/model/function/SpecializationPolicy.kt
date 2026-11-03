@@ -14,18 +14,35 @@ import top.mcfpp.type.TypeRelations
 
 /** Ordinary runtime constants never cause a new function body. */
 object SpecializationPolicy {
+    internal fun structuredType(function: Function, type: MCFPPType,
+                               readonly: Map<String, ClosedReadonlyBinding>): MCFPPType? {
+        val provider = function.bodyHandle?.let { it.repository.body(it).bindings }
+        val head = function.structuredSignatureBindings
+        if (provider == null && head == null) return null
+        (provider as? StructuredFunctionSignatures)?.declaredType(type, function, readonly)?.let { return it }
+        (provider as? StructuredSessionBindings)?.dependentType(type, function)?.let { return it }
+        if (head !== provider) head?.declaredType(type, function, readonly)?.let { return it }
+        if (type is UnresolvedType) throw DeclarationBinding.Failure("LIB_TYPE_UNSUPPORTED: Dependent signature requires structural readonly bindings")
+        val types = readonly.mapNotNull { (name, binding) ->
+            val value = (binding.value as? CompilerValue.Typed)?.payload ?: binding.value
+            (value as? CompilerValue.TypeValue)?.let { fact ->
+                (binding.descriptors[fact.id] ?: MCFPPType.resolveTypeId(fact.id))?.let { name to it }
+            }
+        }.toMap()
+        return bind(type, types)
+    }
     /** A compiler-only interpretation of an erased formal needs its static payload binding. */
     fun needsStaticErasedBindings(function: Function): Boolean {
-        val body = function.ast ?: return false
         val erasedTypes = setOf(top.mcfpp.type.MCFPPBaseType.Any, top.mcfpp.type.MCFPPBaseType.Object)
         val erased = function.normalParams.filter { it.type in erasedTypes }.map { it.identifier }.toMutableSet()
         (function.owner as? top.mcfpp.model.compound.DataTemplate)?.scope?.allVars
             ?.filter { it.type in erasedTypes }?.forEach { erased.add(it.identifier); erased.add("this.${it.identifier}") }
         if (erased.isEmpty()) return false
+        val body = function.bodyContext() ?: return false
         fun inspect(tree: org.antlr.v4.runtime.tree.ParseTree): Boolean {
             if (tree is top.mcfpp.antlr.mcfppParser.CastExpressionContext && tree.type() != null &&
                 tree.unaryExpression().text.trim('(', ')') in erased) {
-                val target = MCFPPType.parseFromString(tree.type().text, function.scope)
+                val target = MCFPPType.parseFromContext(tree.type(), function.scope, function)
                 if (target != null && !target.hasRuntimeRepresentation) return true
             }
             return (0 until tree.childCount).any { inspect(tree.getChild(it)) }
@@ -59,10 +76,13 @@ object SpecializationPolicy {
         val resolve = resolve@ {
             val values = linkedMapOf<String, DeclarationBinding.Bound>()
             val types = linkedMapOf<String, MCFPPType>().apply { putAll(receiverTypes) }
+            fun facts() = values.mapValues { (_, value) -> ClosedReadonlyBinding(value.type, requireNotNull(value.constant), value.descriptors) }
+            fun declared(type: MCFPPType, binder: DeclarationBinding): MCFPPType =
+                structuredType(function, type, facts()) ?: binder.declaredType(type)
             for ((index, parameter) in readonly.withIndex()) {
                 val binder = DeclarationBinding(function, emptyMap(), values, types)
-                val target = binder.declaredType(parameter.type)
-                val argument = supplied.getOrNull(index) ?: parameter.defaultContext?.let(binder::value) ?: parameter.defaultVar?.let {
+                val target = declared(parameter.type, binder)
+                val argument = supplied.getOrNull(index) ?: parameter.defaultSyntax()?.let(binder::value) ?: parameter.defaultVar?.let {
                     StorageAccess.snapshot(it)?.let { snapshot -> DeclarationBinding.Bound(it.type, snapshot, descriptors = StorageAccess.boundTypes(it)) }
                 } ?: return@resolve null
                 if (TypeRelations.resolveImplicitConversion(argument.type, target) == null || argument.constant == null) return@resolve null
@@ -71,11 +91,12 @@ object SpecializationPolicy {
                     CompilerValue.FloatBits(payload.value.toFloat().toRawBits()) else payload
                 val bound = argument.copy(type = target, constant = CompilerValue.Typed(target.typeId, converted))
                 values[parameter.identifier] = bound
-                if (converted is CompilerValue.TypeValue) types[parameter.identifier] = MCFPPType.resolveTypeId(converted.id) ?: return@resolve null
+                if (converted is CompilerValue.TypeValue) types[parameter.identifier] = bound.descriptors[converted.id]
+                    ?: MCFPPType.resolveTypeId(converted.id) ?: return@resolve null
             }
             val binder = DeclarationBinding(function, emptyMap(), values, types)
-            val normal = function.normalParams.map { binder.declaredType(it.type) }
-            val result = binder.declaredType(function.returnType)
+            val normal = function.normalParams.map { declared(it.type, binder) }
+            val result = declared(function.returnType, binder)
             if ((normal + result).any { TypeUsage.ordinaryDiagnostic(it) != null }) return@resolve null
             DeclaredSignature(normal, result)
         }
@@ -92,8 +113,10 @@ object SpecializationPolicy {
         if (supplied.size > readonly.size || readonly.drop(supplied.size).any { !it.hasDefault }) return null
         val resolve = resolve@ {
             val scope = FunctionScope(function.scope)
+            val frame = Function(function).apply { this.scope = scope }
+            val facts = linkedMapOf<String, ClosedReadonlyBinding>()
             val bindings = LinkedHashMap<String, MCFPPType>()
-            fun resolveType(type: MCFPPType): MCFPPType? = if (type is UnresolvedType) {
+            fun resolveType(type: MCFPPType): MCFPPType? = structuredType(frame, type, facts) ?: if (type is UnresolvedType) {
                 MCFPPType.parseFromString(type.originalTypeString, scope, function).also {
                     if (it == null) LogProcessor.error("Invalid bound type: ${type.originalTypeString}")
                 }
@@ -112,6 +135,7 @@ object SpecializationPolicy {
                     return@resolve null
                 }
                 scope.putVar(param.identifier, frozen)
+                facts[param.identifier] = ClosedReadonlyBinding(frozen.type, requireNotNull(StorageAccess.snapshot(frozen)), StorageAccess.boundTypes(frozen))
                 if (frozen is MCFPPTypeVar) {
                     val type = StorageAccess.resolveTypeValue(frozen) ?: return@resolve null
                     bindings[param.identifier] = type
@@ -166,8 +190,10 @@ object SpecializationPolicy {
         for (i in function.normalParams.indices) {
             val original = function.normalParams[i]
             val param = FunctionParam(types[i], original.identifier, compiled, original.hasDefault)
-            param.defaultVar = original.defaultVar
+            param.defaultValue = original.defaultValue
+            param.defaultTypes = original.defaultTypes
             param.defaultContext = original.defaultContext
+            param.defaultBodyHandle = original.defaultBodyHandle
             val storage = param.buildVar()
             compiled.scope.putVar(param.identifier, if (normalSpecialized[i]) storage.assignedBy(normalArgs[i]) else storage, true)
             if (!normalSpecialized[i]) runtimeParams.add(param)
@@ -178,6 +204,7 @@ object SpecializationPolicy {
         compiled.commands.clear()
         compiled.identifier = function.identifier + "-" + function.compiledFunctions.size
         compiled.ast = function.ast
+        compiled.bodyHandle = function.bodyHandle
         function.compiledFunctions[cacheKey] = compiled
         if (types.all { it.hasRuntimeRepresentation } &&
             (function.owner as? top.mcfpp.model.compound.DataTemplate)?.getType()?.hasRuntimeRepresentation != false)
@@ -192,7 +219,8 @@ object SpecializationPolicy {
     fun key(function: Function, arguments: List<Var<*>>, specialized: List<Boolean>): SpecializationKey {
         require(arguments.size == specialized.size)
         return SpecializationKey(function.declarationId, arguments.indices.map { index ->
-            if (specialized[index]) SpecializationKeys.argument(arguments[index]) else SpecializationArgument.Unknown
+            if (specialized[index] || top.mcfpp.core.lang.context.ContextBorrowing.payload(arguments[index]) != null)
+                SpecializationKeys.argument(arguments[index]) else SpecializationArgument.Unknown
         }, GenerationOptions(top.mcfpp.Project.config.version, top.mcfpp.CompileSettings.maxWhileInline,
             top.mcfpp.CompileSettings.foldIRConstants))
     }

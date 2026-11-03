@@ -1,1 +1,2 @@
-
+[agents]
+max_threads = 8

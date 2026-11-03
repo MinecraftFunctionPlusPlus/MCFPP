@@ -247,13 +247,14 @@ class VersionPreprocessorTest {
     }
 
     @Test
-    fun writesMetadataForMainAndImportsPacks() {
+    fun writesMetadataForLinkedPack() {
         val output = Files.createTempDirectory("mcfpp-versions-")
         try {
             MCFPPStringTest.readFromString("func selected(){}", targetPath = output.toString(), version = "26.2")
             assertEquals(0, Project.errorCount)
             assertTrue(Files.exists(output.resolve("debug/data/default.test/function/selected.mcfunction")))
-            for (file in listOf(output.resolve("debug/pack.mcmeta"), output.resolve("Imports/pack.mcmeta"))) {
+            assertFalse(Files.exists(output.resolve("Imports")))
+            for (file in listOf(output.resolve("debug/pack.mcmeta"))) {
                 val pack = JSON.parseObject(Files.readString(file)).getJSONObject("pack")
                 assertEquals(listOf(107, 1), pack.getJSONArray("min_format").map { it as Int })
                 assertEquals(listOf(107, 1), pack.getJSONArray("max_format").map { it as Int })

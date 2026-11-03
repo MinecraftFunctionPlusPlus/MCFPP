@@ -36,6 +36,7 @@ private class OwnedCompoundDataType(
     parentTypes: ArrayList<out MCFPPType>
 ) : MCFPPType(parentTypes) {
     override val objectData: CompoundData get() = owner
+    override val typeId: TypeId get() = owner.sessionIdentity ?: super.typeId
 }
 
 open class CompoundData :
@@ -83,9 +84,43 @@ open class CompoundData :
 
     var commonType: MCFPPType? = null
 
+    /** Imported nominal declarations bind this before publication or specialization. */
+    @Transient private var sessionIdentitySlot: TypeId.Opaque? = null
+    val sessionIdentity: TypeId.Opaque? get() = sessionIdentitySlot
+    protected open val sourceNominalIdentity: TypeId
+        get() = commonType?.typeId ?: TypeId.Declaration("compound", namespace, identifier)
+    open val nominalIdentity: TypeId get() = sessionIdentitySlot ?: sourceNominalIdentity
+
+    fun bindSessionIdentity(identity: TypeId.Opaque) {
+        check(sessionIdentitySlot == null || sessionIdentitySlot == identity) { "Nominal declaration is already bound to another session identity" }
+        if (sessionIdentitySlot == null) {
+            check(this !is CompiledGenericDataTemplate) { "Readonly specializations derive their identity from their origin and arguments" }
+            check(commonType?.typeId !is TypeId.Builtin && this !== DataTemplate.baseDataTemplate) {
+                "Shared builtin declarations cannot be rebound to a library shell"
+            }
+            val namespaces = GlobalScope.localNamespaces.values + GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values
+            check(namespaces.none { namespace ->
+                val scope = namespace.scope
+                scope.template.values.any { it === this } || scope.genericTemplate.values.any { it === this } ||
+                    scope.objects.any { it === this } || scope.enums.any { it === this }
+            }) { "Bind a new nominal model before publishing it in a namespace" }
+        }
+        sessionIdentitySlot = identity
+    }
+
+    /** A model copy of the same declaration keeps the owning shell's identity. */
+    fun copySessionIdentityFrom(declaration: CompoundData) {
+        declaration.sessionIdentitySlot?.let(::bindSessionIdentity)
+    }
+
+    internal fun checkpointSessionIdentity(): () -> Unit {
+        val saved = sessionIdentitySlot
+        return { sessionIdentitySlot = saved }
+    }
+
     /** Canonical declaration identity, independent of temporary model copies and display names. */
     internal open val inheritanceIdentity: TypeId
-        get() = commonType?.typeId ?: TypeId.Declaration("compound", namespace, identifier)
+        get() = nominalIdentity
 
     open fun getType(): MCFPPType {
         if (commonType != null) return commonType!!
@@ -170,7 +205,7 @@ open class CompoundData :
      */
     open fun getAccess(compoundData: CompoundData): Member.AccessModifier {
         //是否是本类
-        return if (compoundData.namespaceID == namespaceID) {
+        return if (compoundData.inheritanceIdentity == inheritanceIdentity) {
             Member.AccessModifier.PRIVATE
         } else {
             //是否是子类
@@ -225,7 +260,7 @@ open class CompoundData :
 
     override fun equals(other: Any?): Boolean {
         if (other !is CompoundData) return false
-        return this.namespaceID == other.namespaceID && this.identifier == other.identifier
+        return inheritanceIdentity == other.inheritanceIdentity
     }
 
     open fun extends(compoundData: CompoundData): CompoundData {
@@ -435,7 +470,7 @@ open class CompoundData :
     }
 
     override fun hashCode(): Int {
-        return javaClass.hashCode()
+        return inheritanceIdentity.hashCode()
     }
 
     companion object {

@@ -1,0 +1,4 @@
+schema = 1
+name = "unit-testing"
+namespace = "example.tests"
+version = "1.21.8"

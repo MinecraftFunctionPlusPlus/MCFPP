@@ -1,0 +1,8 @@
+func main() {
+    /data modify storage demo:state counter set value 5
+    const counter = nbtStorageRef<int>("demo:state", "counter")
+    var found = counter.tryRead { previous ->
+        counter.set(previous + 1)
+    }
+    print(found)
+}

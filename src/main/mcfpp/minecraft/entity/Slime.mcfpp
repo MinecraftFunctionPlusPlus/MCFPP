@@ -1,5 +1,5 @@
 @MCFPPEntity
 data SlimeData: EntityData, CreatureData, AIMobData {
-    @Name<"Size"> var size: int
-    @Name<"WasOnGround"> var wasOnGround: bool
+    @Name("Size") var size: int
+    @Name("WasOnGround") var wasOnGround: bool
 }

@@ -16,6 +16,8 @@ public class ConcreteOnly extends Annotation {
         super("ConcreteOnly","mcfpp.lang",new ArrayList<>());
     }
 
+    public static ConcreteOnly restorePortable() { return new ConcreteOnly(); }
+
     @Override
     public void forDataTemplate(@NotNull DataTemplate data){}
 

@@ -292,4 +292,8 @@ MultiLineStrText
 // Serialized library parse trees retain token numbers. Allocate new keywords
 // after every existing mode; Identifier emits them in DEFAULT_MODE.
 mode AddedKeywords;
-REF: 'ref';
+REF: 'ref'; // Diagnostic-only legacy spelling; never a successful source argument.
+
+// Appended token: keep existing token numbers stable for serialized parse trees.
+mode DEFAULT_MODE;
+ARROW: '->' ;

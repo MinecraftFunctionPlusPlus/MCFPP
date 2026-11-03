@@ -1,0 +1,10 @@
+func main() {
+    // Each actual stone hit returns the next accumulator. keepGoing then decides later samples.
+    external continueHits: int = raycast(5, 0, { hits, i -> hits + 1 }, { true });
+    external continueLast: int = raycast(5, -1, { last, i -> i }, { true });
+    external afterContinue: int = continueHits + 1;
+    // false stops later samples; callback return remains local, so the caller tail runs.
+    external stopHits: int = raycast(5, 0, { hits, i -> return hits + 1; }, { return false; });
+    external stopLast: int = raycast(5, -1, { last, i -> i }, { false });
+    external afterStop: int = stopHits + 1;
+}

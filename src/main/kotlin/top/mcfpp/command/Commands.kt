@@ -191,18 +191,8 @@ object Commands {
      */
     @JvmStatic
     fun dataSetValue(a: NBTPath, value: Tag<*>): Command{
-        if(a.source is EntitySource){
-            val selector = (a.source as EntitySource).entity.value
-            if(!selector.selectingSingleEntity()){
-                val new = a.clone()
-                new.source = EntitySource(SelectorVar(EntitySelector('s')))
-                return Command.build("execute as").build(selector.toCommandPart()).build("run")
-                    .build("data modify").build(new.toCommandPart()).build("set value ${top.mcfpp.backend.NbtEncoding.snbt(value)}")
-            }
-        }
-        return Command.build("data modify")
-            .build(a.toCommandPart())
-            .build("set value ${top.mcfpp.backend.NbtEncoding.snbt(value)}")
+        return entityDataOperation(a) { paths -> Command("data modify").build(paths[0])
+            .build("set value ${top.mcfpp.backend.NbtEncoding.snbt(value)}") }
     }
 
     /**
@@ -215,22 +205,32 @@ object Commands {
      */
     @JvmStatic
     fun dataSetFrom(a: NBTPath, b: NBTPath): Command{
-        if(b.source is EntitySource && !(b.source as EntitySource).entity.value.selectingSingleEntity()){
+        if(b.source is EntitySource && !(b.source as EntitySource).target.entityFacts.selectingSingleEntity){
             LogProcessor.error("Can only select single Entity")
         }
-        if(a.source is EntitySource){
-            val selector = (a.source as EntitySource).entity.value
-            if(!selector.selectingSingleEntity()){
-                val new = a.clone()
-                new.source = EntitySource(SelectorVar(EntitySelector('s')))
-                return Command.build("execute as").build(selector.toCommandPart()).build("run")
-                    .build("data modify").build(new.toCommandPart()).build("set from ${b.toCommandPart()}")
+        return entityDataOperation(a, b) { paths -> Command("data modify").build(paths[0]).build("set from").build(paths[1]) }
+    }
+
+    /** Keep context-restoration prefixes outside the complete data command. */
+    private fun entityDataOperation(vararg paths: NBTPath, build: (List<Command>) -> Command): Command {
+        val entities = paths.mapNotNull { (it.source as? EntitySource)?.entity }
+        if (entities.isEmpty()) return build(paths.map { it.toCommandPart() })
+        val multiple = (paths.first().source as? EntitySource)?.target?.entityFacts?.selectingSingleEntity == false
+        return top.mcfpp.backend.EntityContextCommandOperations.command(entities, changesExecutor = multiple) { targets ->
+            var index = 0
+            var destination: Command? = null
+            val encoded = paths.mapIndexed { pathIndex, path ->
+                if (path.source !is EntitySource) path.toCommandPart() else {
+                    val target = targets[index++]
+                    if (pathIndex == 0 && multiple) {
+                        destination = target
+                        Command("entity @s").build(path.pathToCommandPart())
+                    } else Command("entity").build(target).build(path.pathToCommandPart())
+                }
             }
+            val operation = build(encoded)
+            destination?.let { Command("execute as").build(it).build("run").build(operation) } ?: operation
         }
-        return Command.build("data modify")
-            .build(a.toCommandPart())
-            .build("set from")
-            .build(b.toCommandPart())
     }
 
     /**

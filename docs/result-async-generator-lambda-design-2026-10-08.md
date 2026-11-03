@@ -791,6 +791,8 @@ execute if score #step rt matches 1 run scoreboard players operation #caller.val
 
 ## 11. Lambda：最终采用 Kotlin 风格
 
+> 2026-10-22 后续决定：当前同步 lambda 的类型标注统一使用冒号，函数类型写 `(int, int) -> int`、`() -> void`，不带 `func` 前缀；具名声明仍使用 `func`。引用捕获、普通 lambda 与 MNI `REF` 互操作、嵌套回调 `REF` forwarding 暂缓。可运行语法与当前支持范围见 [同步 lambda 教程](lambda/tutorial.md)。本节后文保留当时的讨论语境，不作为这些后续决定的覆盖。
+
 ### 11.1 已确认的形状调整
 
 早期候选是 `(参数) { 函数体 }`，尾 lambda 曾出现 `fold(0) (sum, item) { ... }`。

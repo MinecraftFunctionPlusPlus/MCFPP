@@ -26,6 +26,13 @@ object TypeRelations {
     private fun subtype(source: MCFPPType, target: MCFPPType, visited: MutableSet<Pair<TypeId, TypeId>>): Boolean {
         if (source.typeId == target.typeId) return true
         if (!visited.add(source.typeId to target.typeId)) return false
+        if (source is top.mcfpp.core.lang.context.MCFPPExecutionContextType ||
+            target is top.mcfpp.core.lang.context.MCFPPExecutionContextType ||
+            source is top.mcfpp.core.lang.context.MCFPPBoundPositionType ||
+            target is top.mcfpp.core.lang.context.MCFPPBoundPositionType)
+            return source.parentType.any { subtype(it, target, HashSet(visited)) }
+        if (source is MCFPPFunctionType || target is MCFPPFunctionType)
+            return functionSubtype(source, target, visited)
         if (!source.isValueType || !target.isValueType) return false
         if (target == MCFPPBaseType.Object) return true
         if (source is MCFPPDataTemplateType && target is MCFPPDataTemplateType &&
@@ -58,8 +65,45 @@ object TypeRelations {
         return source.parentType.any { subtype(it, target, HashSet(visited)) }
     }
 
+    /**
+     * Safe function compatibility. Arity and execution category are invariant, parameter
+     * types are contravariant and the result type is covariant. Every constituent still
+     * goes through [subtype], so nominal object compatibility is never widened to a
+     * structural rule. Function types are also handled before the ordinary value-type
+     * gate and before the `object` top type, so a function value never silently becomes an
+     * ordinary object value.
+     */
+    private fun functionSubtype(
+        source: MCFPPType,
+        target: MCFPPType,
+        visited: MutableSet<Pair<TypeId, TypeId>>
+    ): Boolean {
+        if (source is MCFPPUnionType) return source.types.all { subtype(it, target, HashSet(visited)) }
+        if (target is MCFPPUnionType) return target.types.any { subtype(source, it, HashSet(visited)) }
+        if (source !is MCFPPFunctionType || target !is MCFPPFunctionType) return false
+        if (source.executionCategory != target.executionCategory) return false
+        if (source.parameters.size != target.parameters.size) return false
+        for (index in source.parameters.indices) {
+            // The source must accept everything the target can pass: targetParam <: sourceParam.
+            if (!subtype(target.parameters[index], source.parameters[index], HashSet(visited))) return false
+        }
+        // The source must return a value usable where the target promises one.
+        return subtype(source.result, target.result, HashSet(visited))
+    }
+
     fun resolveImplicitConversion(source: MCFPPType, target: MCFPPType): Conversion? {
         if (source.typeId == target.typeId) return Conversion.EXACT
+        if (source is top.mcfpp.core.lang.context.MCFPPExecutionContextType ||
+            target is top.mcfpp.core.lang.context.MCFPPExecutionContextType ||
+            source is top.mcfpp.core.lang.context.MCFPPBoundPositionType ||
+            target is top.mcfpp.core.lang.context.MCFPPBoundPositionType)
+            return if (isSubtype(source, target)) Conversion.NOMINAL else null
+        if (source is MCFPPFunctionType || target is MCFPPFunctionType) {
+            // Only variance-safe function compatibility is allowed. In particular a
+            // function type is not convertible to object/any, and no other type becomes a
+            // function type structurally.
+            return if (isSubtype(source, target)) Conversion.NOMINAL else null
+        }
         if (!source.isValueType || !target.isValueType) return null
         if (target == MCFPPBaseType.Object) return Conversion.OBJECT
         if (target == MCFPPBaseType.Any) return Conversion.ANY

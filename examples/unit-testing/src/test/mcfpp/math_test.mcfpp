@@ -1,0 +1,26 @@
+import mcfpp.test:*
+
+@BeforeEach
+func setup() {
+    /scoreboard objectives add fixture dummy
+    /scoreboard players set #ready fixture 1
+}
+
+@AfterEach
+func cleanup() {
+    /scoreboard players reset #ready fixture
+}
+
+@Test
+func addition() {
+    assertEquals(3, add(1, 2), "Addition should return 3")
+    assertTrue(add(2, 3) == 5)
+    assertFalse(add(2, 3) == 6)
+    assertNotEquals(0, add(1, 2))
+}
+
+@Disabled("Pending implementation")
+@Test
+func pending() {
+    fail("Not implemented")
+}

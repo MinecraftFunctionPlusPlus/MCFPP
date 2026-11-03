@@ -1,11 +1,12 @@
 package top.mcfpp.test
 
 import top.mcfpp.CompileSettings
+import top.mcfpp.LibraryPublicationConfig
 import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.MCInt
-import top.mcfpp.io.LibBinFormat
+import top.mcfpp.library.format.LibraryWire
 import top.mcfpp.io.KryoManager
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.io.info.NativeFunctionInfo
@@ -79,9 +80,8 @@ class TemplateInitializationTest {
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")
         assertEquals(0, Project.errorCount)
         assertTrue(Files.exists(output.resolve("bin.mclib")))
-        com.esotericsoftware.kryo.io.Input(Files.newInputStream(output.resolve("bin.mclib"))).use {
-            assertEquals(LibBinFormat.MAGIC, it.readInt())
-            assertEquals(LibBinFormat.VERSION, it.readInt())
+        Files.newInputStream(output.resolve("bin.mclib")).use {
+            assertEquals(LibraryWire.CURRENT_VERSION, LibraryWire.read(it).formatVersion)
         }
     }
 
@@ -163,7 +163,9 @@ class TemplateInitializationTest {
         """, output)
         val restored = GlobalScope.getTemplate("fixture.defaults", "Box")!!
         assertNotSame(original, restored)
-        assertNotNull(GlobalScope.libNamespaces.getValue("fixture.defaults").scope.functions.getValue("produce").single().ast)
+        val produce = GlobalScope.libNamespaces.getValue("fixture.defaults").scope.functions.getValue("produce").single()
+        assertNotNull(produce.bodyHandle)
+        assertEquals("fixture.defaults", assertNotNull(produce.declarationFile).namespace.identifier)
         assertEquals(44, execute(main, output).read(main.scope.getVar("result") as MCInt))
     }
 
@@ -185,7 +187,8 @@ class TemplateInitializationTest {
         """, output)
         val restored = GlobalScope.libNamespaces.getValue("fixture.defaults").scope.functions.getValue("add").single()
         assertNotSame(original, restored)
-        assertNotNull(restored.ast)
+        assertNotNull(restored.bodyHandle)
+        assertEquals("fixture.defaults", assertNotNull(restored.declarationFile).namespace.identifier)
         assertEquals(1, restored.compiledFunctions.size)
         val machine = execute(main, output)
         val wrapper = restored.compiledFunctions.values.single()
@@ -203,12 +206,14 @@ class TemplateInitializationTest {
     @Test fun restoredDeclarationImportsResolveLibrariesLoadedAfterTheirUsers() = withLibrary { output ->
         val helper = output.resolve("helper")
         val library = output.resolve("library")
+        Project.config.library = LibraryPublicationConfig("fixture:template-helper", "1.0.0")
         write("""
             namespace fixture.helper
             typealias int as Seed
             func seed(): int { return 4; }
             func main(){}
         """, helper)
+        Project.config.library = LibraryPublicationConfig("fixture:template-defaults", "1.0.0")
         write("""
             namespace fixture.defaults
             import fixture.helper:*
@@ -225,7 +230,9 @@ class TemplateInitializationTest {
         """, library, includes = listOf(library, helper))
         val restored = GlobalScope.getTemplate("fixture.defaults", "Box")!!
         assertNotSame(original, restored)
-        assertNotNull(GlobalScope.libNamespaces.getValue("fixture.defaults").scope.functions.getValue("produce").single().ast)
+        val produce = GlobalScope.libNamespaces.getValue("fixture.defaults").scope.functions.getValue("produce").single()
+        assertNotNull(produce.bodyHandle)
+        assertEquals("fixture.defaults", assertNotNull(produce.declarationFile).namespace.identifier)
         assertEquals(4, execute(main, output).read(main.scope.getVar("result") as MCInt))
     }
 

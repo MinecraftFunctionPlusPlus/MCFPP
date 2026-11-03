@@ -1,0 +1,8 @@
+schema = 1
+name = "mcfpp"
+namespace = "fixture.consumer"
+sourcePath = "src"
+targetPath = "out"
+version = "26.3"
+noMcLib = true
+args = ["-ignoreStdLib"]

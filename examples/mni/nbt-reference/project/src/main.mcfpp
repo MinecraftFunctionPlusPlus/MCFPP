@@ -1,0 +1,19 @@
+namespace example.nbtreference
+
+func applyNbtDamage(health: NBTRef<int>, amount: int) {
+    health.tryRead { current ->
+        if (current < amount) { health.set(0); }
+        else { health.set(current - amount); }
+    }
+}
+
+func main() {
+    /data modify storage example:health normal set value {hp:100}
+    /data modify storage example:health alias set value {hp:100}
+    /data modify storage example:health values set value [10,20]
+    damageNbt(nbtStorageRef<int>("example:health", "normal.hp"), 30)
+    var alias = nbtStorageRef<int>("example:health", "alias.hp")
+    damageNbt(alias, 40)
+    alias.tryRead { current -> damageNbt(alias, current - 10); }
+    damageNbt(nbtStorageRef<int>("example:health", "values[1]"), 5)
+}

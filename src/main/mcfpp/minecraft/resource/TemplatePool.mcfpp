@@ -1,5 +1,5 @@
-@From<"top.mcfpp.mni.resource.TemplatePoolData">
+@From("top.mcfpp.mni.resource.TemplatePoolData")
 data TemplatePool: ResourceID
 
-@From<"top.mcfpp.mni.resource.TemplatePoolObjectData">
+@From("top.mcfpp.mni.resource.TemplatePoolObjectData")
 object data TemplatePool: ResourceID

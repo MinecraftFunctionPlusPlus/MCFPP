@@ -136,7 +136,7 @@ finallyClause    = "finally" curlBlock
 
 `throwsClause` 接在返回类型之后、函数体或原生绑定之前；无显式返回类型时接在参数列表之后。catch/throws 中只允许错误类型、错误联合或根 `Error`，其他普通类型给语义诊断。首版只提供语句级 try、带值 throw，不增加 try 表达式、裸 throw 或捕获条件过滤。
 
-**`error` 必须是声明位置的上下文关键字**：当前标准库 `src/main/mcfpp/lang/sys.mcfpp` 已有 `func error(string)`，不能新增一个排除 Identifier 的全局 ERROR token 导致该函数失效。`throws` 同样只在签名尾部识别，名字位置仍允许旧用法。`throw/catch/finally` 作为新保留字随异常特性的语言版本引入；已有用户声明若占用这些名字，必须给明确的重命名迁移诊断，不能静默改变解析结果。当前标准库搜索只发现 `error` 名称冲突，但发布前仍需扫描用户测试与语言支持仓库。词法改动必须同步普通、成员和原生声明的解析测试。
+**`error` 必须是声明位置的上下文关键字**：当前标准库 `src/main/mcfpp/lang/sys.mcfpp` 已有 `func error(value: string)`，不能新增一个排除 Identifier 的全局 ERROR token 导致该函数失效。`throws` 同样只在签名尾部识别，名字位置仍允许旧用法。`throw/catch/finally` 作为新保留字随异常特性的语言版本引入；已有用户声明若占用这些名字，必须给明确的重命名迁移诊断，不能静默改变解析结果。当前标准库搜索只发现 `error` 名称冲突，但发布前仍需扫描用户测试与语言支持仓库。词法改动必须同步普通、成员和原生声明的解析测试。
 
 ## 5. 效果模型与推导
 

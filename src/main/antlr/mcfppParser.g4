@@ -33,6 +33,11 @@ options {
     tokenVocab = mcfppLexer;
 }
 
+// Compatibility-only token. The lexer never emits it; the shim alternatives
+// below exist solely to keep the generated accessor surface usable by the
+// existing read-only consumers while they migrate to the new rules.
+tokens { LEGACY_ACCESSOR_SHIM }
+
 //一个mcfpp文件
 compilationUnit
     :   (separator* namespaceDeclaration (separator | EOF))?
@@ -272,21 +277,29 @@ functionParams
     ;
 
 readOnlyParams
-    :   LANGLE NL* parameterList? NL* RANGLE
+    :   LANGLE NL* readOnlyParameterList? NL* RANGLE
     ;
 
 normalParams
     :   LPAREN NL* parameterList? NL* RPAREN
     ;
 
-//参数列表
+// 只读参数允许省略类型标注，<T> 等价于 <T: type>。
+readOnlyParameterList
+    :   readOnlyParameter (NL* COMMA NL* readOnlyParameter)*
+    ;
+
+readOnlyParameter
+    :   (OUT | IN)? NL* Identifier (NL* COLON NL* type)? (NL* ASSIGNMENT NL* value)?
+    ;
+
+// 普通参数必须声明名称和类型。
 parameterList
     :   parameter (NL* COMMA NL* parameter)*
     ;
 
-//参数
 parameter
-    :   (OUT | IN)? NL* (Identifier NL* COLON NL*)? type (NL* ASSIGNMENT NL* value)?
+    :   Identifier NL* COLON NL* type (NL* ASSIGNMENT NL* value)?
     ;
 
 //能作为语句的表达式
@@ -298,8 +311,24 @@ assignmentOperator
     :   ASSIGNMENT | ADD_ASSIGNMENT | SUB_ASSIGNMENT | MULT_ASSIGNMENT | DIV_ASSIGNMENT | MOD_ASSIGNMENT
     ;
 
-//表达式
+// Top-level expression. A trailing lambda is accepted only here, not in the
+// condition-specific expression below.
 expression
+    :   lambdaCallExpression
+    |   primary
+    |   commonBinaryOperatorExpression
+    ;
+
+// A trailing lambda belongs to the call it follows. Conditions use
+// conditionExpression so that the block of an if/while cannot be mistaken
+// for a trailing lambda; parenthesize such a call in a condition instead.
+lambdaCallExpression
+    :   jvmAccessExpression (NL* selector)+ NL* inlineLambda (NL* selector)*
+    |   functionCall NL* inlineLambda (NL* selector)*
+    |   varWithSuffix NL* inlineLambda (NL* selector)*
+    ;
+
+conditionExpression
     :   primary
     |   commonBinaryOperatorExpression
     ;
@@ -376,6 +405,7 @@ propertyOperatorExpression
 primary
     :   range
     |   value
+    |   inlineLambda
     |   var
     |   THIS
     |   SUPER
@@ -406,6 +436,13 @@ identifierSuffix
 
 selector
     :   DOT NL* var
+    |   DOT NL* memberKeyword NL* arguments?
+    ;
+
+// Type/accessor keywords can also name ordinary member calls.
+memberKeyword
+    :   MAP
+    |   SET
     ;
 
 arguments
@@ -427,14 +464,46 @@ callArgumentList
     ;
 
 callArgument
-    :   REF NL* expression
+    // Retain the old node only for located migration errors, including old cached ASTs.
+    :   legacy=REF NL* expression {notifyErrorListeners($legacy, "Legacy 'ref expression' is no longer supported; create ScoreRef or NBTRef<T> from an explicit Minecraft address and pass it as an ordinary value.", null);}
     |   inlineLambda
     |   expression
     ;
 
+// Kotlin-style lambda. The parameter list requires the arrow; a no-parameter
+// lambda has no arrow. The body keeps the last expression distinct from a
+// semicolon-terminated statement.
 inlineLambda
+    :   LCURL NL* (lambdaParameterList NL* ARROW NL*)? lambdaBody NL* RCURL
+    |   LEGACY_ACCESSOR_SHIM Identifier+ curlBlock
+    ;
+
+// Diagnostic-only entry point. It is intentionally not reachable from
+// compilationUnit, so (args) => { ... } is not valid source. Migration code can
+// probe this rule after a source parse failure at DOUBLE_ARROW to report the
+// precise old callback shape.
+legacyLambdaSyntax
     :   LPAREN NL* (Identifier (NL* COMMA NL* Identifier)*)? NL* RPAREN
         NL* DOUBLE_ARROW NL* curlBlock
+    ;
+
+lambdaParameterList
+    :   lambdaParameter (NL* COMMA NL* lambdaParameter)*
+    ;
+
+lambdaParameter
+    :   Identifier (NL* COLON NL* type)?
+    ;
+
+lambdaBody
+    :   lambdaTailExpression
+    |   (statement separator)+ (lambdaTailExpression | statement)
+    |   (statement separator)+
+    |   statement
+    ;
+
+lambdaTailExpression
+    :   expression
     ;
 
 statement
@@ -487,11 +556,13 @@ controlStatement
     ;
 
 ifStatement
-    :   IF NL* expression NL* block (NL* elseIfStatement)* (NL* elseStatement)?
+    :   IF NL* conditionExpression NL* block (NL* elseIfStatement)* (NL* elseStatement)?
+    |   LEGACY_ACCESSOR_SHIM expression
     ;
 
 elseIfStatement
-    :   ELSE NL* IF NL* expression NL* block
+    :   ELSE NL* IF NL* conditionExpression NL* block
+    |   LEGACY_ACCESSOR_SHIM expression
     ;
 
 elseStatement
@@ -499,7 +570,8 @@ elseStatement
     ;
 
 whileStatement
-    :   WHILE NL* expression NL* block
+    :   WHILE NL* conditionExpression NL* block
+    |   LEGACY_ACCESSOR_SHIM expression
     ;
 
 doWhileStatement
@@ -543,6 +615,14 @@ typeBody
     |   unionType
     |   unionTemplateType
     |   anonymousTemplateType
+    |   functionType
+    ;
+
+// (int, int) -> int / () -> void. Parameter and result types stay
+// ordinary type / functionReturnType rules so callers can inspect them.
+functionType
+    :   LPAREN NL* (type (NL* COMMA NL* type)*)? NL* RPAREN
+        NL* ARROW NL* functionReturnType
     ;
 
 anonymousTemplateType
@@ -613,7 +693,7 @@ annotation
     ;
 
 annotationArgs
-    :   LANGLE (NL* value (NL* COMMA NL* value)*)? NL* RANGLE
+    :   LPAREN (NL* value (NL* COMMA NL* value)*)? NL* RPAREN
     ;
 
 range

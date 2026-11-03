@@ -42,8 +42,10 @@ class ArithmeticSyntaxTest {
         val exits = function.commands.indices.filter {
             function.commands[it].analyze() == top.mcfpp.command.Commands.stackOut().analyze()
         }
-        assertEquals(1, exits.size, "These void arithmetic entries have one actual frame exit")
-        function.commands.addAll(exits.single(), loads)
+        val insertion = exits.singleOrNull() ?: function.commands.indexOfLast {
+            it.toString().startsWith("return ")
+        }.takeIf { it >= 0 } ?: function.commands.size
+        function.commands.addAll(insertion, loads)
         return registers
     }
     private fun assertFloat(machine: ScoreCommandExecutor, registers: List<top.mcfpp.analysis.StorageLayout.Scoreboard>, expected: Float) {

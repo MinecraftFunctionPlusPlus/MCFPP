@@ -43,7 +43,7 @@ class NbtArrayTest {
         assertEquals(236, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
-    @Test fun ordinaryArrayCopiesAreIndependentAndViewsShareWrites() {
+    @Test fun ordinaryArrayCopiesAndViewInitializersAreIndependent() {
         val main = compile("""
             func main(){
                 var values = [I;2,3]
@@ -54,7 +54,7 @@ class NbtArrayTest {
                 external result = values[0]*100 + values[1]*10 + copied[0]
             }
         """)
-        assertEquals(732, execute(main).read(main.scope.getVar("result") as MCInt))
+        assertEquals(232, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun runtimeArrayParametersIndicesAndReturnsKeepTheirEncoding() {
@@ -85,7 +85,7 @@ class NbtArrayTest {
         assertEquals(78, execute(main).read(main.scope.getVar("number") as MCInt))
     }
 
-    @Test fun multipleUnknownIndicesUseIndependentReadsAndAliasCachesReload() {
+    @Test fun multipleUnknownIndicesUseIndependentReadsAndViewCopiesKeepTheirValues() {
         val main = compile("""
             func read(values: IntArray, left: int, right: int): int { return values[left] + values[right]; }
             func main(){
@@ -99,7 +99,7 @@ class NbtArrayTest {
         """)
         val machine = execute(main)
         assertEquals(2, machine.read(main.scope.getVar("before") as MCInt))
-        assertEquals(7, machine.read(main.scope.getVar("after") as MCInt))
+        assertEquals(2, machine.read(main.scope.getVar("after") as MCInt))
         assertEquals(10, machine.read(main.scope.getVar("result") as MCInt))
     }
 

@@ -1,0 +1,6 @@
+func main() {
+    external doubled = topLevelDouble(21);
+    external combined = objectSum<5>(8);
+    objectPing();
+    objectContextProbe(13);
+}

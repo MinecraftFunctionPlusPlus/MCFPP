@@ -11,7 +11,7 @@ open class MCFPPEnumType(
     var enum: Enum
 ): MCFPPType(arrayListOf(MCFPPBaseType.Object)) {
 
-    override val typeId: TypeId get() = TypeId.Declaration("enum", enum.namespace, enum.identifier)
+    override val typeId: TypeId get() = enum.nominalIdentity
 
     override val objectData: CompoundData
         get() = enum

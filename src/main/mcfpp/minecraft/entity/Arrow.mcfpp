@@ -17,12 +17,12 @@ data GeneralArrowData{
 
     var pickup: byte
 
-    @Name<"PierceLevel">
+    @Name("PierceLevel")
     var pierceLevel: byte
 
     var shake: byte
 
-    @Name<"SoundEvent">
+    @Name("SoundEvent")
     var soundEvent: string
 
     var weapon: ItemData

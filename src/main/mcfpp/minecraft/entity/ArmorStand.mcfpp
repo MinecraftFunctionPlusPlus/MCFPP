@@ -3,48 +3,48 @@ import mcfpp.minecraft.item:ItemStackData
 @MCFPPEntity
 data ArmorStandData: EntityData, CreatureData {
 
-    @Name<"ArmorItems">
+    @Name("ArmorItems")
     var armorItems: list<ItemData>
 
-    @Name<"DisabledSlots">
+    @Name("DisabledSlots")
     var disabledslots: int
 
-    @Name<"HandItems">
+    @Name("HandItems")
     var handItems: list<ItemData>
 
-    @Name<"Invisible">
+    @Name("Invisible")
     var invisible: bool
 
-    @Name<"Marker">
+    @Name("Marker")
     var marker: bool
 
-    @Name<"NoBasePlate">
+    @Name("NoBasePlate")
     var noBasePlate: bool
 
-    @Name<"Pose">
+    @Name("Pose")
     var pose: data {
-        @Name<"Body">
+        @Name("Body")
         var body: list<float>
 
-        @Name<"Head">
+        @Name("Head")
         var head: list<float>
 
-        @Name<"LeftArm">
+        @Name("LeftArm")
         var leftArm: list<float>
 
-        @Name<"LeftLeg">
+        @Name("LeftLeg")
         var leftLeg: list<float>
 
-        @Name<"RightArm">
+        @Name("RightArm")
         var rightArm: list<float>
 
-        @Name<"RightLeg">
+        @Name("RightLeg")
         var rightLeg: list<float>
     }
 
-    @Name<"ShowArms">
+    @Name("ShowArms")
     var showArms: bool
 
-    @Name<"Small">
+    @Name("Small")
     var small: bool
 }

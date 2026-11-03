@@ -49,7 +49,6 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
 
     /**
      * 完成一次库的import
-     * TODO 类型别名
      *
      * @param ctx
      */
@@ -102,12 +101,16 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
                 DataTemplate(id,Project.currNamespace)
             } else {
                 val qwq = GenericDataTemplate(ctx.templateBody(), id, Project.currNamespace)
-                qwq.readOnlyParams.addAll(ctx.compoundDeclaration().declarationName().readOnlyParams().parameterList().parameter().map {
-                    DataTemplateParam(DeclarationSyntax.readonlyTypeName(it), DeclarationSyntax.parameterName(it, true, "p${qwq.readOnlyParams.size}"), variance = when {
-                        it.OUT() != null -> top.mcfpp.model.compound.DeclarationVariance.OUT
-                        it.IN() != null -> top.mcfpp.model.compound.DeclarationVariance.IN
-                        else -> top.mcfpp.model.compound.DeclarationVariance.INVARIANT
-                    })
+                qwq.readOnlyParams.addAll(ctx.compoundDeclaration().declarationName().readOnlyParams().readOnlyParameterList().readOnlyParameter().map {
+                    DataTemplateParam(
+                        ReadonlyParamsDeclarationSyntax.readonlyTypeName(it),
+                        ReadonlyParamsDeclarationSyntax.readonlyParameterName(it),
+                        variance = when {
+                            it.OUT() != null -> DeclarationVariance.OUT
+                            it.IN() != null -> DeclarationVariance.IN
+                            else -> DeclarationVariance.INVARIANT
+                        }
+                    )
                 })
                 qwq
             }
@@ -134,11 +137,14 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             ObjectDataTemplate(id,Project.currNamespace)
         } else {
             val qwq = GenericObjectDataTemplate(ctx.templateBody(), id, Project.currNamespace)
-            qwq.readOnlyParams.addAll(ctx.compoundDeclaration().declarationName().readOnlyParams().parameterList().parameter().map {
-                DataTemplateParam(DeclarationSyntax.readonlyTypeName(it), DeclarationSyntax.parameterName(it, true, "p${qwq.readOnlyParams.size}"), variance = when {
-                        it.OUT() != null -> top.mcfpp.model.compound.DeclarationVariance.OUT
-                        it.IN() != null -> top.mcfpp.model.compound.DeclarationVariance.IN
-                        else -> top.mcfpp.model.compound.DeclarationVariance.INVARIANT
+            qwq.readOnlyParams.addAll(ctx.compoundDeclaration().declarationName().readOnlyParams().readOnlyParameterList().readOnlyParameter().map {
+                DataTemplateParam(
+                    ReadonlyParamsDeclarationSyntax.readonlyTypeName(it),
+                    ReadonlyParamsDeclarationSyntax.readonlyParameterName(it),
+                    variance = when {
+                        it.OUT() != null -> DeclarationVariance.OUT
+                        it.IN() != null -> DeclarationVariance.IN
+                        else -> DeclarationVariance.INVARIANT
                     })
             })
             qwq

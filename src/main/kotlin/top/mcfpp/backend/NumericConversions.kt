@@ -23,6 +23,8 @@ import top.mcfpp.util.TempPool
 
 /** Explicit value conversions. Reinterpretation must never call this service. */
 object NumericConversions {
+
+    @JvmStatic
     fun convert(context: NativeCallContext, target: MCFPPType) = context.withArguments { arguments ->
         context.publishResult(convert(arguments[0], target))
     }

@@ -1,0 +1,35 @@
+namespace example.score
+
+// The declaration processor owns the mapping. `@ScoreMapping` is a processor annotation,
+// so its arguments are read from the immutable AnnotationView rather than a legacy host class.
+// The fixed holder keeps the example independent of an entity/world context backend.
+@ScoreMapping("#scores")
+data Player {
+    // String objectives are real annotation arguments projected by the compiler.
+    @Score("health_hp")
+    var health: int = 0
+
+    @Score("state_alive")
+    var alive: bool = false
+}
+
+func main() {
+    var player = Player()
+
+    // save: int writes the exact value; bool writes strictly 0 or 1.
+    player.health = 7
+    player.alive = true
+    player.save()
+
+    // load: an int score is copied; a nonzero bool score reads true and zero reads false.
+    // A missing objective score reads zero because every score read zeroes its temporary first.
+    player.health = 0
+    player.alive = false
+    player.load()
+
+    external loadedHealth: int = player.health
+    external loadedAlive: int = 0
+    if (player.alive) {
+        loadedAlive = 1
+    }
+}

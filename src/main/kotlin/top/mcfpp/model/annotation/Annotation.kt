@@ -53,9 +53,17 @@ abstract class Annotation : Serializable {
     /**
      * 注解的参数
      */
-    val params = ArrayList<String>()
+    var params = ArrayList<String>()
+        private set
 
-    val parents = ArrayList<Annotation>()
+    var parents = ArrayList<Annotation>()
+        private set
+
+    /** Portable restoration supplies the shared arena cells before filling their contents. */
+    internal fun restorePortableContainers(parameters: ArrayList<String>, inherited: ArrayList<Annotation>) {
+        params = parameters
+        parents = inherited
+    }
 
     /**
      * The original closed compiler arguments of this annotation. This field is transient because
@@ -127,6 +135,7 @@ abstract class Annotation : Serializable {
     /** Shared admission gate for pure preparation and deep transactional consumers. */
     internal fun hasDeclarationStateSupport(): Boolean {
         if (javaClass in builtinDeclarationClasses) return true
+        if (top.mcfpp.mni.expand.ManagedAnnotationAdmission.contains(javaClass)) return true
         for (registry in listOf(GlobalScope.localNamespaces, GlobalScope.importedLibNamespaces,
             GlobalScope.libNamespaces, GlobalScope.stdNamespaces)) {
             check(registry.javaClass == HashMap::class.java) { "Unsupported annotation namespace registry" }

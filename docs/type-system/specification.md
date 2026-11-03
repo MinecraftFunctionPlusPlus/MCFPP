@@ -10,7 +10,7 @@
 别名解析后透明地使用被指向类型的身份。
 未解析类型、泛型占位符、void 和内部静态成员视图不属于普通值类型。
 
-声明使用 `var name: Type`，具名参数和字段也用冒号；`const`、`external` 声明不加 `var`，导入变量仍用 `import var`。readonly `<T>` 等价于 `<T: type>`，值参数使用 `<N: int>`；普通匿名参数仍可只写类型。
+声明使用 `var name: Type`，参数和字段也用冒号；`const`、`external` 声明不加 `var`，导入变量仍用 `import var`。readonly `<T>` 等价于 `<T: type>`，值参数使用 `<N: int>`；普通参数必须使用 `name: Type` 声明显式名称。
 `if`、`else if`、`while`、`do ... while` 的条件括号可省略，条件须为 `bool`。语句用换行或分号分隔，块内最后一条语句无需分号；同一行语句间和 SNBT 数组内的分号保留。
 
 ## object、any 与 DataObject
@@ -44,7 +44,7 @@ const 容器的内容仍可修改，readonly 约束则覆盖内容与后代。�
 
 ## as 与转换函数
 
-as 建立同一 Place 上的解释视图，不调用构造器、不补字段、不复制对象、不转换数值。
+as 产生与来源共享 Place 的临时解释视图，不调用构造器、不补字段、不转换数值。临时视图赋值给变量（包括声明初始化）时，按普通值赋值复制载荷到目标的独立 Place；修改目标内容不影响来源。显式 Ref 系列值的复制保留其引用目标。
 不兼容的普通来源给警告；any 来源不进行运行时类型检查。
 目标没有可用的存储访问方式时给代码生成错误，并建议转换函数。
 数值转换使用 toInt / toFloat / toByte / toShort / toLong / toDouble；toNBT 生成来源约定的编码。

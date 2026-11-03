@@ -38,7 +38,9 @@ import top.mcfpp.nbt.tags.primitive.LongTag
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPEnumType
+import top.mcfpp.type.MCFPPFunctionType
 import top.mcfpp.type.MCFPPListType
+import top.mcfpp.type.MCFPPReferenceType
 import top.mcfpp.type.MCFPPType
 import org.antlr.v4.runtime.ParserRuleContext
 import top.mcfpp.util.LogProcessor
@@ -61,6 +63,7 @@ class MCFPPExprVisitor(
     private var currSelector : Var<*>? = null
     private var superSelector: DataTemplate? = null
     private var expectedLiteral: Pair<Int, MCFPPType>? = null
+    private var expectedFunction: Pair<Int, top.mcfpp.type.MCFPPFunctionType>? = null
 
     fun visitExpression(ctx: mcfppParser.ExpressionContext, expectedType: MCFPPType?): Var<*> {
         fun literalToken(node: ParserRuleContext): Int? = when {
@@ -68,8 +71,10 @@ class MCFPPExprVisitor(
             else -> node.children.orEmpty().filterIsInstance<ParserRuleContext>().singleOrNull()?.let(::literalToken)
         }
         val previous = expectedLiteral
+        val previousFunction = expectedFunction
         expectedLiteral = expectedType?.let { type -> literalToken(ctx)?.let { it to type } }
-        return try { visitExpression(ctx) } finally { expectedLiteral = previous }
+        expectedFunction = (expectedType as? top.mcfpp.type.MCFPPFunctionType)?.let { ctx.start.tokenIndex to it }
+        return try { visitExpression(ctx) } finally { expectedLiteral = previous; expectedFunction = previousFunction }
     }
 
     /**
@@ -79,27 +84,102 @@ class MCFPPExprVisitor(
      */
     @Override
     override fun visitExpression(ctx: mcfppParser.ExpressionContext): Var<*> = withCompilationContext(ctx) {
-        val l = Function.currFunction
-        val f = NoStackFunction(TempPool.getFunctionIdentify("expression"),Function.currFunction)
-        Function.currFunction = f
-        val result = if(ctx.primary() != null){
-            currSelector = null
-            val q = visitPrimary(ctx.primary()).let { if (it is PropertyVar) it.get() else it }
-            Function.currFunction = l
-            l.commands.addAll(f.commands)
-            q
-        }else{
-            currSelector = null
-            val q = visitCommonBinaryOperatorExpression(ctx.commonBinaryOperatorExpression())
-            Function.currFunction = l
-            l.commands.addAll(f.commands)
-            q
+        top.mcfpp.analysis.StructuredBindings.literal(ctx)?.let { return@withCompilationContext it }
+        val lambdaCall = ctx.lambdaCallExpression()
+        if (lambdaCall != null) return@withCompilationContext evaluateInTemporary { visitLambdaCall(lambdaCall) }
+        val result = evaluateInTemporary {
+            if(ctx.primary() != null){
+                currSelector = null
+                visitPrimary(ctx.primary()).let { if (it is PropertyVar) it.get() else it }
+            }else{
+                currSelector = null
+                visitCommonBinaryOperatorExpression(ctx.commonBinaryOperatorExpression())
+            }
         }
-        return if (result is StaticMemberView && result.declaration is MCFPPType) {
+        return@withCompilationContext if (result is StaticMemberView && result.declaration is MCFPPType) {
             val descriptor = result.declaration as MCFPPType
             top.mcfpp.analysis.StorageAccess.literal(top.mcfpp.type.MCFPPConcreteType.Type,
                 top.mcfpp.analysis.CompilerValue.TypeValue(descriptor.typeId), types = mapOf(descriptor.typeId to descriptor))
-        } else result
+        } else top.mcfpp.core.lang.entity.EntityDataAddress.selected(result)?.let(StorageAccess::read) ?: result
+    }
+
+    /** Real condition accessor: if/else-if/while no longer expose their condition as `expression()`. */
+    override fun visitConditionExpression(ctx: mcfppParser.ConditionExpressionContext): Var<*> = withCompilationContext(ctx) {
+        top.mcfpp.analysis.StructuredBindings.literal(ctx)?.let { return@withCompilationContext it }
+        val result = evaluateInTemporary {
+            currSelector = null
+            ctx.primary()?.let { primary ->
+                visitPrimary(primary).let { if (it is PropertyVar) it.get() else it }
+            } ?: visitCommonBinaryOperatorExpression(ctx.commonBinaryOperatorExpression())
+        }
+        top.mcfpp.core.lang.entity.EntityDataAddress.selected(result)?.let(StorageAccess::read) ?: result
+    }
+
+    private fun evaluateInTemporary(block: () -> Var<*>): Var<*> {
+        val caller = Function.currFunction
+        val temporary = NoStackFunction(TempPool.getFunctionIdentify("expression"), caller)
+        Function.currFunction = temporary
+        return try {
+            block()
+        } finally {
+            Function.currFunction = caller
+            caller.commands.addAll(temporary.commands)
+        }
+    }
+
+    private fun visitLambdaCall(ctx: mcfppParser.LambdaCallExpressionContext): Var<*> {
+        if (ctx.functionCall() != null && ctx.selector().isEmpty()) {
+            val binding = top.mcfpp.analysis.StructuredBindings.name(ctx.functionCall().namespaceID(), Function.currFunction)
+            if (binding is top.mcfpp.analysis.StructuredNameBinding.Macros)
+                return MacroCallPipeline.visitFunctionCall(ctx.functionCall(), Function.currFunction, ctx.inlineLambda(), binding.candidates)
+                    ?: UnknownVar("error_macro").apply { isError = true }
+            if (binding == null)
+                MacroCallPipeline.visitFunctionCall(ctx.functionCall(), Function.currFunction, ctx.inlineLambda())?.let { return it }
+        }
+        if (ctx.jvmAccessExpression() != null) {
+            currSelector = null
+            currSelector = visitJvmAccessExpression(ctx.jvmAccessExpression())
+            if (currSelector is PropertyVar) currSelector = (currSelector as PropertyVar).get()
+            val before = ctx.selector().filter { it.start.tokenIndex < ctx.inlineLambda().start.tokenIndex }
+            for (selector in before.dropLast(1)) visitSelector(selector)
+            val read = before.lastOrNull()?.let {
+                top.mcfpp.core.lang.entity.EntityReadCallbacks.selector(it, ctx.inlineLambda())
+            }
+            if (read != null) {
+                currSelector = top.mcfpp.core.lang.ref.ReferenceReadCallbacks.invoke(selectedReference(currSelector!!), read, processVarCache)
+                for (selector in ctx.selector().drop(before.size)) visitSelector(selector)
+                return currSelector!!
+            }
+            val context = before.lastOrNull()?.let {
+                top.mcfpp.core.lang.context.ContextCallbacks.selector(it, ctx.inlineLambda())
+            }
+            if (context != null) {
+                if (ctx.selector().size != before.size) {
+                    LogProcessor.error("Context '${context.name}' returns void; its callback result cannot be selected")
+                    return UnknownVar("context_result").apply { isError = true }
+                }
+                currSelector = top.mcfpp.core.lang.context.ContextCallbackLowering.invoke(currSelector!!, context, processVarCache)
+                return currSelector!!
+            }
+            val collection = before.lastOrNull()?.let {
+                top.mcfpp.analysis.lambda.LambdaCollections.selector(it, ctx.inlineLambda())
+            }
+            if (collection != null && top.mcfpp.analysis.lambda.LambdaCollections.supports(currSelector!!.type, collection.name)) {
+                currSelector = top.mcfpp.analysis.lambda.LambdaCollections.invoke(currSelector!!, collection, processVarCache)
+                for (selector in ctx.selector().drop(before.size)) visitSelector(selector)
+                return currSelector!!
+            }
+            LogProcessor.error("Trailing lambdas on this receiver have no collection target")
+            return UnknownVar("lambda_call_${ctx.start.tokenIndex}").apply { isError = true }
+        }
+        val call = ctx.functionCall()
+        val name = call?.namespaceID()?.text ?: ctx.varWithSuffix()?.takeIf { it.identifierSuffix().isEmpty() }?.Identifier()?.text
+        if (name == null || ctx.selector().isNotEmpty()) {
+            LogProcessor.error("Trailing callback calls on receivers require receiver binding")
+            return UnknownVar("lambda_call_${ctx.start.tokenIndex}")
+        }
+        return top.mcfpp.analysis.lambda.LambdaLowering.call(name, call?.arguments(), ctx.inlineLambda(), processVarCache,
+            call?.namespaceID() ?: ctx.varWithSuffix())
     }
 
     private var visitCommonBinaryOperatorExpressionRe : Var<*>? = null
@@ -360,7 +440,7 @@ class MCFPPExprVisitor(
 
     fun visitAssignableVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*> = withCompilationContext(ctx) {
         val previous = assignmentTarget
-        assignmentTarget = if (ctx.selector().isNotEmpty()) ctx.selector().last().`var`().varWithSuffix()
+        assignmentTarget = if (ctx.selector().isNotEmpty()) ctx.selector().last().`var`()?.varWithSuffix()
             else ctx.jvmAccessExpression().propertyOperator().primary().`var`()?.varWithSuffix()
         try {
             resolveVarWithSelector(ctx, true)
@@ -391,10 +471,17 @@ class MCFPPExprVisitor(
             if (type == null) return UnknownVar("unbound_type").apply { isError = true }
             currSelector = StaticMemberView(type)
         }
-        for (selector in ctx.selector()){
+        for ((index, selector) in ctx.selector().withIndex()){
+            val expected = expectedFunction?.takeIf { it.first == ctx.start.tokenIndex }?.second
+            val member = selector.`var`()?.varWithSuffix()?.takeIf { it.identifierSuffix().isEmpty() }
+            if (!preserveFinalProperty && index == ctx.selector().lastIndex && expected != null && member != null) {
+                val receiver = if (currSelector is PropertyVar) (currSelector as PropertyVar).get() else currSelector!!
+                if (top.mcfpp.analysis.lambda.LambdaMemberReference.hasMethod(receiver.type, member.Identifier().text))
+                    return top.mcfpp.analysis.lambda.LambdaMemberReference.create(receiver, member.Identifier().text, expected, selector)
+            }
             visitSelector(selector)
         }
-        if (!preserveFinalProperty && currSelector is PropertyVar) currSelector = (currSelector as PropertyVar).get()
+        if (!preserveFinalProperty && currSelector is PropertyVar) currSelector = selectedMember(currSelector!!)
         return currSelector!!
     }
 
@@ -417,10 +504,38 @@ class MCFPPExprVisitor(
     }
 
     override fun visitSelector(ctx: mcfppParser.SelectorContext): Var<*> = withCompilationContext(ctx) {
-        if (currSelector is PropertyVar) currSelector = (currSelector as PropertyVar).get()
+        val arguments = ctx.`var`()?.functionCall()?.arguments() ?: ctx.arguments()
+        arguments?.let(LegacyReferenceSyntax::argument)?.let {
+            LogProcessor.error(LegacyReferenceSyntax.MESSAGE)
+            return@withCompilationContext UnknownVar("legacy_reference").apply { isError = true }
+        }
+        if (currSelector is PropertyVar) currSelector = selectedMember(currSelector!!)
+        top.mcfpp.core.lang.entity.EntityReadCallbacks.selector(ctx)?.let { read ->
+            currSelector = top.mcfpp.core.lang.ref.ReferenceReadCallbacks.invoke(selectedReference(currSelector!!), read, processVarCache)
+            return@withCompilationContext currSelector!!
+        }
+        top.mcfpp.core.lang.context.ContextCallbacks.selector(ctx)?.let { context ->
+            currSelector = top.mcfpp.core.lang.context.ContextCallbackLowering.invoke(currSelector!!, context, processVarCache)
+            return@withCompilationContext currSelector!!
+        }
+        val collection = top.mcfpp.analysis.lambda.LambdaCollections.selector(ctx)
+        if (collection != null && top.mcfpp.analysis.lambda.LambdaCollections.supports(currSelector!!.type, collection.name)) {
+            currSelector = top.mcfpp.analysis.lambda.LambdaCollections.invoke(currSelector!!, collection, processVarCache)
+            return@withCompilationContext currSelector!!
+        }
+        val variable = ctx.`var`()
+        if (variable == null) {
+            val keyword = ctx.memberKeyword()?.text ?: ctx.text
+            if (keyword == "set") {
+                currSelector = invokeReferenceSet(currSelector!!, ctx)
+                return@withCompilationContext currSelector!!
+            }
+            LogProcessor.error("Member function '$keyword' requires a function-value call binding, which is not executable yet")
+            return@withCompilationContext UnknownVar("member_${ctx.start.tokenIndex}").apply { isError = true }
+        }
         //进入visitVar，currSelector作为成员选择的上下文
-        currSelector = try { visitVar(ctx.`var`()) } finally { superSelector = null }
-        return currSelector!!
+        currSelector = try { visitVar(variable) } finally { superSelector = null }
+        return@withCompilationContext currSelector!!
     }
 
     /**
@@ -430,6 +545,18 @@ class MCFPPExprVisitor(
      */
     @Override
     override fun visitPrimary(ctx: mcfppParser.PrimaryContext): Var<*> = withCompilationContext(ctx) {
+        if (ctx.inlineLambda() != null) {
+            return@withCompilationContext top.mcfpp.analysis.lambda.LambdaLowering.literal(ctx.inlineLambda(),
+                expectedFunction?.takeIf { it.first == ctx.start.tokenIndex }?.second)
+        }
+        val reference = ctx.`var`()?.varWithSuffix()
+        val expected = expectedFunction?.takeIf { it.first == ctx.start.tokenIndex }?.second
+        if (expected != null && ctx.value()?.nbtValue()?.nbtCompound()?.text == "{}")
+            return@withCompilationContext top.mcfpp.analysis.lambda.LambdaLowering.empty(expected)
+        if (expected != null && reference != null && reference.identifierSuffix().isEmpty() &&
+            (top.mcfpp.analysis.StructuredBindings.functions(reference, Function.currFunction)?.isNotEmpty() == true ||
+                !top.mcfpp.analysis.StructuredBindings.isBound(reference) && Function.currFunction.scope.getVar(reference.Identifier().text) == null))
+            return@withCompilationContext top.mcfpp.analysis.lambda.LambdaLowering.reference(reference.Identifier().text, expected, reference)
         if (ctx.`var`() != null) {
             //变量
             val qwq = visitVar(ctx.`var`())
@@ -460,7 +587,7 @@ class MCFPPExprVisitor(
                 return UnknownVar("range_" + UUID.randomUUID())
             }
         } else if (ctx.type() != null){
-            return MCFPPTypeVar(MCFPPType.parseExpressionType(ctx.type().text, Function.currFunction.scope, Function.currFunction)?: run {
+            return MCFPPTypeVar(MCFPPType.parseFromContext(ctx.type(), Function.currFunction.scope, Function.currFunction)?: run {
                 LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
                 MCFPPBaseType.Any
             })
@@ -517,11 +644,39 @@ class MCFPPExprVisitor(
     }
 
     override fun visitFunctionCall(ctx: mcfppParser.FunctionCallContext): Var<*> = withCompilationContext(ctx) {
+        val boundName = if (currSelector == null && superSelector == null)
+            top.mcfpp.analysis.StructuredBindings.name(ctx.namespaceID(), Function.currFunction) else null
+        if (boundName is top.mcfpp.analysis.StructuredNameBinding.Macros)
+            return@withCompilationContext MacroCallPipeline.visitFunctionCall(ctx, Function.currFunction,
+                frozenCandidates = boundName.candidates) ?: UnknownVar("error_macro").apply { isError = true }
+        val memberCandidates = if (superSelector == null) currSelector?.let {
+            top.mcfpp.analysis.StructuredBindings.memberFunctions(ctx.namespaceID(), it, Function.currFunction)
+        } else null
+        val boundCandidates = if (currSelector == null && superSelector == null)
+            top.mcfpp.analysis.StructuredBindings.functions(ctx.namespaceID(), Function.currFunction) else memberCandidates
+        if (currSelector == null && superSelector == null && boundCandidates != null && (ctx.arguments().normalArgs().callArgumentList() != null ||
+                boundCandidates.any { candidate -> candidate.normalParams.any { it.type is MCFPPFunctionType } } ||
+                boundName is top.mcfpp.analysis.StructuredNameBinding.Frame || boundName is top.mcfpp.analysis.StructuredNameBinding.Value))
+            return@withCompilationContext top.mcfpp.analysis.lambda.LambdaLowering.call(ctx.namespaceID().text,
+                ctx.arguments(), null, processVarCache, ctx.namespaceID())
+        LegacyReferenceSyntax.argument(ctx.arguments())?.let {
+            LogProcessor.error(LegacyReferenceSyntax.MESSAGE)
+            return@withCompilationContext UnknownVar("legacy_reference").apply { isError = true }
+        }
+        if (currSelector == null && superSelector == null && boundCandidates == null) {
+            val (namespace, identifier) = ctx.namespaceID().text.splitNamespaceID()
+            val callable = if (namespace == null) Function.currFunction.scope.getVar(identifier) as? FunctionValue else null
+            if (callable != null) return@withCompilationContext top.mcfpp.analysis.lambda.LambdaLowering.call(
+                ctx.namespaceID().text, ctx.arguments(), null, processVarCache)
+        }
         // Namespace macros must be intercepted before spills, comments or any argument is visited.
         // A member/static/super call can never select a namespace macro, so those keep the old path.
-        if (currSelector == null && superSelector == null) {
+        if (currSelector == null && superSelector == null && boundCandidates == null) {
             val macro = MacroCallPipeline.visitFunctionCall(ctx, Function.currFunction)
             if (macro != null) return@withCompilationContext macro
+            if (top.mcfpp.analysis.lambda.LambdaLowering.hasCallbackTarget(ctx.namespaceID().text))
+                return@withCompilationContext top.mcfpp.analysis.lambda.LambdaLowering.call(
+                    ctx.namespaceID().text, ctx.arguments(), null, processVarCache)
         }
         //是函数调用，将已经计算好的中间量存储到栈中
         val spills = top.mcfpp.analysis.StorageAccess.spill(processVarCache)
@@ -580,15 +735,23 @@ class MCFPPExprVisitor(
             StorageAccess.restore(spills)
             return currSelector!!
         } else if(currSelector == null){
-            GlobalScope.getFunction(p.first, p.second, readOnlyArgs, normalArgs)
+            if (boundCandidates != null) ParameterMatcher.select(boundCandidates, boundCandidates.firstOrNull()?.identifier ?: p.second,
+                readOnlyArgs, normalArgs) ?: UnknownFunction(p.second)
+            else GlobalScope.getFunction(p.first, p.second, readOnlyArgs, normalArgs)
         }else{
             if(p.first != null){
                 LogProcessor.warn("Invalid namespace usage ${p.first} in function call ")
             }
-            MCFPPFuncGetter.getFunction(currSelector!!,p.second, readOnlyArgs, normalArgs)
+            if (memberCandidates != null) ParameterMatcher.select(memberCandidates,
+                memberCandidates.firstOrNull()?.identifier ?: p.second, readOnlyArgs, normalArgs) ?: UnknownFunction(p.second)
+            else MCFPPFuncGetter.getFunction(currSelector!!,p.second, readOnlyArgs, normalArgs)
         }
         //Function invoke
         if (func !is UnknownFunction) {
+            top.mcfpp.mni.ReferenceData.sourceFactory(func, readOnlyArgs, normalArgs)?.let {
+                StorageAccess.restore(spills)
+                return it
+            }
             val returnVar = if(func is Generic<*>){
                 if(readOnlyArgs.any { it is UnknownVar } || normalArgs.any { it is UnknownVar }){
                     UnknownVar("re")
@@ -616,7 +779,8 @@ class MCFPPExprVisitor(
                 else top.mcfpp.analysis.StorageAccess.capture(returnVar)
         }
         //可能是模板的构造函数
-        val declaration = GlobalScope.getTemplate(p.first, p.second)
+        val declaration = ((boundName as? top.mcfpp.analysis.StructuredNameBinding.Type)?.type as? top.mcfpp.type.MCFPPDataTemplateType)?.template
+            ?: if (boundCandidates != null) null else GlobalScope.getTemplate(p.first, p.second)
         if(declaration != null) {
             fun failedTemplate(message: String? = null): UnknownVar {
                 if (message != null) LogProcessor.error(message)
@@ -671,7 +835,14 @@ class MCFPPExprVisitor(
         //变量
         //没有数组选取
         val qwq: String = ctx.Identifier().text
-        var re = if(currSelector == null) {
+        val bound = if (currSelector == null) top.mcfpp.analysis.StructuredBindings.name(ctx, Function.currFunction) else null
+        var re = if (bound is top.mcfpp.analysis.StructuredNameBinding.Type) {
+            StaticMemberView(bound.type)
+        } else if (bound != null) {
+            val value = top.mcfpp.analysis.StructuredBindings.variable(ctx, Function.currFunction)
+                ?: throw top.mcfpp.analysis.DeclarationBinding.Failure("Bound name '$qwq' is not a variable")
+            if (ctx === assignmentTarget) value else StorageAccess.read(value)
+        } else if(currSelector == null) {
             val member = Function.currFunction.scope.getVar(qwq, Function.currFunction)
             if (!member.second) {
                 LogProcessor.error("Cannot access member $qwq")
@@ -688,9 +859,7 @@ class MCFPPExprVisitor(
                 UnknownVar(qwq)
             }
         }else{
-            if(currSelector is PropertyVar){
-                currSelector = (currSelector as PropertyVar).get()
-            }
+            if(currSelector is PropertyVar) currSelector = selectedMember(currSelector!!)
             //获取成员
             val re = if (superSelector != null && currSelector is DataTemplateObject) {
                 try {
@@ -708,7 +877,8 @@ class MCFPPExprVisitor(
                 LogProcessor.error("Cannot access member $qwq")
                 UnknownVar(qwq)
             }else{
-                if (ctx === assignmentTarget) re.first!! else top.mcfpp.analysis.StorageAccess.read(re.first!!)
+                if (ctx === assignmentTarget) re.first!!
+                else top.mcfpp.core.lang.entity.EntityDataAddress.selected(re.first!!) ?: top.mcfpp.analysis.StorageAccess.read(re.first!!)
             }
         }
         if(re is UnknownVar && currSelector == null){
@@ -741,7 +911,7 @@ class MCFPPExprVisitor(
             }
             for (value in ctx.identifierSuffix()) {
                 if(re is PropertyVar){
-                    re = re.get()
+                    re = selectedMember(re)
                 }
                 if (re is MCAny && re !is MCObject) re = StorageAccess.actualView(re)
                 if(value.expression() != null){
@@ -764,6 +934,41 @@ class MCFPPExprVisitor(
         }
     }
 
+    private fun selectedMember(value: Var<*>): Var<*> =
+        top.mcfpp.core.lang.entity.EntityDataAddress.selected(value) ?: (value as? PropertyVar)?.get() ?: value
+
+    private fun selectedReference(value: Var<*>): Var<*> =
+        top.mcfpp.core.lang.entity.EntityDataAddress.selected(value)?.bareRead() ?: (value as? PropertyVar)?.get() ?: value
+
+    private fun invokeReferenceSet(receiver: Var<*>, selector: mcfppParser.SelectorContext): Var<*> {
+        fun failed(message: String): Var<*> {
+            LogProcessor.error(message)
+            return UnknownVar("reference_set").apply { isError = true }
+        }
+        val source = selectedReference(receiver)
+        val type = source.type as? MCFPPReferenceType ?: return failed("set requires ScoreRef or NBTRef<T>")
+        val arguments = selector.arguments() ?: return failed("set expects one value argument")
+        if (arguments.readOnlyArgs() != null) return failed("set does not accept readonly arguments")
+        val normal = arguments.normalArgs()
+        val mixed = normal.callArgumentList()?.callArgument()
+        if (mixed?.any { it.REF() != null } == true) return failed(LegacyReferenceSyntax.MESSAGE)
+        val expressions = normal.expressionList()?.expression().orEmpty()
+        if (mixed != null && mixed.size != 1 || mixed == null && expressions.size != 1)
+            return failed("set expects one value argument")
+        val owned = StorageAccess.capture(source)
+        if (owned.isError) return owned
+        val pending = processVarCache.size
+        processVarCache.add(owned)
+        try {
+            val visitor = MCFPPExprVisitor(processVarCache = processVarCache)
+            val argument = mixed?.single()
+            val value = if (argument?.inlineLambda() != null)
+                top.mcfpp.analysis.lambda.LambdaLowering.literal(argument.inlineLambda(), type.valueType as? MCFPPFunctionType)
+            else visitor.visitExpression(argument?.expression() ?: expressions.single(), type.valueType)
+            return top.mcfpp.core.lang.ref.ReferenceAccess.set(owned, value)
+        } finally { processVarCache.removeAt(pending) }
+    }
+
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE", "UNUSED_VALUE")
     private fun closedLiteral(bound: top.mcfpp.analysis.DeclarationBinding.Bound): Var<*> {
         val value = bound.constant ?: run {
@@ -774,6 +979,7 @@ class MCFPPExprVisitor(
     }
 
     override fun visitValue(ctx: mcfppParser.ValueContext): Var<*> = withCompilationContext(ctx) {
+        top.mcfpp.analysis.StructuredBindings.literal(ctx)?.let { return@withCompilationContext it }
         if (ctx.LineString() != null || ctx.coordinate() != null || ctx.NULL() != null) {
             return closedLiteral(top.mcfpp.analysis.DeclarationBinding(Function.currFunction, emptyMap()).value(ctx))
         }
@@ -838,6 +1044,7 @@ class MCFPPExprVisitor(
     }
 
     override fun visitNbtValue(ctx: mcfppParser.NbtValueContext): Var<*> = withCompilationContext(ctx) {
+        top.mcfpp.analysis.StructuredBindings.literal(ctx)?.let { return@withCompilationContext it }
         if (ctx.nbtCompound() == null && ctx.nbtList() == null) {
             return closedLiteral(top.mcfpp.analysis.DeclarationBinding(Function.currFunction, emptyMap()).nbtLiteral(ctx))
         }

@@ -2,33 +2,55 @@ package top.mcfpp.test
 
 import com.esotericsoftware.kryo.io.Output
 import top.mcfpp.Project
-import top.mcfpp.io.LibBinFormat
 import top.mcfpp.io.LibBinReader
+import top.mcfpp.library.format.LibraryBinaryWriter
+import top.mcfpp.library.format.LibraryFormatCode
+import top.mcfpp.library.format.LibraryFormatException
+import top.mcfpp.library.format.LibraryWire
 import java.io.ByteArrayInputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 class LibCacheFormatTest {
     @Test fun oldAndUnknownCacheFormatsProduceARecompileDiagnostic() {
-        for ((magic, version) in listOf(0 to 0, LibBinFormat.MAGIC to (LibBinFormat.VERSION - 1), LibBinFormat.MAGIC to (LibBinFormat.VERSION + 1))) {
-            val buffer = Output(64)
-            buffer.writeInt(magic)
-            buffer.writeInt(version)
-            val errors = Project.errorCount
-            LibBinReader.readFromStream(ByteArrayInputStream(buffer.toBytes()))
-            assertEquals(errors + 1, Project.errorCount)
+        Project.libraryImportSession?.close()
+        Project.libraryImportSession = null
+        val development = LibraryBinaryWriter().apply {
+            rawBytes(byteArrayOf(0x4d, 0x43, 0x46, 0x4c))
+            u32(87)
+        }.toByteArray()
+        fun publishedHeader(version: Long) = LibraryBinaryWriter().apply {
+            rawBytes(byteArrayOf(0x4d, 0x43, 0x46, 0x50, 0x4c, 0x49, 0x42, 0))
+            u32(version)
+        }.toByteArray()
+        for ((bytes, code, offset) in listOf(
+            Triple(ByteArray(8), LibraryFormatCode.UNSUPPORTED, 0L),
+            Triple(development, LibraryFormatCode.DEVELOPMENT_CACHE, 0L),
+            Triple(publishedHeader(0), LibraryFormatCode.UNSUPPORTED, 8L),
+            Triple(publishedHeader(LibraryWire.CURRENT_VERSION + 1), LibraryFormatCode.NEWER, 8L),
+        )) {
+            val failure = assertFailsWith<LibraryFormatException> {
+                LibBinReader.readFromStream(ByteArrayInputStream(bytes))
+            }
+            assertEquals(code, failure.code)
+            assertEquals(offset, failure.byteOffset)
+            if (code == LibraryFormatCode.DEVELOPMENT_CACHE) assertTrue(failure.detail.contains("re-export"))
         }
         for (bytes in listOf(byteArrayOf(), byteArrayOf(1, 2))) {
-            val errors = Project.errorCount
-            LibBinReader.readFromStream(ByteArrayInputStream(bytes))
-            assertEquals(errors + 1, Project.errorCount)
+            val failure = assertFailsWith<LibraryFormatException> {
+                LibBinReader.readFromStream(ByteArrayInputStream(bytes))
+            }
+            assertEquals(LibraryFormatCode.CORRUPT, failure.code)
         }
     }
     @Test fun immutableTypeIdentitiesRoundTripThroughLibrarySerialization() {
         val identities = listOf(
             top.mcfpp.type.MCFPPUnionType(top.mcfpp.type.MCFPPBaseType.Int, top.mcfpp.type.MCFPPBaseType.Float).typeId,
             top.mcfpp.type.MCFPPListType(top.mcfpp.type.MCFPPBaseType.Int).typeId,
-            top.mcfpp.type.TypeId.Selector(1, listOf("minecraft:pig"), false),
+            top.mcfpp.type.MCFPPEntityType.NormalSelector.typeId,
             top.mcfpp.type.TypeId.Specialized(top.mcfpp.type.TypeId.Declaration("template", "test", "Box"),
                 listOf(top.mcfpp.analysis.CompilerValue.Record(mapOf("value" to top.mcfpp.analysis.CompilerValue.Sequence(listOf(
                     top.mcfpp.analysis.CompilerValue.Integral(1), top.mcfpp.analysis.CompilerValue.NullValue,
@@ -127,7 +149,8 @@ class LibCacheFormatTest {
             val fresh=check()
             kotlin.test.assertNotSame(source.first,fresh.first)
             kotlin.test.assertNotSame(source.second.enum,fresh.second.enum)
-            assertEquals(source.first.getType().typeId,fresh.first.getType().typeId)
+            assertNotEquals(source.first.getType().typeId,fresh.first.getType().typeId,
+                "Fresh imported declarations own distinct session identities; recursive children still resolve to their own canonical Node")
         } finally {
             Project.config=savedConfig
             java.nio.file.Files.walk(output).use { paths -> paths.sorted(java.util.Comparator.reverseOrder()).forEach(java.nio.file.Files::deleteIfExists) }

@@ -101,7 +101,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         }
 
     /**
-     * 是否是静态的成员
+     * 是否是对象的成员
      */
     final override var isStatic = false
 

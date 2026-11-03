@@ -1,0 +1,12 @@
+func plus(a: int, b: int): int { return a + b; }
+
+func main() {
+    var add: (int, int) -> int = { a, b -> a + b };
+    var first = add(2, 3);
+    var second = add(4, 5);
+    var reference: (int, int) -> int = plus;
+    var referenced = reference(3, 4);
+    /data modify storage lambda:results first set from storage mcfpp:system stack_frame[0].first
+    /data modify storage lambda:results second set from storage mcfpp:system stack_frame[0].second
+    /data modify storage lambda:results referenced set from storage mcfpp:system stack_frame[0].referenced
+}

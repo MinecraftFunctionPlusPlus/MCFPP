@@ -1,5 +1,5 @@
-@From<"top.mcfpp.mni.resource.LootTablePredicateData">
+@From("top.mcfpp.mni.resource.LootTablePredicateData")
 data Predicate: ResourceID
 
-@From<"top.mcfpp.mni.resource.LootTablePredicateObjectData">
+@From("top.mcfpp.mni.resource.LootTablePredicateObjectData")
 object data Predicate: ResourceID

@@ -1,0 +1,25 @@
+{
+	"replace": false,
+	"values": [
+		"minecraft:cave_spider",
+		"minecraft:axolotl",
+		"#entitycls:cbox/cls13",
+		"minecraft:guardian",
+		"minecraft:dolphin",
+		"minecraft:strider",
+		"minecraft:trader_llama",
+		"minecraft:warden",
+		"minecraft:wither",
+		"#entitycls:cbox/cls14",
+		"#entitycls:cbox/cls15",
+		"#entitycls:cbox/cls16",
+		"minecraft:spider",
+		"minecraft:iron_golem",
+		"minecraft:ravager",
+		"minecraft:elder_guardian",
+		"minecraft:end_crystal",
+		"minecraft:giant",
+		"minecraft:ghast",
+		"minecraft:ender_dragon"
+	]
+}

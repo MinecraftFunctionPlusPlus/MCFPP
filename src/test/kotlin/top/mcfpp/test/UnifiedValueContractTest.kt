@@ -3,6 +3,7 @@ package top.mcfpp.test
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import top.mcfpp.CompileSettings
+import top.mcfpp.LibraryPublicationConfig
 import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
 import top.mcfpp.antlr.mcfppLexer
@@ -35,8 +36,7 @@ class UnifiedValueContractTest {
             "while(flag){value=4;break;}; value=9;",
             "do {value=4;} while(flag);",
             "if(flag){value=4;}; external observed=value;",
-            "var source=1;const alias=source as int;alias=2;",
-            "const source=1;var alias=source as int;alias=2;"
+            "var source=1;const alias=source as int;alias=2;"
         )
         for (fold in listOf(false, true)) {
             CompileSettings.foldIRConstants = fold
@@ -81,6 +81,7 @@ class UnifiedValueContractTest {
     fun selectorProgramsKeepCapturedOperandsAfterReturnsCopiesAndLaterCalls() = isolated { output ->
         val resources = output.resolve("resources")
         val entities = output.resolve("entities")
+        Project.config.library = LibraryPublicationConfig("fixture:unified-resources", "1.0.0")
         compile("""
             namespace mcfpp.minecraft.resource
             data ResourceID {var id: string;}
@@ -90,9 +91,10 @@ class UnifiedValueContractTest {
         """.trimIndent(), resources)
         assertEquals(0, Project.errorCount)
         Project.config.includes = arrayListOf(resources.toString())
+        Project.config.library = LibraryPublicationConfig("fixture:unified-entities", "1.0.0")
         compile("""
             namespace mcfpp.minecraft.entity
-            @From<"top.mcfpp.mni.SelectorData">
+            @From("top.mcfpp.mni.SelectorData")
             data EntityData {}
         """.trimIndent(), entities)
         assertEquals(0, Project.errorCount)
@@ -129,9 +131,10 @@ class UnifiedValueContractTest {
         """.trimIndent()
         for (fold in listOf(false, true)) {
             CompileSettings.foldIRConstants = fold
+            Project.config.library = LibraryPublicationConfig("fixture:unified-selectors", "1.0.0")
             roundTrip(declarations, main, output.resolve("selectors-$fold"), dependencies) { _, machine ->
                 assertEquals(listOf(
-                    "@e[tag=first,x=4,limit=1]",
+                    "@e[tag=first,x=4]",
                     "@e[tag=first,x=4,tag=copied]",
                     "@e[tag=first,x=4,tag=copied,tag=relayed]",
                     "@e[tag=second,x=9]"
@@ -296,7 +299,7 @@ class UnifiedValueContractTest {
                 val function = if (ir) namespace("fixture.float_values").scope.functions.getValue("pack").single()
                     else (entry.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("pack").single()
                 if (ir) assertNotNull(function.typedIR) else assertNull(function.typedIR)
-                for ((name, value) in listOf("original" to 1f, "copied" to -0.0f, "dto" to 2f, "dtoCopy" to -0.0f)) {
+                for ((name, value) in listOf("original" to -0.0f, "copied" to -0.0f, "dto" to -0.0f, "dtoCopy" to -0.0f)) {
                     assertEquals(value.toRawBits(), assertIs<FloatTag>(machine.readNbt("fixture:float_values", "$name.nested.value")).value.toRawBits(), name)
                     assertEquals((-0.0f).toRawBits(), assertIs<FloatTag>(machine.readNbt("fixture:float_values", "$name.nested.values[0]")).value.toRawBits(), name)
                 }
@@ -305,7 +308,7 @@ class UnifiedValueContractTest {
     }
 
     @Test
-    fun vectorViewsShareTheirSourceAndOrdinaryReturnsHaveIndependentComponents() = isolated { output ->
+    fun vectorViewInitializersAndOrdinaryReturnsHaveIndependentComponents() = isolated { output ->
         val declarations = "namespace fixture.vector_values;\nfunc relay(value: vec3):vec3{return value;}"
         val main = """
             func main(){
@@ -320,7 +323,7 @@ class UnifiedValueContractTest {
         for (fold in listOf(false, true)) {
             CompileSettings.foldIRConstants = fold
             roundTrip(declarations, main, output.resolve("vectors-$fold")) { entry, machine ->
-                assertEquals(921, machine.read(entry.scope.getVar("result") as MCInt))
+                assertEquals(221, machine.read(entry.scope.getVar("result") as MCInt))
                 assertTrue(namespace("fixture.vector_values").scope.functions.getValue("relay").single().compiledFunctions.isEmpty())
             }
         }

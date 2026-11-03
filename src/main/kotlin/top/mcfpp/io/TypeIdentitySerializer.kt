@@ -8,6 +8,10 @@ import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.type.TypeId
 import java.util.Collections
 
+internal class LegacyEntityMetadataException : IllegalArgumentException(
+    "Legacy entity subtype metadata is no longer supported. Use ordinary entity declarations and target value constraints, then recompile the library sources."
+)
+
 /** Explicit metadata encoding avoids reflecting immutable payloads and JVM collection internals. */
 class TypeIdentitySerializer : Serializer<TypeId>() {
     override fun write(kryo: Kryo, output: Output, value: TypeId) = writeId(output, value)
@@ -27,13 +31,7 @@ class TypeIdentitySerializer : Serializer<TypeId>() {
                 output.writeByte(3); output.writeInt(value.alternatives.size)
                 value.alternatives.sortedBy { it.toString() }.forEach { writeId(output, it) }
             }
-            is TypeId.Selector -> {
-                output.writeByte(4); output.writeBoolean(value.limit != null)
-                value.limit?.let(output::writeInt)
-                output.writeBoolean(value.entities != null)
-                value.entities?.let { entities -> output.writeInt(entities.size); entities.forEach(output::writeString) }
-                output.writeBoolean(value.isName)
-            }
+            is TypeId.Selector -> throw LegacyEntityMetadataException()
             is TypeId.Opaque -> { output.writeByte(5); output.writeLong(value.declaration) }
             is TypeId.Specialized -> {
                 output.writeByte(6); writeId(output, value.constructor)
@@ -47,11 +45,7 @@ class TypeIdentitySerializer : Serializer<TypeId>() {
         1 -> TypeId.Declaration(input.readString(), input.readString(), input.readString())
         2 -> TypeId.Applied(readId(input), List(input.readInt()) { readId(input) })
         3 -> TypeId.Union(List(input.readInt()) { readId(input) }.toSet())
-        4 -> {
-            val limit = if (input.readBoolean()) input.readInt() else null
-            val entities = if (input.readBoolean()) List(input.readInt()) { input.readString() } else null
-            TypeId.Selector(limit, entities, input.readBoolean())
-        }
+        4 -> throw LegacyEntityMetadataException()
         5 -> input.readLong().let { TypeId.reserve(it); TypeId.Opaque(it) }
         6 -> TypeId.Specialized(readId(input), List(input.readInt()) { readValue(input) })
         else -> error("Unknown type identity encoding: $kind")

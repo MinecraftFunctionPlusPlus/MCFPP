@@ -2,6 +2,7 @@ package top.mcfpp.analysis
 
 import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.Token
+import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser as Parser
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.Var
@@ -36,6 +37,8 @@ import top.mcfpp.util.NBTUtil.toNBTLong
 import top.mcfpp.util.NBTUtil.toNBTFloat
 import top.mcfpp.util.NBTUtil.toNBTShort
 import top.mcfpp.util.NBTUtil.toNBTDouble
+import top.mcfpp.optimization.references
+import top.mcfpp.optimization.resultReferences
 
 /** Internal migration boundary for scalar, erased and collection IR, without mutable Var-based analysis. */
 object PrimitiveCompiler {
@@ -97,13 +100,17 @@ object PrimitiveCompiler {
     private fun prepare(context: Parser.CurlBlockContext?, root: Function, fields: InitializerFields? = null): Pair<List<Prepared>, Map<SymbolId, TypedIR>>? {
         val prepared = linkedMapOf<SymbolId, Prepared>()
         val unsupported = hashSetOf<SymbolId>()
+        val bodies = java.util.IdentityHashMap<Function, Parser.CurlBlockContext?>()
         fun rootFields(function: Function) = fields?.takeIf { function === root }
         fun lowerBody(function: Function, lowering: Lowering): List<String> = if (rootFields(function) != null)
-            lowering.initializers() else lower(if (function === root) context!! else function.ast!!, lowering)
-        fun discover(function: Function, body: Parser.CurlBlockContext?) {
+            lowering.initializers() else lower(requireNotNull(bodies[function]), lowering)
+        fun discover(function: Function) {
             val initializerRoot = rootFields(function) != null
             if (function.declarationId in prepared || function.declarationId in unsupported ||
-                !initializerRoot && (body == null || function.bodyCompiled)) return
+                !initializerRoot && function.bodyCompiled) return
+            val body = if (initializerRoot) null else if (function === root) context else function.bodyContext()
+            if (!initializerRoot && body == null) return
+            bodies[function] = body
             if (!initializerRoot && (!supportedSignature(function) || function.scope.vars.keys.any { name -> function.normalParams.none { it.identifier == name } })) {
                 unsupported.add(function.declarationId); return
             }
@@ -114,9 +121,9 @@ object PrimitiveCompiler {
                 lowerBody(function, draft)
             } catch (_: Unsupported) { unsupported.add(function.declarationId); return }
             prepared[function.declarationId] = Prepared(function, declarations, draft, diagnostics)
-            draft.calls.values.forEach { discover(it, it.ast) }
+            draft.calls.values.forEach(::discover)
         }
-        discover(root, context)
+        discover(root)
         if (root.declarationId !in prepared) return null
         var graph: Map<SymbolId, TypedIR>
         while (true) {
@@ -144,7 +151,7 @@ object PrimitiveCompiler {
                 prepared[id] = Prepared(entry.function, entry.declarations, bound, diagnostics)
             }
             if (root.declarationId !in prepared) return null
-            prepared.values.toList().flatMap { it.lowering.calls.values }.forEach { discover(it, it.ast) }
+            prepared.values.toList().flatMap { it.lowering.calls.values }.forEach(::discover)
             if (before == prepared.mapValues { it.value.lowering.finish() }) break
         }
         graph = functions().mapNotNull { f -> f.typedIR?.let { f.declarationId to it } }.toMap() + prepared.mapValues { it.value.lowering.finish() }
@@ -175,6 +182,7 @@ object PrimitiveCompiler {
             entry.function.typedIR = graph.getValue(entry.function.declarationId)
             entry.function.runtimeEffect = effects.getValue(entry.function.declarationId)
         }
+        top.mcfpp.optimization.OptimizationPipeline.conventions(graph, prepared.map { it.function })
         // Publish the backend's parameter locations for the whole graph before recursive
         // calls consume them. This establishes layout, not an initialized value.
         for (entry in prepared) for (parameter in entry.function.normalParams) {
@@ -184,9 +192,17 @@ object PrimitiveCompiler {
             adapter.symbol = symbol
             val binding = StorageAccess.ensure(adapter)
             val layout = StorageLayout.Scoreboard(
-                entry.function.prefix + symbol.name,
+                top.mcfpp.optimization.OptimizationPipeline.scoreName(entry.function, symbol.name, symbol.id),
                 if (symbol.declaredType == int) "mcfpp_default" else "mcfpp_boolean")
-            if (binding.place == binding.data.root) binding.data.layout = layout
+            when (adapter) {
+                is MCInt -> adapter.name = layout.player
+                is ScoreBool -> adapter.name = layout.player
+            }
+            if (binding.place == binding.data.root) {
+                binding.data.layout = layout
+                binding.data.refreshWriter(StorageAccess.scoreWriter(binding.path, layout.player, layout.objective,
+                    if (symbol.declaredType == bool) "byte" else "int"))
+            }
             else binding.data.registerLayout(binding.place, layout)
         }
         for (entry in prepared) entry.function.runInFunction {
@@ -265,8 +281,29 @@ object PrimitiveCompiler {
         diagnostics.distinct().forEach(top.mcfpp.util.LogProcessor::error)
         conversionDiagnostics.values.forEach(top.mcfpp.util.LogProcessor::error)
         val returns = ir.blocks.filter { it.id in facts.entries && it.terminator is Terminator.Return }
-        val backend = Backend(function, lowering, ir, facts, typeFacts)
-        if (diagnostics.isEmpty() && conversionDiagnostics.isEmpty() && permissionsValid) backend.generate()
+        val valid = diagnostics.isEmpty() && conversionDiagnostics.isEmpty() && permissionsValid
+        function.backendValid = valid
+        if (!valid) {
+            function.optimizedScalar = false
+            function.optimizedRegisters = false
+            function.optimizedStaticFrame = null
+        }
+        val optimized = if (valid) top.mcfpp.optimization.OptimizationPipeline.optimize(function, ir, graph,
+            lowering.initialFacts, lowering.exportedSymbols.map { it.id }.toSet()) else ir
+        val foldGeneration = top.mcfpp.CompileSettings.foldIRConstants && Project.config.optimization.enabled(top.mcfpp.optimization.PassIds.CONSTANTS)
+        val generationFacts = if (optimized == ir && foldGeneration) facts else FlowAnalysis.analyze(optimized, initial = lowering.initialFacts,
+            evaluator = if (foldGeneration) PrimitiveEvaluation::binary else { _: String, _: CompilerValue, _: CompilerValue -> null },
+            canFoldBranch = { foldGeneration && (it !is ValueRef.Result || it.instruction !in optimized.runtimeValues) },
+            callSummary = { call, args -> ReturnTypeAnalysis.summarize(call, graph, args) },
+            declarations = optimized.declarations, boundTypes = optimized.boundTypes, foldIntrinsics = foldGeneration)
+        val generationTypes = if (optimized == ir) typeFacts else FlowAnalysis.analyze(optimized, initial = lowering.initialFacts,
+            evaluator = PrimitiveEvaluation::binary,
+            canFoldBranch = { it !is ValueRef.Result || it.instruction !in optimized.runtimeValues },
+            callSummary = { call, args -> ReturnTypeAnalysis.summarize(call, graph, args) },
+            declarations = optimized.declarations, boundTypes = optimized.boundTypes)
+        val backend = Backend(function, lowering, optimized, generationFacts, generationTypes, graph)
+        backend.prepareLayout()
+        if (valid) function.pendingBackend = { function.runInFunction { backend.generate() } }
         lowering.warnings.forEach(top.mcfpp.util.LogProcessor::warn)
         function.hasReturnStatement = function.returnType !== MCFPPPrivateType.Void ||
             returns.any { (it.terminator as Terminator.Return).value == null }
@@ -325,13 +362,16 @@ object PrimitiveCompiler {
                 }
             }
             adapter.symbol = symbol
+            when (adapter) {
+                is MCInt -> adapter.name = top.mcfpp.optimization.OptimizationPipeline.scoreName(function, symbol.name, symbol.id)
+                is ScoreBool -> adapter.name = top.mcfpp.optimization.OptimizationPipeline.scoreName(function, symbol.name, symbol.id)
+            }
             adapter.isConst = !symbol.mutable
             val binding = StorageBinding(data(place), place, backend.address(lowering.location(symbol)))
-            adapter.storageBinding = if (place.root == symbol.id) binding else binding.copy(view = ValueRef.TypedView(
-                symbol.declaredType, ValueRef.Read(lowering.symbols.values.first { it.id == place.root }.declaredType, place),
-                place, binding.location))
+            adapter.storageBinding = binding
             adapter.nbtPath = if (nbt(symbol.declaredType)) backend.address(lowering.location(symbol)) else NBTPath.getNormalStackPath(adapter)
             function.scope.putVar(symbol.name, adapter, true)
+            lowering.declarationSites[symbol.id]?.let { StructuredBindings.publish(it, function, adapter) }
         }
     }
 
@@ -352,8 +392,7 @@ object PrimitiveCompiler {
                            private val initializerFields: InitializerFields? = null) {
         val symbols = linkedMapOf<String, Symbol>()
         val types = PrimitiveCompiler.types.toMutableMap()
-        private val aliases = mutableMapOf<SymbolId, Location>()
-        fun location(symbol: Symbol) = aliases[symbol.id] ?: Location(Place(symbol.id))
+        fun location(symbol: Symbol) = Location(Place(symbol.id))
         fun place(symbol: Symbol) = location(symbol).place
         private fun register(type: MCFPPType): MCFPPType {
             if (!supportedType(type) && type !== MCFPPPrivateType.Wildcard) unsupported()
@@ -376,6 +415,7 @@ object PrimitiveCompiler {
             else -> unsupported()
         })
         private fun type(context: Parser.TypeContext): MCFPPType {
+            StructuredBindings.type(context, function)?.let { return register(it) }
             val syntax = context.typeBody()
             val element = syntax.type()?.let(::type) ?: MCFPPPrivateType.Wildcard
             val result = when {
@@ -396,6 +436,8 @@ object PrimitiveCompiler {
         private var current = blocks.first()
         private val instructions get() = current.instructions
         private val visible = linkedMapOf<String, Symbol>()
+        private val semanticLocals = mutableMapOf<top.mcfpp.library.syntax.DeclarationId, Symbol>()
+        val declarationSites = mutableMapOf<SymbolId, Parser.FieldDeclarationContext>()
         private var declaredHere = linkedSetOf<String>()
         private val localNames = hashSetOf<String>()
         val exportedSymbols = mutableListOf<Symbol>()
@@ -482,6 +524,7 @@ object PrimitiveCompiler {
             val property = node.jvmAccessExpression().propertyOperator()
             if (property.propertyOperatorExpression().isNotEmpty() || property.primary().THIS() == null) return null
             val selected = node.selector().singleOrNull()?.`var`()?.varWithSuffix() ?: unsupported()
+
             val name = selected.Identifier().text
             val symbol = fields[name] ?: if (name in initializerFields.expressions)
                 invalid("Cannot infer field '$name' before its initializer is evaluated (forward or self reference)") else unsupported()
@@ -515,11 +558,15 @@ object PrimitiveCompiler {
         }
         private fun condition(context: Parser.ExpressionContext): ValueRef =
             boundValue(expression(context)).also { if (it.type != bool && !(exploratory && it.type == any)) invalid("Condition must be bool") }
+        private fun condition(context: Parser.ConditionExpressionContext): ValueRef =
+            boundValue(context.primary()?.let(::expression) ?: expression(context.commonBinaryOperatorExpression()))
+                .also { if (it.type != bool && !(exploratory && it.type == any)) invalid("Condition must be bool") }
         private fun conditional(context: Parser.IfStatementContext) {
             val merge = newBlock()
             val before = LinkedHashMap(knowledge)
             val branches = mutableListOf<Map<SymbolId, TypeKnowledge>>()
-            val choices = listOf(context.expression() to context.block()) + context.elseIfStatement().map { it.expression() to it.block() }
+            val choices = listOf(context.conditionExpression() to context.block()) +
+                context.elseIfStatement().map { it.conditionExpression() to it.block() }
             for ((predicate, body) in choices) {
                 knowledge = LinkedHashMap(before)
                 val value = condition(predicate)
@@ -545,7 +592,7 @@ object PrimitiveCompiler {
             val exit = newBlock()
             jump(header)
             current = header
-            terminate(Terminator.Branch(condition(context.expression()), body.id, exit.id))
+            terminate(Terminator.Branch(condition(context.conditionExpression()), body.id, exit.id))
             current = body
             loops.addLast(header.id to exit.id)
             try { scoped(context.block()) } finally { loops.removeLast() }
@@ -605,6 +652,7 @@ object PrimitiveCompiler {
             val index = local("index", context.start.tokenIndex)
             val limit = local("end", context.COLON().symbol.tokenIndex)
             val item = local("value", context.Identifier().symbol.tokenIndex)
+            top.mcfpp.model.function.StructuredBodyContexts.declaration(context)?.let { semanticLocals[it] = item }
             write(index, first)
             write(limit, last)
             val header = newBlock()
@@ -632,9 +680,29 @@ object PrimitiveCompiler {
         private fun unsupported(): Nothing = throw Unsupported()
         private fun invalid(message: String): Nothing = throw Invalid(message)
 
-        private fun lookup(name: String): Symbol = visible[name] ?: run {
+        private fun lookup(name: String, site: Parser.VarWithSuffixContext? = null): Symbol {
+            if (site != null && StructuredBindings.isBound(site)) {
+                val use = top.mcfpp.model.function.StructuredBodyContexts.origin(site)?.nameUse
+                if (use is top.mcfpp.library.syntax.NameUse.Local) semanticLocals[use.target]?.let { return it }
+                when (val binding = StructuredBindings.name(site, function)) {
+                    is StructuredNameBinding.Frame -> {
+                        // Parameters are established before lowering; locals carry their D directly above.
+                        function.normalParams.firstOrNull { it.identifier == binding.identifier }?.let { parameter ->
+                            exportedSymbols.firstOrNull { it.name == parameter.identifier }?.let { return it }
+                        }
+                    }
+                    is StructuredNameBinding.Value -> {
+                        val value = StructuredBindings.variable(site, function) ?: unsupported()
+                        symbols.values.firstOrNull { it.id == value.symbol?.id }?.let { return it }
+                    }
+                    else -> Unit
+                }
+                unsupported()
+            }
+            return visible[name] ?: run {
             if (name in localNames && function.scope.getType(name) == null) invalid("Symbol is outside its scope: $name")
             unsupported()
+            }
         }
 
         private fun declare(context: Parser.FieldDeclarationContext, type: TypeId): Symbol {
@@ -646,6 +714,8 @@ object PrimitiveCompiler {
             val symbol = Symbol(declarationIds.getOrPut(context.start.tokenIndex, SymbolId::fresh), name,
                 type, modifier != "const", forceRuntime = context.fieldModifier()?.EXTERNAL() != null)
             symbols[storedName] = symbol
+            declarationSites[symbol.id] = context
+            top.mcfpp.model.function.StructuredBodyContexts.declaration(context)?.let { semanticLocals[it] = symbol }
             visible[name] = symbol
             instructions += Instruction.Declare(symbol)
             if (depth == 0) exportedSymbols.add(symbol)
@@ -713,8 +783,7 @@ object PrimitiveCompiler {
                 val assigned = promote(boundValue(value), type)
                 if (assigned.type != type && type !in erased && !(exploratory && assigned.type == any)) invalid("Cannot assign ${assigned.type} to $type")
                 val symbol = declare(declaration, type)
-                if (view) aliases[symbol.id] = locations.getValue((value as ValueRef.Result).instruction)
-                else write(symbol, assigned)
+                write(symbol, assigned)
                 return
             }
             val assignment = context.statementExpression()
@@ -722,7 +791,7 @@ object PrimitiveCompiler {
                 val target = assignment.varWithSelector()
                 if (target == null) { expression(assignment.expression()); return }
                 val suffix = target.jvmAccessExpression().propertyOperator().primary().`var`()?.varWithSuffix() ?: unsupported()
-                val symbol = lookup(suffix.Identifier().text)
+                val symbol = lookup(suffix.Identifier().text, suffix)
                 if (target.selector().isNotEmpty()) unsupported()
                 val operation = assignment.assignmentOperator().text
                 val indexedDestination = if (suffix.identifierSuffix().isEmpty()) null else indexed(suffix, writing = true, readFinal = operation != "=")
@@ -776,7 +845,7 @@ object PrimitiveCompiler {
             return ValueRef.Result(type, result)
         }
         private fun indexed(node: Parser.VarWithSuffixContext, writing: Boolean = false, readFinal: Boolean = true, initialValue: ValueRef? = null): ValueRef {
-            var value = initialValue ?: read(lookup(node.Identifier().text), node)
+            var value = initialValue ?: read(lookup(node.Identifier().text, node), node)
             val declaration = (value as? ValueRef.Result)?.let { accessDeclarations[it.instruction] }
             for ((index, suffix) in node.identifierSuffix().withIndex()) {
                 val key = boundValue(expression(suffix.expression() ?: unsupported()))
@@ -970,7 +1039,8 @@ object PrimitiveCompiler {
             // This compiler is exploratory: it may not complete declarations, run a macro host or
             // publish a transaction. Recognize the macro from pure metadata and fall back to the
             // legacy body compiler before any argument expression is visited.
-            if (MacroCallPipeline.isPotentialMacro(context, function)) unsupported()
+            val boundCandidates = StructuredBindings.functions(context.namespaceID(), function)
+            if (boundCandidates == null && MacroCallPipeline.isPotentialMacro(context, function)) unsupported()
             if (context.arguments().readOnlyArgs() != null) unsupported()
             val args = context.arguments().normalArgs().expressionList()?.expression().orEmpty().map { boundValue(expression(it)) }.toMutableList()
             val name = context.namespaceID().text.splitNamespaceID()
@@ -982,14 +1052,17 @@ object PrimitiveCompiler {
             val file = function.scope.parent.filterIsInstance<FileScope>().firstOrNull() ?: initializerFields?.file
             var provisional = false
             var provisionalType: TypeId? = null
-            val target = when (val selected = GlobalScope.getFunctionByTypes(name.first, name.second, args.map(::argumentType), file)) {
+            val selected = if (boundCandidates != null) ParameterMatcher.selectTypes(boundCandidates,
+                boundCandidates.firstOrNull()?.identifier ?: name.second, args.map(::argumentType))
+                else GlobalScope.getFunctionByTypes(name.first, name.second, args.map(::argumentType), file)
+            val target = when (selected) {
                 is ParameterMatcher.TypeSelection.Selected -> selected.function
                 is ParameterMatcher.TypeSelection.Ambiguous -> invalid("Ambiguous overload '${name.second}'")
                 ParameterMatcher.TypeSelection.Missing -> {
                     if (!args.any { it.type == any }) unsupported()
                     if (!exploratory) invalid("Actual type of any is unknown; use 'as' before binding '${name.second}'")
                     // A draft records possibilities; only the fixed-point binding may select a concrete overload.
-                    val candidates = GlobalScope.getFunctionCandidates(name.first, name.second, file).filter {
+                    val candidates = (boundCandidates ?: GlobalScope.getFunctionCandidates(name.first, name.second, file)).filter {
                         (supportedSignature(it) || conversion(it)) && args.size <= it.normalParams.size && it.normalParams.drop(args.size).all { parameter -> parameter.hasDefault }
                     }.distinctBy { it.declarationId }
                     if (candidates.isEmpty()) unsupported()
@@ -1014,7 +1087,7 @@ object PrimitiveCompiler {
             target.normalParams.forEach { register(it.type) }
             if (target.returnType !== MCFPPPrivateType.Void) register(target.returnType)
             for (parameter in target.normalParams.drop(args.size)) {
-                val constant = (parameter.defaultContext?.let {
+                val constant = (parameter.defaultSyntax()?.let {
                     try { DeclarationBinding(target, emptyMap()).value(it).constant }
                     catch (_: DeclarationBinding.Failure) { null }
                 } ?: parameter.defaultVar?.let(StorageAccess::snapshot)) as? CompilerValue.Typed ?: unsupported()
@@ -1082,7 +1155,10 @@ object PrimitiveCompiler {
             }
             if (container !is MCFPPDictType && container !is MCFPPListType && container !is MCFPPImmutableListType && container !is MCFPPMapType) unsupported()
             val members = if (container is MCFPPDictType || container is MCFPPMapType) container.objectData else container.instanceData
-            val candidates = members.scope.getFunctionCandidates(name).filterIsInstance<NativeFunction>()
+            val frozen = StructuredBindings.memberFunctions(context.namespaceID(), container, function)
+            if (frozen != null && frozen.isEmpty()) invalid("No author member candidate '$name'")
+            if (frozen != null && frozen.any { it !is NativeFunction }) unsupported()
+            val candidates = (frozen ?: members.scope.getFunctionCandidates(name)).filterIsInstance<NativeFunction>()
                 .map { it.replaceGenericParams(mapOf("E" to (container as MCFPPTypeWithGeneric).generic.single())) }
             val arguments = context.arguments().normalArgs().expressionList()?.expression().orEmpty().mapIndexed { index, argument ->
                 val previous = expectedLiteral
@@ -1169,8 +1245,16 @@ object PrimitiveCompiler {
                 declaration = (receiver as? ValueRef.Result)?.let { accessDeclarations[it.instruction] })
             return ValueRef.Result(if (result == null) MCFPPPrivateType.Void.typeId else bool, result ?: -1)
         }
-        private fun expression(node: ParserRuleContext): ValueRef = when (node) {
-            is Parser.ExpressionContext -> expression(node.primary() ?: node.commonBinaryOperatorExpression())
+        private fun expression(node: ParserRuleContext): ValueRef {
+            StructuredBindings.constant(node, function)?.let { bound ->
+                bound.descriptors.values.forEach(::register)
+                val type = register(bound.type)
+                val constant = requireNotNull(bound.constant)
+                return ValueRef.Constant(type.typeId, (constant as? CompilerValue.Typed)?.payload ?: constant)
+            }
+            return when (node) {
+            is Parser.ExpressionContext -> if (node.lambdaCallExpression() != null) unsupported()
+                else expression(node.primary() ?: node.commonBinaryOperatorExpression())
             is Parser.CommonBinaryOperatorExpressionContext -> fold(node.conditionalOrExpression(), node.op)
             is Parser.ConditionalOrExpressionContext -> fold(node.conditionalAndExpression(), node.op)
             is Parser.ConditionalAndExpressionContext -> fold(node.equalityExpression(), node.op)
@@ -1218,7 +1302,7 @@ object PrimitiveCompiler {
             is Parser.VarWithSelectorContext -> receiverField(node) ?: run {
                 if (initializerFields != null && node.selector().isNotEmpty()) unsupported()
                 node.selector().fold(expression(node.jvmAccessExpression())) { receiver, selector ->
-                    val selected = selector.`var`()
+                    val selected = selector.`var`() ?: unsupported()
                     if (selected.functionCall() != null) member(receiver, selected.functionCall())
                     else projection(receiver, selected.varWithSuffix() ?: unsupported())
                 }
@@ -1262,11 +1346,12 @@ object PrimitiveCompiler {
                 else -> unsupported()
             }
             else -> unsupported()
+            }
         }
     }
 
     private class Backend(val function: Function, val lowering: Lowering, val ir: TypedIR, val facts: FlowAnalysis.Result,
-                          val typeFacts: FlowAnalysis.Result) {
+                          val typeFacts: FlowAnalysis.Result, val graph: Map<SymbolId, TypedIR>) {
         private var blockId = 0
         private val commands = mutableListOf<String>()
         val materializedPlaces = hashSetOf<Place>()
@@ -1275,14 +1360,82 @@ object PrimitiveCompiler {
         private val nbtResults = mutableMapOf<Int, NBTPath>()
         private val viewResults = mutableMapOf<Int, ValueRef.TypedView>()
         private val constants = mutableMapOf<Pair<TypeId, CompilerValue>, Score>()
-        private val symbols = lowering.symbols.values.associateBy { it.id }
-        private val storageNames = lowering.symbols.entries.associate { it.value.id to it.key }
+        private val symbols = lowering.symbols.values.associateBy { it.id } + ir.declarations
+        private val storageNames = ir.declarations.mapValues { it.value.name } + lowering.symbols.entries.associate { it.value.id to it.key }
+        private val types = lowering.types + ir.boundTypes
         private val destinations = mutableMapOf(0 to function)
         private val storagePlaces = hashSetOf<Place>()
         private val initialized = hashSetOf<Place>()
         private val scorePlaces = hashSetOf<Place>()
         private val liveAtCalls = liveCallResults()
+        private val livePlacesAtCalls = top.mcfpp.optimization.StorageLiveness.atCalls(ir)
         private var callNumber = 0
+        private val program = top.mcfpp.optimization.ProgramAnalysis(graph)
+        private val optimizeSaves = Project.config.optimization.enabled(top.mcfpp.optimization.PassIds.SAVES)
+        private val staticFrame = top.mcfpp.optimization.OptimizationPipeline.staticFrame(function)
+        private val backendRuntime = ir.runtimeValues
+        private val optimizeCopies = Project.config.optimization.enabled(top.mcfpp.optimization.PassIds.COPIES)
+        private val resultUses = ir.blocks.flatMap { block ->
+            block.instructions.flatMap { it.references() } + when (val exit = block.terminator) {
+                is Terminator.Return -> exit.value?.resultReferences().orEmpty()
+                is Terminator.Branch -> exit.condition.resultReferences()
+                else -> emptySet()
+            }
+        }.groupingBy { it }.eachCount()
+        private val scoreDestinations: Map<Int, Score> = buildMap {
+            if (optimizeCopies) for (block in ir.blocks) for ((index, instruction) in block.instructions.withIndex()) {
+                if (instruction !is Instruction.Binary || instruction.type !in setOf(int, bool) || resultUses[instruction.result] != 1) continue
+                val next = nextExecutable(block, index)
+                if (next is Instruction.Write && next.value == ValueRef.Result(instruction.type, instruction.result) &&
+                    top.mcfpp.optimization.RuntimeValues.scalarRoot(next.location, symbols)) put(instruction.result, place(next.place))
+                val exit = block.terminator
+                if (next == null && function.optimizedScalar && exit is Terminator.Return &&
+                    exit.value == ValueRef.Result(instruction.type, instruction.result)) put(instruction.result, returnScore(function))
+            }
+        }
+        private fun frame(offset: Int = 0) = staticFrame ?: NBTPath.stack.intIndex(offset)
+        private fun calleeFrame(target: Function) = top.mcfpp.optimization.OptimizationPipeline.staticFrame(target) ?: NBTPath.stack.intIndex(0)
+        private fun returnScore(target: Function) = Score(top.mcfpp.optimization.OptimizationPipeline.scoreName(target, "\$return"), objective(target.returnType.typeId))
+
+        private fun nextExecutable(block: BasicBlock, position: Int): Instruction? {
+            for (index in position + 1..block.instructions.lastIndex) {
+                val instruction = block.instructions[index]
+                if (instruction !is Instruction.Declare) return instruction
+            }
+            return null
+        }
+
+        private fun mayReuseRead(instruction: Instruction.Read, block: BasicBlock, position: Int): Boolean {
+            if (!optimizeCopies || resultUses[instruction.result] != 1 ||
+                !top.mcfpp.optimization.RuntimeValues.scalarRoot(instruction.location, symbols)) return false
+            val reference = ValueRef.Result(instruction.type, instruction.result)
+            return when (val next = nextExecutable(block, position)) {
+                is Instruction.Binary -> instruction.result in next.references() &&
+                    (scoreDestinations[next.result] != place(instruction.place) ||
+                        next.left == reference && next.operation in setOf("+", "-", "*", "&&"))
+                is Instruction.Write -> next.value == reference && top.mcfpp.optimization.RuntimeValues.scalarRoot(next.location, symbols)
+                null -> function.optimizedScalar && (block.terminator as? Terminator.Return)?.value == reference
+                else -> false
+            }
+        }
+
+        private fun immediateArithmetic(instruction: Instruction.Binary): Boolean {
+            if (!optimizeCopies || instruction.type != int || instruction.operation !in setOf("+", "-")) return false
+            var operand = instruction.left
+            var value = ((instruction.right as? ValueRef.Constant)?.value as? CompilerValue.Integral)?.value?.toInt()
+            if (value == null && instruction.operation == "+") {
+                value = ((instruction.left as? ValueRef.Constant)?.value as? CompilerValue.Integral)?.value?.toInt()
+                operand = instruction.right
+            }
+            if (value == null || value == Int.MIN_VALUE) return false
+            val source = score(operand)
+            val destination = scoreDestinations[instruction.result] ?: temporary(int)
+            results[instruction.result] = destination
+            if (destination != source) commands += "scoreboard players operation $destination = $source"
+            val delta = if (instruction.operation == "-") -value else value
+            commands += "scoreboard players ${if (delta < 0) "remove" else "add"} $destination ${kotlin.math.abs(delta)}"
+            return true
+        }
         /** Only code-generation liveness: initialization and value evidence remain in FlowFacts. */
         private fun liveCallResults(): Map<Pair<Int, Int>, Set<Int>> {
             fun references(value: ValueRef): Set<Int> = when (value) {
@@ -1361,14 +1514,14 @@ object PrimitiveCompiler {
         private fun temporary(type: TypeId) = Score(TempPool.getVarIdentify(), objective(type))
         private fun place(place: Place): Score {
             val symbol = symbols.getValue(place.root)
-            return Score(function.prefix + storageNames.getValue(place.root), objective(symbol.declaredType))
+            return Score(top.mcfpp.optimization.OptimizationPipeline.scoreName(function, storageNames.getValue(place.root), place.root), objective(symbol.declaredType))
         }
         fun address(place: Place): NBTPath = address(Location(place))
         fun address(location: Location): NBTPath {
             val place = location.place
             val name = storageNames.getValue(place.root)
             var path = if (name.startsWith("$")) internal(name, location.frameOffset)
-                else NBTPath.stack.intIndex(location.frameOffset).memberIndex(name)
+                else frame(location.frameOffset).memberIndex(name)
             for ((position, segment) in place.path.withIndex()) path = when (segment) {
                 is PathSegment.Field -> path.memberIndex(StorageAccess.quotedKey(segment.name))
                 is PathSegment.Index -> path.intIndex(segment.index)
@@ -1399,7 +1552,7 @@ object PrimitiveCompiler {
             val score = place(place)
             StorageLayout.Scoreboard(score.name, score.objective)
         } else StorageLayout.Nbt(address(place).source.toString(), address(place).pathToCommandPart().toString())
-        private fun internal(name: String, frame: Int = 0) = NBTPath.stack.intIndex(frame).memberIndex("\$ir").memberIndex(name)
+        private fun internal(name: String, frame: Int = 0) = frame(frame).memberIndex("\$ir").memberIndex(name)
         private fun legacyComponents(value: MCFloat) = LegacyFloatComparison.Components(
             "${value.sign.name} ${value.sign.sbObject}", "${value.int0.name} ${value.int0.sbObject}",
             "${value.int1.name} ${value.int1.sbObject}", "${value.exp.name} ${value.exp.sbObject}")
@@ -1420,7 +1573,8 @@ object PrimitiveCompiler {
         }
         private fun floatProvider(value: ValueRef): String {
             val stored = (value as? ValueRef.Result)?.let { nbtResults[it.instruction] }
-            if (stored != null) return FloatProviders.storageProvider("mcfpp:system", stored.pathToCommandPart().toString())
+            if (stored != null) return FloatProviders.storageProvider((stored.source as top.mcfpp.lib.StorageSource).storage,
+                stored.pathToCommandPart().toString())
             val known = constant(value) as? CompilerValue.FloatBits ?: error("Unmaterialized float $value")
             return Float.fromBits(known.bits).toString()
         }
@@ -1495,13 +1649,13 @@ object PrimitiveCompiler {
         }
         private fun emit(command: Command) {
             // Every dynamic address parameter belongs to this frame's IR slots.
-            commands += command.buildMacroFunction(NBTPath.stack.intIndex(0).memberIndex("\$ir")).analyze()
+            commands += command.buildMacroFunction(frame().memberIndex("\$ir")).analyze()
         }
         private fun encode(destination: NBTPath, value: ValueRef) {
             val existing = (value as? ValueRef.Result)?.let { nbtResults[it.instruction] }
             if (existing != null) { emit(Commands.dataSetFrom(destination, existing)); return }
             val known = constant(value)
-            if (known != null && !lowering.runtime(value)) {
+            if (known != null && (value !is ValueRef.Result || value.instruction !in backendRuntime)) {
                 val tag = StorageAccess.snapshotTag(known, value.type) ?: error("Unsupported constant encoding")
                 emit(Commands.dataSetValue(destination, tag))
             } else {
@@ -1535,7 +1689,7 @@ object PrimitiveCompiler {
             val destination = address(instruction.receiver).memberIndex("entries")
             if (instruction.operation.query && constant(ValueRef.Result(
                     if (instruction.operation == MapOperation.SIZE) int else bool, instruction.result!!)) != null &&
-                instruction.result !in lowering.runtimeResults) return
+                instruction.result !in backendRuntime) return
             if (instruction.operation == MapOperation.CLEAR) {
                 emit(Commands.dataSetValue(destination, ListTag()))
                 return
@@ -1579,7 +1733,7 @@ object PrimitiveCompiler {
             is ValueRef.Result -> (facts.values[blockId to value.instruction]?.value as? ValueKnowledge.Constant)?.value
             else -> null
         }
-        private fun runtime(value: ValueRef) = lowering.runtime(value) || constant(value) == null
+        private fun runtime(value: ValueRef) = value is ValueRef.Result && value.instruction in backendRuntime || constant(value) == null
         private fun number(value: CompilerValue): Int = when (value) {
             is CompilerValue.Integral -> value.value.toInt()
             is CompilerValue.Bool -> if (value.value) 1 else 0
@@ -1617,36 +1771,63 @@ object PrimitiveCompiler {
 
         private fun call(instruction: Instruction.Call, position: Int) {
             check(!instruction.provisional) { "An unresolved call cannot reach command generation" }
-            val target = lowering.calls.getValue(instruction.declaration)
-            if (target.typedIR == null && target.ast != null && !target.bodyCompiled && !target.bodyBeingCompiled)
+            val target = lowering.calls[instruction.declaration] ?: functions().first { it.declarationId == instruction.declaration }
+            if (target.typedIR == null && target.hasBody && !target.bodyCompiled && !target.bodyBeingCompiled)
                 target.compileBody()
             if (target !in function.child) function.child.add(target)
             if (function !in target.parent) target.parent.add(function)
+            if (target.optimizedScalar) {
+                val arguments = instruction.arguments.map(::score)
+                target.normalParams.forEachIndexed { index, parameter ->
+                    val destination = physical(target.scope.getVar(parameter.identifier)!!)!!
+                    commands += "scoreboard players operation $destination = ${arguments[index]}"
+                }
+                commands += "function ${target.namespaceID}"
+                instruction.result?.let { result ->
+                    val destination = temporary(instruction.returnType!!)
+                    commands += "scoreboard players operation $destination = ${returnScore(target)}"
+                    results[result] = destination
+                    instruction.resultPlace?.let { place ->
+                        commands += "scoreboard players operation ${place(place)} = $destination"
+                        scorePlaces.add(place); initialized.add(place); materializedPlaces.add(place)
+                    }
+                }
+                return
+            }
             val id = callNumber++
             // Read snapshots and earlier argument results already live in the current frame.
             instruction.arguments.forEachIndexed { index, value -> encode(internal("arg_${id}_$index"), value) }
             val saved = linkedMapOf<Score, NBTPath>()
-            for (location in storagePlaces) if (location in initialized && location in scorePlaces)
+            val clobbered = !optimizeSaves || program.effects[instruction.declaration]?.unknown != false ||
+                program.reaches(instruction.declaration, function.declarationId)
+            val livePlaces = livePlacesAtCalls[blockId to position].orEmpty()
+            for (location in storagePlaces) if (clobbered && location in initialized && location in scorePlaces &&
+                (!optimizeSaves || livePlaces.any { it.overlaps(location) }))
                 saved[place(location)] = path(location)
             val live = liveAtCalls[blockId to position].orEmpty()
-            for (value in (results.filterKeys { it in live }.values + constants.values).distinct())
+            for (value in (if (clobbered) results.filterKeys { it in live }.values else emptyList()).distinct())
                 saved.putIfAbsent(value, internal("spill_${id}_${saved.size}"))
             for ((value, location) in saved)
                 commands += "execute store result ${location.toCommandPart()} int 1 run scoreboard players get $value"
-            emit(Commands.stackIn())
+            val staticTarget = top.mcfpp.optimization.OptimizationPipeline.staticFrame(target)
+            if (staticTarget == null) emit(Commands.stackIn())
+            else emit(Commands.dataSetValue(staticTarget, top.mcfpp.nbt.tags.CompoundTag()))
             target.normalParams.forEachIndexed { index, parameter ->
-                val destination = NBTPath.stack.intIndex(0).memberIndex(parameter.identifier)
-                emit(Commands.dataSetFrom(destination, internal("arg_${id}_$index", 1)))
+                val destination = calleeFrame(target).memberIndex(parameter.identifier)
+                emit(Commands.dataSetFrom(destination, internal("arg_${id}_$index", if (staticTarget == null) 1 else 0)))
                 physical(target.scope.getVar(parameter.identifier)!!)?.let { score ->
                     commands += "execute store result score $score run data get ${destination.toCommandPart()} 1"
                 }
             }
             commands += "function ${target.namespaceID}"
+            // Unknown implementations may use registers from an independently compiled pack.
+            // Recreate literals on demand instead of spilling their cached registers to NBT.
+            if (program.effects[instruction.declaration]?.unknown != false) constants.clear()
             instruction.result?.let {
-                val destination = internal("result_$id", 1)
-                emit(Commands.dataSetFrom(destination, NBTPath.stack.intIndex(0).memberIndex("return")))
+                val destination = internal("result_$id", if (staticTarget == null) 1 else 0)
+                emit(Commands.dataSetFrom(destination, calleeFrame(target).memberIndex("return")))
             }
-            emit(Commands.stackOut())
+            if (staticTarget == null) emit(Commands.stackOut())
             for ((value, location) in saved)
                 commands += "execute store result score $value run data get ${location.toCommandPart()} 1"
             instruction.result?.let { result ->
@@ -1693,7 +1874,7 @@ object PrimitiveCompiler {
             } else results[instruction.result!!] = Score(index.name, index.sbObject.toString())
         }
 
-        fun generate() {
+        fun prepareLayout() {
             val reachable = ir.blocks.filter { it.id in facts.entries }
             for (parameter in function.normalParams) {
                 val symbol = lowering.symbols[parameter.identifier] ?: continue
@@ -1701,21 +1882,32 @@ object PrimitiveCompiler {
             }
             if (reachable.any { block -> block.instructions.any { it is Instruction.RawCommand || it is Instruction.Call && it.effect == Effect.Unknown } }) {
                 // Raw commands can observe any physical register and have unknown writes.
-                storagePlaces.addAll(lowering.symbols.values.map { Place(it.id) })
+                storagePlaces.addAll(symbols.values.map { Place(it.id) })
             }
             // Values read without a full constant, and values crossing a conditional write,
             // need locations. Unchanged unrelated constants remain unmaterialized.
             for (block in reachable) for (instruction in block.instructions) {
-                if (instruction is Instruction.Read && ((facts.values[block.id to instruction.result]?.value !is ValueKnowledge.Constant) || instruction.result in lowering.runtimeResults)) storagePlaces.add(instruction.place)
+                if (instruction is Instruction.Read && ((facts.values[block.id to instruction.result]?.value !is ValueKnowledge.Constant) || instruction.result in backendRuntime)) storagePlaces.add(instruction.place)
                 if (block.id != 0 && instruction is Instruction.Write) storagePlaces.add(instruction.place)
                 if (instruction is Instruction.Call && instruction.effect is Effect.Writes) storagePlaces.addAll(instruction.effect.places)
             }
+            for (block in reachable) for (instruction in block.instructions.filterIsInstance<Instruction.Write>()) {
+                if (nbt(symbols.getValue(instruction.place.root).declaredType) || instruction.place.path.isNotEmpty() ||
+                    instruction.place in storagePlaces || runtime(instruction.value) || symbols.getValue(instruction.place.root).forceRuntime) {
+                    materializedPlaces.add(instruction.place)
+                    if (!nbt(symbols.getValue(instruction.place.root).declaredType) && instruction.place.path.isEmpty()) scorePlaces.add(instruction.place)
+                }
+            }
+        }
+
+        fun generate() {
+            val reachable = ir.blocks.filter { it.id in facts.entries }
             fun containsFunction(declaration: Function): Boolean = declaration === function || declaration.compiledFunctions.values.any(::containsFunction)
             fun contains(template: top.mcfpp.model.compound.DataTemplate): Boolean {
                 if (template.constructors.any(::containsFunction) || template.scope.functions.values.flatten().any(::containsFunction)) return true
                 return template is top.mcfpp.model.compound.GenericDataTemplate && template.compiledTemplates.values.any(::contains)
             }
-            val helperScope = (
+            val helperScope = (if (function.bodyHandle != null) function.declarationFile?.namespace?.scope else null) ?: (
                 GlobalScope.localNamespaces.values + GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values
             ).firstOrNull { namespace ->
                 var found = namespace.scope.functions.values.flatten().any(::containsFunction)
@@ -1747,12 +1939,12 @@ object PrimitiveCompiler {
                 constants.clear() // Literals must be initialized on every reachable entry.
                 initialized.clear()
                 initialized.addAll(storagePlaces.filter { facts.entries.getValue(block.id).read(it)?.state == ValueState.INITIALIZED })
-                if (block.id == 0 && ((!FloatProviders.enabled && function.returnVar is MCFloat) || reachable.any { candidate -> candidate.instructions.any { it is Instruction.Call ||
+                if (!function.optimizedScalar && block.id == 0 && ((!FloatProviders.enabled && function.returnVar is MCFloat) || reachable.any { candidate -> candidate.instructions.any { it is Instruction.Call ||
                     it is Instruction.Construct || it is Instruction.Promote || it is Instruction.Convert ||
                     it is Instruction.Binary && (it.left.type == float || it.right.type == float) ||
                     it is Instruction.Read && nbt(symbols.getValue(it.place.root).declaredType) ||
                     it is Instruction.Write && storageNames.getValue(it.place.root).startsWith("$") && nbt(symbols.getValue(it.place.root).declaredType) } }))
-                    emit(Commands.dataSetValue(NBTPath.stack.intIndex(0).memberIndex("\$ir"), top.mcfpp.nbt.tags.CompoundTag()))
+                    emit(Commands.dataSetValue(frame().memberIndex("\$ir"), top.mcfpp.nbt.tags.CompoundTag()))
                 for ((position, instruction) in block.instructions.withIndex()) when (instruction) {
                     is Instruction.Declare -> {
                         val root = Place(instruction.symbol.id)
@@ -1765,8 +1957,9 @@ object PrimitiveCompiler {
                         emit(Commands.dataSetFrom(snapshot, address(instruction.location)))
                         nbtResults[instruction.result] = snapshot
                     } else if (runtime(ValueRef.Result(instruction.type, instruction.result))) {
-                        val snapshot = temporary(instruction.type)
-                        commands += "scoreboard players operation $snapshot = ${place(instruction.place)}"
+                        val source = place(instruction.place)
+                        val snapshot = if (mayReuseRead(instruction, block, position)) source else temporary(instruction.type)
+                        if (snapshot != source) commands += "scoreboard players operation $snapshot = $source"
                         results[instruction.result] = snapshot
                     }
                     is Instruction.Write -> {
@@ -1780,8 +1973,11 @@ object PrimitiveCompiler {
                         materializedPlaces.add(instruction.place)
                         val destination = place(instruction.place)
                         val known = constant(instruction.value)
-                        if (known != null && !lowering.runtime(instruction.value)) commands += "scoreboard players set $destination ${number(known)}"
-                        else commands += "scoreboard players operation $destination = ${score(instruction.value)}"
+                        if (known != null && (instruction.value !is ValueRef.Result || instruction.value.instruction !in backendRuntime)) commands += "scoreboard players set $destination ${number(known)}"
+                        else {
+                            val source = score(instruction.value)
+                            if (!optimizeCopies || source != destination) commands += "scoreboard players operation $destination = $source"
+                        }
                         initialized.add(instruction.place)
                         scorePlaces.add(instruction.place)
                     }
@@ -1814,13 +2010,14 @@ object PrimitiveCompiler {
                             }
                             continue
                         }
+                        if (immediateArithmetic(instruction)) continue
                         val left = score(instruction.left)
                         val right = score(instruction.right)
-                        val result = temporary(instruction.type)
+                        val result = scoreDestinations[instruction.result] ?: temporary(instruction.type)
                         results[instruction.result] = result
                         when (instruction.operation) {
                             "+", "-", "*", "&&" -> {
-                                commands += "scoreboard players operation $result = $left"
+                                if (!optimizeCopies || result != left) commands += "scoreboard players operation $result = $left"
                                 val operation = if (instruction.operation == "&&") "*" else instruction.operation
                                 commands += "scoreboard players operation $result $operation= $right"
                             }
@@ -1845,7 +2042,9 @@ object PrimitiveCompiler {
                     is Instruction.Convert -> convert(instruction)
                     is Instruction.RawCommand -> {
                         // Raw observers see the current assigned values, including score-backed locals.
-                        for (location in initialized.filter { it.path.isEmpty() && it in scorePlaces }) {
+                        for (location in initialized.filter { it.path.isEmpty() && it in scorePlaces &&
+                            (!Project.config.optimization.enabled(top.mcfpp.optimization.PassIds.FRAMES) ||
+                                EffectAnalysis.rawCommandEffect(instruction.command) == Effect.Unknown) }) {
                             val type = symbols.getValue(location.root).declaredType
                             if (type == int || type == bool) emit(Command("execute store result")
                                 .build(address(location).toCommandPart())
@@ -1923,12 +2122,12 @@ object PrimitiveCompiler {
                     }
                     is Instruction.Construct -> {
                         val destination = path(instruction.place)
-                        val literal = constant(ValueRef.Result(instruction.type, instruction.result))?.takeUnless { lowering.runtime(ValueRef.Result(instruction.type, instruction.result)) }
+                        val literal = constant(ValueRef.Result(instruction.type, instruction.result))?.takeUnless { instruction.result in backendRuntime }
                             ?.let { StorageAccess.snapshotTag(it, instruction.type) }
                         if (literal != null) emit(Commands.dataSetValue(destination, literal))
                         else if (instruction.sequence) {
                             val empty = if (TypeRelations.arrayElementType(instruction.type) != null)
-                                lowering.types.getValue(instruction.type).defaultValue() as Tag<*> else ListTag()
+                                types.getValue(instruction.type).defaultValue() as Tag<*> else ListTag()
                             emit(Commands.dataSetValue(destination, empty))
                             for ((segment, value) in instruction.parts) {
                                 val source = internal("part_${instruction.result}_${(segment as PathSegment.Index).index}")
@@ -1965,7 +2164,7 @@ object PrimitiveCompiler {
                     is Terminator.Jump -> jump(terminator.block)
                     is Terminator.Branch -> {
                         val known = constant(terminator.condition) as? CompilerValue.Bool
-                        if (known != null && !lowering.runtime(terminator.condition)) jump(if (known.value) terminator.whenTrue else terminator.whenFalse)
+                        if (known != null && (terminator.condition !is ValueRef.Result || terminator.condition.instruction !in backendRuntime)) jump(if (known.value) terminator.whenTrue else terminator.whenFalse)
                         else if (!supportsReturn) {
                             // Each recursive branch owns a guard frame. A loop cannot overwrite
                             // the caller's guard and accidentally execute its opposite branch.
@@ -1983,8 +2182,18 @@ object PrimitiveCompiler {
                     }
                     is Terminator.Return -> {
                         terminator.value?.let { value ->
-                            val destination = NBTPath.stack.intIndex(0).memberIndex("return")
-                            if (!FloatProviders.enabled && function.returnVar is MCFloat)
+                            val destination = frame().memberIndex("return")
+                            if (function.optimizedScalar) {
+                                val destinationScore = returnScore(function)
+                                val known = constant(value)
+                                if (known != null && (value !is ValueRef.Result || value.instruction !in backendRuntime))
+                                    commands += "scoreboard players set $destinationScore ${number(known)}"
+                                else {
+                                    val source = score(value)
+                                    if (!optimizeCopies || source != destinationScore) commands += "scoreboard players operation $destinationScore = $source"
+                                }
+                            }
+                            else if (!FloatProviders.enabled && function.returnVar is MCFloat)
                                 emit(Commands.dataSetFrom(destination, legacyFloat(value)))
                             else encode(destination, value)
                         }

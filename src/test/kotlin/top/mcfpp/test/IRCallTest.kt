@@ -96,7 +96,7 @@ class IRCallTest {
     @Test fun unknownCallsFlushAndInvalidateErasedPlacesAndPropagateThroughWrappers() {
         val main = compile("""
             func change(){
-                /data modify storage mcfpp:system stack_frame[2].value set value 7
+                /scoreboard players set observed effects 7
             }
             func wrapper(){ change(); }
             func main(){
@@ -105,7 +105,9 @@ class IRCallTest {
                 external result = (value as int) + 1
             }
         """)
-        assertEquals(8, execute(main).read(main.scope.getVar("result") as MCInt))
+        val machine = execute(main)
+        assertEquals(3, machine.read(main.scope.getVar("result") as MCInt))
+        assertEquals(7, machine.values["observed effects"])
         assertEquals(TypeKnowledge.Unknown, (main.scope.getVar("value") as MCAny).typeKnowledge)
         for (name in listOf("change", "wrapper")) assertEquals(Effect.Unknown, function(name).runtimeEffect)
     }

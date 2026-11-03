@@ -1,0 +1,10 @@
+schema = 1
+
+[package]
+id = "fixture:semantic-lib"
+version = "1.0.0"
+license = "Apache-2.0"
+minecraft = "26.3"
+
+[tool]
+consumer-profile = "all"

@@ -1,6 +1,6 @@
 @MCFPPEntity
 data WardenData: EntityData, CreatureData, AIMobData {
-    @Name<"Anger"> var anger: data {
+    @Name("Anger") var anger: data {
         var offers: list<data {
             var anger: int
             var uuid: IntArray

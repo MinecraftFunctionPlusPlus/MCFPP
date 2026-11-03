@@ -24,10 +24,10 @@ fun main(){
 fun ResourceIDWriter(id: String){
 
     val template =
-        """@From<"top.mcfpp.mni.resource.${id}Data">
+        """@From("top.mcfpp.mni.resource.${id}Data")
 data $id: ResourceID
 
-@From<"top.mcfpp.mni.resource.${id}ObjectData">
+@From("top.mcfpp.mni.resource.${id}ObjectData")
 object data $id: ResourceID
 """
     //覆盖写入文件

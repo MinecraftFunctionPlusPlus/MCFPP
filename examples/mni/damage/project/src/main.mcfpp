@@ -1,0 +1,17 @@
+func applyDamage(health: ScoreRef, amount: int) {
+    health.tryRead { current ->
+        if (current < amount) { health.set(0); }
+        else { health.set(current - amount); }
+    }
+}
+
+func main() {
+    /scoreboard objectives add hp dummy
+    /scoreboard players set #normal hp 100
+    /scoreboard players set #low hp 8
+    /scoreboard players set #alias hp 40
+    damage(scoreRef("#normal", "hp"), 30)
+    damage(scoreRef("#low", "hp"), 20)
+    var alias = scoreRef("#alias", "hp")
+    alias.tryRead { current -> damage(alias, current); }
+}

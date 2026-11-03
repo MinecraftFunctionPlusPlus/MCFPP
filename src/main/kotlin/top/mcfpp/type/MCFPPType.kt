@@ -231,13 +231,20 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             MCFPPConcreteType.Type,
 
             MCFPPEntityType.NormalSelector,
-            MCFPPEntityType.Player,
+            MCFPPScoreRefType,
+
+            top.mcfpp.core.lang.context.ContextTypes.ExecutionContext,
+            top.mcfpp.core.lang.context.ContextTypes.PosContext,
+            top.mcfpp.core.lang.context.ContextTypes.EntityContext,
+            top.mcfpp.core.lang.context.ContextTypes.RelationContext,
+            top.mcfpp.core.lang.context.ContextTypes.Position,
 
             MCFPPPrivateType.StaticMemberViewType
         ).associateBy { it.simpleName }.toMutableMap()}
 
         internal fun builtinTypesById(): Map<TypeId, MCFPPType> =
-            typeCache.values.filter { it.typeId is TypeId.Builtin }.associateBy { it.typeId }
+            typeCache.values.filter { it.typeId is TypeId.Builtin }.associateBy { it.typeId } +
+                (MCFPPEntityType.NormalSelector.typeId to MCFPPEntityType.NormalSelector)
 
         internal fun cachedSyntaxType(text: String): MCFPPType? = typeCache[text]
 
@@ -290,8 +297,14 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                     if (factory != null && argument != null) factory(argument) else null
                 }
             }
-            is TypeId.Specialized -> resolveSpecialization(id)?.getType()
-            is TypeId.Selector -> MCFPPEntityType(id.limit, id.entities, id.isName).takeIf { it.typeId == id }
+            is TypeId.Opaque -> Project.libraryImportSession?.resolveTypeIdentity(id)
+            is TypeId.Specialized -> (if (id.constructor is TypeId.Opaque)
+                Project.libraryImportSession?.resolveTypeIdentity(id) else null)
+                ?: resolveSpecialization(id)?.getType()
+            is TypeId.Selector -> {
+                LogProcessor.error("Legacy entity subtype metadata is no longer supported; use ordinary entity declarations and recompile the library sources.")
+                null
+            }
             is TypeId.Union -> {
                 val alternatives = id.alternatives.map(::resolveTypeId)
                 if (alternatives.isEmpty() || alternatives.any { it == null }) null
@@ -316,6 +329,12 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 else -> null
             } ?: return null
             if (prototype.getType().typeId != declaration) return null
+            return resolveSpecialization(id, prototype)
+        }
+
+        /** Imported constructors use their actual bound prototype, including opaque session identities. */
+        internal fun resolveSpecialization(id: TypeId.Specialized, prototype: GenericDataTemplate): CompiledGenericDataTemplate? {
+            if (Project.compileStage == Project.CompileStage.READ_LIB || prototype.nominalIdentity != id.constructor) return null
             val prepare = { prototype.prepareHeader() }
             val file = prototype.restoreDeclarationEnvironment()
             if (file == null) prepare() else file.withDeclarationContext(prepare)
@@ -331,14 +350,14 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 registerSnapshotTypes(snapshot, types)
                 val value = StorageAccess.restore(type, snapshot, parameter.identifier, types)
                 if (value == null) {
-                    LogProcessor.error("Cannot restore frozen readonly argument '${parameter.identifier}' of ${declaration.name}")
+                    LogProcessor.error("Cannot restore frozen readonly argument '${parameter.identifier}' of ${prototype.identifier}")
                     return null
                 }
                 arguments.add(value)
             }
             val canonical = prototype.compile(arguments) ?: return null
             if (canonical.getType().typeId != id) {
-                LogProcessor.error("Restored specialization identity does not match '${declaration.namespace}:${declaration.name}'")
+                LogProcessor.error("Restored specialization identity does not match '${prototype.namespaceID}'")
                 return null
             }
             return canonical
@@ -374,6 +393,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             "dict" to {generic: MCFPPType -> MCFPPDictType(generic)},
             "map" to {generic: MCFPPType -> MCFPPMapType(generic)},
             "ImmutableList" to {generic: MCFPPType -> MCFPPImmutableListType(generic)},
+            "NBTRef" to {generic: MCFPPType -> MCFPPNBTRefType(generic)},
         )
 
         private val genericTypeClassCache: MutableMap<String, KClass<out MCFPPType>> = mutableMapOf(
@@ -381,6 +401,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             "dict" to MCFPPDictType::class,
             "map" to MCFPPMapType::class,
             "ImmutableList" to MCFPPImmutableListType::class,
+            "NBTRef" to MCFPPNBTRefType::class,
         )
 
         internal fun nativeConstructor(name: String): MCFPPNotCompiledGenericType? =
@@ -435,8 +456,8 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             if(typeStr.trimEnd().endsWith('!')) return null
             typeCache[typeStr]?.let { return it }
             nativeConstructor(typeStr)?.let { return it }
-            //使用泛型
-            if(typeStr.contains("<")){
+            //使用泛型或函数类型；函数类型拼写包含 `(...) -> ...`。
+            if(typeStr.contains("<") || typeStr.contains("->")){
                 val charStream: CharStream = CharStreams.fromString(typeStr)
                 val tokens = CommonTokenStream(mcfppLexer(charStream))
                 val parser = mcfppParser(tokens)
@@ -485,6 +506,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         }
 
         fun parseFromContext(ctx: TypeContext, typeScope: IScopeWithType, caller: Function? = null): MCFPPType?{
+            top.mcfpp.analysis.StructuredBindings.type(ctx, caller ?: Function.currFunction)?.let { return it }
             return TypeSyntaxResolver.resolve(ctx, LegacyTypeSyntaxContext(typeScope, caller))
         }
     }

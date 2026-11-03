@@ -8,11 +8,15 @@ import java.util.Collections
 
 sealed interface SpecializationArgument {
     data class Constant(val value: CompilerValue) : SpecializationArgument
+    /** A provenance key, never a readonly value or a restorable serialized capability. */
+    data class Borrow(val identity: CompilerValue) : SpecializationArgument
     object Unknown : SpecializationArgument
     object Error : SpecializationArgument
 }
 
-data class GenerationOptions(val targetVersion: String, val maxWhileInline: Int, val foldIRConstants: Boolean = true)
+data class GenerationOptions(val targetVersion: String, val maxWhileInline: Int, val foldIRConstants: Boolean = true,
+    val optimization: top.mcfpp.optimization.OptimizationConfig = Project.config.optimization.copy(
+        disabledPasses = Project.config.optimization.disabledPasses.toSet()))
 class SpecializationKey(val declaration: SymbolId, arguments: List<SpecializationArgument>, val options: GenerationOptions) {
     val arguments: List<SpecializationArgument> = Collections.unmodifiableList(ArrayList(arguments))
     override fun equals(other: Any?) = other is SpecializationKey && declaration == other.declaration && arguments == other.arguments && options == other.options
@@ -22,6 +26,8 @@ class SpecializationKey(val declaration: SymbolId, arguments: List<Specializatio
 object SpecializationKeys {
     fun argument(value: Var<*>): SpecializationArgument = when {
         value.isError -> SpecializationArgument.Error
+        top.mcfpp.core.lang.context.ContextBorrowing.payload(value) != null -> SpecializationArgument.Borrow(
+            top.mcfpp.core.lang.context.ContextBorrowing.payload(value)!!.identity)
         else -> top.mcfpp.analysis.StorageAccess.snapshot(value)?.let { SpecializationArgument.Constant(it) } ?: SpecializationArgument.Unknown
     }
     fun isConstant(value: Var<*>): Boolean = argument(value) is SpecializationArgument.Constant

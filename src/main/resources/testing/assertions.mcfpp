@@ -1,0 +1,34 @@
+namespace mcfpp.test
+
+// Failure is recorded in world state so AfterEach can still run.
+func fail(message: string = "Test failed") {
+    /scoreboard players add #failures mcfpp_test 1
+    print(message)
+}
+
+func assertTrue(actual: bool, message: string = "Expected true") {
+    if (!actual) { fail(message); }
+}
+
+func assertFalse(actual: bool, message: string = "Expected false") {
+    if (actual) { fail(message); }
+}
+
+func assertEquals(expected: int, actual: int, message: string = "Integers are not equal") {
+    if (expected != actual) { fail(message); }
+}
+
+func assertEquals(expected: bool, actual: bool, message: string = "Booleans are not equal") {
+    if (expected != actual) { fail(message); }
+}
+
+func assertEquals(expected: string, actual: string, message: string = "Strings are not equal") {
+    /data modify storage mcfpp:testing comparison set from storage mcfpp:system stack_frame[0].expected
+    /execute store success score #different mcfpp_test run data modify storage mcfpp:testing comparison set from storage mcfpp:system stack_frame[0].actual
+    /execute if score #different mcfpp_test matches 1 run scoreboard players add #failures mcfpp_test 1
+    /execute if score #different mcfpp_test matches 1 run tellraw @a {"nbt":"stack_frame[0].message","storage":"mcfpp:system"}
+}
+
+func assertNotEquals(expected: int, actual: int, message: string = "Integers are equal") {
+    if (expected == actual) { fail(message); }
+}

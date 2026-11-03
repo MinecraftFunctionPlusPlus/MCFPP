@@ -30,6 +30,10 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
     val branchGuards = mutableListOf<Int>()
     var stackDepth = 0
         private set
+    var executedCommands = 0
+        private set
+    var stackOperations = 0
+        private set
     private val frames = mutableListOf<MutableMap<String, Tag<*>>>()
     private var completedRootFrame: Map<String, Tag<*>>? = null
     private val storage = mutableMapOf<String, MutableMap<String, Tag<*>>>()
@@ -204,13 +208,14 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val reset = Regex("scoreboard players reset (\\S+)(?: (\\S+))?")
         val add = Regex("scoreboard players (add|remove) (\\S+ \\S+) (\\d+)")
         val operation = Regex("scoreboard players operation (\\S+ \\S+) (=|\\+=|-=|\\*=|/=|%=|><) (\\S+ \\S+)")
-        val compare = Regex("execute (if|unless) score (\\S+ \\S+) (=|<|>|<=|>=) (\\S+ \\S+) (?:run (.*)|((?:if|unless) (?:score|function) .*))")
-        val matches = Regex("execute (if|unless) score (\\S+ \\S+) matches (-?\\d+|(?:-?\\d+)?\\.\\.(?:-?\\d+)?) (?:run (.*)|((?:if|unless) (?:score|function) .*))")
+        val compare = Regex("execute (if|unless) score (\\S+ \\S+) (=|<|>|<=|>=) (\\S+ \\S+) (?:run (.*)|((?:if|unless) (?:score|data|function) .*))")
+        val matches = Regex("execute (if|unless) score (\\S+ \\S+) matches (-?\\d+|(?:-?\\d+)?\\.\\.(?:-?\\d+)?) (?:run (.*)|((?:if|unless) (?:score|data|function) .*))")
         val functionCondition = Regex("execute (if|unless) function (\\S+) (?:run (.*)|((?:if|unless) (?:score|function) .*))")
         val asIdentity = Regex("execute as (\\S+) run (.*)")
         val guardStore = Regex("execute store result storage mcfpp:system ir_branch_stack\\[0].condition byte 1 run scoreboard players get (\\S+ \\S+)")
         val guardTest = Regex("execute (if|unless) data storage mcfpp:system ir_branch_stack\\[0]\\{condition:1b} run (.*)")
         val save = Regex("execute store result storage (\\S+) ($nbtPath) (int|byte|short|long|double) 1 run scoreboard players get (\\S+ \\S+)")
+        val saveSuccess = Regex("execute store success storage (\\S+) ($nbtPath) byte 1 run (.*)")
         val saveOperation = Regex("execute store result storage (\\S+) ($nbtPath) int 1 run (scoreboard players operation (\\S+ \\S+) = \\S+ \\S+)")
         val restore = Regex("execute store result score (\\S+ \\S+) run data get storage (\\S+) ($nbtPath)(?: 1(?:\\.0)?)?")
         val setNbt = Regex("data modify storage (\\S+) ($nbtPath) set value (.*)", RegexOption.DOT_MATCHES_ALL)
@@ -229,9 +234,10 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val insertNbt = Regex("data modify storage (\\S+) ($nbtPath) (append|prepend|insert -?\\d+) from storage (\\S+) ($nbtPath)")
         val appendNbtValue = Regex("data modify storage (\\S+) ($nbtPath) append value (.*)")
         val compareNbt = Regex("execute store success score (\\S+ \\S+) run data modify storage (\\S+) ($nbtPath) set from storage (\\S+) ($nbtPath)")
+        val compareNbtValue = Regex("execute store success score (\\S+ \\S+) run data modify storage (\\S+) ($nbtPath) set value (.*)", RegexOption.DOT_MATCHES_ALL)
         val removeNbt = Regex("data remove storage (\\S+) ($nbtPath)")
         val testNbt = Regex("execute store success score (\\S+ \\S+) if data storage (\\S+) ($nbtPath)")
-        val conditionalNbt = Regex("execute (if|unless) data storage (\\S+) ($nbtPath) run (.*)")
+        val conditionalNbt = Regex("execute (if|unless) data storage (\\S+) ($nbtPath) (?:run (.*)|((?:if|unless) (?:score|data|function) .*))")
         val macroCall = Regex("function (\\S+) with storage (\\S+) ($nbtPath)")
         var steps = 0
         val recentCommands = ArrayDeque<String>()
@@ -242,6 +248,16 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             if (!player.startsWith("@")) return key
             check(player == "@s") { "Unsupported score selector: $player" }
             return "${identity ?: error("@s needs an executor identity")} ${key.substringAfter(' ')}"
+        }
+        fun storeScoreResult(match: MatchResult, value: Int) {
+            val tag = when (match.groupValues[3]) {
+                "byte" -> ByteTag(value.toByte())
+                "short" -> ShortTag(value.toShort())
+                "long" -> LongTag(value.toLong())
+                "double" -> DoubleTag(value.toDouble())
+                else -> IntTag(value)
+            }
+            writeNbt(match.groupValues[1], match.groupValues[2], tag)
         }
         fun scoreComparison(leftKey: String, operator: String, rightKey: String): Boolean {
             val left = values[scoreKey(leftKey)] ?: return false
@@ -288,6 +304,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             }
         }
         execute = command@{ command ->
+            executedCommands++
             recentCommands.addLast(command)
             if (recentCommands.size > 24) recentCommands.removeFirst()
             check(++steps < commandBudget) {
@@ -319,8 +336,9 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 identity = next
                 try { return@command execute(it.groupValues[2]) } finally { identity = previous }
             }
-            if (command == "data modify storage mcfpp:system stack_frame prepend value {}") { stackDepth++; frames.add(0, mutableMapOf()); return@command false }
+            if (command == "data modify storage mcfpp:system stack_frame prepend value {}") { stackOperations++; stackDepth++; frames.add(0, mutableMapOf()); return@command false }
             if (command == "data remove storage mcfpp:system stack_frame[0]") {
+                stackOperations++
                 stackDepth--; check(stackDepth >= 0)
                 val removed = frames.removeAt(0)
                 if (frames.isEmpty()) completedRootFrame = removed.mapValues { it.value.copy() }
@@ -389,16 +407,15 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 values[target] = values.getValue(target) + delta
                 return@command false
             }
+            saveSuccess.matchEntire(command)?.let { outer ->
+                val nested = save.matchEntire(outer.groupValues[3]) ?: error("Unsupported nested score store: $command")
+                val value = values[scoreKey(nested.groupValues[4])]
+                storeScoreResult(nested, value ?: 0)
+                writeNbt(outer.groupValues[1], outer.groupValues[2], ByteTag((if (value != null) 1 else 0).toByte()))
+                return@command false
+            }
             save.matchEntire(command)?.let {
-                val value = values.getValue(scoreKey(it.groupValues[4]))
-                val tag = when (it.groupValues[3]) {
-                    "byte" -> ByteTag(value.toByte())
-                    "short" -> ShortTag(value.toShort())
-                    "long" -> LongTag(value.toLong())
-                    "double" -> DoubleTag(value.toDouble())
-                    else -> IntTag(value)
-                }
-                writeNbt(it.groupValues[1], it.groupValues[2], tag)
+                storeScoreResult(it, values.getValue(scoreKey(it.groupValues[4])))
                 return@command false
             }
             clearCompound.matchEntire(command)?.let {
@@ -484,6 +501,13 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 values[scoreKey(it.groupValues[1])] = if (changed) 1 else 0
                 return@command false
             }
+            compareNbtValue.matchEntire(command)?.let {
+                val value = literalTag(it.groupValues[4])
+                val old = runCatching { readNbt(it.groupValues[2], it.groupValues[3]) }.getOrNull()
+                writeNbt(it.groupValues[2], it.groupValues[3], value.copy())
+                values[scoreKey(it.groupValues[1])] = if (old != value) 1 else 0
+                return@command false
+            }
             appendNbtValue.matchEntire(command)?.let {
                 val list = readNbt(it.groupValues[1], it.groupValues[2]) as ListTag
                 list.value.add(Tag.toNBT(it.groupValues[3]))
@@ -514,7 +538,8 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                     val value = readNbt(it.groupValues[2], actualPath)
                     predicateAt < 0 || matches(value, Tag.toNBT(path.substring(predicateAt)) as CompoundTag)
                 } catch (_: IllegalStateException) { false } catch (_: IndexOutOfBoundsException) { false }
-                if (present == (it.groupValues[1] == "if")) return@command execute(it.groupValues[4])
+                if (present == (it.groupValues[1] == "if")) return@command execute(
+                    if (it.groupValues[5].isNotEmpty()) "execute ${it.groupValues[5]}" else it.groupValues[4])
                 return@command false
             }
             testNbt.matchEntire(command)?.let {

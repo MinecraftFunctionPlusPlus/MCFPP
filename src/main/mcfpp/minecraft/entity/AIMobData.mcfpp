@@ -1,42 +1,42 @@
 import mcfpp.minecraft.item:ItemStackData
 
 data AIMobData {
-    @Name<"ArmorDropChances">
+    @Name("ArmorDropChances")
     var armorDropChances: list<float>
 
-    @Name<"ArmorItems">
+    @Name("ArmorItems")
     var armorItems: list<ItemData>
 
-    @Name<"body_armor_drop_chance">
+    @Name("body_armor_drop_chance")
     var bodyArmorDropChance: float
 
-    @Name<"body_armor_item">
+    @Name("body_armor_item")
     var bodyArmorItem: list<ItemData>
 
-    @Name<"CanPickUpLoot">
+    @Name("CanPickUpLoot")
     var canPickUpLoot: bool
 
-    @Name<"DeathLootTable">
+    @Name("DeathLootTable")
     var deathLootTable: list<AIMobData>
 
-    @Name<"DeathLootTableSeed">
+    @Name("DeathLootTableSeed")
     var deathLootTableSeed: long
 
-    @Name<"HandDropChances">
+    @Name("HandDropChances")
     var handDropChances: list<float>
 
-    @Name<"HandItems">
+    @Name("HandItems")
     var handItems: list<ItemData>
 
-    @Name<"leash">
+    @Name("leash")
     var leash: (IntArray|nbt)
 
-    @Name<"LeftHanded">
+    @Name("LeftHanded")
     var leftHanded: bool
 
-    @Name<"NoAI">
+    @Name("NoAI")
     var noAI: bool
 
-    @Name<"PersistenceRequired">
+    @Name("PersistenceRequired")
     var persistenceRequired: bool
 }

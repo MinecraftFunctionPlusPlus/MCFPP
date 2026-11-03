@@ -1,18 +1,18 @@
 @MCFPPEntity
 data FoxData : EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
-    @Name<"Crouching">
+    @Name("Crouching")
     var crouching: bool
 
-    @Name<"Sitting">
+    @Name("Sitting")
     var sitting: bool
 
-    @Name<"Sleeping">
+    @Name("Sleeping")
     var sleeping: bool
 
-    @Name<"Trusted">
+    @Name("Trusted")
     var trusted: list<IntArray>
 
-    @Name<"Type">
+    @Name("Type")
     var type: FoxType
 }
 

@@ -1,0 +1,18 @@
+func main() {
+    // Each callback explicitly returns the next accumulator, 0+1+2+3+4 = 10.
+    external total: int = repeat(5, 0, { accumulator, i ->
+        var local: int = i;
+        accumulator + local
+    });
+    // A local return supplies this item and leaves later items and the caller tail active.
+    external guarded: int = repeat(5, 0, { accumulator, i ->
+        if (i == 2) { return accumulator; }
+        accumulator + i
+    });
+    external tail: int = guarded + 1;
+    // The inner callback snapshots this outer i at each nested creation. Result: 22.
+    external nested: int = repeat(2, 0, { accumulator, i ->
+        var inner: int = repeat(2, 0, { subtotal, j -> subtotal + i * 10 + j });
+        accumulator + inner
+    });
+}

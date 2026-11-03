@@ -52,12 +52,12 @@ public class StdCommands {
         NativeStdCommandOperations.INSTANCE.damageAt(context);
     }
 
-    @MNIFunction(identifier = "damage", normalParams = {"entity", "float", "entity<1>" , "DamageType = GENERIC"})
+    @MNIFunction(identifier = "damage", normalParams = {"entity", "float", "entity" , "DamageType = GENERIC"})
     public static void damageBy(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.damageBy(context);
     }
 
-    @MNIFunction(identifier = "damage", normalParams = {"entity", "float", "entity<1>", "entity<1>" , "DamageType = GENERIC"})
+    @MNIFunction(identifier = "damage", normalParams = {"entity", "float", "entity", "entity" , "DamageType = GENERIC"})
     public static void damageFrom(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.damageFrom(context);
     }
@@ -133,12 +133,12 @@ public class StdCommands {
     //endregion
 
     //region give
-    @MNIFunction(normalParams = {"Player", "Item"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(normalParams = {"entity", "Item"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void give(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.give(context);
     }
 
-    @MNIFunction(identifier = "give", normalParams = {"Player", "Item", "int"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(identifier = "give", normalParams = {"entity", "Item", "int"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void giveCount(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.giveCount(context);
     }
@@ -169,7 +169,7 @@ public class StdCommands {
     //endregion
 
     //region kick
-    @MNIFunction(normalParams = {"Player", "string = \"\""}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(normalParams = {"entity", "string = \"\""}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void kick(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.kick(context);
     }
@@ -212,7 +212,7 @@ public class StdCommands {
     //endregion
 
     //region
-    @MNIFunction(normalParams = {"Player", "LootTable"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(normalParams = {"entity", "LootTable"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void lootGive(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.lootGive(context);
     }
@@ -247,7 +247,7 @@ public class StdCommands {
         NativeStdCommandOperations.INSTANCE.lootReplaceEntityCount(context);
     }
 
-    @MNIFunction(normalParams = {"Player", "LootTable", "pos3"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(normalParams = {"entity", "LootTable", "pos3"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void lootGiveFish(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.lootGiveFish(context);
     }
@@ -326,57 +326,57 @@ public class StdCommands {
         NativeStdCommandOperations.INSTANCE.lootReplaceEntityCountFish(context);
     }
 
-    @MNIFunction(normalParams = {"Player", "entity<1>"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(normalParams = {"entity", "entity"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void lootGiveKill(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.lootGiveKill(context);
     }
 
-    @MNIFunction(identifier = "lootInsert", normalParams = {"pos3", "entity<1>"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(identifier = "lootInsert", normalParams = {"pos3", "entity"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void lootInsertKill(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.lootInsertKill(context);
     }
 
-    @MNIFunction(identifier = "lootSpawn", normalParams = {"pos3", "entity<1>"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(identifier = "lootSpawn", normalParams = {"pos3", "entity"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void lootSpawnKill(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.lootSpawnKill(context);
     }
 
-    @MNIFunction(identifier = "lootReplace", normalParams = {"pos3", "Slot", "entity<1>"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(identifier = "lootReplace", normalParams = {"pos3", "Slot", "entity"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void lootReplaceBlockKill(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.lootReplaceBlockKill(context);
     }
 
-    @MNIFunction(identifier = "lootReplace", normalParams = {"entity", "Slot", "entity<1>"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(identifier = "lootReplace", normalParams = {"entity", "Slot", "entity"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void lootReplaceEntityKill(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.lootReplaceEntityKill(context);
     }
 
-    @MNIFunction(identifier = "lootReplace", normalParams = {"pos3", "Slot", "int", "entity<1>"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(identifier = "lootReplace", normalParams = {"pos3", "Slot", "int", "entity"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void lootReplaceBlockCountKill(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.lootReplaceBlockCountKill(context);
     }
 
-    @MNIFunction(identifier = "lootReplace", normalParams = {"entity", "Slot", "int", "entity<1>"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(identifier = "lootReplace", normalParams = {"entity", "Slot", "int", "entity"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void lootReplaceEntityCountKill(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.lootReplaceEntityCountKill(context);
     }
 
-    @MNIFunction(normalParams = {"Player", "pos3"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(normalParams = {"entity", "pos3"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void lootGiveMine(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.lootGiveMine(context);
     }
 
-    @MNIFunction(normalParams = {"Player", "pos3", "Item"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(normalParams = {"entity", "pos3", "Item"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void lootGiveMineUsing(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.lootGiveMineUsing(context);
     }
 
-    @MNIFunction(normalParams = {"Player", "pos3"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(normalParams = {"entity", "pos3"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void lootGiveMineUsingMainHand(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.lootGiveMineUsingMainHand(context);
     }
 
-    @MNIFunction(normalParams = {"Player", "pos3"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(normalParams = {"entity", "pos3"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void lootGiveMineUsingOffHand(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.lootGiveMineUsingOffHand(context);
     }
@@ -485,12 +485,12 @@ public class StdCommands {
         NativeStdCommandOperations.INSTANCE.particleForce(context);
     }
 
-    @MNIFunction(identifier = "particle", normalParams = {"Particle", "pos3", "pos3", "float", "int", "Player"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(identifier = "particle", normalParams = {"Particle", "pos3", "pos3", "float", "int", "entity"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void particleForPlayers(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.particleForPlayers(context);
     }
 
-    @MNIFunction(identifier = "particleForce", normalParams = {"Particle", "pos3", "pos3", "float", "int", "Player"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(identifier = "particleForce", normalParams = {"Particle", "pos3", "pos3", "float", "int", "entity"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void particleForceForPlayers(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.particleForceForPlayers(context);
     }
@@ -551,7 +551,7 @@ public class StdCommands {
     //endregion
 
     //region playsound
-    @MNIFunction(normalParams = {"Sound", "SoundType", "Player = @s", "pos3 = pos3.HERE", "float = 1.0", "float = 1.0", "float = 0.0"})
+    @MNIFunction(normalParams = {"Sound", "SoundType", "entity = @s", "pos3 = pos3.HERE", "float = 1.0", "float = 1.0", "float = 0.0"})
     public static void playsound(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.playsound(context);
     }
@@ -691,7 +691,7 @@ public class StdCommands {
     //endregion
 
     //region tellraw
-    @MNIFunction(normalParams = {"Player", "text"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(normalParams = {"entity", "text"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void tellraw(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.tellraw(context);
     }
@@ -700,22 +700,22 @@ public class StdCommands {
     // tick 不能调用
 
     //region titile
-    @MNIFunction(normalParams = "Player", returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(normalParams = "entity", returnType = "mcfpp.minecraft.std:CommandResult")
     public static void titleClear(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.titleClear(context);
     }
 
-    @MNIFunction(normalParams = "Player", returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(normalParams = "entity", returnType = "mcfpp.minecraft.std:CommandResult")
     public static void titleReset(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.titleReset(context);
     }
 
-    @MNIFunction(normalParams = {"Player", "text", "TitlePos"})
+    @MNIFunction(normalParams = {"entity", "text", "TitlePos"})
     public static void titleTitle(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.titleTitle(context);
     }
 
-    @MNIFunction(normalParams = {"Player", "Time", "Time", "Time"})
+    @MNIFunction(normalParams = {"entity", "Time", "Time", "Time"})
     public static void titleSet(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.titleSet(context);
     }
@@ -729,7 +729,7 @@ public class StdCommands {
     //endregion
 
     //region transfer
-    @MNIFunction(normalParams = {"string", "int = 25565", "Player = @s"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    @MNIFunction(normalParams = {"string", "int = 25565", "entity = @s"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void transfer(NativeCallContext context){
         NativeStdCommandOperations.INSTANCE.transfer(context);
     }

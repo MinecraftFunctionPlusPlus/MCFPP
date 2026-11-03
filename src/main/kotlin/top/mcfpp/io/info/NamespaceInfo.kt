@@ -1,5 +1,6 @@
 package top.mcfpp.io.info
 
+import top.mcfpp.backend.ReferenceAccessHelpers
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.type.MCFPPType
@@ -11,7 +12,8 @@ data class NamespaceInfo (
     var enums: ArrayList<EnumInfo>,
     var objectDataInfo: ArrayList<AbstractTemplateInfo<*>>,
     var aliases: HashMap<String, MCFPPType>,
-    var macros: ArrayList<MacroFunctionInfo> = arrayListOf()
+    var macros: ArrayList<MacroFunctionInfo> = arrayListOf(),
+    var referenceHelpers: ArrayList<ReferenceHelperInfo> = arrayListOf()
 ): ModelInfo<Namespace>{
     override fun get(): Namespace {
         val namespace = Namespace(identifier)
@@ -62,7 +64,8 @@ data class NamespaceInfo (
                 enums,
                 objects,
                 HashMap(namespace.scope.resolvedAliases()),
-                ArrayList(namespace.macroDeclarations())
+                ArrayList(namespace.macroDeclarations()),
+                ArrayList(ReferenceAccessHelpers.recipes(namespace.identifier).map(ReferenceHelperInfo::from))
             )
         }
     }

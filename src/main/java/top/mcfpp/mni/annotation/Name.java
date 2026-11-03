@@ -20,6 +20,11 @@ public class Name extends FieldAnnotation {
         this.version = version;
     }
 
+    public String getName() { return name; }
+    public String getVersion() { return version; }
+
+    public void restorePortableState(String value, String targetVersion) { name = value; version = targetVersion; }
+
     @Override
     public void forField(@NotNull Var<?> field) {
 

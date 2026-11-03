@@ -4,6 +4,7 @@ import com.mojang.brigadier.StringReader
 import kotlin.test.Test
 import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
+import top.mcfpp.LibraryPublicationConfig
 import top.mcfpp.CompileSettings
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.mni.annotation.WritesReceiver
@@ -71,6 +72,7 @@ class NativeSelectorContractTest {
         val entities = output.resolve("entities")
         val library = output.resolve("selectors")
         Project.config.includes = arrayListOf()
+        Project.config.library = LibraryPublicationConfig("fixture:selector-contract-resources", "1.0.0")
         MCFPPStringTest.readFromString("""
             namespace mcfpp.minecraft.resource
             data ResourceID { var id: string; }
@@ -80,9 +82,10 @@ class NativeSelectorContractTest {
         """.trimIndent(), targetPath = resources.toString(), version = "26.3")
         assertEquals(0, Project.errorCount)
         Project.config.includes = arrayListOf(resources.toString())
+        Project.config.library = LibraryPublicationConfig("fixture:selector-contract-entities", "1.0.0")
         MCFPPStringTest.readFromString("""
             namespace mcfpp.minecraft.entity
-            @From<"top.mcfpp.mni.SelectorData">
+            @From("top.mcfpp.mni.SelectorData")
             data EntityData {}
         """.trimIndent(), targetPath = entities.toString(), version = "26.3")
         assertEquals(0, Project.errorCount)
@@ -130,6 +133,7 @@ class NativeSelectorContractTest {
             }
         """
         Project.config.includes = arrayListOf(resources.toString(), entities.toString())
+        Project.config.library = LibraryPublicationConfig("fixture:selector-contract-selectors", "1.0.0")
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = library.toString(), version = "26.3")
         assertEquals(0, Project.errorCount)
         checkExport(output.resolve("source"))
@@ -318,6 +322,7 @@ class NativeSelectorContractTest {
         val entities=output.resolve("guard-entities")
         val library=output.resolve("guard-library")
         Project.config.includes=arrayListOf()
+        Project.config.library = LibraryPublicationConfig("fixture:selector-contract-guard-resources", "1.0.0")
         MCFPPStringTest.readFromString("""
             namespace mcfpp.minecraft.resource
             data ResourceID {var id: string;}
@@ -327,9 +332,10 @@ class NativeSelectorContractTest {
         """.trimIndent(),targetPath=resources.toString(),version="26.3")
         assertEquals(0,Project.errorCount)
         Project.config.includes=arrayListOf(resources.toString())
+        Project.config.library = LibraryPublicationConfig("fixture:selector-contract-guard-entities", "1.0.0")
         MCFPPStringTest.readFromString("""
             namespace mcfpp.minecraft.entity
-            @From<"top.mcfpp.mni.SelectorData">
+            @From("top.mcfpp.mni.SelectorData")
             data EntityData {}
         """.trimIndent(),targetPath=entities.toString(),version="26.3")
         assertEquals(0,Project.errorCount)
@@ -355,6 +361,7 @@ class NativeSelectorContractTest {
             func main(){var box=Box();external result=box.name("initial");external tagResult=box.tag("initial");external teamResult=box.team("initial");known();}
         """.trimIndent()
         for(fresh in listOf(false,true)) {
+            Project.config.library = LibraryPublicationConfig("fixture:selector-contract-guards", "1.0.0")
             Project.config.includes=if(fresh) arrayListOf(resources.toString(),entities.toString(),library.toString()) else arrayListOf(resources.toString(),entities.toString())
             MCFPPStringTest.readFromString(if(fresh) "import fixture.guards:*;\nfunc main(){var box=Box();external result=box.name(\"initial\");external tagResult=box.tag(\"initial\");external teamResult=box.team(\"initial\");known();}" else source,
                 targetPath=if(fresh)null else library.toString(),version="26.3")
@@ -391,6 +398,9 @@ class NativeSelectorContractTest {
             }
             // The manual macro entrypoint validates the exact argument compound supplied by its caller.
             val sink=Function("manual_guard","fixture.guards",context=null)
+            // The linker needs the manually built consumer as an explicit resource root.
+            GlobalScope.localNamespaces.getOrPut(sink.namespace) { top.mcfpp.model.Namespace(sink.namespace) }
+                .scope.addFunction(sink, false)
             Function.currFunction=sink
             val input=MCString("incoming")
             val binding=StorageAccess.bindIncomingParameter(input)

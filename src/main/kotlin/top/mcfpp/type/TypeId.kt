@@ -44,5 +44,36 @@ sealed interface TypeId {
         private val declarations = AtomicLong()
         fun reserve(id: Long) { declarations.accumulateAndGet(id, ::maxOf) }
         fun fresh(): TypeId = Opaque(declarations.incrementAndGet())
+
+        /** Reserved constructor key for canonical function value identities. */
+        const val FUNCTION_CONSTRUCTOR = "func"
+
+        /** Reserved wrapper key that groups the parameter identities of a function type. */
+        const val FUNCTION_PARAMETERS = "func.params"
+
+        /** Prefix of the execution-category discriminator inside a function identity. */
+        const val FUNCTION_EXECUTION_PREFIX = "func.execution:"
+
+        /**
+         * Canonical structural identity for a function value type.
+         *
+         * The identity is an [Applied] type, so it reuses the existing structural
+         * [equals]/[hashCode] machinery instead of depending on object identity. The
+         * execution category is part of the identity: signatures that differ only in
+         * normal/paused/generator category are distinct types.
+         *
+         * Arguments are, in order: the execution-category marker, a parameter-list
+         * marker, and the result type. The marker nodes keep parameter order and the
+         * parameter/result split unambiguous.
+         */
+        fun function(parameterTypes: List<TypeId>, resultType: TypeId, executionCategory: String): TypeId =
+            Applied(
+                Builtin(FUNCTION_CONSTRUCTOR),
+                listOf(
+                    Builtin(FUNCTION_EXECUTION_PREFIX + executionCategory),
+                    Applied(Builtin(FUNCTION_PARAMETERS), parameterTypes),
+                    resultType
+                )
+            )
     }
 }

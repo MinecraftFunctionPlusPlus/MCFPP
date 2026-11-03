@@ -11,6 +11,8 @@ public class NoInstance extends DataTemplateAnnotation {
         super("NoInstance","mcfpp.lang");
     }
 
+    public static NoInstance restorePortable() { return new NoInstance(); }
+
     @Override
     public void forDataTemplate(@NotNull DataTemplate data){}
 }

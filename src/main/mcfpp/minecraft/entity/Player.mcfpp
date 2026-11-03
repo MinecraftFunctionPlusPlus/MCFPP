@@ -3,63 +3,63 @@ import mcfpp.minecraft.item:ItemStackData
 
 @MCFPPEntity
 data PlayerData: EntityData, CreatureData {
-    @Name<"DataVersion"> var dataVersion: int
-    @Name<"Abilities"> var abilities: data {
-        @Name<"Flying"> var flying: bool
-        @Name<"FlySpeed"> var flySpeed: float
-        @Name<"Instabuild"> var instabuild: bool
-        @Name<"Invulnerable"> var invulnerable: bool
-        @Name<"MayBuild"> var mayBuild: bool
-        @Name<"MayFly"> var mayFly: bool
-        @Name<"WalkSpeed"> var walkSpeed: float
+    @Name("DataVersion") var dataVersion: int
+    @Name("Abilities") var abilities: data {
+        @Name("Flying") var flying: bool
+        @Name("FlySpeed") var flySpeed: float
+        @Name("Instabuild") var instabuild: bool
+        @Name("Invulnerable") var invulnerable: bool
+        @Name("MayBuild") var mayBuild: bool
+        @Name("MayFly") var mayFly: bool
+        @Name("WalkSpeed") var walkSpeed: float
     }
-    @Name<"current_explosion_impact_pos"> var currentExplosionImpactPos: list<double>
-    @Name<"current_impulse_context_reset_grace_time"> var currentImpulseContextResetGraceTime: int
-    @Name<"Dimension"> var dimension: string
-    @Name<"ender_pearls"> var enderPearls: list<data: EnderPearlData {
-        @Name<"ender_pearl_dimension"> var enderPearlDimension: string
+    @Name("current_explosion_impact_pos") var currentExplosionImpactPos: list<double>
+    @Name("current_impulse_context_reset_grace_time") var currentImpulseContextResetGraceTime: int
+    @Name("Dimension") var dimension: string
+    @Name("ender_pearls") var enderPearls: list<data: EnderPearlData {
+        @Name("ender_pearl_dimension") var enderPearlDimension: string
     }>
-    @Name<"EnderItems"> var enderItems: list<ItemData>
+    @Name("EnderItems") var enderItems: list<ItemData>
     var enteredNetherPosition: list<double>
     var foodExhaustionLevel: float
     var foodLevel: int
     var foodSaturationLevel: float
     var foodTickTimer: int
-    @Name<"ignore_fall_damage_from_current_explosion"> var ignoreFallDamageFromCurrentExplosion: bool
-    @Name<"Inventory"> var inventory: list<ItemData>
-    @Name<"LastDeathLocation"> var lastDeathLocation: data {
+    @Name("ignore_fall_damage_from_current_explosion") var ignoreFallDamageFromCurrentExplosion: bool
+    @Name("Inventory") var inventory: list<ItemData>
+    @Name("LastDeathLocation") var lastDeathLocation: data {
         var dimension: string
         var pos: IntArray
     }
     var playerGameType: int
     var previousplayerGameType: int
-    @Name<"raid_omen_position"> var raidOmenPosition: IntArray
-    @Name<"RecipeBook"> var recipeBook: list<RecipeBook>
-    @Name<"RootVehicle"> var rootVehicle: data {
-        @Name<"Attach"> var attach: IntArray
-        @Name<"Entity"> var _entity: EntityData
+    @Name("raid_omen_position") var raidOmenPosition: IntArray
+    @Name("RecipeBook") var recipeBook: list<RecipeBook>
+    @Name("RootVehicle") var rootVehicle: data {
+        @Name("Attach") var attach: IntArray
+        @Name("Entity") var _entity: EntityData
     }
-    @Name<"Score"> var score: int
+    @Name("Score") var score: int
     var seenCredits: byte
-    @Name<"SelectedItem"> var selectedItem: ItemStackData
-    @Name<"SelectedItemSlot"> var selectedItemSlot: int
-    @Name<"ShoulderEntityLeft"> var shoulderEntityLeft: EntityData
-    @Name<"ShoulderEntityRight"> var shoulderEntityRight: EntityData
-    @Name<"SleepTimer"> var sleepTimer: short
-    @Name<"spawn_extra_particles_on_fall"> var spawnExtraParticlesOnFall: bool
-    @Name<"SpawnAngle"> var spawnAngle: float
-    @Name<"SpawnDimension"> var spawnDimension: string
-    @Name<"SpawnForced"> var spawnForced: bool
-    @Name<"SpawnX"> var spawnX: int
-    @Name<"SpawnY"> var spawnY: int
-    @Name<"SpawnZ"> var spawnZ: int
-    @Name<"warden_spawn_tracker"> var wardenSpawnTracker: data {
-        @Name<"cooldown_ticks"> var cooldownTicks: int
-        @Name<"ticks_since_last_warning"> var ticksSinceLastWarning: int
-        @Name<"warning_level"> var warningLevel: int
+    @Name("SelectedItem") var selectedItem: ItemStackData
+    @Name("SelectedItemSlot") var selectedItemSlot: int
+    @Name("ShoulderEntityLeft") var shoulderEntityLeft: EntityData
+    @Name("ShoulderEntityRight") var shoulderEntityRight: EntityData
+    @Name("SleepTimer") var sleepTimer: short
+    @Name("spawn_extra_particles_on_fall") var spawnExtraParticlesOnFall: bool
+    @Name("SpawnAngle") var spawnAngle: float
+    @Name("SpawnDimension") var spawnDimension: string
+    @Name("SpawnForced") var spawnForced: bool
+    @Name("SpawnX") var spawnX: int
+    @Name("SpawnY") var spawnY: int
+    @Name("SpawnZ") var spawnZ: int
+    @Name("warden_spawn_tracker") var wardenSpawnTracker: data {
+        @Name("cooldown_ticks") var cooldownTicks: int
+        @Name("ticks_since_last_warning") var ticksSinceLastWarning: int
+        @Name("warning_level") var warningLevel: int
     }
-    @Name<"XpLevel"> var xpLevel: int
-    @Name<"XpP"> var xpP: float
-    @Name<"XpSeed"> var xpSeed: int
-    @Name<"XpTotal"> var xpTotal: int
+    @Name("XpLevel") var xpLevel: int
+    @Name("XpP") var xpP: float
+    @Name("XpSeed") var xpSeed: int
+    @Name("XpTotal") var xpTotal: int
 }

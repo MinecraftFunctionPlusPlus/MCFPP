@@ -1,5 +1,5 @@
-@From<"top.mcfpp.mni.resource.ItemData">
+@From("top.mcfpp.mni.resource.ItemData")
 data Item: ResourceID
 
-@From<"top.mcfpp.mni.resource.ItemObjectData">
+@From("top.mcfpp.mni.resource.ItemObjectData")
 object data Item: ResourceID

@@ -1,0 +1,13 @@
+// Player names are 1..16 ASCII letters, digits or underscores.
+// UUID text has five nonempty hexadecimal groups, with maximum widths 8-4-4-4-12.
+// Short groups such as 0-0-0-0-1 are accepted; signs and oversized groups are rejected.
+// Neither factory requires UUID version or variant bits. Targets resolve when consumed.
+func entityByName(name: string): entity = top.mcfpp.mni.EntityTargetData.entityByName
+func entityByUUID(uuid: string): entity = top.mcfpp.mni.EntityTargetData.entityByUUID
+
+// Compiler intrinsics on every entity value:
+// target.withPosCtx { ctx -> ... } establishes execute at (position, rotation, dimension).
+// target.withEntityCtx { ctx -> ... } establishes execute as (executor only).
+// Their synchronous callbacks and scoped context types are registered by ContextCallbacks.
+// On a context, onPassengers/onVehicle/onOrigin/onOwner/onController/onLeasher/onTarget/
+// onAttacker use execute on from its executor and inherit space at the call site (1.19.4+).

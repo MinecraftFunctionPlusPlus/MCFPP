@@ -3,15 +3,12 @@ package top.mcfpp
 import com.ibm.icu.impl.data.ResourceReader
 import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
-import picocli.CommandLine
 import top.mcfpp.io.DatapackCreator
+import top.mcfpp.library.mcfpm.McfpmCliCompiler
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.util.LogLevel
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.UwU
-import java.io.File
-import java.nio.file.Files
-import kotlin.io.path.Path
+import java.io.PrintWriter
 import kotlin.io.path.absolutePathString
 import kotlin.system.exitProcess
 
@@ -19,26 +16,16 @@ import kotlin.system.exitProcess
  * 编译器的启动入口
  */
 fun main(args: Array<String>) {
-    // 获取log4j2.xml配置文件
-    val source:ConfigurationSource
-    try {
-        source = ConfigurationSource(ResourceReader::class.java.classLoader.getResourceAsStream("log4j2.xml"))
-        Configurator.initialize(null,source)
-    }catch (e:Exception){
-        println("Failed to load log4j2.xml")
-        e.printStackTrace()
-    }
-    if (args.isNotEmpty()) {
-        val options = parseCompilerArgs(args)
+    val exitCode = runCompiler(args)
+    if (exitCode != 0) exitProcess(exitCode)
+}
 
-        LogProcessor.info("Tips: " + UwU.tip) // 生成tips
-
-        val config = Project.readConfig(options) // 读取配置文件
-        if (Project.errorCount > 0) exitProcess(1)
-
-        compile(config)
-        if (Project.errorCount > 0) exitProcess(1)
-    }
+internal fun runCompiler(
+    args: Array<String>,
+    out: PrintWriter = PrintWriter(System.out, true),
+    err: PrintWriter = PrintWriter(System.err, true),
+): Int {
+    return top.mcfpp.cli.ProjectCli.run(args, out, err)
 }
 
 fun compile(config: ProjectConfig){
@@ -77,45 +64,4 @@ fun compile(config: ProjectConfig){
 
 object MCFPP {
     const val VERSION = "0.1.0"
-}
-
-/** This result contains only this invocation's macro options; it never carries legacy globals. */
-internal fun parseCompilerArgs(args: Array<String>): CompilerOptions {
-    val options = CompilerOptions()
-    CommandLine(options).parseArgs(*args)
-    return options
-}
-
-class CompilerOptions {
-
-    @CommandLine.Parameters(paramLabel = "FILE")
-    lateinit var file: File
-
-    @CommandLine.Option(names = ["-debug"])
-    var debug: Boolean = false
-
-    @CommandLine.Option(names = ["-ignoreStdLib"])
-    var ignoreStdLib: Boolean = false
-
-    @CommandLine.Option(names = ["-macroMaxDepth"])
-    var isLib: Boolean = false
-
-    @CommandLine.Option(names = ["-maxWhileInline"])
-    var macroMaxDepth: Int = 64
-
-    @CommandLine.Option(names = ["-macroMaxDepth"])
-    var macroMaxNodes: Int = 100_000
-
-    @CommandLine.Option(names = ["-dumpMacroExpansion"])
-    var dumpMacroExpansion: Boolean = false
-
-    @CommandLine.Option(names = ["-debug"])
-    var maxWhileInline: Int = 32
-
-    @CommandLine.Option(names = ["-macroMaxDepth"])
-    var printAll: Boolean = false
-
-    @CommandLine.Option(names = ["-debug"])
-    var level: LogLevel = LogLevel.DEBUG
-
 }

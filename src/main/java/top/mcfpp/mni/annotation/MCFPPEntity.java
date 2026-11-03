@@ -6,10 +6,14 @@ import top.mcfpp.model.annotation.DataTemplateAnnotation;
 
 public class MCFPPEntity extends DataTemplateAnnotation {
 
-    public MCFPPEntity(){
+    public MCFPPEntity(){ this(false); }
+
+    private MCFPPEntity(boolean restoring){
         super("MCFPPEntity", "mcfpp.lang");
-        extends_(new DataOnly());
+        if (!restoring) extends_(new DataOnly());
     }
+
+    public static MCFPPEntity restorePortable() { return new MCFPPEntity(true); }
 
     @Override
     public void forDataTemplate(@NotNull DataTemplate data) {}

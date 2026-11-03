@@ -2,7 +2,6 @@ package top.mcfpp.model.function
 
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.Var
-import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.scope.SimpleScopeWithType
 import top.mcfpp.type.MCFPPBaseType
@@ -62,6 +61,18 @@ class FunctionParam(
             }.orEmpty()
         }
     var defaultContext: mcfppParser.ValueContext? = null
+    @Transient var defaultBodyHandle: BodyHandle? = null
+
+    fun defaultSyntax(): mcfppParser.ValueContext? {
+        val handle = defaultBodyHandle ?: return defaultContext
+        val bound = handle.repository.body(handle)
+        val root = bound.root as? top.mcfpp.library.syntax.Expression
+            ?: throw IllegalStateException("LIB_BODY_UNSUPPORTED: Parameter default is not an expression")
+        val projection = top.mcfpp.library.compiler.CurrentSyntaxProjection(bound.bindings, bound.declarations)
+        val context = projection.defaultValue(root)
+        handle.repository.registerProjection(handle, projection, context)
+        return context
+    }
 
     fun buildVar(): Var<*>{
         if (type is top.mcfpp.type.UnresolvedType || type is MCFPPGenericParamType)
@@ -116,15 +127,15 @@ class FunctionParam(
             val typeScope = SimpleScopeWithType.getTypeScope().apply { parent.add(top.mcfpp.io.MCFPPFile.currFile?.field) }
             //解析只读参数
             params.readOnlyParams()?.let {
-                for (param in it.parameterList()?.parameter()?: emptyList()) {
-                    val typeName = top.mcfpp.antlr.DeclarationSyntax.readonlyTypeName(param)
+                for (param in it.readOnlyParameterList()?.readOnlyParameter()?: emptyList()) {
+                    val typeName = top.mcfpp.antlr.ReadonlyParamsDeclarationSyntax.readonlyTypeName(param)
                     val type = MCFPPType.parseFromString(typeName, typeScope)?: run {
                         LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(typeName))
                         MCFPPBaseType.Any
                     }
                     r.add(type)
                     if(type == MCFPPConcreteType.Type){
-                        val name = top.mcfpp.antlr.DeclarationSyntax.parameterName(param, true, "p${r.size - 1}")
+                        val name = top.mcfpp.antlr.ReadonlyParamsDeclarationSyntax.readonlyParameterName(param)
                         typeScope.putType(name, MCFPPGenericParamType(name, arrayListOf(MCFPPBaseType.Any)))
                     }
                 }

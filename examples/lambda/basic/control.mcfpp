@@ -1,0 +1,67 @@
+func apply(value: int, callback: (int) -> int): int { return callback(value); }
+func consume(callback: () -> void) { callback(); }
+func identity(value: int): int { return value; }
+func genericApply<T>(value: T, callback: (T) -> T): T { return callback(value); }
+
+func next(): int {
+    import var value: int;
+    /scoreboard players add lambda_order mcfpp_default 1
+    /execute store result storage mcfpp:system stack_frame[0].value int 1 run scoreboard players get lambda_order mcfpp_default
+    return value;
+}
+
+func bump(): int {
+    /scoreboard players add lambda_effects mcfpp_default 1
+    return 11;
+}
+
+func main() {
+    /scoreboard players set lambda_order mcfpp_default 0
+    /scoreboard players set lambda_effects mcfpp_default 0
+    var trailing = apply(4) { it + 1 };
+    var argument = apply(5, { value -> value + 1 });
+    var reference = apply(7, identity);
+    var callbackValue: (int) -> int = identity;
+    var parameter = apply(8, callbackValue);
+    var generic = genericApply<int>(9) { it + 1 };
+    var combine: (int, int) -> int = { a, b -> a * 10 + b };
+    var order = combine(next(), next());
+    var copied: (int, int) -> int = combine;
+    var copyResult = copied(3, 4);
+    var early: (int) -> int = { value -> if (value > 0) { return value; }; return 0; };
+    var local = early(7);
+    var after = 42;
+    var ignored: () -> void = { bump() };
+    var terminated: () -> void = { bump(); };
+    ignored();
+    terminated();
+    consume { bump() };
+    var empty: () -> void = {};
+    empty();
+    consume({});
+    var compound = {};
+    var loop: (int) -> int = { limit ->
+        var i = 0;
+        while (i < limit) {
+            i = i + 1;
+            if (i == 2) { continue; }
+            if (i == 4) { break; }
+        }
+        i
+    };
+    var loopResult = loop(10);
+    /data modify storage lambda:results trailing set from storage mcfpp:system stack_frame[0].trailing
+    /data modify storage lambda:results argument set from storage mcfpp:system stack_frame[0].argument
+    /data modify storage lambda:results reference set from storage mcfpp:system stack_frame[0].reference
+    /data modify storage lambda:results parameter set from storage mcfpp:system stack_frame[0].parameter
+    /data modify storage lambda:results generic set from storage mcfpp:system stack_frame[0].generic
+    /data modify storage lambda:results order set from storage mcfpp:system stack_frame[0].order
+    /data modify storage lambda:results copyResult set from storage mcfpp:system stack_frame[0].copyResult
+    /data modify storage lambda:results local set from storage mcfpp:system stack_frame[0].local
+    /data modify storage lambda:results after set from storage mcfpp:system stack_frame[0].after
+    /data modify storage lambda:results loopResult set from storage mcfpp:system stack_frame[0].loopResult
+    /execute store result storage lambda:results calls int 1 run scoreboard players get lambda_order mcfpp_default
+    /execute store result storage lambda:results effects int 1 run scoreboard players get lambda_effects mcfpp_default
+    consume(terminated);
+    /execute store result storage lambda:results effectsAfterParameter int 1 run scoreboard players get lambda_effects mcfpp_default
+}

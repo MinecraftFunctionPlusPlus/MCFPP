@@ -41,7 +41,7 @@ class ImmutableListTest {
         assertEquals(type.typeId, type.buildUnConcrete("runtime").clone().type.typeId)
     }
 
-    @Test fun readOnlyViewsObserveWritesThroughTheMutableSource() {
+    @Test fun readOnlyViewInitializersKeepIndependentContents() {
         val main = compile("""
             func main(){
                 var source = [2,3]
@@ -51,10 +51,10 @@ class ImmutableListTest {
                 external result = view[0]*10 + view[-1]
             }
         """)
-        assertEquals(73, execute(main).read(main.scope.getVar("result") as MCInt))
+        assertEquals(23, execute(main).read(main.scope.getVar("result") as MCInt))
         val source = main.scope.getVar("source")!!
         val view = main.scope.getVar("view")!!
-        assertSame(source.storageBinding!!.data, view.storageBinding!!.data)
+        assertNotSame(source.storageBinding!!.data, view.storageBinding!!.data)
     }
 
     @Test fun ordinaryImmutableCopiesAndRuntimeParametersAndReturnsUseIndependentValues() {
@@ -69,7 +69,7 @@ class ImmutableListTest {
                 external result = view[0]*100 + copied[0]*10 + returned[0]
             }
         """)
-        assertEquals(722, execute(main).read(main.scope.getVar("result") as MCInt))
+        assertEquals(222, execute(main).read(main.scope.getVar("result") as MCInt))
         assertEquals(MCFPPImmutableListType(MCFPPBaseType.Int).typeId, main.scope.getVar("returned")!!.type.typeId)
     }
 

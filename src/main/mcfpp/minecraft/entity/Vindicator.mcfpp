@@ -1,4 +1,4 @@
 @MCFPPEntity
 data VindicatorData: EntityData, CreatureData, AIMobData, RaiderData {
-    @Name<"Johnny"> var johnny: bool
+    @Name("Johnny") var johnny: bool
 }

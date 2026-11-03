@@ -22,6 +22,8 @@ import top.mcfpp.nbt.tags.collection.LongArrayTag
 import top.mcfpp.nbt.tags.primitive.*
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
+import top.mcfpp.util.LogLevel
+import top.mcfpp.util.LogProcessor
 import java.nio.file.Files
 import java.nio.file.Path
 import java.io.ByteArrayOutputStream
@@ -184,13 +186,12 @@ class NumericConversionContractTest {
                     appendLine("}")
                 }
                 Project.config.includes=if(fresh)arrayListOf(library.toString())else arrayListOf()
-                val original=System.out
-                val captured=ByteArrayOutputStream()
-                try {
-                    System.setOut(PrintStream(captured,true,Charsets.UTF_8))
+                val captured=LogProcessor.beginDiagnosticCapture()
+                val diagnostics=try {
                     MCFPPStringTest.readFromString(program,version=version)
-                } finally {System.setOut(original)}
-                val diagnostics=captured.toString(Charsets.UTF_8)
+                    captured.seal().diagnostics.filter { it.level == LogLevel.ERROR }
+                        .joinToString("\n") { it.message }
+                } finally {captured.close()}
                 assertEquals(pairs.size*2,Project.errorCount,"$version/$fresh/IR=$ir\n$diagnostics")
                 for((source,target)in pairs) {
                     val diagnostic=Regex("${conversion(target)}\\(${source.name}\\) has no runtime implementation",RegexOption.IGNORE_CASE)

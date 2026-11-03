@@ -5,6 +5,16 @@ import top.mcfpp.backend.NativeMinecraftCommandOperations;
 import top.mcfpp.mni.NativeCallContext;
 
 public class EntityTeleportData {
+    @MNIFunction(identifier = "tp", normalParams = {"entity", "pos3"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void teleportEntitiesToPosition(NativeCallContext context) {
+        NativeMinecraftCommandOperations.INSTANCE.teleportEntities(context);
+    }
+
+    @MNIFunction(identifier = "tp", normalParams = {"entity", "ContextPosition"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void teleportEntitiesToContextPosition(NativeCallContext context) {
+        NativeMinecraftCommandOperations.INSTANCE.teleportEntities(context);
+    }
+
     @MNIFunction(identifier = "tp", normalParams = "pos3", caller = "entity", returnType = "mcfpp.minecraft.std:CommandResult")
     public static void teleportToPosition(NativeCallContext context) {
         NativeMinecraftCommandOperations.INSTANCE.entityTeleportToPosition(context);

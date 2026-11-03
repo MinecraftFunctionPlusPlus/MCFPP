@@ -189,14 +189,11 @@ class LegacyFloatIRTest {
             assertNotNull(function("main").typedIR)
             val executable = function("main").commands.map { it.toString().trim() }
                 .filter { it.isNotEmpty() && !it.startsWith("#") }
-            assertEquals(listOf(
-                "data modify storage mcfpp:system stack_frame prepend value {}",
-                "data remove storage mcfpp:system stack_frame[0]"
-            ), executable, executable.joinToString("\n"))
+            assertTrue(executable.isEmpty(), executable.joinToString("\n"))
         }
     }
 
-    @Test fun erasedAndUnknownFloatViewsShareThePayloadWithoutRuntimeTypeChecks() = modes {
+    @Test fun erasedAndUnknownFloatViewInitializersCopyWithoutRuntimeTypeChecks() = modes {
         val main = compile("""
             func expose(value: float): any { return value; }
             func main(){
@@ -211,17 +208,15 @@ class LegacyFloatIRTest {
             }
         """)
         val machine = execute(main)
-        assertEquals(2, result(machine, main))
-        assertEquals(listOf(1, 2000, 0, 1), components(machine, "temp.view"))
+        assertEquals(1, result(machine, main))
+        assertEquals(listOf(1, 1250, 0, 1), components(machine, "temp.view"))
     }
 
     @Test fun scalarFloatViewsKeepTheExistingUnusedAndReadLayoutBoundary() {
         compile("func main(){ var source: any = 1; var unused = source as float; }", ir = false)
-        for (source in listOf(
-            "func main(){ var source: any = 1; var view = source as float; var result = toInt(view); }",
-            "func main(){ var source: any = 1.25; var view = source as float; source = 2; var result = toInt(view); }")) {
-            MCFPPStringTest.readFromString(source, version = "1.20.1")
-            assertTrue(Project.errorCount > 0, source)
-        }
+        MCFPPStringTest.readFromString("func main(){ var source: any = 1; var view = source as float; var result = toInt(view); }", version = "1.20.1")
+        assertTrue(Project.errorCount > 0)
+        val main = compile("func main(){ var source: any = 1.25; var view = source as float; source = 2; external result = toInt(view); }")
+        assertEquals(1, result(execute(main), main))
     }
 }

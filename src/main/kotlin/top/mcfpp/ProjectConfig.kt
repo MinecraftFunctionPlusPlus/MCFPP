@@ -7,6 +7,29 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
 
+/** Publication identity must agree with the enclosing Mcfpm package manifest. */
+data class LibraryPublicationConfig(
+    val coordinate: String,
+    val version: String,
+    val classifier: String = "mcfpp",
+) {
+    init {
+        require(Regex("[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?:[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?").matches(coordinate)) {
+            "library.coordinate: expected lowercase group:name using letters, digits, '.', '_' or '-'"
+        }
+        require(Regex("(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-((?:0|[1-9A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?").matches(version)) {
+            "library.version: expected a SemVer 2.0 version"
+        }
+        val prerelease = version.substringBefore('+').substringAfter('-', "")
+        require(prerelease.split('.').none { it.length > 1 && it.startsWith('0') && it.all(Char::isDigit) }) {
+            "library.version: numeric prerelease identifiers must not contain leading zeroes"
+        }
+        require(Regex("[a-z0-9][a-z0-9._-]*").matches(classifier)) {
+            "library.classifier: expected lowercase letters, digits, '.', '_' or '-'"
+        }
+    }
+}
+
 /** Limits and diagnostics for MNI code expansion. Each compilation creates its own budget. */
 data class MacroExpansionConfig(
     val maxDepth: Int = DEFAULT_MAX_DEPTH,
@@ -113,8 +136,24 @@ open class ProjectConfig(
     */
     var dataPath: Path? = null,
 
+    /** Vanilla client resources; a sibling resource pack is emitted when this contains files. */
+    var assetsPath: Path? = null,
+
+    /** Stable vanilla function IDs mapped to public, parameterless void MCFPP functions. */
+    var entrypoints: Map<String, String> = emptyMap(),
+
+    /** Explicit project resource paths permitted to replace generated files (relative to data/). */
+    var resourceOverrides: List<String> = emptyList(),
+
     /** MNI macro limits and expansion dump setting. */
     var macroExpansion: MacroExpansionConfig = MacroExpansionConfig(),
+
+    /** Optional package identity; ordinary projects retain a stable local identity. */
+    var library: LibraryPublicationConfig? = null,
+
+    /** Optional debug artifacts, kept outside the installable datapack. */
+    var irOutputPath: Path? = null,
+    var optimization: top.mcfpp.optimization.OptimizationConfig = top.mcfpp.optimization.OptimizationConfig(),
 )
 
 /** Create a fresh budget for one compilation unit; counts are never shared between compilations. */

@@ -85,6 +85,9 @@ class Execute {
 
     abstract class WriteOnlyVar: Var<WriteOnlyVar>(){
 
+        /** Execute options emit a command fragment rather than assigning a stored value. */
+        fun accept(value: Var<*>) { doAssignedBy(value) }
+
         abstract fun getData(): CompoundData
 
         override fun clone(): WriteOnlyVar = this

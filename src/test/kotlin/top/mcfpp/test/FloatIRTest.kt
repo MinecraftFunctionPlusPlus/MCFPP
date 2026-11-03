@@ -83,7 +83,7 @@ class FloatIRTest {
                 valuesCopy[1] = 4
                 valuesCopy.add(3)
                 external result = 0
-                if(erased == 3.0 && values[1] == 2.0 && valuesCopy[1] == 4.0 && valuesCopy[2] == 3.0){ result = 1; }
+                if(view == 3.0 && erased == 2.5 && values[1] == 2.0 && valuesCopy[1] == 4.0 && valuesCopy[2] == 3.0){ result = 1; }
                 /data modify storage mcfpp:system temp.element set from storage mcfpp:system stack_frame[0].valuesCopy[2]
             }
         """)

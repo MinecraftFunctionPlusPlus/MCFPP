@@ -8,7 +8,6 @@ import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.analysis.StorageAccess
 
 import org.antlr.v4.runtime.RuleContext
-import org.antlr.v4.runtime.tree.ParseTree
 import top.mcfpp.Project
 import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.annotations.InsertCommand
@@ -169,6 +168,11 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             //注册函数
             GlobalScope.localNamespaces[Project.currNamespace]!!.scope.addFunction(Function.currFunction, force = false)
             isInTopStatement = true
+            if (Function.currFunction.scope.vars.isEmpty()) {
+                val path = NBTPath(top.mcfpp.lib.StorageSource("mcfpp:system"))
+                    .memberIndex("file_${Function.currFunction.identifier}")
+                Function.addCommand(Commands.dataSetValue(path, top.mcfpp.nbt.tags.CompoundTag()))
+            }
             super.visitTopStatement(ctx)
             isInTopStatement = false
             //变量移动到文件作用域
@@ -270,7 +274,11 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             init = MCFPPExprVisitor(
                 if(type is MCFPPEnumType) type else null
             ).visitExpression(ctx.expression(), if (ctx.type() != null) type else null)
-            if (init.isError) return null
+            if (init.isError) {
+                if (Project.errorCount == declarationErrors)
+                    LogProcessor.error("Cannot resolve initializer for variable '${ctx.Identifier().text}': ${ctx.expression().text}")
+                return null
+            }
         }
         //类型推断
         if(type == null && init == null){
@@ -286,6 +294,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         val `var` = type.buildUnConcrete(ctx.Identifier().text, Function.currFunction)
         if(isInTopStatement){
             `var`.nbtPath = NBTPath.getFileScopePath(`var`)
+            `var`.isStatic = true
         }else{
             `var`.nbtPath = NBTPath.getNormalStackPath(`var`)
         }
@@ -295,26 +304,16 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         }
         `var`.isConst = fieldModifier == "const"
         `var`.bindDeclaration(forceRuntime = isExternal)
+        if (isInTopStatement) {
+            StorageAccess.bindStaticField(`var`)
+            `var`.nbtPath = StorageAccess.ensure(`var`).path.clone()
+        }
         if (fieldModifier == "import") StorageAccess.bindIncomingParameter(`var`)
-        val stored = if (isExternal && init != null && !top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(init)) {
-            `var`.assignedBy(init)
-        } else if (isViewInitializer(ctx.expression()) && init?.storageBinding?.view != null && init.type == type) {
-            top.mcfpp.analysis.StorageAccess.adapter(type, `var`.identifier, init.storageBinding!!).apply {
-                symbol = `var`.symbol
-                isConst = `var`.isConst
-            }
-        } else if (init != null) `var`.assignedBy(init) else `var`
+        val stored = if (init != null) `var`.assignedBy(init) else `var`
         Function.currField.putVar(`var`.identifier, stored, true)
+        top.mcfpp.analysis.StructuredBindings.publish(ctx, Function.currFunction, stored)
         if (isExternal && !stored.isError) makeRuntime(stored)
         return null
-    }
-
-    private fun isViewInitializer(expression: ParseTree?): Boolean = when (expression) {
-        null -> false
-        is mcfppParser.CastExpressionContext -> expression.type() != null ||
-            isViewInitializer(expression.unaryExpression())
-        is mcfppParser.BucketExpressionContext -> isViewInitializer(expression.expression())
-        else -> expression.childCount == 1 && isViewInitializer(expression.getChild(0))
     }
 
     /**
@@ -327,7 +326,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         if(ctx.varWithSelector() != null){
             val left: Var<*> = MCFPPExprVisitor().visitAssignableVarWithSelector(ctx.varWithSelector())
             if (left.isError || left is top.mcfpp.core.lang.UnknownVar) return null
-            val type = left.type
+            val address = top.mcfpp.core.lang.entity.EntityDataAddress.selected(left)
+            val type = address?.valueType ?: left.type
             val assignment = ctx.assignmentOperator().text
             val current = if (assignment == "=") null else {
                 val value = top.mcfpp.analysis.StorageAccess.read(if (left is PropertyVar) left.get() else left)
@@ -335,7 +335,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             }
             val right: Var<*> = MCFPPExprVisitor(
                 if(type is MCFPPEnumType) type else null
-            ).visitExpression(ctx.expression())
+            ).visitExpression(ctx.expression(), type)
             val operator = assignment.dropLast(1)
             val assigned = when (current) {
                 null -> right
@@ -346,7 +346,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 LogProcessor.error(it)
                 return null
             }
-            left.replacedBy(left.assignedBy(assigned))
+            if (address != null) address.write(assigned) else left.replacedBy(left.assignedBy(assigned))
         }else{
             MCFPPExprVisitor().visitExpression(ctx.expression())
         }
@@ -390,7 +390,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     override fun visitReturnStatement(ctx: mcfppParser.ReturnStatementContext):Any? = withCompilationContext(ctx) {
         Function.addComment(ctx.text)
         if (ctx.expression() != null) {
-            val ret: Var<*> = MCFPPExprVisitor().visitExpression(ctx.expression())
+            val ret: Var<*> = MCFPPExprVisitor().visitExpression(ctx.expression(), Function.currBaseFunction.returnType)
             val diagnostic = TypeUsage.ordinaryDiagnostic(ret.type, StorageAccess.snapshot(ret))
             if (diagnostic != null) LogProcessor.error(diagnostic)
             else Function.currBaseFunction.assignReturnVar(ret)
@@ -572,12 +572,12 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addComment("if branch start")
         //匿名函数的定义
         val f = NoStackFunction(TempPool.getFunctionIdentify("if_branch"), Function.currFunction)
-        val expr = ctx.expression()
+        val expr = ctx.conditionExpression()
         if(expr == null){
             LogProcessor.error("The condition of if statement is null.")
             return false to f
         }
-        val exp = MCFPPExprVisitor().visit(expr)
+        val exp = MCFPPExprVisitor().visitConditionExpression(expr)
         knownCondition(exp)?.let { condition ->
                 if (condition) {
                     // visitIfStatement inlines a branch that is known to run.
@@ -618,12 +618,12 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addComment("else-if branch start")
         //匿名函数的定义
         val f = NoStackFunction(TempPool.getFunctionIdentify("else_if_branch"), Function.currFunction)
-        val expr = ctx.expression()
+        val expr = ctx.conditionExpression()
         if(expr == null){
             LogProcessor.error("The condition of if statement is null.")
             return false to f
         }
-        val exp = MCFPPExprVisitor().visit(expr)
+        val exp = MCFPPExprVisitor().visitConditionExpression(expr)
         knownCondition(exp)?.let { condition ->
                 if (condition) {
                     // A runtime chain registers this branch; a static chain inlines it.
@@ -662,20 +662,22 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     override fun visitWhileStatement(ctx: mcfppParser.WhileStatementContext): Any? = withCompilationContext(ctx) {
-        compileLoop(ctx.block(), { MCFPPExprVisitor().visitExpression(ctx.expression()) }, false)
+        compileLoop(ctx.block(), { MCFPPExprVisitor().visitConditionExpression(ctx.conditionExpression()) }, false)
         return null
     }
 
-    private fun bindIterationVariable(name: String, element: Var<*>, body: Function) {
+    private fun bindIterationVariable(declaration: mcfppParser.ForeachStatementContext, element: Var<*>, body: Function) {
+        val name = declaration.Identifier().text
         val variable = element.type.buildUnConcrete(name, body)
         variable.bindDeclaration(name)
         StorageAccess.ensure(variable)
         StorageAccess.write(variable, element)
         body.scope.putVar(name, variable)
+        top.mcfpp.analysis.StructuredBindings.publish(declaration, body, variable)
     }
 
     private fun compileLoop(block: BlockContext, condition: () -> Var<*>, bodyFirst: Boolean,
-                            captured: List<Var<*>> = emptyList(), iteration: Pair<String, () -> Var<*>>? = null,
+                            captured: List<Var<*>> = emptyList(), iteration: Pair<mcfppParser.ForeachStatementContext, () -> Var<*>>? = null,
                             advance: (() -> Unit)? = null) {
         val caller = Function.currFunction
         val visible = flowValues() + captured
@@ -759,7 +761,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         val command = Command()
         for (content in ctx.orgCommandContent()){
             if(content.OrgCommandText() != null){
-                command.build(content.OrgCommandText().text)
+                command.build(content.OrgCommandText().text, false)
             }else{
                 val exp = MCFPPExprVisitor().visitExpression(content.orgCommandExpression().expression())
                 command.build(exp.toCommandPart(), false)
@@ -840,7 +842,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 }
             }
             val value = MCFPPExprVisitor().visitExpression(context.expression())
-            arg?.assignedBy(value)
+            arg?.accept(value)
         }
         val execFunction = NoStackFunction(TempPool.getFunctionIdentify("execute"), Function.currFunction)
         GlobalScope.localNamespaces[execFunction.namespace]!!.scope.addFunction(execFunction, false)
@@ -864,7 +866,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             StorageAccess.ensure(index)
             StorageAccess.write(index, first)
             compileLoop(ctx.block(), { StorageAccess.binary(index, last, "<=") }, false,
-                captured = listOf(index, last), iteration = id to { StorageAccess.capture(index) }, advance = {
+                captured = listOf(index, last), iteration = ctx to { StorageAccess.capture(index) }, advance = {
                     val atEnd = StorageAccess.binary(index, last, ">=")
                     val command = when (atEnd) {
                         is BaseBool -> Command("execute if").build(atEnd.toCommandPart())
@@ -894,7 +896,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 loops.addLast(loop)
                 try {
                     body.runInFunction {
-                        bindIterationVariable(id, element, body)
+                        bindIterationVariable(ctx, element, body)
                         visitBlock(ctx.block())
                         if (!Function.currFunction.isEnded && !Function.currFunction.hasReturnStatement) finishBranchPath()
                     }
@@ -913,16 +915,13 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             propagateLoopReturn(emitControlCall(sequence))
             return null
         }
-        val length = StorageAccess.iterationLength(captured) ?: return null
-        val index = top.mcfpp.core.lang.MCInt(TempPool.getVarIdentify())
-        StorageAccess.ensure(index)
-        StorageAccess.write(index, StorageAccess.literal(MCFPPBaseType.Int, CompilerValue.Integral(0)))
-        compileLoop(ctx.block(), { StorageAccess.binary(index, length, "<") }, false,
-            captured = listOf(index, length, captured), iteration = id to {
-                StorageAccess.capture(StorageAccess.iterationElement(captured, index))
+        // capture() owns a fresh SymbolId, Place and payload; consuming this private
+        // work list cannot mutate the source list or a callback's captured environment.
+        compileLoop(ctx.block(), { StorageAccess.iterationHasElement(captured) }, false,
+            captured = listOf(captured), iteration = ctx to {
+                StorageAccess.capture(StorageAccess.iterationHead(captured))
             }, advance = {
-                StorageAccess.write(index, StorageAccess.binary(index,
-                    StorageAccess.literal(MCFPPBaseType.Int, CompilerValue.Integral(1)), "+"))
+                StorageAccess.consumeIterationHead(captured)
             })
         return null
     }

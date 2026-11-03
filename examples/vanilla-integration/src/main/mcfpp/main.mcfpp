@@ -1,0 +1,6 @@
+// Advancement rewards enter through demo:on_use, declared in mcfpp.toml.
+func handleUse() {
+    print("MCFPP received the vanilla advancement callback.")
+    /function demo:effects
+    /advancement revoke @s only demo:use_wand
+}

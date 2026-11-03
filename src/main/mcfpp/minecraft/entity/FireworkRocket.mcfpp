@@ -2,15 +2,15 @@ import mcfpp.minecraft.item:ItemStackData
 
 @MCFPPEntity
 data FireworkRocketData {
-    @Name<"FireworksItem">
+    @Name("FireworksItem")
     var fireworksItem: list<ItemStackData>
 
-    @Name<"Life">
+    @Name("Life")
     var life: int
 
-    @Name<"LifeTime">
+    @Name("LifeTime")
     var lifeTime: int
 
-    @Name<"ShotAtAngle">
+    @Name("ShotAtAngle")
     var shotAtAngle: byte
 }

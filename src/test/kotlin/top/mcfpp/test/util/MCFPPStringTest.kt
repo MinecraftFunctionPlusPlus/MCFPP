@@ -16,7 +16,7 @@ import top.mcfpp.io.MCFPPFile
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.ObjectDataTemplate
 import top.mcfpp.model.scope.GlobalScope
-import top.mcfpp.parseArgs
+import top.mcfpp.util.LogLevel
 import top.mcfpp.util.LogProcessor
 import java.io.File
 import java.io.FileInputStream
@@ -25,15 +25,36 @@ import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
 
 object MCFPPStringTest {
-    fun readFromString(str: String, args: Array<String> = arrayOf(), targetPath: String? = null, version: String = "1.20"){
+    private fun applyLegacyTestArgs(args: Array<String>) {
+        for (arg in args) {
+            when {
+                arg == "-debug" -> CompileSettings.isDebug = true
+                arg == "-ignoreStdLib" -> CompileSettings.ignoreStdLib = true
+                arg == "-isLib" -> CompileSettings.isLib = true
+                arg == "-printAll" -> CompileSettings.printAll = true
+                arg.startsWith("-maxWhileInline=") -> CompileSettings.maxWhileInline =
+                    arg.substringAfter('=').toIntOrNull() ?: CompileSettings.maxWhileInline
+                arg.startsWith("-level=") -> LogProcessor.level =
+                    LogLevel.entries.firstOrNull { it.name.equals(arg.substringAfter('='), ignoreCase = true) }
+                        ?: LogProcessor.level
+                else -> LogProcessor.warn("Invalid argument: $arg")
+            }
+        }
+    }
+
+    fun readFromString(str: String, args: Array<String> = arrayOf(), targetPath: String? = null, version: String = "1.20",
+                       afterFileCreated: ((MCFPPFile) -> Unit)? = null){
         val source = ConfigurationSource(ResourceReader::class.java.classLoader.getResourceAsStream("log4j2.xml"))
         Configurator.initialize(null,source)
-        //编译参数
-        parseArgs(args.asList())
+        //编译参数：test-only adapter for the removed global parseArgs. The production CLI
+        // owns file/positional arguments, so this helper maps only the legacy flags it uses.
+        applyLegacyTestArgs(args)
         Project.compileStage = Project.CompileStage.PRE_INIT
         //读取json
         LogProcessor.debug("Generate debug project for a string")
         Project.config.root = Path.of("./")
+        // This helper compiles the supplied string, not a previous CLI project's directory.
+        Project.config.sourcePath = null
         Project.config.name = "debug"
         //版本77
         Project.config.version = version
@@ -48,6 +69,7 @@ object MCFPPStringTest {
         Project.readProject() //读取引用的库的索引
         //解析文件
         MCFPPFile.currFile = MCFPPFile()
+        afterFileCreated?.invoke(MCFPPFile.currFile!!)
         val charStream: CharStream = CharStreams.fromString(VersionPreprocessor.process(str, Project.config.version))
         val tokens = CommonTokenStream(mcfppLexer(charStream))
         val parser = mcfppParser(tokens)
@@ -55,6 +77,7 @@ object MCFPPStringTest {
         parser.addErrorListener(MCFPPErrorListener())
         val context = parser.compilationUnit()
         if (MCFPPFile.currFile!!.syntaxError) return
+        Project.trees[MCFPPFile.currFile!!] = context
         LogProcessor.debug("Generate Type Index...")
         Project.compileStage = Project.CompileStage.INDEX_TYPE
         Project.resolveImportedTemplateParents()
@@ -86,6 +109,10 @@ object MCFPPStringTest {
         LogProcessor.debug("Compiling mcfpp code...")
         visitor.visit(context)
         Project.optimization() //优化
+        if (Project.errorCount > 0) {
+            Project.ctx.clear()
+            return
+        }
         if(targetPath != null) Project.genIndex() //生成索引
         Project.ctx.clear()
         if(Project.config.targetPath != null){
@@ -122,8 +149,8 @@ object MCFPPStringTest {
             Project.config.rootNamespace = "default"
             //输出目录
             Project.config.targetPath = null
-            Project.readProject() //读取引用的库的索引
             Project.init() //初始化
+            Project.readProject() //读取引用的库的索引
             LogProcessor.debug("Analysing project...")
             //解析文件
             //添加默认库的域

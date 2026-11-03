@@ -1,23 +1,23 @@
 @MCFPPEntity
 data BeeData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, NeutralData {
-    @Name<"CannotEnterHiveTicks">
+    @Name("CannotEnterHiveTicks")
     var cannotEnterHiveTicks: int
 
-    @Name<"CropsGrownSincePollination">
+    @Name("CropsGrownSincePollination")
     var cropsGrownSincePollination: int
 
-    @Name<"flower_pos">
+    @Name("flower_pos")
     var flowerPos: IntArray
 
-    @Name<"HasNectar">
+    @Name("HasNectar")
     var hasNectar: byte
 
-    @Name<"HasStung">
+    @Name("HasStung")
     var hasStung: byte
 
-    @Name<"hive_pos">
+    @Name("hive_pos")
     var hivePos: IntArray
 
-    @Name<"TicksSincePollination">
+    @Name("TicksSincePollination")
     var ticksSincePollination: int
 }

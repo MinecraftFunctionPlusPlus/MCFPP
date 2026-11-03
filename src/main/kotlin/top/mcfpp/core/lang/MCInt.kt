@@ -72,7 +72,10 @@ open class MCInt : MCNumber<Int>, OnScoreboard {
         val left = StorageAccess.intRegister(this)
         val right = StorageAccess.intRegister(other)
         val result = top.mcfpp.core.lang.bool.ScoreBool()
-        Function.addCommand("execute store success score ${result.name} ${result.boolObject} ${if (operation == "!=") "unless" else "if"} score ${left.player} ${left.objective} ${if (operation == "==" || operation == "!=") "=" else operation} ${right.player} ${right.objective}")
+        // A terminal execute condition is legal in Minecraft, but the supported DSB
+        // execution path requires an explicit run. Clear every evaluation, including false.
+        Function.addCommand("scoreboard players set ${result.name} ${result.boolObject} 0")
+        Function.addCommand("execute ${if (operation == "!=") "unless" else "if"} score ${left.player} ${left.objective} ${if (operation == "==" || operation == "!=") "=" else operation} ${right.player} ${right.objective} run scoreboard players set ${result.name} ${result.boolObject} 1")
         return StorageAccess.publishBoolean(result, StorageLayout.Scoreboard(result.name, result.boolObject.toString()))
     }
     override fun isBigger(a: Var<*>) = comparison(a, ">")

@@ -83,12 +83,14 @@ class DictionaryMemberTest {
                 var view = source as dict<any>
                 view.remove("a.b")
                 external kept = source["kept"] + 0
-                external absent = source.containsKey("a.b")
+                external absent = view.containsKey("a.b")
+                external original = source.containsKey("a.b")
             }
         """)
         val machine = execute(main)
         assertEquals(2, machine.read(main.scope.getVar("kept") as MCInt))
         assertEquals(0, machine.read(main.scope.getVar("absent") as ScoreBool))
+        assertEquals(1, machine.read(main.scope.getVar("original") as ScoreBool))
     }
 
     @Test fun mergingKnownFieldsIntoAPartialReceiverPreservesKnownSiblings() {
@@ -225,9 +227,9 @@ class DictionaryMemberTest {
     @Test fun bulkMergeFreezesIncomingFactsBeforeAnOverlappingSourceIsInvalidated() {
         val main = compile("func main(){}")
         Function.currFunction = main
-        val exit = main.commands.last()
-        assertEquals(top.mcfpp.command.Commands.stackOut().analyze(), exit.toString())
-        main.commands.removeAt(main.commands.lastIndex)
+        main.commands.clear()
+        main.commands.add(top.mcfpp.command.Commands.stackIn())
+        val exit = top.mcfpp.command.Commands.stackOut()
         val nested = dictionary(mapOf("added" to MCInt(8)), "nested")
         val patch = dictionary(mapOf("patch" to nested, "scalar" to MCInt(7)), "patch")
         val values = dictionary(mapOf("patch" to patch, "runtime" to MCInt(0)), "values")

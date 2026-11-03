@@ -1,16 +1,11 @@
 package top.mcfpp
 
-import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
-import com.google.gson.JsonObject
-import com.ibm.icu.impl.data.ResourceReader
 import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.tree.ParseTree
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.apache.tools.zip.ZipFile
-import org.stringtemplate.v4.compiler.STParser
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.MCFPPFieldVisitor
 import top.mcfpp.command.Command
@@ -24,34 +19,36 @@ import top.mcfpp.io.LibBinReader
 import top.mcfpp.io.LibBinWriter
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.io.info.LibraryMetadata
+import top.mcfpp.library.api.LibraryImportSession
+import top.mcfpp.library.compiler.ManagedNativeBindings
+import top.mcfpp.library.compiler.PortableAnnotationCodec
+import top.mcfpp.library.compiler.PortableAnnotationCodecs
+import top.mcfpp.library.model.LibraryCompatibility
+import top.mcfpp.library.syntax.PackageKey
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.Native
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericDataTemplate
-import top.mcfpp.model.compound.ObjectDataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionTag
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.mni.expand.ExpansionBudget
 import top.mcfpp.mni.expand.TemplateProcessorRunner
 import top.mcfpp.mni.expand.invalidateExpansionSessions
-import top.mcfpp.type.MCFPPDataTemplateType
-import top.mcfpp.type.MCFPPType
+import top.mcfpp.model.compound.pairCompanion
 import top.mcfpp.type.TypeId
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.splitNamespaceID
 import top.mcfpp.util.Module
 import top.mcfpp.util.ModuleType
-import top.mcfpp.util.Utils
-import java.io.File
-import java.io.FileReader
 import java.io.IOException
 import java.net.URLClassLoader
+import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.jar.JarFile
+import java.util.ServiceLoader
 import kotlin.io.path.*
-import kotlin.system.exitProcess
 
 
 /**
@@ -104,7 +101,7 @@ object Project {
             return block()
         } catch (e: Exception) {
             LogProcessor.error("Fatal error. Caused by: ", e)
-            exitProcess(1)
+            throw e
         } finally {
             Project.ctx.removeFirst()
         }
@@ -187,6 +184,84 @@ object Project {
 
     var classLoader: ClassLoader = Thread.currentThread().contextClassLoader
 
+    /** One batch owns every standard, local and installed library in this compilation. */
+    var libraryImportSession: LibraryImportSession? = null
+    var libraryNativeBindings: ManagedNativeBindings? = null
+    var librarySourceProviders: Map<String, PackageKey?> = emptyMap()
+    var loadedLibraryCount = 0
+        private set
+    private val libraryClassLoaders = arrayListOf<URLClassLoader>()
+    private var libraryResourceRoot: Path? = null
+
+    /** Close compiler-owned inputs; the host class loader and Mcfpm cache remain caller-owned. */
+    fun closeLibraryImports() {
+        val failures = arrayListOf<Throwable>()
+        libraryImportSession?.let { runCatching { it.close() }.exceptionOrNull()?.let(failures::add) }
+        libraryImportSession = null
+        libraryNativeBindings = null
+        librarySourceProviders = emptyMap()
+        libraryClassLoaders.asReversed().forEach { loader -> runCatching { loader.close() }.exceptionOrNull()?.let(failures::add) }
+        libraryClassLoaders.clear()
+        libraryResourceRoot?.let { root ->
+            runCatching { Files.walk(root).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::delete) } }
+                .exceptionOrNull()?.let(failures::add)
+        }
+        libraryResourceRoot = null
+        modules.clear()
+        loadedLibraryCount = 0
+        classLoader = Thread.currentThread().contextClassLoader
+        if (failures.isNotEmpty()) throw IllegalStateException("Unable to close compiler library inputs", failures.first()).also {
+            failures.drop(1).forEach(it::addSuppressed)
+        }
+    }
+
+    /** Release the completed API compilation without running initialization hooks again. */
+    fun closeCompilation() {
+        try {
+            closeLibraryImports()
+        } finally {
+            ctx.clear(); trees.clear(); tokens.clear(); files.clear()
+            constants.clear(); macroFunction.clear()
+            anonymousTemplates.clear(); pendingTemplateContracts.clear()
+            preparedObjectInitializers.clear(); objectInitializerBodies.clear()
+            objectInitializerDependencies.clear(); activeObjectInitializers.clear()
+            invalidInheritanceHeaders.clear(); boundTemplateParents.clear()
+            inheritanceHeaderSnapshot = emptySet()
+            templateSignatureCollectionDepth = 0; completingTemplateContracts = false
+            templateDeclarationsReady = false
+            projectTickSlot = null; projectLoadSlot = null; projectInitSlot = null
+            macroExpansionBudgetSlot = null
+            MCFPPFile.currFile = null
+            Function.currFunction = Function.nullFunction; Function.forcedField = null
+            DataTemplate.currTemplate = null
+            GlobalScope.localNamespaces.clear(); GlobalScope.libNamespaces.clear()
+            GlobalScope.stdNamespaces.clear(); GlobalScope.importedLibNamespaces.clear()
+            GlobalScope.functionTags.clear(); GlobalScope.scoreboards.clear()
+            FunctionTag.TICK.functions.clear(); FunctionTag.LOAD.functions.clear()
+            LibraryMetadata.reset()
+            top.mcfpp.backend.ReferenceAccessHelpers.reset()
+            invalidateExpansionSessions(); TemplateProcessorRunner.reset()
+        }
+    }
+
+    /** Called again after body compilation so regenerated functions suppress their saved resources. */
+    fun refreshLibraryResources() {
+        val session = libraryImportSession ?: return
+        val active = session.resources()
+        if (active.isEmpty() && modules.isEmpty() && libraryResourceRoot == null) return
+        val root = libraryResourceRoot ?: Files.createTempDirectory("mcfpp-library-resources").also { libraryResourceRoot = it }
+        Files.walk(root).use { files -> files.filter { Files.isRegularFile(it) }.forEach { file ->
+            if (root.relativize(file).joinToString("/") !in active) Files.delete(file)
+        } }
+        active.forEach { (entry, bytes) ->
+            val output = root.resolve(entry).normalize()
+            require(output.startsWith(root)) { "Library resource escapes its session directory: $entry" }
+            Files.createDirectories(output.parent)
+            Files.write(output, bytes)
+        }
+        modules.forEach { it.type = ModuleType.DIR; it.resourcePath = root.resolve("datapack") }
+    }
+
     private val files = ArrayList<MCFPPFile>()
 
     val mcfppSystemTick: Function = Function("sys.tick","mcfpp", null).apply {
@@ -205,6 +280,8 @@ object Project {
      * 初始化
      */
     fun init() {
+        closeLibraryImports()
+        top.mcfpp.io.PackEntrypoints.reset()
         preparedObjectInitializers.clear()
         objectInitializerBodies.clear()
         objectInitializerDependencies.clear()
@@ -225,6 +302,7 @@ object Project {
         warningCount = 0
         constants.clear()
         macroFunction.clear()
+        top.mcfpp.backend.ReferenceAccessHelpers.reset()
         anonymousTemplates.clear()
         pendingTemplateContracts.clear()
         templateSignatureCollectionDepth = 0
@@ -248,108 +326,7 @@ object Project {
         stageProcessor[compileStage.ordinal].forEach { it() }
     }
 
-    /** Macro precedence: JSON, config args, then this invocation's CLI overrides.
-     * Legacy flags retain CLI-before-config-args ordering in main/parseCompilerArgs.
-     */
-    internal fun readConfig(options: CompilerOptions): ProjectConfig{
-        val config = ProjectConfig()
-        //工程信息读取
-        try {
-            val qwq = options.file
-            //读取json
-            LogProcessor.rawDebug(logger, "Reading project from file \"${qwq.absolutePath}\"")
-            config.name = qwq.name.substring(0, qwq.name.lastIndexOf('.'))
-            config.root = qwq.parentFile.toPath()
-            val json = qwq.readText()
-            // 解析json
-            val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
-
-            // 根目录
-            (jsonObject.remove("root") as? String)?.let { config.root = Path(it) }
-
-            // 源代码根目录
-            (jsonObject.remove("sourcePath") as? String)?.let { config.sourcePath = Path(it) }
-
-            // 版本
-            (jsonObject.remove("version") as? String)?.let { config.version = it }
-
-            // 描述
-            (jsonObject.remove("description") as? String)?.let { config.description = it }
-
-            // 默认命名空间
-            (jsonObject.remove("namespace") as? String)?.let { config.rootNamespace = it }
-
-            //调用库
-            jsonObject.getJSONArray("jars")?.let {
-                for (i in it.indices) {
-                    it.getString(i)?.let(config.jars::add)
-                }
-                jsonObject.remove("jars")
-            }
-
-            //输出目录
-            (jsonObject.remove("targetPath") as? String)?.let { config.targetPath = Path(it) }
-
-            //是否生成数据包
-            (jsonObject.remove("noDatapack") as? Boolean)?.let { config.noDatapack = it }
-
-            //注释等级
-            if(jsonObject.containsKey("commentLevel")){
-                val str = jsonObject.getString("commentLevel")
-                config.commentLevel = try {
-                    CommentLevel.valueOf(str.uppercase())
-                }catch (e: Exception){
-                    LogProcessor.error("Unsupported comment level: $str, using default value \"DEBUG\"")
-                    CommentLevel.DEBUG
-                }
-                jsonObject.remove("commentLevel")
-            }
-
-            if(jsonObject.containsKey("copyImport")){
-                config.copyImport = jsonObject.getBoolean("copyImport")
-                jsonObject.remove("copyImport")
-            }
-
-            if (jsonObject.containsKey("macroExpansion")) {
-                val options = jsonObject.getJSONObject("macroExpansion")
-                options.getInteger("maxDepth")?.let {
-                    config.macroExpansion = config.macroExpansion.copy(maxDepth = it)
-                }
-                options.getInteger("maxNodes")?.let {
-                    config.macroExpansion = config.macroExpansion.copy(maxNodes = it)
-                }
-                options.getBoolean("dump")?.let {
-                    config.macroExpansion = config.macroExpansion.copy(dump = it)
-                }
-                jsonObject.remove("macroExpansion")
-            }
-
-            //编译参数
-            if(jsonObject.containsKey("args")){
-                val compileArgsJson = jsonObject.getJSONArray("args")
-                // TODO json里面能不能定义编译器参数呢。。。
-                jsonObject.remove("args")
-            }
-
-            //额外数据
-            if(jsonObject.containsKey("dataPath")){
-                config.dataPath = config.root.resolve(Path(jsonObject.getString("dataPath")))
-                jsonObject.remove("dataPath")
-            }
-
-            for (key in jsonObject.keys) {
-                LogProcessor.warn("Unsupported config item: $key")
-            }
-
-        } catch (e: Exception) {
-            LogProcessor.error("Error while reading project from file \"${options.file.absolutePath}\"")
-            LogProcessor.captureStackTrace(e)
-        }
-
-        // 编译器cli参数中的 marco 配置会覆写项目配置
-        config.macroExpansion = MacroExpansionConfig(options.macroMaxDepth, options.macroMaxNodes, options.dumpMacroExpansion)
-        return config
-    }
+    internal fun readConfig(options: CompilerOptions): ProjectConfig = readProjectConfig(options)
 
     fun checkConfig(): Boolean{
         if (TargetCapabilities.forVersion(config.version) == null){
@@ -374,7 +351,10 @@ object Project {
     /**
      * 读取库文件，并将库写入缓存
      */
-    fun readProject(){
+    fun readProject(installedLibraries: List<LibBinReader.Payload> = emptyList()) {
+        check(libraryImportSession == null) {
+            "Library inputs are already open; call Project.init() or Project.closeCompilation() before reading another project"
+        }
         compileStage = CompileStage.READ_LIB
         //生成默认命名空间
         GlobalScope.localNamespaces[config.rootNamespace] = Namespace(config.rootNamespace)
@@ -390,134 +370,67 @@ object Project {
         FunctionTag.LOAD.functions.add(projectLoad)
         FunctionTag.LOAD.functions.add(projectInit)
 
-        //读取所有jar
-        for (jar in config.jars){
-            if(Paths.get(jar).notExists()){
-                LogProcessor.error("Cannot find jar at: $jar")
-                continue
-            }
-            val url = Paths.get(jar).toUri().toURL()
-            classLoader = URLClassLoader(arrayOf(url), classLoader)
-        }
-
-
-        fun readFromJar(path: String){
-            if(!Path(path).exists()){
-                LogProcessor.warn("Cannot find jar at: $path")
-                return
-            }
-            JarFile(path).use { jarFile ->
-                val jarEntry = jarFile.getJarEntry("datapack/bin.mclib")
-                if (jarEntry != null) {
-                    jarFile.getInputStream(jarEntry).use {
-                        LibBinReader.readFromStream(it)
-                    }
-                }else{
-                    LogProcessor.warn("Cannot find lib file at: ${jarFile.name}")
-                }
-                val moduleEntry = jarFile.getJarEntry("datapack/module.json")
-                if (moduleEntry != null) {
-                    jarFile.getInputStream(moduleEntry).use {stream ->
-                        val json = stream.reader().readText()
-                        val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
-                        modules += Module.fromJson(jsonObject).onEach {
-                            it.type = ModuleType.JAR
-                            it.resourcePath = Path(path)
-                        }
-                    }
-                }else{
-                    LogProcessor.warn("Cannot find module.json at: ${jarFile.name}")
+        try {
+            for (jar in config.jars) {
+                val path = Paths.get(jar)
+                require(Files.isRegularFile(path)) { "Cannot find jar at: $jar" }
+                URLClassLoader(arrayOf(path.toUri().toURL()), classLoader).also {
+                    libraryClassLoaders += it
+                    classLoader = it
                 }
             }
-        }
-
-        fun readFromDirectory(directory: String){
-            val libFile = File(directory, "bin.mclib")
-            if (libFile.exists()) {
-                libFile.inputStream().use {
-                    LibBinReader.readFromStream(it)
+            val managed = libraryNativeBindings ?: object : ManagedNativeBindings {
+                override fun loader(provider: PackageKey?): ClassLoader {
+                    require(provider == null) { "No trusted plugin registered for $provider" }
+                    return classLoader
                 }
-            }else{
-                LogProcessor.warn("Cannot find lib file at: $directory")
+                override fun provider(owner: java.lang.Class<*>): PackageKey? = null
             }
-            val moduleFile = File(directory, "module.json")
-            if (moduleFile.exists()) {
-                moduleFile.inputStream().use {stream ->
-                    val json = stream.reader().readText()
-                    val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
-                    modules += Module.fromJson(jsonObject).onEach {
-                        it.type = ModuleType.DIR
-                        it.resourcePath = Path(directory)
-                    }
-                }
-            }else{
-                LogProcessor.warn("Cannot find module.json at: $directory")
-            }
-        }
-
-        fun readFromZip(path: String){
-            if(!Path(path).exists()){
-                LogProcessor.warn("Cannot find zip at: $path")
-                return
-            }
-            ZipFile(path).use { zipFile ->
-                val zipEntry = zipFile.getEntry("datapack/bin.mclib")
-                if (zipEntry!= null) {
-                    zipFile.getInputStream(zipEntry).use {
-                        LibBinReader.readFromStream(it)
-                    }
-                }
-                val moduleEntry = zipFile.getEntry("datapack/module.json")
-                if (moduleEntry != null) {
-                    zipFile.getInputStream(moduleEntry).use {stream ->
-                        val json = stream.reader().readText()
-                        val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
-                        modules += Module.fromJson(jsonObject).onEach {
-                            it.type = ModuleType.ZIP
-                            it.resourcePath = Path(path)
-                        }
-                    }
-                }else{
-                    LogProcessor.warn("Cannot find module.json at: ${zipFile.name}")
-                }
-            }
-        }
-
-        //默认的
-        if(!CompileSettings.ignoreStdLib){
-            LogProcessor.info("Reading lib file at: datapack/bin.mclib")
-            val inputStream = ResourceReader::class.java.classLoader.getResourceAsStream("datapack/bin.mclib")
-
-            if (inputStream == null) {
-                LogProcessor.error("Cannot find lib file at: datapack/bin.mclib")
-                return
-            }
-            LibBinReader.readFromStream(inputStream)
-
-            //模块信息读取
-            val jsonStream = ResourceReader::class.java.classLoader.getResourceAsStream("datapack/module.json")
-            if (jsonStream == null) {
-                LogProcessor.error("Cannot find module file at: datapack/module.json")
-                return
-            }
-            val json = jsonStream.reader().readText()
-            val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
-            modules += Module.fromJson(jsonObject).onEach { it.type = ModuleType.INNER }
-        }
-        //写入缓存
-        for (include in config.includes) {
-            LogProcessor.info("Reading lib at: $include")
+            val codecs = PortableAnnotationCodecs.builtins()
             try {
-                if(include.endsWith(".jar")){
-                    readFromJar(include)
-                }else if(include.endsWith(".zip")){
-                    readFromZip(include)
-                }else{
-                    readFromDirectory(include)
+                ServiceLoader.load(PortableAnnotationCodec::class.java, classLoader).forEach { provider ->
+                    codecs.register(provider, managed.provider(provider.annotationClass), managed)
                 }
-            } catch (e: IOException) {
-                LogProcessor.error("Error while reading lib file at $include: $e")
+                val session = LibraryImportSession(LibraryCompatibility(minecraftVersion = config.version))
+                libraryImportSession = session
+                session.configureNative(managed, codecs, librarySourceProviders)
+            } catch (failure: Throwable) {
+                codecs.close()
+                throw failure
             }
+            val sources = arrayListOf<LibBinReader.Payload>()
+            if (!CompileSettings.ignoreStdLib) config.stdLib.forEach { library ->
+                sources += if (library == "%std") LibBinReader.builtin(Project::class.java.classLoader, config.version)
+                else LibBinReader.payload(config.root.resolve(library).normalize())
+            }
+            config.jars.filter { it !in config.includes }.forEach { jar ->
+                LibBinReader.embedded(Paths.get(jar))?.let(sources::add)
+            }
+            config.includes.forEach { include ->
+                LogProcessor.info("Reading lib at: $include")
+                sources += LibBinReader.payload(Paths.get(include))
+            }
+            sources += installedLibraries
+            val pendingModules = arrayListOf<Module>()
+            val session = requireNotNull(libraryImportSession)
+            sources.forEach { source ->
+                try {
+                    session.stage(source.binary, source.identity, source.resources)
+                    val metadata = JSONObject.parse(source.moduleJson.toString(Charsets.UTF_8))
+                    require(metadata is JSONObject) { "module.json must be a JSON object" }
+                    pendingModules += Module.fromJson(metadata)
+                } catch (failure: Exception) {
+                    throw LibBinReader.SourceException(source, failure)
+                }
+            }
+            session.bindAll()
+            session.commit()
+            modules.addAll(pendingModules)
+            loadedLibraryCount = sources.size
+            refreshLibraryResources()
+        } catch (failure: Throwable) {
+            runCatching { closeLibraryImports() }.exceptionOrNull()?.let(failure::addSuppressed)
+            throw failure
         }
         restoreDeclarationEnvironments()
         //函数参数解析
@@ -612,8 +525,7 @@ object Project {
     fun pairTemplateCompanions() {
         (GlobalScope.localNamespaces.values + GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values).forEach { namespace ->
             namespace.scope.template.values.forEach { template ->
-                top.mcfpp.model.compound.GenericDeclarationContract.pair(template,
-                    namespace.scope.getObject(template.identifier) as? DataTemplate)
+                pairCompanion(template, namespace.scope.getObject(template.identifier) as? DataTemplate)
             }
         }
     }
@@ -1090,7 +1002,7 @@ object Project {
             val owners = if (template is GenericDataTemplate) template.compiledTemplates.values.toList() else listOf(template)
             owners.forEach { actual.putIfAbsent(it.getType().typeId, it) }
         }
-        return actual.values.toList()
+        return actual.values.filter { it.namespace in GlobalScope.localNamespaces || preparedObjectInitializers.contains(it) }
     }
 
     internal fun prepareObjectInitializer(template: DataTemplate) {
@@ -1142,6 +1054,7 @@ object Project {
         // before any source or generated body is checked.
         if (templateDeclarationsReady) TemplateProcessorRunner.run()
         prepareObjectInitializers()
+        libraryImportSession?.prepareInitializers()
         //工程文件编译
         //解析文件
         for (file in files) {
@@ -1154,7 +1067,9 @@ object Project {
                 LogProcessor.captureStackTrace(e)
             }
         }
+        top.mcfpp.io.PackEntrypoints.prepare()
         stageProcessor[compileStage.ordinal].forEach { it() }
+        top.mcfpp.io.IrTextDump.snapshot("01-compiled.ir", "compiled")
     }
 
     /**
@@ -1163,22 +1078,35 @@ object Project {
     @InsertCommand
     fun optimization() {
         compileStage = CompileStage.OPTIMIZATION
+        projectLoad.runInFunction {
+            for (obj in orderedObjectInitializers()) {
+                prepareObjectInitializer(obj)
+                objectInitializerBodies[obj]?.invoke(emptyList(), null)
+            }
+        }
+        top.mcfpp.optimization.OptimizationPipeline.finish(cleanup = false)
+        val runtimeCommands = top.mcfpp.io.DatapackLinker.runtimeCommands()
+        val initializers = projectLoad.commands.toList()
+        projectLoad.commands.clear()
         LogProcessor.rawDebug(logger, "Optimizing...")
         LogProcessor.rawDebug(logger, "Adding scoreboards declare in mcfpp:load function")
 
         //向load函数中添加记分板初始化命令
         projectLoad.runInFunction {
-            for (scoreboard in GlobalScope.scoreboards.values){
+            for (scoreboard in GlobalScope.scoreboards.values.filter {
+                Regex("(?<![a-zA-Z0-9_.-])" + Regex.escape(it.name) + "(?![a-zA-Z0-9_.-])").containsMatchIn(runtimeCommands)
+            }){
                 Function.addCommand("scoreboard objectives add ${scoreboard.name} ${scoreboard.criterion}")
             }
 
-            Function.addComment("math:_init", CommentLevel.INFO)
-
-            //向load函数中添加库初始化命令
-            Function.addCommand("execute unless score math mcfpp_init matches 1 run function math:_init")
+            if (Regex("\\bmath(?:\\.[a-z0-9_-]+)*:[a-z0-9_./-]+").containsMatchIn(runtimeCommands)) {
+                Function.addComment("math:_init", CommentLevel.INFO)
+                Function.addCommand("scoreboard objectives add mcfpp_init dummy")
+                Function.addCommand("execute unless score math mcfpp_init matches 1 run function math:_init")
+            }
 
             //向load函数中添加实体初始化命令
-            Function.addCommand("summon item 0 0 0 {" +
+            if (runtimeCommands.contains("mcfpp_ptr_marker") || runtimeCommands.contains(config.tempItemEntityUUID.uuidSNBT)) Function.addCommand("summon item 0 0 0 {" +
                     "Tags:[\"mcfpp_ptr_marker\"]," +
                     "UUID:${config.tempItemEntityUUID.uuidSNBT}, " +
                     "Age:-32768, " +
@@ -1191,18 +1119,15 @@ object Project {
             Function.addComment("class init", CommentLevel.INFO)
 
             //浮点数临时marker实体
-            if (!FloatProviders.enabled) {
+            if (!FloatProviders.enabled && (runtimeCommands.contains("mcfpp_float_marker") ||
+                    runtimeCommands.contains(MCFloat.tempFloatEntityUUIDNBT) || runtimeCommands.contains("math.float:"))) {
                 Function.addCommand("summon marker 0 0 0 {" +
                         "Tags:[\"mcfpp_float_marker\"]," +
                         "UUID:${MCFloat.tempFloatEntityUUIDNBT}}"
                 )
             }
 
-            //execute object constructor
-            for(obj in orderedObjectInitializers()){
-                prepareObjectInitializer(obj)
-                objectInitializerBodies[obj]?.invoke(emptyList(), null)
-            }
+            projectLoad.commands.addAll(initializers)
         }
 
         //寻找入口函数
@@ -1213,11 +1138,18 @@ object Project {
                     if (f.parent.size == 0 && f !is Native) {
                         //找到了入口函数
                         hasEntrance = true
+                        if (f.optimizedScalar) return@run
+                        top.mcfpp.optimization.OptimizationPipeline.staticFrame(f)?.let { frame ->
+                            f.commands.add(0, Commands.dataSetValue(frame, top.mcfpp.nbt.tags.CompoundTag()))
+                            return@run
+                        }
                         if (f.frameExits.isEmpty()) {
                             f.commands.add(Commands.stackOut())
                         } else {
-                            f.frameExits.forEach { exit ->
-                                exit.function.commands.add(exit.commandIndex, Commands.stackOut())
+                            f.frameExits.groupBy { it.function }.forEach { (function, exits) ->
+                                exits.sortedByDescending { it.commandIndex }.forEach { exit ->
+                                    function.commands.add(exit.commandIndex, Commands.stackOut())
+                                }
                             }
                         }
                         f.commands.add(0, Commands.stackIn())
@@ -1231,7 +1163,10 @@ object Project {
             LogProcessor.recordProjectWarning()
         }
         LogProcessor.rawInfo(logger, "Complete compiling project " + config.root.name + " with [$errorCount] error and [$warningCount] warning")
+        refreshLibraryResources()
         stageProcessor[compileStage.ordinal].forEach { it() }
+        top.mcfpp.optimization.OptimizationPipeline.finish()
+        top.mcfpp.io.IrTextDump.snapshot("02-optimized.ir", "optimized")
     }
 
     /**
@@ -1241,6 +1176,7 @@ object Project {
     fun genIndex() {
         LogProcessor.debug("Writing lib file to ${config.targetPath!!.absolutePathString()}")
         compileStage = CompileStage.GEN_INDEX
+        libraryImportSession?.prepareInitializers()
         LibBinWriter.write(config.targetPath!!.absolutePathString())
         stageProcessor[compileStage.ordinal].forEach { it() }
     }

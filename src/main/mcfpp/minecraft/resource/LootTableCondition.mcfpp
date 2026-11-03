@@ -1,5 +1,5 @@
-@From<"top.mcfpp.mni.resource.LootTableConditionData">
+@From("top.mcfpp.mni.resource.LootTableConditionData")
 data LootTableCondition: ResourceID
 
-@From<"top.mcfpp.mni.resource.LootTableConditionObjectData">
+@From("top.mcfpp.mni.resource.LootTableConditionObjectData")
 object data LootTableCondition: ResourceID
