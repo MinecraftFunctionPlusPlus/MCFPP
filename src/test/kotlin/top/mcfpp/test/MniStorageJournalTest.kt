@@ -101,6 +101,36 @@ class MniStorageJournalTest {
         assertEquals(5, (StorageAccess.read(value) as MCInt).value)
     }
 
+    @Test fun mergedSavepointsRetainDetachedPathsAndNewStorageAliases() = inFunction { _ ->
+        val original = MCInt("original").apply { nbtPath = path("original") }
+        val detachedPath = original.nbtPath
+        val detachedSegments = detachedPath.pathList.toList()
+        val before = StorageAccess.checkpoint(listOf(original))
+        val replacementPath = path("replacement")
+        original.nbtPath = replacementPath
+        val added = MCInt(7, "added").apply { bindDeclaration() }
+        val alias = MCInt(added)
+        val binding = assertNotNull(added.storageBinding)
+        val joined = before.captureCurrent(listOf(added, alias))
+        detachedPath.pathList.clear()
+        StorageAccess.write(alias, MCInt(9))
+        joined.restore()
+        assertSame(replacementPath, original.nbtPath)
+        assertEquals(detachedSegments, detachedPath.pathList)
+        assertSame(binding, added.storageBinding)
+        assertSame(binding.data, alias.storageBinding!!.data)
+        assertEquals(7, (StorageAccess.read(alias) as MCInt).value)
+
+        val next = joined.captureCurrent()
+        detachedPath.pathList.clear()
+        StorageAccess.write(added, MCInt(11))
+        next.restore()
+        assertEquals(detachedSegments, detachedPath.pathList)
+        assertEquals(7, (StorageAccess.read(alias) as MCInt).value)
+        before.restore()
+        assertSame(detachedPath, original.nbtPath)
+    }
+
     @Test fun failedPreparationRestoresPendingWriterAndEmitsTheOriginalRuntimeValue() = inFunction { function ->
         val value = runtimeInt("pending")
         val binding = assertNotNull(value.storageBinding)

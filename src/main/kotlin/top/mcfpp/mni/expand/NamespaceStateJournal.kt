@@ -29,7 +29,7 @@ internal class NamespaceStateJournal private constructor(
     private val retained: List<Root>,
     private val restores: List<() -> Unit>,
     private val keyRestores: List<() -> Unit>,
-    private val storage: List<StorageCheckpoint>,
+    private val storage: StorageCheckpoint,
     val elements: List<Any>,
     /** External source inputs for the composing global journal; never declaration-deep roots. */
     val sourceFiles: List<MCFPPFile>,
@@ -39,10 +39,10 @@ internal class NamespaceStateJournal private constructor(
         // Mutable generic keys must regain their old hash before their owning maps are rebuilt.
         keyRestores.forEach { it() }
         restores.forEach { it() }
-        storage.forEach { it.restore() }
+        storage.restore()
     }
 
-    fun captureCurrent(): NamespaceStateJournal = capture(retained, retainedStorage = storage.map { it.captureCurrent() }, previousProcessors = processors)
+    fun captureCurrent(): NamespaceStateJournal = capture(retained, retainedStorage = storage, previousProcessors = processors)
 
     private class Root(val target: Any, val read: (Capture) -> Unit)
     private enum class Items { FUNCTION, ENUM, OBJECT, SCOPE, FILE, TYPE, MACRO }
@@ -54,7 +54,7 @@ internal class NamespaceStateJournal private constructor(
         private fun capture(
             retained: List<Root>,
             scopes: List<SimpleLibScope> = emptyList(),
-            retainedStorage: List<StorageCheckpoint> = emptyList(),
+            retainedStorage: StorageCheckpoint? = null,
             previousProcessors: IdentityHashMap<TemplateProcessorRegistry, TemplateProcessorRegistry.RawCheckpoint> = IdentityHashMap()
         ): NamespaceStateJournal {
             val capture = Capture(previousProcessors)
@@ -66,7 +66,8 @@ internal class NamespaceStateJournal private constructor(
                 capture.retained.toList(),
                 capture.restores.toList(),
                 capture.keyRestores.toList(),
-                retainedStorage + StorageAccess.checkpointGraph(elements.filterIsInstance<SbObject>()),
+                retainedStorage?.captureCurrent(elements.filterIsInstance<SbObject>())
+                    ?: StorageAccess.checkpointGraph(elements.filterIsInstance<SbObject>()),
                 elements,
                 Collections.unmodifiableList(ArrayList(capture.sourceFiles)),
                 capture.processors

@@ -27,17 +27,20 @@ import java.util.IdentityHashMap
 internal class FunctionStateJournal private constructor(
     private val enrolled: List<Any>,
     private val restores: List<() -> Unit>,
-    private val storage: List<StorageCheckpoint>,
+    private val storage: StorageCheckpoint,
     private val effects: EffectAnalysis.EffectGraphSnapshot
 ) {
     fun restore() {
         restores.forEach { it() }
-        storage.forEach { it.restore() }
+        storage.restore()
         effects.restore()
     }
 
     /** Retains detached before-state objects as well as newly reachable after-state objects. */
-    fun captureCurrent(): FunctionStateJournal = capture(enrolled, storage.map { it.captureCurrent() }, effects)
+    fun captureCurrent(): FunctionStateJournal = capture(enrolled, storage, effects)
+
+    internal fun captureCurrent(functions: Iterable<Function>, values: Iterable<Var<*>>): FunctionStateJournal =
+        capture(enrolled + functions + values, storage, effects)
 
     /** Executes preparation once, then leaves the compiler at the before-state even on failure. */
     fun prepare(action: () -> Unit): PreparedCompilerCommit {
@@ -68,11 +71,11 @@ internal class FunctionStateJournal private constructor(
     }
 
     companion object {
-        fun checkpoint(functions: Iterable<Function>, values: Iterable<Var<*>> = emptyList()): FunctionStateJournal = capture(functions.toList() + values.toList(), emptyList())
+        fun checkpoint(functions: Iterable<Function>, values: Iterable<Var<*>> = emptyList()): FunctionStateJournal = capture(functions.toList() + values.toList(), null)
 
         private fun capture(
             roots: Iterable<Any>,
-            retainedStorage: List<StorageCheckpoint>,
+            retainedStorage: StorageCheckpoint?,
             retainedEffects: EffectAnalysis.EffectGraphSnapshot? = null
         ): FunctionStateJournal {
             val pending = ArrayDeque<Any>().apply { roots.forEach(::addLast) }
@@ -347,9 +350,10 @@ internal class FunctionStateJournal private constructor(
                     else -> error("Function journal cannot capture ${value.javaClass.name}")
                 }
             }
-            val savedStorage = StorageAccess.checkpoint(values, stores)
+            val storageRoots = values + stores
+            val savedStorage = retainedStorage?.captureCurrent(storageRoots) ?: StorageAccess.checkpointGraph(storageRoots)
             val savedEffects = retainedEffects?.captureCurrent(runtimeEffects) ?: EffectAnalysis.checkpointEffectGraph(runtimeEffects)
-            return FunctionStateJournal(enrolled, restores, retainedStorage + savedStorage, savedEffects)
+            return FunctionStateJournal(enrolled, restores, savedStorage, savedEffects)
         }
 
         private class ListRoot(val items: MutableList<Any?>)

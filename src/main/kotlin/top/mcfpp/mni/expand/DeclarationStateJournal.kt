@@ -49,8 +49,8 @@ internal class DeclarationStateJournal private constructor(
     private val restores: List<() -> Unit>,
     private val templates: IdentityHashMap<DataTemplate, DataTemplate.DeclarationStateCheckpoint>,
     private val scopes: IdentityHashMap<CompoundDataScope, CompoundDataScope.JournalSnapshot>,
-    private val objects: List<CompilerObjectJournal>,
-    private val storage: List<StorageCheckpoint>,
+    private val objects: CompilerObjectJournal,
+    private val storage: StorageCheckpoint,
     val elements: List<Any>
 ) {
     fun restore() {
@@ -59,8 +59,8 @@ internal class DeclarationStateJournal private constructor(
         restores.forEach { it() }
         templates.values.forEach { it.restore() }
         scopes.values.forEach { it.restore() }
-        objects.forEach { it.restore() }
-        storage.forEach { it.restore() }
+        objects.restore()
+        storage.restore()
     }
 
     fun captureCurrent(): DeclarationStateJournal = capture(roots, templates, scopes, objects, storage)
@@ -113,8 +113,8 @@ internal class DeclarationStateJournal private constructor(
                 elements.map { value -> Root(value, Role.OBJECT) { it.enqueue(value) } },
                 IdentityHashMap(),
                 IdentityHashMap(),
-                emptyList(),
-                emptyList()
+                null,
+                null
             )
         }
 
@@ -122,23 +122,23 @@ internal class DeclarationStateJournal private constructor(
             roots: List<Root>,
             oldTemplates: IdentityHashMap<DataTemplate, DataTemplate.DeclarationStateCheckpoint>,
             oldScopes: IdentityHashMap<CompoundDataScope, CompoundDataScope.JournalSnapshot>,
-            oldObjects: List<CompilerObjectJournal>,
-            oldStorage: List<StorageCheckpoint>
+            oldObjects: CompilerObjectJournal?,
+            oldStorage: StorageCheckpoint?
         ): DeclarationStateJournal {
             val capture = Capture(oldTemplates, oldScopes)
             roots.forEach { it.read(capture) }
             EffectAnalysis.checkpointActualEffects().functions.forEach(capture::enqueue)
             capture.walk()
             // The complete metadata graph is preflighted before lower-level journals read/hash it.
-            val objectStates = oldObjects.map { it.captureCurrent() } +
-                CompilerObjectJournal.checkpoint(capture.variables, capture.functions)
+            val objectStates = oldObjects?.captureCurrent(capture.variables, capture.functions)
+                ?: CompilerObjectJournal.checkpoint(capture.variables, capture.functions)
             return DeclarationStateJournal(
                 capture.roots.toList(),
                 capture.restores.toList(),
                 capture.templates,
                 capture.scopes,
                 objectStates,
-                oldStorage.map { it.captureCurrent() } + StorageAccess.checkpointGraph(capture.storageRoots),
+                oldStorage?.captureCurrent(capture.storageRoots) ?: StorageAccess.checkpointGraph(capture.storageRoots),
                 Collections.unmodifiableList(capture.elements.toList())
             )
         }

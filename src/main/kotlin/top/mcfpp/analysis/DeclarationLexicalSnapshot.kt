@@ -559,7 +559,7 @@ internal class DeclarationLexicalSnapshot private constructor(
                     view.heads,
                     emptyMap(),
                     emptySet(),
-                    emptyMap()
+                    view.functions
                 )
                 qualified.putIfAbsent(standard.identifier, listOf(heads))
                 heads
@@ -800,13 +800,12 @@ internal class DeclarationDomainStamp private constructor(
         }
         private fun slots(owner: Any, names: Set<String>): RawPreparationFact {
             val rows = arrayListOf<RawPreparationFact>()
-            var type: Class<*>? = owner.javaClass
-            while (type != null && type != Any::class.java) {
-                for (field in type.declaredFields) if (!java.lang.reflect.Modifier.isStatic(field.modifiers) && field.name in names) {
+            for (slot in backingShapes.get(owner.javaClass).slots) {
+                val field = slot.field
+                if (field.name in names) {
                     check(field.trySetAccessible()) { "Cannot read declaration backing slot ${field.name}" }
-                    rows.add(RawPreparationFact.row(RawPreparationFact.scalar(type.name + "." + field.name), raw(field.get(owner))))
+                    rows.add(RawPreparationFact.row(slot.label, raw(field.get(owner))))
                 }
-                type = type.superclass
             }
             return RawPreparationFact.unordered(rows)
         }
@@ -817,16 +816,10 @@ internal class DeclarationDomainStamp private constructor(
             return fields(owner, *names)
         }
         private fun slot(owner: Any, name: String): Any? {
-            var type: Class<*>? = owner.javaClass
-            while (type != null && type != Any::class.java) {
-                val field = type.declaredFields.firstOrNull { it.name == name && !java.lang.reflect.Modifier.isStatic(it.modifiers) }
-                if (field != null) {
-                    check(field.trySetAccessible()) { "Cannot read declaration backing slot '$name'" }
-                    return field.get(owner)
-                }
-                type = type.superclass
-            }
-            fail("Missing required declaration backing slot '$name'")
+            val field = backingShapes.get(owner.javaClass).slots.firstOrNull { it.field.name == name }?.field
+                ?: fail("Missing required declaration backing slot '$name'")
+            check(field.trySetAccessible()) { "Cannot read declaration backing slot '$name'" }
+            return field.get(owner)
         }
         private fun relation(owner: Any, name: String, key: (Any?) -> Boolean, item: (Any?) -> Boolean) {
             val value = slot(owner, name)
@@ -1187,16 +1180,33 @@ internal class DeclarationDomainStamp private constructor(
                 }
             }
         }
-        private fun allFieldNames(value: Any): Set<String> {
-            val result = linkedSetOf<String>()
-            var type: Class<*>? = value.javaClass
-            while (type != null && type != Any::class.java) {
-                result.addAll(type.declaredFields.map { it.name })
-                type = type.superclass
+        private fun allFieldNames(value: Any): Set<String> = backingShapes.get(value.javaClass).names
+
+        private class BackingSlot(val field: java.lang.reflect.Field, val label: RawPreparationFact)
+
+        /** Class metadata is stable; each capture still reads the current backing values. */
+        private class BackingShape(owner: Class<*>) {
+            val names = linkedSetOf<String>()
+            val slots = arrayListOf<BackingSlot>()
+
+            init {
+                var type: Class<*>? = owner
+                while (type != null && type != Any::class.java) {
+                    for (field in type.declaredFields) {
+                        names.add(field.name)
+                        if (!java.lang.reflect.Modifier.isStatic(field.modifiers)) {
+                            slots.add(BackingSlot(field, RawPreparationFact.scalar(type.name + "." + field.name)))
+                        }
+                    }
+                    type = type.superclass
+                }
             }
-            return result
         }
         companion object {
+            private val backingShapes = object : ClassValue<BackingShape>() {
+                override fun computeValue(type: Class<*>): BackingShape = BackingShape(type)
+            }
+
             private val lists = setOf(
                 "java.util.ArrayList",
                 "java.util.LinkedList",

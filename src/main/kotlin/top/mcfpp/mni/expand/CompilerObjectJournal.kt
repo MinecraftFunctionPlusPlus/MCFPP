@@ -35,8 +35,8 @@ internal class CompilerObjectJournal private constructor(
     private val enrolled: List<Any>,
     private val restores: List<() -> Unit>,
     private val scopes: List<Pair<CompoundDataScope, CompoundDataScope.JournalSnapshot>>,
-    private val functions: List<FunctionStateJournal>,
-    private val storage: List<StorageCheckpoint>,
+    private val functions: FunctionStateJournal,
+    private val storage: StorageCheckpoint,
     private val effects: EffectAnalysis.JournalSnapshot,
     private val scores: List<Pair<Var<*>, MCFPPEntityType.ScoresStateCheckpoint>>,
     elements: List<Any>
@@ -48,13 +48,16 @@ internal class CompilerObjectJournal private constructor(
         scores.forEach { it.second.restore() }
         restores.forEach { it() }
         scopes.forEach { it.second.restore() }
-        functions.forEach { it.restore() }
-        storage.forEach { it.restore() }
+        functions.restore()
+        storage.restore()
         effects.restore()
     }
 
     /** Detached published caches, members, accessors and frames remain enrollment roots. */
     fun captureCurrent(): CompilerObjectJournal = capture(enrolled, scopes, functions, storage, effects, scores)
+
+    internal fun captureCurrent(values: Iterable<Var<*>>, functions: Iterable<Function>): CompilerObjectJournal =
+        capture(enrolled + rootList(values) + rootList(functions), scopes, this.functions, storage, effects, scores)
 
     /** Legacy preparation runs once. Applying its captured result does not invoke native code. */
     fun prepare(action: () -> Unit): PreparedCompilerCommit {
@@ -88,7 +91,7 @@ internal class CompilerObjectJournal private constructor(
         fun checkpoint(
             values: Iterable<Var<*>> = emptyList(),
             functions: Iterable<Function> = emptyList()
-        ): CompilerObjectJournal = capture(rootList(values) + rootList(functions), emptyList(), emptyList(), emptyList(), null, emptyList())
+        ): CompilerObjectJournal = capture(rootList(values) + rootList(functions), emptyList(), null, null, null, emptyList())
 
         private fun <T> rootList(values: Iterable<T>): List<T> {
             check(
@@ -108,8 +111,8 @@ internal class CompilerObjectJournal private constructor(
         private fun capture(
             roots: List<Any>,
             retainedScopes: List<Pair<CompoundDataScope, CompoundDataScope.JournalSnapshot>>,
-            retainedFunctions: List<FunctionStateJournal>,
-            retainedStorage: List<StorageCheckpoint>,
+            retainedFunctions: FunctionStateJournal?,
+            retainedStorage: StorageCheckpoint?,
             retainedEffects: EffectAnalysis.JournalSnapshot?,
             retainedScores: List<Pair<Var<*>, MCFPPEntityType.ScoresStateCheckpoint>>
         ): CompilerObjectJournal {
@@ -310,8 +313,9 @@ internal class CompilerObjectJournal private constructor(
                 }
             }
             // Preflight the reachable adapter/accessor graph above before invoking deeper capabilities.
-            val functionStates = retainedFunctions.map { it.captureCurrent() } + FunctionStateJournal.checkpoint(functions, values)
-            val storageStates = retainedStorage.map { it.captureCurrent() } + StorageAccess.checkpointGraph(values + properties)
+            val functionStates = retainedFunctions?.captureCurrent(functions, values) ?: FunctionStateJournal.checkpoint(functions, values)
+            val storageRoots = values + properties
+            val storageStates = retainedStorage?.captureCurrent(storageRoots) ?: StorageAccess.checkpointGraph(storageRoots)
             val published = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
             val elements = (enrolled + declarationRoots).filter { published.add(it) }
             return CompilerObjectJournal(enrolled, restores, scopes, functionStates, storageStates, effects, scores, elements)

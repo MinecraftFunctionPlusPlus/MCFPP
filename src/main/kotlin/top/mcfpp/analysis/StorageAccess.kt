@@ -259,7 +259,8 @@ internal class StorageCheckpoint internal constructor(
     fun restore() { restoreActions.forEach { it() } }
 
     /** Includes the original enrollment as well as any producers/bindings now reachable from it. */
-    fun captureCurrent(): StorageCheckpoint = StorageAccess.checkpointGraph(enrolled)
+    fun captureCurrent(additionalRoots: Iterable<Any> = emptyList()): StorageCheckpoint =
+        StorageAccess.checkpointGraph(enrolled + additionalRoots)
 }
 
 /** Central boundary between Place/TypedView and the remaining Var-based backends. */
