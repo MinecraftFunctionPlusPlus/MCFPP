@@ -5,6 +5,7 @@ import org.apache.tools.zip.ZipFile
 import top.mcfpp.io.FileUtils.copyAllFiles
 import top.mcfpp.io.FileUtils.extractFolderFromInner
 import top.mcfpp.io.FileUtils.extractTo
+import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
@@ -26,7 +27,32 @@ class Module(var id: String) {
 
     var resourcePath: Path = Path(".")
 
+    /** Session-owned bytes, replaced as recompiled bodies suppress saved resources. */
+    internal var resourceSnapshot: Map<String, ByteArray>? = null
+
+    internal fun resources(): Map<String, ByteArray>? {
+        val snapshot = resourceSnapshot ?: return null
+        val result = linkedMapOf<String, ByteArray>()
+        for (pack in base + packages.filterValues { it }.keys) {
+            for (provide in pack.provides) {
+                val prefix = "datapack/$id/data/$provide/"
+                for ((path, bytes) in snapshot) {
+                    if (path.startsWith(prefix)) result["${pack.id}/${path.removePrefix(prefix)}"] = bytes
+                }
+            }
+        }
+        return result
+    }
+
     fun extract(targetRoot: Path){
+        resources()?.let { resources ->
+            for ((relative, bytes) in resources) {
+                val output = targetRoot.resolve(relative)
+                Files.createDirectories(output.parent)
+                Files.write(output, bytes)
+            }
+            return
+        }
         when(type){
             ModuleType.DIR -> extractFromDir(targetRoot)
             ModuleType.JAR, ModuleType.ZIP -> extractFromJarOrZip(targetRoot)

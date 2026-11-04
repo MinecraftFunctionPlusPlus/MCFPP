@@ -357,12 +357,14 @@ internal class ProjectStateJournal private constructor(
                 val packages = target.packages
                 val type = target.type
                 val path = target.resourcePath
+                val resources = target.resourceSnapshot
                 restores.add {
                     target.id = id
                     target.base = base
                     target.packages = packages
                     target.type = type
                     target.resourcePath = path
+                    target.resourceSnapshot = resources
                 }
                 list(base, Items.PACKAGE)
                 map(packages, Keys.PACKAGE)

@@ -116,6 +116,8 @@ class MniProjectStateJournalTest {
         val provides = pack.provides
         module.base.add(pack)
         module.packages[pack] = false
+        val resources = mapOf("datapack/module/data/pack/function/main.mcfunction" to "say old".toByteArray())
+        module.resourceSnapshot = resources
         Project.modules.add(module)
         val packages = module.packages
         val before = ProjectStateJournal.checkpoint()
@@ -126,6 +128,8 @@ class MniProjectStateJournalTest {
         config.copyImport = false
         module.packages = hashMapOf()
         module.base.clear()
+        val changedResources = emptyMap<String, ByteArray>()
+        module.resourceSnapshot = changedResources
         pack.id = "changedPack"
         (provides as MutableList<String>).clear()
         pack.provides = listOf("replacement")
@@ -139,6 +143,7 @@ class MniProjectStateJournalTest {
         assertSame(packages, module.packages)
         assertEquals(false, packages[pack])
         assertSame(pack, module.base.single())
+        assertSame(resources, module.resourceSnapshot)
         assertSame(provides, pack.provides)
         assertEquals(listOf("functions"), provides)
         assertEquals("pack", pack.id)
@@ -148,6 +153,7 @@ class MniProjectStateJournalTest {
         assertFalse(packages.isEmpty(), "The detached original map was not changed by the preparation")
         assertTrue(module.packages.isEmpty())
         assertTrue(module.base.isEmpty())
+        assertSame(changedResources, module.resourceSnapshot)
         assertTrue(provides.isEmpty())
         before.restore()
         assertSame(packages, module.packages)

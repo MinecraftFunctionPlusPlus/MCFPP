@@ -41,7 +41,6 @@ import top.mcfpp.type.TypeId
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.splitNamespaceID
 import top.mcfpp.util.Module
-import top.mcfpp.util.ModuleType
 import java.io.IOException
 import java.net.URLClassLoader
 import java.nio.file.Files
@@ -191,7 +190,6 @@ object Project {
     var loadedLibraryCount = 0
         private set
     private val libraryClassLoaders = arrayListOf<URLClassLoader>()
-    private var libraryResourceRoot: Path? = null
 
     /** Close compiler-owned inputs; the host class loader and Mcfpm cache remain caller-owned. */
     fun closeLibraryImports() {
@@ -202,11 +200,6 @@ object Project {
         librarySourceProviders = emptyMap()
         libraryClassLoaders.asReversed().forEach { loader -> runCatching { loader.close() }.exceptionOrNull()?.let(failures::add) }
         libraryClassLoaders.clear()
-        libraryResourceRoot?.let { root ->
-            runCatching { Files.walk(root).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::delete) } }
-                .exceptionOrNull()?.let(failures::add)
-        }
-        libraryResourceRoot = null
         modules.clear()
         loadedLibraryCount = 0
         classLoader = Thread.currentThread().contextClassLoader
@@ -248,18 +241,7 @@ object Project {
     fun refreshLibraryResources() {
         val session = libraryImportSession ?: return
         val active = session.resources()
-        if (active.isEmpty() && modules.isEmpty() && libraryResourceRoot == null) return
-        val root = libraryResourceRoot ?: Files.createTempDirectory("mcfpp-library-resources").also { libraryResourceRoot = it }
-        Files.walk(root).use { files -> files.filter { Files.isRegularFile(it) }.forEach { file ->
-            if (root.relativize(file).joinToString("/") !in active) Files.delete(file)
-        } }
-        active.forEach { (entry, bytes) ->
-            val output = root.resolve(entry).normalize()
-            require(output.startsWith(root)) { "Library resource escapes its session directory: $entry" }
-            Files.createDirectories(output.parent)
-            Files.write(output, bytes)
-        }
-        modules.forEach { it.type = ModuleType.DIR; it.resourcePath = root.resolve("datapack") }
+        modules.forEach { it.resourceSnapshot = active }
     }
 
     private val files = ArrayList<MCFPPFile>()

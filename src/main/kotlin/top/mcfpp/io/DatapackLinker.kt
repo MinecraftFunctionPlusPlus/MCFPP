@@ -15,13 +15,22 @@ internal object DatapackLinker {
 
     fun libraryResources(): Map<String, ByteArray> {
         if (!Project.config.copyImport || Project.modules.isEmpty()) return emptyMap()
-        val staging = Files.createTempDirectory("mcfpp-link-")
-        return try {
-            Project.modules.forEach { it.extract(staging) }
-            read(staging)
-        } finally {
-            Files.walk(staging).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::delete) }
+        val resources = linkedMapOf<String, ByteArray>()
+        for (module in Project.modules) {
+            val snapshot = module.resources()
+            if (snapshot != null) {
+                resources.putAll(snapshot)
+            } else {
+                val staging = Files.createTempDirectory("mcfpp-link-")
+                try {
+                    module.extract(staging)
+                    resources.putAll(read(staging))
+                } finally {
+                    Files.walk(staging).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::delete) }
+                }
+            }
         }
+        return resources
     }
 
     private fun read(root: Path): Map<String, ByteArray> {

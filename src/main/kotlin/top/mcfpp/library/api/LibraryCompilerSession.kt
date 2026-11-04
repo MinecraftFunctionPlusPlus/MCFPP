@@ -177,15 +177,20 @@ class LibraryCompilerSession private constructor(
         val providers = input.plugins.associate { it.path.toRealPath() to it.identity }
         val packages = input.plugins.mapTo(hashSetOf()) { it.identity }
         val managed = object : ManagedNativeBindings {
+            private val locations = hashMapOf<String, PackageKey?>()
+
             override fun loader(provider: PackageKey?): ClassLoader {
                 if (provider == null) return Project.classLoader
                 require(provider in packages) { "No trusted installed plugin provides $provider" }
                 return requireNotNull(pluginLoader)
             }
             override fun provider(owner: java.lang.Class<*>): PackageKey? {
+                if (providers.isEmpty()) return null
                 val source = owner.protectionDomain?.codeSource?.location ?: return null
                 if (source.protocol != "file") return null
-                return providers[Path.of(source.toURI()).toRealPath()]
+                val location = source.toExternalForm()
+                if (locations.containsKey(location)) return locations[location]
+                return providers[Path.of(source.toURI()).toRealPath()].also { locations[location] = it }
             }
         }
         return PluginBindings(managed, Collections.unmodifiableMap(owners))
