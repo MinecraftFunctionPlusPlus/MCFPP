@@ -798,23 +798,19 @@ internal class DeclarationDomainStamp private constructor(
             }
             return facts
         }
-        private fun slots(owner: Any, names: Set<String>): RawPreparationFact {
-            val rows = arrayListOf<RawPreparationFact>()
-            for (slot in backingShapes.get(owner.javaClass).slots) {
+        private fun slots(owner: Any, names: Array<out String>, required: Boolean): RawPreparationFact {
+            val selection = backingShapes.get(owner.javaClass).select(names)
+            if (required && !selection.complete) fail("Missing required declaration backing slot in ${owner.javaClass.name}")
+            val rows = ArrayList<RawPreparationFact>(selection.slots.size)
+            for (slot in selection.slots) {
                 val field = slot.field
-                if (field.name in names) {
-                    check(field.trySetAccessible()) { "Cannot read declaration backing slot ${field.name}" }
-                    rows.add(RawPreparationFact.row(slot.label, raw(field.get(owner))))
-                }
+                check(field.trySetAccessible()) { "Cannot read declaration backing slot ${field.name}" }
+                rows.add(RawPreparationFact.row(slot.label, raw(field.get(owner))))
             }
             return RawPreparationFact.unordered(rows)
         }
-        private fun fields(owner: Any, vararg names: String) = slots(owner, names.toSet())
-        private fun required(owner: Any, vararg names: String): RawPreparationFact {
-            val available = allFieldNames(owner)
-            if (!available.containsAll(names.toSet())) fail("Missing required declaration backing slot in ${owner.javaClass.name}")
-            return fields(owner, *names)
-        }
+        private fun fields(owner: Any, vararg names: String) = slots(owner, names, required = false)
+        private fun required(owner: Any, vararg names: String) = slots(owner, names, required = true)
         private fun slot(owner: Any, name: String): Any? {
             val field = backingShapes.get(owner.javaClass).slots.firstOrNull { it.field.name == name }?.field
                 ?: fail("Missing required declaration backing slot '$name'")
@@ -1180,14 +1176,21 @@ internal class DeclarationDomainStamp private constructor(
                 }
             }
         }
-        private fun allFieldNames(value: Any): Set<String> = backingShapes.get(value.javaClass).names
-
         private class BackingSlot(val field: java.lang.reflect.Field, val label: RawPreparationFact)
+        private class SlotSelection(val slots: List<BackingSlot>, val complete: Boolean)
 
         /** Class metadata is stable; each capture still reads the current backing values. */
         private class BackingShape(owner: Class<*>) {
             val names = linkedSetOf<String>()
             val slots = arrayListOf<BackingSlot>()
+            private val selections = java.util.concurrent.ConcurrentHashMap<List<String>, SlotSelection>()
+
+            fun select(names: Array<out String>): SlotSelection {
+                val key = names.asList()
+                selections[key]?.let { return it }
+                val selection = SlotSelection(slots.filter { it.field.name in key }, this.names.containsAll(key))
+                return selections.putIfAbsent(names.toList(), selection) ?: selection
+            }
 
             init {
                 var type: Class<*>? = owner
