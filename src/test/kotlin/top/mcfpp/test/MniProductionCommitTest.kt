@@ -172,6 +172,42 @@ class MniProductionCommitTest {
     }
 
     @Test
+    fun enclosedEmissionFailureRollsBackActualCommandsAndRegistrationsEvenWhenCaught() = isolated {
+        Fixture().use { f ->
+            val counter = assertIs<Ref<IntT>>(f.root("counter"))
+            val code = f.session.context().quote().block(Consumer { builder ->
+                builder.assign(counter, builder.intLiteral(9))
+            })
+            val plan = f.environment.lower(code)
+            val participant = CompilerBridge(f.bindings).prepare(plan)
+            val commands = f.caller.commands.toList()
+            val functions = f.namespace.scope.functions.mapValues { it.value.toList() }
+            val failure = IllegalStateException("after real enclosed emission")
+            val caught = assertFailsWith<IllegalStateException> {
+                CompilerStateJournal.checkpoint().prepareCumulative { enclosing ->
+                    val transaction = CompilerTransaction(CompilerCommitBackend(enclosing).attach(f.bindings))
+                    transaction.enlist(participant)
+                    transaction.enlist(object : CompilerJournalParticipant {
+                        override val domains = setOf(CompilerDomain.RESOURCES)
+                        override fun prepare(): PreparedCompilerCommit = error("Enclosed generation must execute once")
+                        override fun generation(): () -> Unit = {
+                            assertTrue(f.caller.commands.size > commands.size)
+                            Project.macroFunction["enclosed-partial"] = "discarded"
+                            throw failure
+                        }
+                    })
+                    assertSame(failure, assertFailsWith<IllegalStateException> { transaction.commit() })
+                }
+            }
+            assertSame(failure, caught)
+            assertEquals(commands, f.caller.commands.toList())
+            assertEquals(functions, f.namespace.scope.functions.mapValues { it.value.toList() })
+            assertNull(Project.macroFunction["enclosed-partial"])
+            assertEquals(0, Project.errorCount)
+        }
+    }
+
+    @Test
     fun helperResultAndGlobalCaptureCommitWithResourceNameAndWarningOnce() = isolated {
         Fixture().use { f ->
             val global = assertIs<Ref<IntT>>(f.root("counter"))

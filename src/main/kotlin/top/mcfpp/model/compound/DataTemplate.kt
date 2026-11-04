@@ -1082,6 +1082,25 @@ internal sealed class RawPreparationFact {
         override fun equals(other: Any?) = other is Scalar && value == other.value
         override fun hashCode() = value?.hashCode() ?: 0
     }
+
+    /** Owned primitive input buffers avoid one boxed fact and list slot per source code point. */
+    sealed class Buffer : RawPreparationFact() {
+        class Bytes internal constructor(value: ByteArray) : Buffer() {
+            private val data = value.copyOf()
+            override fun equals(other: Any?) = other is Bytes && data.contentEquals(other.data)
+            override fun hashCode() = data.contentHashCode()
+        }
+        class Chars internal constructor(value: CharArray) : Buffer() {
+            private val data = value.copyOf()
+            override fun equals(other: Any?) = other is Chars && data.contentEquals(other.data)
+            override fun hashCode() = data.contentHashCode()
+        }
+        class Ints internal constructor(value: IntArray) : Buffer() {
+            private val data = value.copyOf()
+            override fun equals(other: Any?) = other is Ints && data.contentEquals(other.data)
+            override fun hashCode() = data.contentHashCode()
+        }
+    }
     class Sequence internal constructor(values: List<RawPreparationFact>) : RawPreparationFact() {
         val values: List<RawPreparationFact> = java.util.Collections.unmodifiableList(ArrayList(values))
         override fun equals(other: Any?) = other is Sequence && values == other.values
@@ -1107,6 +1126,9 @@ internal sealed class RawPreparationFact {
     companion object {
         fun identity(value: Any?) = Identity(value)
         fun scalar(value: Any?) = Scalar(value)
+        fun buffer(value: ByteArray): RawPreparationFact = Buffer.Bytes(value)
+        fun buffer(value: CharArray): RawPreparationFact = Buffer.Chars(value)
+        fun buffer(value: IntArray): RawPreparationFact = Buffer.Ints(value)
         fun sequence(values: List<RawPreparationFact>) = Sequence(values)
         fun row(vararg values: RawPreparationFact) = Sequence(values.toList())
         fun unordered(values: List<RawPreparationFact>) = Unordered(values)

@@ -43,6 +43,17 @@ internal class CompilerStateJournal private constructor(
 
     fun captureCurrent(): CompilerStateJournal = capture(this)
 
+    /** Enclosed generation joins this savepoint; a failed child revokes the whole preparation. */
+    fun prepareCumulative(action: (CompilerEnclosingPreparation) -> Unit): PreparedCompilerCommit = prepare {
+        val enclosing = CompilerEnclosingPreparation()
+        try {
+            action(enclosing)
+            enclosing.requireSuccessful()
+        } finally {
+            enclosing.close()
+        }
+    }
+
     /**
      * Execute once. Compiler diagnostics remain visible to the action and the after snapshot;
      * only logger publication is detached. Applying a nested commit joins its parent's capture.
@@ -327,4 +338,27 @@ internal class CompilerStateJournal private constructor(
             return CompilerStateJournal(project, namespaces.toList(), declarations.toList(), files.toList(), fileNamespaces, ambient)
         }
     }
+}
+
+/** An explicit, short-lived capability to write under an enclosing full compiler savepoint. */
+internal class CompilerEnclosingPreparation internal constructor() {
+    private var open = true
+    private var failure: Throwable? = null
+
+    fun generate(action: () -> Unit) {
+        check(open) { "The enclosing compiler preparation is closed" }
+        requireSuccessful()
+        try {
+            action()
+        } catch (problem: Throwable) {
+            failure = problem
+            throw problem
+        }
+    }
+
+    fun requireSuccessful() {
+        failure?.let { throw it }
+    }
+
+    fun close() { open = false }
 }

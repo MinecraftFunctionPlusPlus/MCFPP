@@ -124,13 +124,13 @@ internal object MacroCallPipeline {
         }
         var result: Var<*>? = null
         val prepared = try {
-            journal.prepare {
+            journal.prepareCumulative { enclosing ->
                 when (val preparation = if (frozen == null) CompilerBindingEnvironment.prepareCall(syntax, caller, trailing)
                     else prepareFrozen(syntax, caller, trailing, frozen)) {
                     is CompilerCallPreparationResult.Rejected -> throw RejectedCall(preparation)
                     is CompilerCallPreparationResult.Ready -> {
                         val target = preparation.call.target.function as? ImmutableFunctionRef<*>
-                        if (target?.kind == FunctionKind.MACRO) result = expand(preparation, caller, budget)
+                        if (target?.kind == FunctionKind.MACRO) result = expand(preparation, caller, budget, enclosing)
                     }
                 }
             }
@@ -202,13 +202,14 @@ internal object MacroCallPipeline {
     private fun expand(
         prepared: CompilerCallPreparationResult.Ready,
         caller: Function,
-        budget: ExpansionBudget
+        budget: ExpansionBudget,
+        enclosing: CompilerEnclosingPreparation
     ): Var<*> {
         val call = prepared.call
         val target = call.target.function as ImmutableFunctionRef<*>
         var session: ExpansionSession? = null
         try {
-            val backend = CompilerCommitBackend()
+            val backend = CompilerCommitBackend(enclosing)
             val active = ExpansionSession(
                 ExpansionSite(call.source, canonicalSignature(call)),
                 budget,

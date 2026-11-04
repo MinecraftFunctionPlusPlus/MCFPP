@@ -64,7 +64,7 @@ class MniDeclarationDomainFactsTest {
     private fun scalar(facts: DeclarationPreparationFacts, name: String) = assertIs<RawPreparationFact.Scalar>(facts.values.getValue(name)).value
     private fun identities(value: RawPreparationFact): List<Any?> = when (value) {
         is RawPreparationFact.Identity -> listOf(value.value)
-        is RawPreparationFact.Scalar -> emptyList()
+        is RawPreparationFact.Scalar, is RawPreparationFact.Buffer -> emptyList()
         is RawPreparationFact.Sequence -> value.values.flatMap(::identities)
         is RawPreparationFact.Unordered -> value.values.flatMap(::identities)
     }
@@ -77,6 +77,45 @@ class MniDeclarationDomainFactsTest {
         assertEquals(first, second)
         assertEquals(first.hashCode(), second.hashCode())
         assertSame(target, first.owner.value)
+    }
+
+    @Test fun sourceBuffersKeepOwnedContentAndDetectEditsForEveryCodePointWidth() = isolated {
+        for (text in listOf("ascii", "中文", "\uD83D\uDE80")) {
+            val stream = CharStreams.fromString("{ /* $text */ }")
+            val source = mcfppParser(CommonTokenStream(mcfppLexer(stream))).templateBody()
+            val target = GenericDataTemplate(source, "Buffer", "facts.test").apply { declarationFile = null }
+            val name = when (stream.javaClass.simpleName) {
+                "CodePoint8BitCharStream" -> "byteArray"
+                "CodePoint16BitCharStream" -> "charArray"
+                "CodePoint32BitCharStream" -> "intArray"
+                else -> error("Unsupported test input stream")
+            }
+            val buffer = stream.javaClass.getDeclaredField(name).apply { isAccessible = true }.get(stream)
+            val stamp = DeclarationDomainStamp.captureRoots(listOf(target), site)
+            stamp.requireCurrent()
+            when (buffer) {
+                is ByteArray -> {
+                    val saved = buffer[0]
+                    buffer[0] = '!'.code.toByte()
+                    assertFailsWith<PreparationFactFailure> { stamp.requireCurrent() }
+                    buffer[0] = saved
+                }
+                is CharArray -> {
+                    val saved = buffer[0]
+                    buffer[0] = '!'
+                    assertFailsWith<PreparationFactFailure> { stamp.requireCurrent() }
+                    buffer[0] = saved
+                }
+                is IntArray -> {
+                    val saved = buffer[0]
+                    buffer[0] = '!'.code
+                    assertFailsWith<PreparationFactFailure> { stamp.requireCurrent() }
+                    buffer[0] = saved
+                }
+            }
+            stamp.requireCurrent()
+            assertEquals(0, Project.errorCount)
+        }
     }
 
     @Test fun delegatedTemplateTypeChangesInvalidateTheDomainAndJournalRestoresBothVersions() = isolated {

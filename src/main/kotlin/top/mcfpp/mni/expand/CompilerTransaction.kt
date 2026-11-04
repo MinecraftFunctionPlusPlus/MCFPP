@@ -42,6 +42,12 @@ internal interface CompilerCumulativeBackend : CompilerTransactionBackend {
     fun prepare(changes: CompilerChanges, participants: List<CompilerJournalParticipant>): PreparedCompilerCommit
 }
 
+/** Writes may join an explicit outer savepoint instead of preparing another full snapshot. */
+internal interface CompilerEnclosedBackend : CompilerCumulativeBackend {
+    /** Return false without writes when no enclosing savepoint is available. */
+    fun commitEnclosed(changes: CompilerChanges, participants: List<CompilerJournalParticipant>, requireOpen: () -> Unit): Boolean
+}
+
 /** Journal participants are compiler-owned; the macro API cannot enlist arbitrary callbacks. */
 internal interface CompilerJournalParticipant {
     val domains: Set<CompilerDomain>
@@ -165,13 +171,18 @@ internal class CompilerTransaction private constructor(
         val prepared = arrayListOf<PreparedCompilerCommit>()
         val attempted = arrayListOf<PreparedCompilerCommit>()
         try {
+            val changes = snapshot()
+            if (backend is CompilerEnclosedBackend && backend.commitEnclosed(changes, participants, ::open)) {
+                status = Status.COMMITTED
+                return
+            }
             // The cumulative backend owns a single outer journal including command, helper,
             // resource, name, diagnostic and participant domains. It must not be combined with
             // independently prepared participant snapshots, which would overwrite earlier writes.
             if (backend is CompilerCumulativeBackend) {
-                prepared += backend.prepare(snapshot(), participants)
+                prepared += backend.prepare(changes, participants)
             } else {
-                prepared += backend.prepare(snapshot())
+                prepared += backend.prepare(changes)
                 open() // prepare may reenter compiler lifecycle hooks and revoke this transaction.
                 participants.forEach {
                     open()

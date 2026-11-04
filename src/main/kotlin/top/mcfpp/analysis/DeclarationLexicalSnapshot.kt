@@ -668,12 +668,15 @@ internal class DeclarationDomainStamp private constructor(
                 is RawPreparationFact.Identity -> value.value?.javaClass?.name ?: "null"
                 is RawPreparationFact.Sequence -> "row"
                 is RawPreparationFact.Unordered -> "unordered"
+                is RawPreparationFact.Buffer -> "input buffer"
             }
             return when {
                 before is RawPreparationFact.Scalar && after is RawPreparationFact.Scalar ->
                     "$path scalar '${label(before)}' -> '${label(after)}'"
                 before is RawPreparationFact.Identity && after is RawPreparationFact.Identity ->
                     "$path identity ${label(before)} -> ${label(after)}"
+                before is RawPreparationFact.Buffer && after is RawPreparationFact.Buffer ->
+                    "$path input buffer changed"
                 before is RawPreparationFact.Sequence && after is RawPreparationFact.Sequence -> {
                     val index = before.values.indices.firstOrNull { it >= after.values.size || before.values[it] != after.values[it] }
                     if (index == null) "$path length ${before.values.size} -> ${after.values.size}"
@@ -783,7 +786,7 @@ internal class DeclarationDomainStamp private constructor(
                 }
                 is RawPreparationFact.Sequence -> value.values.forEach(::follow)
                 is RawPreparationFact.Unordered -> value.values.forEach(::follow)
-                is RawPreparationFact.Scalar -> Unit
+                is RawPreparationFact.Scalar, is RawPreparationFact.Buffer -> Unit
             }
         }
         fun capture(roots: List<Any>): java.util.IdentityHashMap<Any, RawPreparationFact> {
@@ -893,9 +896,9 @@ internal class DeclarationDomainStamp private constructor(
             return RawPreparationFact.unordered(value.entries.map { RawPreparationFact.row(raw(it.key), raw(it.value)) })
         }
         private fun node(value: Any): RawPreparationFact = when (value) {
-            is ByteArray -> RawPreparationFact.sequence(value.map { RawPreparationFact.scalar(it.toInt()) })
-            is CharArray -> RawPreparationFact.sequence(value.map { RawPreparationFact.scalar(it.code) })
-            is IntArray -> RawPreparationFact.sequence(value.map { RawPreparationFact.scalar(it) })
+            is ByteArray -> RawPreparationFact.buffer(value)
+            is CharArray -> RawPreparationFact.buffer(value)
+            is IntArray -> RawPreparationFact.buffer(value)
             is Array<*> -> {
                 if (value.javaClass.componentType !== MCFPPType::class.java || value.any { it !is MCFPPType })
                     fail("Unsupported declaration array role")

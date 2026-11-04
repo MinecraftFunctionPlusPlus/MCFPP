@@ -311,6 +311,70 @@ class MniCompilerStateJournalTest {
         assertEquals(0, Project.warningCount)
     }
 
+    @Test fun cumulativePreparationRestoresNativeStateAndPublishesOnceAfterRehashing() = isolated {
+        val value = variable(5)
+        val leaf = model("Leaf")
+        val leafType = MCFPPDataTemplateType(leaf, arrayListOf())
+        val inner = MCFPPListType(leafType)
+        val arguments = arrayListOf<MCFPPType>(inner)
+        val generic = GenericDataTemplate(parse("{}").templateBody(), "Box", namespace.identifier).apply { declarationFile = null }
+        namespace.scope.genericTemplate["Box" to arguments] = generic
+        val native = native()
+        mutation = {
+            StorageAccess.write(value, MCInt(17))
+            inner.generic[0] = MCFPPBaseType.Bool
+            Project.macroFunction["cumulative"] = "prepared"
+            LogProcessor.warn("cumulative warning")
+        }
+        lateinit var retained: CompilerEnclosingPreparation
+        val commit = CompilerStateJournal.checkpoint().prepareCumulative { enclosing ->
+            retained = enclosing
+            enclosing.generate { assertFalse(native.invoke(emptyList(), emptyList(), null).isError) }
+            assertEquals(1, calls)
+            assertTrue(events.isEmpty())
+        }
+        assertSame(leafType, inner.generic.single())
+        assertEquals(5, assertIs<MCInt>(StorageAccess.read(value)).value)
+        assertNull(Project.macroFunction["cumulative"])
+        assertTrue(events.isEmpty())
+        repeat(2) {
+            commit.apply()
+            assertSame(MCFPPBaseType.Bool, inner.generic.single())
+            assertSame(generic, namespace.scope.genericTemplate["Box" to listOf(inner)])
+            assertEquals("prepared", Project.macroFunction["cumulative"])
+            assertEquals(1, events.size)
+            commit.rollback()
+            assertSame(leafType, inner.generic.single())
+            assertEquals(5, assertIs<MCInt>(StorageAccess.read(value)).value)
+        }
+        assertEquals(1, calls)
+        var executedAfterClose = false
+        assertFailsWith<IllegalStateException> { retained.generate { executedAfterClose = true } }
+        assertFalse(executedAfterClose)
+    }
+
+    @Test fun caughtCumulativeGenerationFailureStillRevokesTheOuterPreparation() = isolated {
+        val value = variable(5)
+        val failure = IllegalArgumentException("partial cumulative generation")
+        val caught = assertFailsWith<IllegalArgumentException> {
+            CompilerStateJournal.checkpoint().prepareCumulative { enclosing ->
+                assertSame(failure, assertFailsWith<IllegalArgumentException> {
+                    enclosing.generate {
+                        StorageAccess.write(value, MCInt(91))
+                        Project.macroFunction["partial"] = "discarded"
+                        LogProcessor.warn("discarded cumulative warning")
+                        throw failure
+                    }
+                })
+            }
+        }
+        assertSame(failure, caught)
+        assertEquals(5, assertIs<MCInt>(StorageAccess.read(value)).value)
+        assertNull(Project.macroFunction["partial"])
+        assertEquals(0, Project.warningCount)
+        assertTrue(events.isEmpty())
+    }
+
     @Test fun nestedSuccessfulPreparationPublishesAtApplyPositionExactlyOnce() = isolated {
         val value = variable()
         val owner = model("Owner").also { namespace.scope.addTemplate(it.identifier, it, true) }

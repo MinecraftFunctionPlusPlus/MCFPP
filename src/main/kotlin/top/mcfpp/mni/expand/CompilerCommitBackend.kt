@@ -17,17 +17,18 @@ import top.mcfpp.util.LogProcessor
 /**
  * Production transaction backend for expansion-owned compiler artifacts.
  *
- * Every successful preparation executes exactly one [CompilerStateJournal.prepare]: helper
+ * Standalone preparation executes exactly one [CompilerStateJournal.prepare]: helper
  * definitions, resources, generated names, diagnostics and all enlisted participant domains are
  * written while that single outer journal is open, the cumulative after state is captured, and the
  * original before state is restored in `finally`. Applying the returned mutation restores the one
  * cumulative snapshot and publishes captured diagnostics; it never invokes a native/MNI host body,
- * a macro callback or a plan emitter a second time.
+ * a macro callback or a plan emitter a second time. A source macro with an explicit enclosing
+ * savepoint contributes generation to that savepoint, including diagnostic capture and rollback.
  *
  * Helpers are lowered and emitted from their FINAL validated bodies while their arenas are still
  * open. The session closes those arenas only after the root transaction has applied this commit.
  */
-internal class CompilerCommitBackend : CompilerCumulativeBackend {
+internal class CompilerCommitBackend(private val enclosing: CompilerEnclosingPreparation? = null) : CompilerEnclosedBackend {
     private var source: CompilerSourceBindings? = null
 
     /** The session and backend are mutually recursive; bind once after source capture succeeds. */
@@ -41,6 +42,22 @@ internal class CompilerCommitBackend : CompilerCumulativeBackend {
     override fun prepare(changes: CompilerChanges): PreparedCompilerCommit = prepare(changes, emptyList())
 
     override fun prepare(changes: CompilerChanges, participants: List<CompilerJournalParticipant>): PreparedCompilerCommit {
+        val generate = generation(changes, participants)
+        // Discover new helper/resource roots in the cumulative after snapshot.
+        return CompilerStateJournal.checkpoint().prepare(generate)
+    }
+
+    override fun commitEnclosed(changes: CompilerChanges, participants: List<CompilerJournalParticipant>, requireOpen: () -> Unit): Boolean {
+        val owner = enclosing ?: return false
+        owner.generate {
+            generation(changes, participants).invoke()
+            // Revocation during generation must poison the enclosing savepoint as well.
+            requireOpen()
+        }
+        return true
+    }
+
+    private fun generation(changes: CompilerChanges, participants: List<CompilerJournalParticipant>): () -> Unit {
         val bindings = requireNotNull(source) { "A production commit backend requires its captured source bindings" }
         bindings.requireCurrent()
         validateNames(changes)
@@ -49,9 +66,7 @@ internal class CompilerCommitBackend : CompilerCumulativeBackend {
                 "Journal participant ${it.domains} cannot join one cumulative production transaction"
             }
         }
-        // The journal discovers newly emitted helper functions/resources from the same compiler
-        // registries on its AFTER capture, so no separately prepared snapshot can overwrite them.
-        return CompilerStateJournal.checkpoint().prepare {
+        return {
             // The source proof belongs here, before the first controlled registry write. Helper
             // registration below mutates NamespaceScope.functions, so bindHelper must not re-run
             // the old pre-write declaration snapshot after the first helper has been registered.
