@@ -6,7 +6,6 @@ import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.command.Comment
@@ -60,10 +59,10 @@ class MniRepeatTest {
             var hostCalls = 0
 
             @JvmStatic
-            @MNIMacro(identifier = "repeat", params = [
-                MacroParam(name = "times", type = "int", mode = ParamMode.VALUE),
-                MacroParam(name = "initial", type = "int", mode = ParamMode.VALUE),
-                MacroParam(name = "body", type = "(int,int)->int", mode = ParamMode.INLINE)
+            @MNIMacro(identifier = "repeat", normalParams = [
+                "int",
+                "int",
+                "(int,int)->int"
             ], returnType = "int")
             fun repeatFold(context: MacroContext, times: Value<IntT>, initial: Value<IntT>, body: InlineFn<IntT>): Expr<IntT> {
                 hostCalls++
@@ -82,9 +81,9 @@ class MniRepeatTest {
             @JvmStatic
             @MNIMacro(
                 identifier = "repeat",
-                params = [
-                    MacroParam(name = "times", type = "int", mode = ParamMode.VALUE),
-                    MacroParam(name = "body", type = "(int)->void", mode = ParamMode.INLINE)
+                normalParams = [
+                    "int",
+                    "(int)->void"
                 ],
                 returnType = "void"
             )
@@ -148,8 +147,8 @@ class MniRepeatTest {
             EffectEntries.effects.clear()
             GlobalScope.localNamespaces[namespace.identifier] = namespace
             namespace.scope.journalFileFields.add(file.field)
-            namespace.injectedBy(RepeatEntries::class.java)
-            namespace.injectedBy(EffectEntries::class.java)
+            namespace.declareMniFixtures(RepeatEntries::class.java)
+            namespace.declareMniFixtures(EffectEntries::class.java)
 
             val bodySource = "{\n$source\n}"
             val parser = P(CommonTokenStream(mcfppLexer(CharStreams.fromString(bodySource, "$owner.mcfpp"))))

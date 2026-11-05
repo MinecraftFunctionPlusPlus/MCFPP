@@ -46,6 +46,26 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     // Statements following a branch must run in each branch function, including nested branches.
     private var followingStatements: List<mcfppParser.StatementContext> = emptyList()
+    private data class DebugBlock(val context: mcfppParser.BlockContext,
+        val declarations: MutableList<Triple<top.mcfpp.model.scope.FunctionScope, String, Var<*>?>> = mutableListOf(), var active: Boolean = true)
+    private val debugBlocks = ArrayDeque<DebugBlock>()
+
+    private fun leaveDebugBlock(block: DebugBlock) {
+        if (!block.active) return
+        block.declarations.asReversed().forEach { (scope, name, previous) ->
+            if (previous == null) { scope.vars.remove(name); scope.fieldVarSet.remove(name) }
+            else scope.vars[name] = previous
+        }
+        block.active = false
+    }
+
+    private fun enterDebugStatement(statement: mcfppParser.StatementContext) {
+        if (!Project.config.debugInfo) return
+        debugBlocks.reversed().forEach { block ->
+            if (block.active && generateSequence(statement as org.antlr.v4.runtime.tree.ParseTree?) { it.parent }.none { it === block.context })
+                leaveDebugBlock(block)
+        }
+    }
 
     private class LoopContext(
         val visible: List<Var<*>>,
@@ -153,6 +173,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         val previous = followingStatements
         try {
             statements.forEachIndexed { index, statement ->
+                enterDebugStatement(statement)
                 if (Function.currFunction.hasReturnStatement || Function.currFunction.isReturned || Function.currFunction.isEnded) return@forEachIndexed
                 followingStatements = statements.drop(index + 1) + afterBlock
                 visitStatement(statement)
@@ -255,7 +276,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext):Any? = withCompilationContext(ctx) {
         val declarationErrors = Project.errorCount
         val fieldModifier = ctx.fieldModifier()?.start?.text
-        val isExternal = ctx.fieldModifier()?.EXTERNAL() != null
+        val isExternal = ctx.fieldModifier()?.EXTERNAL() != null ||
+            Project.config.debugInfo && fieldModifier !in setOf("const", "import")
         var type = ctx.type()?.let {
             MCFPPType.parseFromContextNotNull(it, Function.currFunction.scope)
         }
@@ -292,11 +314,14 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             return null
         }
         val `var` = type.buildUnConcrete(ctx.Identifier().text, Function.currFunction)
+        val debugBlock = debugBlocks.lastOrNull { it.active }
         if(isInTopStatement){
             `var`.nbtPath = NBTPath.getFileScopePath(`var`)
             `var`.isStatic = true
         }else{
             `var`.nbtPath = NBTPath.getNormalStackPath(`var`)
+            if (debugBlock != null) `var`.nbtPath = NBTPath.stack.intIndex(0)
+                .memberIndex("${`var`.identifier}__debug_${ctx.start.startIndex}")
         }
         //一定是函数变量
         if (Function.currField.containVar(ctx.Identifier().text)) {
@@ -304,13 +329,26 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         }
         `var`.isConst = fieldModifier == "const"
         `var`.bindDeclaration(forceRuntime = isExternal)
+        if (debugBlock != null && StorageAccess.hasRuntimeRepresentation(`var`)) {
+            val binding = `var`.storageBinding ?: StorageAccess.declare(`var`, requireNotNull(`var`.symbol))
+            if (binding.data.layout == top.mcfpp.analysis.StorageLayout.Constant) {
+                val address = `var`.nbtPath.clone()
+                binding.data.allocate(address, top.mcfpp.analysis.StorageLayout.Nbt(address.source.toString(), address.toCommandPart().toString()), null)
+            }
+        }
         if (isInTopStatement) {
             StorageAccess.bindStaticField(`var`)
             `var`.nbtPath = StorageAccess.ensure(`var`).path.clone()
         }
         if (fieldModifier == "import") StorageAccess.bindIncomingParameter(`var`)
         val stored = if (init != null) `var`.assignedBy(init) else `var`
-        Function.currField.putVar(`var`.identifier, stored, true)
+        if (debugBlock == null) Function.currField.putVar(`var`.identifier, stored, true)
+        else {
+            val scope = Function.currField
+            debugBlock.declarations.add(Triple(scope, `var`.identifier, scope.vars[`var`.identifier]))
+            scope.vars[`var`.identifier] = stored
+            scope.fieldVarSet.add(`var`.identifier)
+        }
         top.mcfpp.analysis.StructuredBindings.publish(ctx, Function.currFunction, stored)
         if (isExternal && !stored.isError) makeRuntime(stored)
         return null
@@ -411,7 +449,13 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     private fun visitBlock(ctx: mcfppParser.BlockContext, afterBlock: List<mcfppParser.StatementContext>) {
         val statements = ctx.curlBlock()?.statement() ?: ctx.children().map { it as mcfppParser.StatementContext }
-        visitStatements(statements, afterBlock)
+        val block = if (Project.config.debugInfo && ctx.parent.let { it is mcfppParser.IfStatementContext ||
+            it is mcfppParser.ElseIfStatementContext || it is mcfppParser.ElseStatementContext ||
+            it is mcfppParser.WhileStatementContext || it is mcfppParser.DoWhileStatementContext ||
+            it is mcfppParser.ForeachStatementContext || it is mcfppParser.ExecuteStatementContext }) DebugBlock(ctx) else null
+        if (block != null) debugBlocks.addLast(block)
+        try { visitStatements(statements, afterBlock) }
+        finally { if (block != null) { leaveDebugBlock(block); debugBlocks.removeLast() } }
     }
 
     private enum class ConditionType {

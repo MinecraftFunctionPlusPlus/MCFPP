@@ -46,15 +46,23 @@ internal object OptimizationPipeline {
         if (name == "\$return") "r_$owner" else "v_${owner}_${java.lang.Long.toHexString(requireNotNull(symbol).value)}"
     } else function.prefix + name
 
+    /** One prepared module owns these summaries; scalar passes only replace their local IR. */
+    class Module(graph: Map<SymbolId, TypedIR>) {
+        val graph = ModulePassManager(listOf(BindCallEffects)).run(graph, PassContext(Project.config.optimization))
+        val program by lazy { ProgramAnalysis(this.graph) }
+        val estimator by lazy { TypedMinecraftCost(this.graph) }
+        val summarize = ReturnTypeAnalysis.summarizer(this.graph)
+    }
+
     fun optimize(function: Function, ir: TypedIR, graph: Map<SymbolId, TypedIR>, initial: FlowFacts,
-                 observable: Set<SymbolId>): TypedIR {
+                 observable: Set<SymbolId>, shared: Module = Module(graph)): TypedIR {
         val config = Project.config.optimization.let {
             if (top.mcfpp.CompileSettings.foldIRConstants) it else it.copy(disabledPasses = it.disabledPasses + PassIds.CONSTANTS)
         }
         val analyses = AnalysisManager()
         val names = if (Project.config.irOutputPath == null) emptyMap() else
             FunctionInventory.all().associate { it.declarationId to it.namespaceID.toString() }
-        val module = ModulePassManager(listOf(BindCallEffects)).run(graph, PassContext(config, analyses = analyses))
+        val module = shared.graph
         val context = PassContext(config, initial, module, analyses, trace = { id, before, after ->
             if (Project.config.irOutputPath != null) function.optimizationTrace += buildString {
                 appendLine("pass $id | changed=${before != after}")
@@ -65,7 +73,7 @@ internal object OptimizationPipeline {
         val manager = PassManager(scalarPasses(observable))
         var result = manager.simplify(ir, context)
         if (config.enabled(PassIds.INLINE, 2)) {
-            val pass = AutomaticInlining(module, observable, TypedMinecraftCost(module), names)
+            val pass = AutomaticInlining(module, observable, shared.estimator, names, shared.program)
             val before = result
             result = pass.run(result, context)
             if (result != before) context.analyses.invalidate(pass.invalidates)
@@ -104,6 +112,7 @@ internal object OptimizationPipeline {
             val planned = if (cleanup && Project.config.optimization.enabled(PassIds.FRAMES)) MinecraftFramePlanning.run(input) else input
             val output = if (cleanup && Project.config.optimization.enabled(PassIds.COMMANDS)) MinecraftCleanup.run(planned) else planned
             function.minecraftIR = output
+            if (Project.config.debugInfo) continue
             // Retain Comment instances so comment-level filtering still happens at publication.
             val comments = function.commands.filterIsInstance<Comment>().associateBy { it.toString() }
             function.commands.clear()
@@ -119,9 +128,15 @@ internal object OptimizationPipeline {
 /** Provisional lowering uses the same Minecraft cost classifier as emitted command IR. */
 internal class TypedMinecraftCost(private val functions: Map<SymbolId, TypedIR>) : InlineCostEstimator {
     private val targets = FunctionInventory.all().associateBy { it.declarationId }
+    private val calls = functions.mapValues { (_, body) -> body.blocks.flatMap { block ->
+        block.instructions.filterIsInstance<Instruction.Call>().map { it.declaration }
+    } }
+    private val recursive = graphComponents(functions.keys) { calls[it].orEmpty() }
+        .filter { it.size > 1 || it.single() in calls[it.single()].orEmpty() }.flatten().toSet()
+
     override fun cost(ir: TypedIR, model: CommandCostModel): Double {
         val estimator = MinecraftCostEstimator(model)
-        val activeCalls = hashSetOf<SymbolId>()
+        val completed = hashMapOf<SymbolId, Double>()
         lateinit var estimate: (TypedIR) -> Double
         estimate = { body ->
             val macroFunction = body.blocks.any { block -> block.instructions.any {
@@ -138,11 +153,10 @@ internal class TypedMinecraftCost(private val functions: Map<SymbolId, TypedIR>)
             is Instruction.Binary -> ordinary(count = if (i.operation in setOf("+", "-", "*", "&&")) 2 else 3)
             is Instruction.Call -> {
                 val callee = functions[i.declaration]
-                val body = if (callee != null && activeCalls.add(i.declaration)) {
-                    val cost = estimate(callee)
-                    activeCalls.remove(i.declaration)
-                    cost
-                } else 0.0
+                // Recursive iteration counts are unknown, just like loop iteration counts below.
+                // Count dispatch/transfers, never enumerate paths through a recursive component.
+                val body = if (callee != null && i.declaration !in recursive)
+                    completed.getOrPut(i.declaration) { estimate(callee) } else 0.0
                 val target = targets[i.declaration]
                 val transfers = if (target?.optimizedScalar == true)
                     ordinary(count = i.arguments.size + if (i.result != null) 1 else 0)
@@ -154,28 +168,28 @@ internal class TypedMinecraftCost(private val functions: Map<SymbolId, TypedIR>)
             else -> ordinary(model.storage)
         }
             val blocks = body.blocks.associateBy { it.id }
-            fun reaches(from: Int, target: Int, seen: MutableSet<Int>): Boolean =
-                from == target || seen.add(from) && blocks.getValue(from).terminator.successors().any { reaches(it, target, seen) }
-            val loopBlocks = blocks.keys.filter { id -> blocks.getValue(id).terminator.successors().any { reaches(it, id, hashSetOf()) } }.toSet()
-            val active = hashSetOf<Int>()
-            fun path(id: Int): Double {
-                if (!active.add(id)) return 0.0 // The unknown iteration count is never guessed.
-                val block = blocks.getValue(id)
-                val own = if (id in loopBlocks) 0.0 else block.instructions.sumOf(::instruction)
+            val components = graphComponents(blocks.keys) { blocks.getValue(it).terminator.successors() }
+            val componentOf = components.flatMapIndexed { index, ids -> ids.map { it to index } }.toMap()
+            val costs = DoubleArray(components.size)
+            // Components arrive dependency-first. Shared branch tails are evaluated once.
+            components.forEachIndexed { index, ids ->
+                val loop = ids.size > 1 || ids.single() in blocks.getValue(ids.single()).terminator.successors()
+                val block = blocks.getValue(ids.first())
+                val own = if (loop) 0.0 else block.instructions.sumOf(::instruction)
                 val returned = (block.terminator as? Terminator.Return)?.value
-                val exitCost = if (returned == null || id in loopBlocks) 0.0 else
+                val exitCost = if (returned == null || loop) 0.0 else
                     if (returned.type in setOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.Bool.typeId)) ordinary() else ordinary(model.storage)
-                val dispatch = if (id in loopBlocks) 0.0 else when (block.terminator) {
+                val dispatch = if (loop) 0.0 else when (block.terminator) {
                     is Terminator.Jump -> ordinary()
                     is Terminator.Branch -> ordinary(count = 2)
                     is Terminator.Return -> if (returned == null) 0.0 else ordinary()
                     else -> 0.0
                 }
-                val tail = block.terminator.successors().maxOfOrNull(::path) ?: 0.0
-                active.remove(id)
-                return own + tail + exitCost + dispatch
+                val tail = ids.asSequence().flatMap { blocks.getValue(it).terminator.successors().asSequence() }
+                    .map { componentOf.getValue(it) }.filter { it != index }.maxOfOrNull { costs[it] } ?: 0.0
+                costs[index] = own + tail + exitCost + dispatch
             }
-            path(body.entry)
+            costs[componentOf.getValue(body.entry)]
         }
         return estimate(ir)
     }

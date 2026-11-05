@@ -1,9 +1,12 @@
 @MCFPPEntity
+/// 青蛙的实体数据。继承的字段由各父数据类型提供。
 data FrogData : EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name("Variant")
+    /// 外观变种。
     var variant: FrogVariant
 }
 
+/// 青蛙的外观变种。
 enum FrogVariant {
     temperate, warm, cold
 }

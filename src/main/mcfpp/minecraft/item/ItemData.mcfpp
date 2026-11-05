@@ -1,5 +1,9 @@
+/// 物品堆叠的标识符、数量和组件数据。
 data ItemStackData {
+    /// 资源标识符。
     var id: string
+    /// 数量。
     var count: int
+    /// 物品组件数据。
     var components: dict<ItemComponent>
 }

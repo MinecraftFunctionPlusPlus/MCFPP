@@ -39,8 +39,8 @@ object NativeDeclarations {
         val provider = bindings.sourceProvider(descriptor.providerClass)
         val native = NativeBinding(provider, descriptor.providerClass, descriptor.methodName, descriptor.parameterClasses, descriptor.returnClass)
         val method = resolveMethod(native, bindings)
-        require(MacroFunctionInfo.from(method) == descriptor) { "The source macro descriptor changed before capture" }
-        val prepared = requireNotNull(MacroSignatureParser.prepare(method)) { "Method has no MNIMacro declaration" }
+        require(descriptor.method(bindings.loader(provider)) == method) { "The source macro descriptor changed before capture" }
+        val prepared = descriptor.prepare(method)
         fun type(value: PreparedMacroType): MacroType = when (value) {
             is PreparedMacroType.Source -> MacroType.Source(bindings.types.type(bindings.sourceType(namespace, value.expression)))
             is PreparedMacroType.Callback -> MacroType.Callback(value.signature.parameters.map {

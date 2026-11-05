@@ -1,4 +1,6 @@
 @From("top.mcfpp.mni.minecraft.TriggerData")
+/// 供 trigger 命令使用的目标名称。
 data Trigger {
+    /// 资源标识符。
     var id: string
 }

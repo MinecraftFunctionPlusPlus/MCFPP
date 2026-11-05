@@ -1,64 +1,111 @@
 package top.mcfpp.mni.api
 
-/** Processes one completed declaration. Generated annotation metadata does not invoke processors. */
+/** Adds generated members or metadata after the compiler completes a source declaration. */
 fun interface TemplateProcessor {
+    /** Inspects [template] and returns edits built with [context]. Generated metadata remains data during this pass. */
     fun expand(context: DeclarationContext, template: TemplateView): DeclarationEdits
 }
 
-/** Compiler-issued facts only: these views never contain a compiler scope, Var, or Function. */
+/** A completed MCFPP template and its effective members, including inherited members. */
 sealed interface TemplateView {
+    /** Returns the completed template type. */
     fun type(): TypeRef<*>
+    /** Returns field references for generated reads and writes. */
     fun fields(): List<FieldRef<*>>
+    /** Returns field declarations with visibility, ownership, and annotation information. */
     fun fieldDeclarations(): List<FieldDeclarationView>
+    /** Returns the template's effective method declarations. */
     fun methods(): List<MethodView>
+    /** Returns annotations attached to the template. */
     fun annotations(): List<AnnotationView>
+    /** Returns the template's source location. */
     fun source(): SourceSpan
 }
 
-enum class DeclarationAccess { PUBLIC, PROTECTED, PRIVATE, COMPILE_PRIVATE }
+/** Visibility recorded on an MCFPP declaration. */
+enum class DeclarationAccess {
+    /** Accessible wherever the declaring type is accessible. */
+    PUBLIC,
+    /** Accessible within the declaring type and derived types. */
+    PROTECTED,
+    /** Accessible within the declaring type. */
+    PRIVATE,
+    /** Uses MCFPP's compile-private access rule. */
+    COMPILE_PRIVATE
+}
 
+/** An annotation name, its constant arguments, and its source location. */
 sealed interface AnnotationView {
+    /** Returns the annotation's resolved name. */
     fun name(): String
+    /** Returns immutable argument values indexed by parameter name. */
     fun arguments(): Map<String, ConstantValue>
+    /** Returns the annotation's source location. */
     fun source(): SourceSpan
 }
 
+/** Declaration information for a field in a completed template. */
 sealed interface FieldDeclarationView {
+    /** Returns the field reference for generated code. */
     fun field(): FieldRef<*>
+    /** Returns the type that declares this field. */
     fun owner(): TypeRef<*>
+    /** Returns the field's declared visibility. */
     fun access(): DeclarationAccess
+    /** Returns true when the field declaration permits null values. */
     fun nullable(): Boolean
+    /** Returns annotations attached to the field. */
     fun annotations(): List<AnnotationView>
+    /** Returns the field's source location. */
     fun source(): SourceSpan
 }
 
+/** Declaration information for a method in a completed template. */
 sealed interface MethodView {
+    /** Returns the method name. */
     fun name(): String
+    /** Returns the type that declares this method. */
     fun owner(): TypeRef<*>
+    /** Returns ordinary parameters and the result type. */
     fun signature(): FunctionSignature<*>
+    /** Returns readonly parameters in declaration order. */
     fun readonlyParameters(): List<ParameterView>
+    /** Returns the method's declared visibility. */
     fun access(): DeclarationAccess
+    /** Returns true for a static method. */
     fun isStatic(): Boolean
+    /** Returns true for an abstract method. */
     fun isAbstract(): Boolean
+    /** Returns true for a final method. */
     fun isFinal(): Boolean
+    /** Returns annotations attached to the method. */
     fun annotations(): List<AnnotationView>
+    /** Returns the method's source location. */
     fun source(): SourceSpan
 }
 
+/** Services available while a [TemplateProcessor] builds edits for the current declaration. */
 interface DeclarationContext {
+    /** Returns the entry point for building generated bodies. */
     fun quote(): Quote
+    /** Returns type and function lookup in the declaration's environment. */
     fun types(): TypeService
+    /** Returns the compiler message service. */
     fun diagnostics(): DiagnosticService
+    /** Returns the generated helper service. */
     fun helpers(): HelperService
+    /** Returns the generated resource service. */
     fun resources(): ResourceService
+    /** Returns the builder for edits to the current declaration. */
     fun declarations(): DeclarationBuilder
 }
 
+/** Builds additions to the declaration currently being processed. */
 interface DeclarationBuilder {
     /**
-     * Adds a PUBLIC instance method on the current canonical owner. Explicit parameters are
-     * ordinary runtime VALUE parameters; self is separate. Existing visible signature slots
-     * cannot be replaced, including inherited slots. The callback is consumed immediately.
+     * Builds a new public instance method on the current template [owner].
+     * Choose a signature distinct from existing and inherited methods. Explicit parameters use VALUE mode.
+     * [body] runs immediately and receives the instance separately through [MethodBodyContext.self].
      */
     fun <O, R> method(
         owner: TypeRef<O>,
@@ -67,43 +114,64 @@ interface DeclarationBuilder {
         body: GeneratedMethodBody<O, R>
     ): MethodEdit
 
-    /** Adds a compiler-named internal helper using the existing helper construction protocol. */
+    /** Builds an internal helper with [hint] as its suggested name, using [HelperService.define]'s parameter rules. */
     fun <R> internalFunction(hint: String, signature: FunctionSignature<R>, body: GeneratedBody<R>): InternalDeclarationEdit<R>
 
-    /** Only compiler-whitelisted annotation names and exact immutable argument shapes are accepted. */
+    /** Builds metadata for [owner]. The annotation name and argument types must match a compiler-supported annotation. */
     fun metadata(owner: TypeRef<*>, annotation: String, arguments: Map<String, ConstantValue>): MetadataEdit
+    /** Groups edits from this builder into the result returned by [TemplateProcessor.expand]. */
     fun edits(edits: List<DeclarationEdit>): DeclarationEdits
 }
 
-/** A host callback is construction input; neither the edit nor its Code tree retains it. */
+/** A JVM callback that constructs a generated instance method body once, during declaration processing. */
 fun interface GeneratedMethodBody<O, R> {
+    /** Builds the method body. Use [CodeBuilder.yield] when the signature requires a result. */
     fun build(context: MethodBodyContext<O>)
 }
 
+/** The builder, instance, and parameters available while constructing a generated method. */
 interface MethodBodyContext<O> {
+    /** Returns the builder for this method body. */
     fun builder(): CodeBuilder
+    /** Returns the type that owns the generated method. */
     fun owner(): TypeRef<O>
+    /** Returns a writable reference to this method's instance. */
     fun self(): Ref<O>
+    /** Returns explicit parameters in signature order. */
     fun parameters(): List<MacroInput>
 }
 
+/** One proposed addition, applied after the compiler validates the processor result. */
 sealed interface DeclarationEdit {
+    /** Returns the source location associated with this addition. */
     fun source(): SourceSpan
 }
+/** A proposed public instance method and its generated body. */
 sealed interface MethodEdit : DeclarationEdit {
+    /** Returns the type receiving the method. */
     fun owner(): TypeRef<*>
+    /** Returns the proposed method name. */
     fun name(): String
+    /** Returns the proposed parameters and result type. */
     fun signature(): FunctionSignature<*>
+    /** Returns the generated method body. */
     fun body(): Block
 }
+/** A proposed internal helper function. */
 sealed interface InternalDeclarationEdit<R> : DeclarationEdit {
+    /** Returns the reference that generated code can call. */
     fun function(): FunctionRef<R>
 }
+/** A proposed annotation addition to a template. */
 sealed interface MetadataEdit : DeclarationEdit {
+    /** Returns the type receiving the annotation. */
     fun owner(): TypeRef<*>
+    /** Returns the proposed annotation and constant arguments. */
     fun annotation(): AnnotationView
 }
+/** The complete group of additions returned by a declaration processor. */
 sealed interface DeclarationEdits {
+    /** Returns proposed additions in their supplied order. */
     fun all(): List<DeclarationEdit>
 }
 

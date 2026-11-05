@@ -1,1 +1,2 @@
+/// 单个实体数据的抽象基础类型。
 abstract data SingleEntity {}

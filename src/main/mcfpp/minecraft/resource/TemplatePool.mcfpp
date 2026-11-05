@@ -1,5 +1,7 @@
 @From("top.mcfpp.mni.resource.TemplatePoolData")
+/// 结构模板池资源的标识符。通过 id 字段保存资源名称。
 data TemplatePool: ResourceID
 
 @From("top.mcfpp.mni.resource.TemplatePoolObjectData")
+/// 结构模板池资源类型的共享成员入口。
 object data TemplatePool: ResourceID

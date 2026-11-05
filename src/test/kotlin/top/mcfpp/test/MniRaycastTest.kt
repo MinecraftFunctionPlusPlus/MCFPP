@@ -5,7 +5,6 @@ import org.antlr.v4.runtime.CommonTokenStream
 import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.command.Comment
@@ -76,11 +75,11 @@ class MniRaycastTest {
             var hostCalls = 0
 
             @JvmStatic
-            @MNIMacro(identifier = "raycast", params = [
-                MacroParam(name = "samples", type = "int", mode = ParamMode.CONST),
-                MacroParam(name = "initial", type = "int", mode = ParamMode.VALUE),
-                MacroParam(name = "step", type = "(int,int)->int", mode = ParamMode.INLINE),
-                MacroParam(name = "keepGoing", type = "(int)->bool", mode = ParamMode.INLINE)
+            @MNIMacro(identifier = "raycast", normalParams = [
+                "int",
+                "int",
+                "(int,int)->int",
+                "(int)->bool"
             ], returnType = "int")
             fun raycastFold(context: MacroContext, samples: Const<IntT>, initial: Value<IntT>,
                             step: InlineFn<IntT>, keepGoing: InlineFn<BoolT>): Expr<IntT> {
@@ -108,9 +107,9 @@ class MniRaycastTest {
             @JvmStatic
             @MNIMacro(
                 identifier = "raycast",
-                params = [
-                    MacroParam(name = "samples", type = "int", mode = ParamMode.CONST),
-                    MacroParam(name = "body", type = "(int)->bool", mode = ParamMode.INLINE)
+                normalParams = [
+                    "int",
+                    "(int)->bool"
                 ],
                 returnType = "void"
             )
@@ -174,7 +173,7 @@ class MniRaycastTest {
             RaycastEntries.hostCalls = 0
             GlobalScope.localNamespaces[namespace.identifier] = namespace
             namespace.scope.journalFileFields.add(file.field)
-            namespace.injectedBy(RaycastEntries::class.java)
+            namespace.declareMniFixtures(RaycastEntries::class.java)
 
             val bodySource = "{\n$source\n}"
             val parser = P(CommonTokenStream(mcfppLexer(CharStreams.fromString(bodySource, "$owner.mcfpp"))))

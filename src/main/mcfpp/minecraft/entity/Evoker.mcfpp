@@ -1,5 +1,7 @@
 @MCFPPEntity
+/// 唤魔者的实体数据。继承的字段由各父数据类型提供。
 data EvokerData: EntityData, CreatureData, AIMobData, RaiderData {
     @Name("SpellTicks")
+    /// 施法状态的剩余时间。
     var spellTicks: int
 }

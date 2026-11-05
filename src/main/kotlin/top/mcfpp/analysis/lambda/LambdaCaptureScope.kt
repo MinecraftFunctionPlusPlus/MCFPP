@@ -52,7 +52,7 @@ internal class LambdaCaptureScope(private val target: Function, private val lexi
 
     override fun getVar(key: String): Var<*>? {
         vars[key]?.let { it.stackIndex = 0; return it }
-        aliases[key]?.let { it.stackIndex = 0; return it }
+        aliases[key]?.let { restoreCaptureEvidence(it); it.stackIndex = 0; return it }
         var scope: top.mcfpp.model.scope.IScope? = lexical
         var outer: Var<*>? = null
         while (scope is FunctionScope) {
@@ -82,7 +82,7 @@ internal class LambdaCaptureScope(private val target: Function, private val lexi
     internal fun boundCapture(source: Var<*>, key: String = source.identifier): Var<*> {
         source.bindDeclaration()
         val symbol = source.symbol!!
-        aliases.values.firstOrNull { it.symbol?.id == symbol.id }?.let { return it }
+        aliases.values.firstOrNull { it.symbol?.id == symbol.id }?.let { restoreCaptureEvidence(it); return it }
         if (controlledContext && top.mcfpp.core.lang.context.ContextBorrowing.provenance(source).isNotEmpty()) {
             val borrowed = StorageAccess.capturePayload(source.type, source, key)
                 ?: return source.clone().apply { isError = true }
@@ -117,6 +117,18 @@ internal class LambdaCaptureScope(private val target: Function, private val lexi
         // declaration may shadow it, while normal duplicate-local checks still use vars.
         aliases[key] = alias
         return alias
+    }
+
+    /** A branch can restore a snapshot taken before this immutable incoming capture was discovered. */
+    private fun restoreCaptureEvidence(alias: Var<*>) {
+        val binding = alias.storageBinding ?: return
+        if (binding.data.facts.read(binding.place) != null) return
+        val source = sources[alias.symbol?.id] ?: return
+        val actual = StorageAccess.actualType(source)
+        binding.data.types.putAll(StorageAccess.boundTypes(source))
+        binding.data.types[actual.typeId] = actual
+        binding.data.facts.initialize(binding.place, ValueFacts(TypeKnowledge.Exact(actual.typeId), ValueKnowledge.Unknown))
+        source.storageBinding?.let { StorageAccess.copyRuntimeEvidence(it, binding) }
     }
 
     /** Run only back in the creator: capture copies are emitted at expression evaluation. */

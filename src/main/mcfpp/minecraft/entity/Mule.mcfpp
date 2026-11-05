@@ -1,8 +1,11 @@
 @MCFPPEntity
+/// 骡的实体数据。继承的字段由各父数据类型提供。
 data MuleData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, GeneralHorseData {
     @Name("ChestedHorse")
+    /// 是否携带箱子。
     var chestedHorse: bool
 
     @Name("Items")
+    /// 关联物品列表。
     var items: list<ItemData>
 }

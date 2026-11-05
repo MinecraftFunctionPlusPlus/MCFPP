@@ -1,5 +1,7 @@
 @MCFPPEntity
+/// 鹦鹉的实体数据。继承的字段由各父数据类型提供。
 data ParrotData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, TameableData {
     @Name("Variant")
+    /// 外观变种。
     var variant: int
 }

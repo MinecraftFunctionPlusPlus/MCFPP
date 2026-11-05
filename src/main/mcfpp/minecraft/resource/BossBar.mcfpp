@@ -1,19 +1,26 @@
 import mcfpp.minecraft.std:*
 
 @From("top.mcfpp.mni.minecraft.BossBarData")
+/// Boss栏资源的标识符。通过 id 字段保存资源名称。
 data BossBar: ResourceID{
 
+    /// 显示名称。
     var name: text
 
+    /// Boss 栏显示满值时对应的数值。
     var max: int { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; }
+    /// Boss 栏当前显示的数值。
     var value: int { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; }
+    /// 是否显示此 Boss 栏。
     var visible: bool { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; }
 
+    /// 保存 Boss 栏标识符，并将其用作显示名称。调用 add() 在游戏中创建 Boss 栏。
     constructor(id: string){
         this.id = id
         this.name = id.toText()
     }
 
+    /// 保存 Boss 栏标识符和显示名称。调用 add() 在游戏中创建 Boss 栏。
     constructor(id: string, name: text){
         this.id = id
         this.name = name
@@ -21,8 +28,10 @@ data BossBar: ResourceID{
 }
 
 @From("top.mcfpp.mni.minecraft.BossBarData")
+/// Boss栏资源类型的共享成员入口。
 object data BossBar
 
+/// Boss 栏的分段显示样式。
 enum BossBarStyle{
     PROGRESS = "progress",
     NOTCHED_6 = "notched_6",
@@ -31,6 +40,7 @@ enum BossBarStyle{
     NOTCHED_20 = "notched_20"
 }
 
+/// Boss 栏的显示颜色。
 enum BossBarColor{
     PINK = "pink",
     BLUE = "blue",

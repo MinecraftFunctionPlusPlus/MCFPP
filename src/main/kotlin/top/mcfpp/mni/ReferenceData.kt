@@ -14,8 +14,9 @@ import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 
-/** Standard-library address constructors and the ordinary set member share one backend. */
+/** Implements Minecraft address creation and writes through ScoreRef and NBTRef values. */
 object ReferenceData {
+    /** Builds the member directory containing the set operation for the supplied reference type. */
     fun members(type: MCFPPReferenceType): CompoundData = CompoundData(type.typeName, "mcfpp.lang").apply {
         commonType = type
         val setter = NativeFunction("set", "mcfpp.lang", ReferenceData::class.java.getMethod("set", NativeCallContext::class.java)).apply {
@@ -26,27 +27,32 @@ object ReferenceData {
         scope.addFunction(setter, false)
     }
 
+    /** Writes the supplied value through the receiver Minecraft address. */
     @JvmStatic fun set(context: NativeCallContext) = context.withAdapters { receiver, arguments ->
         ReferenceAccess.set(receiver, arguments.single())
     }
 
+    /** Creates a scoreboard address from a fixed holder name and an objective name. */
     @JvmStatic @top.mcfpp.mni.annotation.NoExternalWrites
     @MNIFunction(normalParams = ["string", "string"], returnType = "ScoreRef")
     fun scoreRef(context: NativeCallContext) = context.withArguments { context.publishResult(factory("scoreRef", emptyList(), it)) }
 
+    /** Creates an NBT address in command storage with the requested value type. */
     @JvmStatic @top.mcfpp.mni.annotation.NoExternalWrites
     @MNIFunction(readOnlyParams = ["type"], normalParams = ["string", "string"], genericType = ["T"], returnType = "NBTRef<T>")
     fun nbtStorageRef(context: NativeCallContext) = context.withArguments { context.publishResult(factory("nbtStorageRef", it.take(1), it.drop(1))) }
 
+    /** Creates an NBT address on the supplied entity with the requested value type. */
     @JvmStatic @top.mcfpp.mni.annotation.NoExternalWrites
     @MNIFunction(readOnlyParams = ["type"], normalParams = ["entity", "string"], genericType = ["T"], returnType = "NBTRef<T>")
     fun nbtEntityRef(context: NativeCallContext) = context.withArguments { context.publishResult(factory("nbtEntityRef", it.take(1), it.drop(1))) }
 
+    /** Creates an NBT address at a block position and dimension with the requested value type. */
     @JvmStatic @top.mcfpp.mni.annotation.NoExternalWrites
     @MNIFunction(readOnlyParams = ["type"], normalParams = ["string", "int", "int", "int", "string"], genericType = ["T"], returnType = "NBTRef<T>")
     fun nbtBlockRef(context: NativeCallContext) = context.withArguments { context.publishResult(factory("nbtBlockRef", it.take(1), it.drop(1))) }
 
-    /** A constructor derives a borrow in the current scope; it does not return one from a callee scope. */
+    /** Creates a reference in the caller's scope for a recognized address factory, or returns null for other native functions. */
     fun sourceFactory(function: Function, readonly: List<Var<*>>, normal: List<Var<*>>): Var<*>? {
         val native = function as? NativeFunction ?: return null
         if (native.javaMethod.declaringClass != ReferenceData::class.java || native.javaMethod.name !in factoryNames) return null

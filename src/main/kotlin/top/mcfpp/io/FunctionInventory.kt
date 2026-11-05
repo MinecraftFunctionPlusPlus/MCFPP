@@ -22,6 +22,12 @@ internal object FunctionInventory {
         }
         fun compound(value: CompoundData) {
             if (!compounds.add(value)) return
+            // This is an inventory of already-bound functions for optimization/emission.
+            // A semantic scope enumeration would load every unused library field/accessor.
+            if (value is DataTemplate && value.hasDeferredLibraryMembers) {
+                value.companionObject?.let(::compound)
+                return
+            }
             value.scope.forEachFunction(::function)
             if (value is DataTemplate) {
                 value.constructors.forEach(::function)

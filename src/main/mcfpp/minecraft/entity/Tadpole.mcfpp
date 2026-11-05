@@ -1,5 +1,8 @@
 @MCFPPEntity
+/// 蝌蚪的实体数据。继承的字段由各父数据类型提供。
 data TadpoleData: EntityData, CreatureData, AIMobData {
+    /// 年龄值。
     @Name("Age") var age: int
+    /// 是否通过桶放出。
     @Name("FromBucket") var fromBucket: bool
 }

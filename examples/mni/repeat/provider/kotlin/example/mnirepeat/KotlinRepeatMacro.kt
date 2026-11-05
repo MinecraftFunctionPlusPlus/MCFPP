@@ -1,17 +1,14 @@
 package example.mnirepeat
 
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.mni.api.Block
 import top.mcfpp.mni.api.Expr
-import top.mcfpp.mni.api.InlineArgument
 import top.mcfpp.mni.api.InlineFn
 import top.mcfpp.mni.api.IntT
 import top.mcfpp.mni.api.MacroContext
-import top.mcfpp.mni.api.ParamMode
 import top.mcfpp.mni.api.Value
 import top.mcfpp.mni.api.VoidT
-import top.mcfpp.mni.api.kotlin
+import top.mcfpp.mni.api.quote
 
 /**
  * Kotlin provider for the MNI `repeat` macro. `@JvmStatic` is required because registration
@@ -25,42 +22,38 @@ import top.mcfpp.mni.api.kotlin
  */
 object KotlinRepeatMacro {
     @JvmStatic
-    @MNIMacro(identifier = "repeat", params = [
-        MacroParam(name = "times", type = "int", mode = ParamMode.VALUE),
-        MacroParam(name = "initial", type = "int", mode = ParamMode.VALUE),
-        MacroParam(name = "body", type = "(int,int)->int", mode = ParamMode.INLINE)
+    @MNIMacro(normalParams = [
+        "int",
+        "int",
+        "(int,int)->int"
     ], returnType = "int")
     fun repeatFold(context: MacroContext, times: Value<IntT>, initial: Value<IntT>, body: InlineFn<IntT>): Expr<IntT> =
-        context.quote().kotlin().expression(context.types().intType()) {
-            val iteration = local("i", context.types().intType(), intLiteral(0))
-            val limit = local("limit", context.types().intType(), times.expr())
-            val accumulator = local("accumulator", context.types().intType(), initial.expr())
-            whileLoop({ lt(iteration.load(), limit.load()) }, {
-                assign(accumulator, inline(body, listOf(InlineArgument.value(accumulator.load()), InlineArgument.value(iteration.load()))))
-                assign(iteration, add(iteration.load(), intLiteral(1)))
-            })
-            yield(accumulator.load())
+        context.quote.expression(context.types().intType()) {
+            val iteration = local("i", literal(0))
+            val limit = local("limit", times.value)
+            val accumulator = local("accumulator", initial.value)
+            whileLoop({ iteration.value lt limit.value }) {
+                accumulator.value = inline(body, accumulator.value, iteration.value)
+                iteration += 1
+            }
+            yield(accumulator.value)
         }
 
     @JvmStatic
     @MNIMacro(
-        identifier = "repeat",
-        params = [
-            MacroParam(name = "times", type = "int", mode = ParamMode.VALUE),
-            MacroParam(name = "body", type = "(int)->void", mode = ParamMode.INLINE)
+        normalParams = [
+            "int",
+            "(int)->void"
         ],
         returnType = "void"
     )
     fun repeat(context: MacroContext, times: Value<IntT>, body: InlineFn<VoidT>): Block =
-        context.quote().kotlin().block {
-            val iteration = local("i", context.types().intType(), intLiteral(0))
-            val limit = local("limit", context.types().intType(), times.expr())
-            whileLoop(
-                { lt(iteration.load(), limit.load()) },
-                {
-                    inlineVoid(body, listOf(InlineArgument.value(iteration.load())))
-                    assign(iteration, add(iteration.load(), intLiteral(1)))
-                }
-            )
+        context.quote.block {
+            val iteration = local("i", literal(0))
+            val limit = local("limit", times.value)
+            whileLoop({ iteration.value lt limit.value }) {
+                inlineVoid(body, iteration.value)
+                iteration += 1
+            }
         }
 }

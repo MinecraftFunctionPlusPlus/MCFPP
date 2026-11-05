@@ -1,4 +1,6 @@
 @MCFPPEntity
+/// 凋灵之首的实体数据。继承的字段由各父数据类型提供。
 data WitherSkullData: EntityData, ProjectileData, FireballData {
+    /// 是否使用危险投射物状态。
     var dangerous: bool
 }

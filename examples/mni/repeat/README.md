@@ -9,16 +9,15 @@
 - 每次展开都有自己的 `i`、`limit` 和回调局部，不共享符号。嵌套 `repeat` 也不会串用外层计数。
 - 不生成运行时 `repeat` 宏函数，也不按回调编号分派。普通 `while`/`if` lowering 仍会生成 `mniu2f`/`mni/...` 控制流 helper，这是正常的源码 lower；不是宏调用帧，也不是编号回调分派。
 
-Java 与 Kotlin provider 使用同一公共 builder API、同一宏签名和同一算法；只有一份源码回调示例工程。
+Kotlin provider 使用接收者 DSL、表达式属性和运算符构造循环；源码回调示例工程保持一份。
 
 ## 目录
 
 ```text
 examples/mni/repeat/
 ├── build --project mcfpp.toml                         # 示例工程配置，从 build/repeat-macro.jar 加载 provider
-├── project/src/.mcfpp                 # injectedBy 指令（默认启用 Kotlin provider）
+├── project/src/main.mcfpp              # 显式宏声明与调用
 ├── project/src/main.mcfpp             # 两种源码回调 + 嵌套展开示例
-├── provider/java/.../JavaRepeatMacro.java
 └── provider/kotlin/.../KotlinRepeatMacro.kt
 ```
 
@@ -38,43 +37,16 @@ examples/mni/repeat/
 
 ## 构建 provider
 
-在仓库根目录先构建编译器（JDK 21）：
+在仓库根目录先构建编译器（JDK 25）：
 
 ```bash
-./gradlew shadowJar
+./gradlew shadowJar mniExamplesJar
 ```
 
-下面的命令使用 `build/libs/MCFPP-1.0.2-SNAPSHOT.jar`。
+下面的命令使用 `build/libs/MCFPP-0.1.0.jar`。
 
-选择其中一个 provider。Java：
-
-```bash
-javac -cp build/libs/MCFPP-1.0.2-SNAPSHOT.jar \
-  -d examples/mni/repeat/build/classes \
-  examples/mni/repeat/provider/java/example/mnirepeat/JavaRepeatMacro.java
-
-jar --create --file examples/mni/repeat/build/repeat-macro.jar \
-  -C examples/mni/repeat/build/classes .
-```
-
-Kotlin：
-
-```bash
-kotlinc examples/mni/repeat/provider/kotlin \
-  -cp build/libs/MCFPP-1.0.2-SNAPSHOT.jar \
-  -d examples/mni/repeat/build/classes
-
-jar --create --file examples/mni/repeat/build/repeat-macro.jar \
-  -C examples/mni/repeat/build/classes .
-```
-
-`project/src/.mcfpp` 默认注入 Kotlin provider。使用 Java provider 时，把该文件的第一行（Kotlin `injectedBy` 指令）替换为：
-
-```text
-//> injectedBy example.mnirepeat.JavaRepeatMacro
-```
-
-同一个命名空间内不能同时注入两个同名 `repeat` 宏。`injectedBy` 指令必须位于文件开头，普通注释出现在第一条非指令行后就会停止读取后续指令。切换 Java/Kotlin 时只需用 `injectedBy` 选择其中一个 provider；jar 中同时包含两份入口也受支持，因为实际只注入被选中的那个类。
+`mniExamplesJar` 生成 `build/libs/mni-example-providers.jar`，示例配置直接加载它。
+`project/src/main.mcfpp` 显式声明两个 repeat 重载，分别绑定 `KotlinRepeatMacro.repeatFold` 和 `KotlinRepeatMacro.repeat`。
 
 ## 运行
 
@@ -82,7 +54,7 @@ jar --create --file examples/mni/repeat/build/repeat-macro.jar \
 
 ```bash
 cd examples/mni/repeat
-java -jar ../../../build/libs/MCFPP-1.0.2-SNAPSHOT.jar build --project mcfpp.toml
+java -jar ../../../build/libs/MCFPP-0.1.0.jar build --project mcfpp.toml
 ```
 
 产物写入 `examples/mni/repeat/project/build`。

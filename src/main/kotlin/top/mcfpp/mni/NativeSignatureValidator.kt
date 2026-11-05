@@ -8,13 +8,15 @@ import top.mcfpp.util.ValueWrapper
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
-/** Shared JVM contract for both namespace and compound @MNIFunction registration. */
+/** Checks JVM method signatures when registering global functions and data template members through MNIFunction. */
 object NativeSignatureValidator {
+    /** Returns ordinary declared and inherited JVM methods in reproducible signature order. */
     fun methods(type: Class<*>): List<Method> = (type.methods.asList() + type.declaredMethods.asList())
         .distinct()
         .filterNot { it.isBridge || it.isSynthetic }
         .sortedBy { it.toGenericString() }
 
+    /** Checks public static visibility, JVM void result, and context or wrapper parameters. Reports signature errors and returns false on failure. */
     fun validate(function: NativeFunction): Boolean {
         val method = function.javaMethod
         val location = "Method ${method.name} in class ${method.declaringClass.name}"
@@ -40,10 +42,11 @@ object NativeSignatureValidator {
         return true
     }
 
-    /** Duplicates within one provider are errors; an explicit inherited override is separate. */
+    /** Tracks signatures accepted from one provider while allowing explicit inherited overrides. */
     class Registration {
         private val accepted = ArrayList<NativeFunction>()
 
+        /** Validates [function] and records its signature. Reports a duplicate or invalid signature and returns false. */
         fun accept(function: NativeFunction): Boolean {
             if (!validate(function)) return false
             val previous = accepted.firstOrNull {

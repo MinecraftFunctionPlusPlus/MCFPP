@@ -203,10 +203,16 @@ object EffectAnalysis {
     }
     fun analyze(functions: Map<SymbolId, TypedIR>): Map<SymbolId, Effect> {
         val effects = functions.keys.associateWith<SymbolId, Effect> { Effect.Pure }.toMutableMap()
-        var changed: Boolean
-        do {
-            changed = false
-            for ((id, ir) in functions) {
+        val callers = functions.keys.associateWith { linkedSetOf<SymbolId>() }
+        functions.forEach { (id, ir) -> ir.blocks.forEach { block ->
+            block.instructions.filterIsInstance<Instruction.Call>().forEach { callers[it.declaration]?.add(id) }
+        } }
+        val pending = ArrayDeque(functions.keys)
+        val queued = functions.keys.toMutableSet()
+        while (pending.isNotEmpty()) {
+                val id = pending.removeFirst()
+                queued.remove(id)
+                val ir = functions.getValue(id)
                 var effect: Effect = Effect.Pure
                 val bound = bind(ir, functions, effects)
                 val reachable = FlowAnalysis.analyze(bound, evaluator = PrimitiveEvaluation::binary).entries.keys
@@ -229,9 +235,11 @@ object EffectAnalysis {
                     effect = join(effect, external)
                 }
                 effect = join(effects.getValue(id), effect)
-                if (effects[id] != effect) { effects[id] = effect; changed = true }
-            }
-        } while (changed)
+                if (effects[id] != effect) {
+                    effects[id] = effect
+                    callers.getValue(id).forEach { if (queued.add(it)) pending.add(it) }
+                }
+        }
         return effects.toMap()
     }
 
@@ -241,10 +249,23 @@ object EffectAnalysis {
         return effects[call.declaration] ?: Effect.Unknown
     }
 
-    fun bind(ir: TypedIR, functions: Map<SymbolId, TypedIR>, effects: Map<SymbolId, Effect>) = ir.copy(
-        blocks = ir.blocks.map { block -> block.copy(instructions = block.instructions.map { instruction ->
-            if (instruction is Instruction.Call) instruction.copy(effect = callEffect(instruction, functions, effects)) else instruction
-        }) })
+    fun bind(ir: TypedIR, functions: Map<SymbolId, TypedIR>, effects: Map<SymbolId, Effect>): TypedIR {
+        var changed = false
+        val blocks = ir.blocks.map { block ->
+            var blockChanged = false
+            val instructions = block.instructions.map { instruction ->
+                if (instruction is Instruction.Call) {
+                    val effect = callEffect(instruction, functions, effects)
+                    if (effect != instruction.effect) {
+                        blockChanged = true
+                        instruction.copy(effect = effect)
+                    } else instruction
+                } else instruction
+            }
+            if (blockChanged) { changed = true; block.copy(instructions = instructions) } else block
+        }
+        return if (changed) ir.copy(blocks = blocks) else ir
+    }
 
     private fun writes(places: Set<Place>, contents: Set<Place> = emptySet()): Effect {
         val roots = places.filter { candidate -> places.none { ancestor -> ancestor != candidate && ancestor.root == candidate.root &&

@@ -66,7 +66,9 @@ internal object MacroCallPipeline {
     }
 
     /** Declaration inference prepares immutable argument/type facts without invoking or expanding a host. */
-    fun declaredResultType(syntax: P.FunctionCallContext, caller: Function): top.mcfpp.type.MCFPPType? {
+    fun declaredResultType(syntax: P.FunctionCallContext, caller: Function,
+                           values: Map<String, top.mcfpp.analysis.DeclarationBinding.Bound> = emptyMap(),
+                           declarations: Map<top.mcfpp.library.syntax.DeclarationId, top.mcfpp.analysis.DeclarationBinding.Bound> = emptyMap()): top.mcfpp.type.MCFPPType? {
         val binding = StructuredBindings.name(syntax.namespaceID(), caller)
         val frozen = (binding as? StructuredNameBinding.Macros)?.candidates
         if (binding != null && frozen == null) return null
@@ -74,8 +76,9 @@ internal object MacroCallPipeline {
         if (frozen == null && namespace == null && caller.scope.getVar(identifier)?.type is top.mcfpp.type.MCFPPFunctionType)
             return null
         if (frozen == null && !isPotentialMacro(syntax, caller)) return null
-        val preparation = if (frozen == null) CompilerBindingEnvironment.prepareCall(syntax, caller)
-            else prepareFrozen(syntax, caller, null, frozen)
+        val inference = SourceInferenceBindings(values, declarations)
+        val preparation = if (frozen == null) CompilerSourceIndex(caller, inference = inference).prepareCallDeclarations(syntax)
+            else prepareFrozen(syntax, caller, null, frozen, inference)
         return when (preparation) {
             is CompilerCallPreparationResult.Rejected -> throw top.mcfpp.analysis.DeclarationBinding.Failure(
                 preparation.diagnostics.joinToString("\n") { it.message }.ifBlank { "Cannot prepare macro result type" })
@@ -125,6 +128,7 @@ internal object MacroCallPipeline {
         var result: Var<*>? = null
         val prepared = try {
             journal.prepareCumulative { enclosing ->
+                prepareCaptures(syntax, caller)
                 when (val preparation = if (frozen == null) CompilerBindingEnvironment.prepareCall(syntax, caller, trailing)
                     else prepareFrozen(syntax, caller, trailing, frozen)) {
                     is CompilerCallPreparationResult.Rejected -> throw RejectedCall(preparation)
@@ -156,12 +160,29 @@ internal object MacroCallPipeline {
 
     private class RejectedCall(val preparation: CompilerCallPreparationResult.Rejected) : RuntimeException()
 
+    /** Resolve incoming closure aliases before freezing source locations; arguments remain unevaluated. */
+    private fun prepareCaptures(syntax: P.FunctionCallContext, caller: Function) {
+        var scope: top.mcfpp.model.scope.IScope? = caller.scope
+        while (scope is top.mcfpp.model.scope.FunctionScope && scope !is top.mcfpp.analysis.lambda.LambdaCaptureScope)
+            scope = scope.parent.firstOrNull()
+        if (scope !is top.mcfpp.analysis.lambda.LambdaCaptureScope) return
+        fun visit(node: ParseTree) {
+            if (node is P.InlineLambdaContext) return
+            if (node is P.VarWithSuffixContext && node.parent?.parent !is P.SelectorContext) {
+                if (StructuredBindings.isBound(node)) StructuredBindings.variable(node, caller)
+                else caller.scope.getVar(node.Identifier().text)
+            }
+            for (index in 0 until node.childCount) visit(node.getChild(index))
+        }
+        visit(syntax)
+    }
+
     /** Preserve the original syntax and source identities while replacing only frozen call candidates. */
     private fun prepareFrozen(syntax: P.FunctionCallContext, caller: Function, trailing: P.InlineLambdaContext?,
-                              frozen: FrozenMacroCandidates): CompilerCallPreparationResult = try {
+                              frozen: FrozenMacroCandidates, inference: SourceInferenceBindings? = null): CompilerCallPreparationResult = try {
         frozen.directory.requireOpen()
         val root = if (trailing != null) syntax.parent as? P.LambdaCallExpressionContext ?: syntax else syntax
-        val prepared = CompilerSourceIndex(caller, nativeDirectory = frozen.directory).prepareDeclarationEnvironment(root)
+        val prepared = CompilerSourceIndex(caller, nativeDirectory = frozen.directory, inference = inference).prepareDeclarationEnvironment(root)
         val base = prepared.binding
         val catalog = base.types
         val calls = arrayListOf<P.FunctionCallContext>()

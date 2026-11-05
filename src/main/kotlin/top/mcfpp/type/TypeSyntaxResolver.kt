@@ -143,6 +143,10 @@ internal object TypeSyntaxResolver {
         body.anonymousTemplateType()?.let { return context.anonymous(it) }
         val name = body.className()?.text ?: body.Identifier()?.text ?: body.text
         val (namespace, identifier) = name.splitNamespaceID()
+        if (namespace == null && identifier == "ScoreRef") {
+            if (body.readOnlyArgs() != null) return context.invalid(body, "ScoreRef does not accept type arguments")
+            return MCFPPScoreRefType
+        }
         if (namespace == null && identifier == "NBTRef") {
             val arguments = body.readOnlyArgs()?.expressionList()?.expression().orEmpty()
             if (arguments.size != 1) return context.invalid(body, "NBTRef requires exactly one stored type argument")

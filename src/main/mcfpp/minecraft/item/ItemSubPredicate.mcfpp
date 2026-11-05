@@ -1,36 +1,54 @@
 import mcfpp.math:*
 
+/// 物品组件子匹配条件的基础类型。
 data ItemSubPredicate
 
+/// 物品属性修饰符的匹配条件。
 data AttributeModifierPredicate: ItemSubPredicate {
+    /// 属性修饰符列表。
     var modifiers: AttributeModifiers
 }
 
+/// 属性修饰符集合的包含项和数量条件。
 data AttributeModifiers {
+    /// 集合中需要包含的匹配项。
     var contains: list<AttributePredicate>?
+    /// 集合大小的匹配值或范围。
     var size: (int | IntRange)?
+    /// 匹配元素数量的条件。
     var count: list<AttributeCountPredicate>?
 }
 
+/// 符合指定条件的属性修饰符数量。
 data AttributeCountPredicate {
+    /// 对集合元素应用的匹配条件。
     var test: AttributePredicate
+    /// 匹配元素数量的条件。
     var count: (int | IntRange)
 }
 
+/// 单项属性修饰符的匹配条件。
 data AttributePredicate {
+    /// 属性标识符或可接受的标识符列表。
     var attribute: (string | list<string>)?
+    /// 资源标识符。
     var id: list<string>?
+    /// 修饰数值的匹配值或范围。
     var amount: (float | DecimalRange)?
+    /// 属性数值的计算方式。
     var operation: AttributeOperation?
+    /// 修饰符适用的装备槽位。
     var slot: AttributeSlot?
 }
 
+/// 属性匹配条件使用的数值计算方式。
 enum AttributeOperation {
     ADD_VALUE = "add_value",
     ADD_MULTIPLIED_BASE = "add_multiplied_base",
     ADD_MULTIPLIED_TOTAL = "add_multiplied_total"
 }
 
+/// 属性修饰符适用的装备槽位。
 enum AttributeSlot {
     ANY = "any",
     MAINHAND = "mainhand",
@@ -43,50 +61,78 @@ enum AttributeSlot {
     ARMOR = "armor"
 }
 
+/// 收纳袋内容物的匹配条件。
 data BundleContentsPredicate: ItemSubPredicate {
+    /// 收纳袋内容物的集合匹配条件。
     var items: ItemStackCompoundPredicate
 }
 
+/// 容器内容物的匹配条件。
 data ContainerPredicate: ItemSubPredicate {
+    /// 容器内容物的集合匹配条件。
     var items: ItemStackCompoundPredicate
 }
 
+/// 物品堆叠集合的包含项和数量条件。
 data ItemStackCompoundPredicate {
+    /// 集合中需要包含的匹配项。
     var contains: list<ItemStackPredicate>
+    /// 集合大小的匹配值或范围。
     var size: (int | IntRange)?
+    /// 匹配元素数量的条件。
     var count: list<ItemStackCountPredicate>?
 }
 
+/// 单个物品堆叠的匹配条件。
 data ItemStackPredicate {
+    /// 物品组件数据。
     var components: dict<ItemComponent>?
+    /// 匹配元素数量的条件。
     var count: (int | IntRange)?
+    /// 关联物品列表。
     var items: (string | list<string>)?
+    /// 按组件名称指定的子匹配条件。
     var predicates: dict<nbt>?
 }
 
+/// 符合指定条件的物品堆叠数量。
 data ItemStackCountPredicate {
+    /// 对集合元素应用的匹配条件。
     var test: ItemStackPredicate
+    /// 匹配元素数量的条件。
     var count: (int | IntRange)
 }
 
+/// 自定义组件数据的匹配条件。
 data CustomDataPredicate {}
 
+/// 物品损伤值和剩余耐久度的匹配条件。
 data DamagePredicate: ItemSubPredicate {
+    /// 伤害值。
     var damage: (int | IntRange)?
+    /// 剩余耐久度的匹配值或范围。
     var durability: (int | IntRange)?
 }
 
+/// 物品附魔种类和等级的匹配条件。
 data EnchantmentPredicate: ItemSubPredicate {
+    /// 附魔标识符或可接受的标识符列表。
     var enchantments: (string | list<string>)
+    /// 附魔等级的匹配值或范围。
     var levels: (int | IntRange)
 }
 
+/// 单次烟花爆炸效果的匹配条件。
 data FireworkExplosionPredicate: ItemSubPredicate {
+    /// 烟花爆炸形状。
     var shape: FireworkShape?
+    /// 是否要求拖尾效果。
     var hasTrail: bool?
+    /// 是否要求闪烁效果。
     var hasTwinkle: bool?
 }
 
+/// 烟花爆炸的形状。
 enum FireworkShape {
     SMALL_BALL = "small_ball",
     LARGE_BALL = "large_ball",
@@ -95,55 +141,88 @@ enum FireworkShape {
     BURST = "burst"
 }
 
+/// 烟花爆炸效果和飞行时长的匹配条件。
 data FireworksPredicate {
+    /// 烟花爆炸效果的匹配条件。
     var explosions: FireworkExplosions
+    /// 烟花飞行时长的匹配值或范围。
     var flightDuration: (int | IntRange)?
 }
 
+/// 烟花爆炸效果集合的包含项和数量条件。
 data FireworkExplosions {
+    /// 集合中需要包含的匹配项。
     var contains: list<FireworkExplosionPredicate>
+    /// 集合大小的匹配值或范围。
     var size: (int | IntRange)?
+    /// 匹配元素数量的条件。
     var count: list<FireworkExplosionCountPredicate>?
 }
 
+/// 符合指定条件的烟花爆炸效果数量。
 data FireworkExplosionCountPredicate {
+    /// 对集合元素应用的匹配条件。
     var test: FireworkExplosionPredicate
+    /// 匹配元素数量的条件。
     var count: (int | IntRange)
 }
 
+/// 可播放唱片曲目的匹配条件。
 data JukeboxPlayablePredicate: ItemSubPredicate {
+    /// 唱片曲目的标识符或可接受的标识符列表。
     var songs: (string | list<string>)
 }
 
+/// 存储附魔种类和等级的匹配条件。
 data StoredEnchantments: ItemSubPredicate {
+    /// 附魔标识符或可接受的标识符列表。
     var enchantments: (string | list<string>)
+    /// 附魔等级的匹配值或范围。
     var levels: (int | IntRange)
 }
 
+/// 护甲纹饰材料和图案的匹配条件。
 data TrimPredicate: ItemSubPredicate {
+    /// 纹饰材料的标识符或可接受的标识符列表。
     var material: (string | list<string>)
+    /// 纹饰图案的标识符或可接受的标识符列表。
     var pattern: (string | list<string>)
 }
 
+/// 书与笔内容的匹配条件。
 data WriteableBookContentPredicate: ItemSubPredicate {
+    /// 书页的匹配条件。
     var pages: PagePredicate
 }
 
+/// 成书的书页、作者和版本信息匹配条件。
 data WrittenBookContentPredicate: ItemSubPredicate {
+    /// 书页的匹配条件。
     var pages: PagePredicate
+    /// 作者名称。
     var author: string
+    /// 书名。
     var title: string
+    /// 成书复制代数的匹配值或范围。
     var generation: (int | IntRange)
+    /// 是否要求已解析的书页内容。
     var resolved: bool
 }
 
+/// 书页集合的包含项和数量条件。
 data PagePredicate {
+    /// 集合中需要包含的匹配项。
     var contains: list<text>?
+    /// 集合大小的匹配值或范围。
     var size: (int | IntRange)?
+    /// 匹配元素数量的条件。
     var count: list<PageCountPredicate>?
 }
 
+/// 符合指定条件的书页数量。
 data PageCountPredicate {
+    /// 对集合元素应用的匹配条件。
     var test: text
+    /// 匹配元素数量的条件。
     var count: (int | IntRange)
 }

@@ -80,6 +80,10 @@ class LibraryCompoundImportTest {
                     assertFalse(GlobalScope.localNamespaces.containsKey("published.compound"))
                     session.stage(path, identity); session.bindAll()
                     assertFalse(GlobalScope.libNamespaces.containsKey("published.compound"))
+                    // Importing an unused field must not allocate runtime storage just to look
+                    // for callback payloads. Actual object construction below still initializes it.
+                    val importedBox = session.functions().single { it.identifier == "read" }.owner as DataTemplate
+                    assertNull(importedBox.scope.getVar("z")!!.storageBinding)
                     session.commit()
                 }
                 val restored = GlobalScope.libNamespaces.getValue("published.compound").scope.template.getValue("Box")

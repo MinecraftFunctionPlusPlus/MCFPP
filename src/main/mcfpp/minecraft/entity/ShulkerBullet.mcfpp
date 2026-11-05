@@ -1,9 +1,16 @@
 @MCFPPEntity
+/// 潜影弹的实体数据。继承的字段由各父数据类型提供。
 data ShulkerBulletData: EntityData, ProjectileData {
+    /// 移动方向编号。
     @Name("Dir") var dir: int
+    /// 当前移动阶段的剩余步数。
     @Name("Steps") var steps: int
+    /// 目标实体的 UUID。
     @Name("Target") var target: IntArray
+    /// 目标方向的 X 分量。
     @Name("TXD") var TXD: double
+    /// 目标方向的 Y 分量。
     @Name("TYD") var TYD: double
+    /// 目标方向的 Z 分量。
     @Name("TZD") var TZD: double
 }

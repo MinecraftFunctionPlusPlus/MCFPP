@@ -23,7 +23,7 @@ object ProjectTemplates {
                 MniDependency("org.junit.platform:junit-platform-launcher:1.10.1", "testRuntimeOnly")) else emptyList()).bytes()),
             "src/main/mcfpp/main.mcfpp" to if (mni) "func answer(): int = example.mni.Example.answer\n\nfunc main() {\n    print(answer())\n}\n" else "func main() {\n    print(\"Hello MCFPP!\")\n}\n",
             "README.md" to "# $name\n\nRun `mcfpp build` to compile the datapack.\n" +
-                if (mni) "Run `mcfpp test` for Java tests. Generated Gradle files are in `.mcfpp`.\n" else ""
+                if (mni) "Write MNI providers in `src/main/kotlin` and run `mcfpp test` for Kotlin tests. Generated Gradle files are in `.mcfpp`.\n" else ""
         )
         if (mni) files.putAll(mniSources())
         files.keys.forEach { require(!Files.exists(root.resolve(it))) { "Will not overwrite ${root.resolve(it)}" } }
@@ -38,30 +38,35 @@ object ProjectTemplates {
     }
 
     internal fun mniSources(): Map<String, String> = mapOf(
-        "src/main/java/example/mni/Example.java" to """
-            package example.mni;
+        "src/main/kotlin/example/mni/Example.kt" to """
+            package example.mni
 
-            import top.mcfpp.annotations.MNIFunction;
-            import top.mcfpp.core.lang.MCInt;
-            import top.mcfpp.util.ValueWrapper;
+            import top.mcfpp.annotations.MNIMacro
+            import top.mcfpp.mni.api.Expr
+            import top.mcfpp.mni.api.IntT
+            import top.mcfpp.mni.api.MacroContext
+            import top.mcfpp.mni.api.quote
 
-            public final class Example {
-                public static int answerValue() { return 42; }
+            object Example {
+                @JvmStatic
+                fun answerValue(): Int = 42
 
-                @MNIFunction(returnType = "int")
-                public static void answer(ValueWrapper<MCInt> result) {
-                    result.set(new MCInt(answerValue(), "answer"));
-                }
+                @MNIMacro(returnType = "int")
+                @JvmStatic
+                fun answer(context: MacroContext): Expr<IntT> =
+                    context.quote.expression(context.types().intType()) {
+                        yield(literal(answerValue()))
+                    }
             }
         """.trimIndent() + "\n",
-        "src/test/java/example/mni/ExampleTest.java" to """
-            package example.mni;
+        "src/test/kotlin/example/mni/ExampleTest.kt" to """
+            package example.mni
 
-            import org.junit.jupiter.api.Test;
-            import static org.junit.jupiter.api.Assertions.assertEquals;
+            import org.junit.jupiter.api.Test
+            import org.junit.jupiter.api.Assertions.assertEquals
 
             class ExampleTest {
-                @Test void answerIs42() { assertEquals(42, Example.answerValue()); }
+                @Test fun answerIs42() { assertEquals(42, Example.answerValue()) }
             }
         """.trimIndent() + "\n"
     )

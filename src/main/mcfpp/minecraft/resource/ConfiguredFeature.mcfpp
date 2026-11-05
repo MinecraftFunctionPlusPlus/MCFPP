@@ -1,5 +1,7 @@
 @From("top.mcfpp.mni.resource.ConfiguredFeatureData")
+/// 已配置的地物资源的标识符。通过 id 字段保存资源名称。
 data ConfiguredFeature: ResourceID
 
 @From("top.mcfpp.mni.resource.ConfiguredFeatureObjectData")
+/// 已配置的地物资源类型的共享成员入口。
 object data ConfiguredFeature: ResourceID

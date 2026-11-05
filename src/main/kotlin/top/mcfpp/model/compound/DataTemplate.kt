@@ -112,6 +112,7 @@ open class DataTemplate :
 
     /** Metadata supplies identities, never generated specialization names or mutable compiler types. */
     internal fun deferParentTypes(parents: List<TypeId>) {
+        Project.invalidateTemplateInheritanceHeaders()
         check((parents as List<*>).all { it is TypeId }) { "Invalid pending parent identity" }
         val copy = ArrayList(parents)
         pendingParentTypes.clear()
@@ -292,6 +293,14 @@ open class DataTemplate :
     internal val hasCompletedDeclaration: Boolean
         get() = declarationCompletionPhase == DeclarationCompletionPhase.COMPLETE
 
+    internal val hasDeferredLibraryMembers: Boolean get() = scope.deferredMembers?.isDeferred == true
+
+    internal fun deferLibraryMembers(loader: DeferredLibraryMembers) {
+        check(structuredMemberState == null)
+        structuredMemberState = loader
+        scope.deferredMembers = loader
+    }
+
     internal val hasDeclarationCompletionFailure: Boolean
         get() = declarationCompletionPoisoned
 
@@ -390,14 +399,21 @@ open class DataTemplate :
         )
 
     override fun getType(): MCFPPDataTemplateType {
-        val visiting = buildingTypes.get()
-        val entered = visiting.add(this)
+        val existing = buildingTypes.get()
+        val building = existing ?: java.util.IdentityHashMap<DataTemplate, MCFPPDataTemplateType>().also(buildingTypes::set)
         try {
-            val parents = if (entered) parent.filterIsInstance<DataTemplate>().map { it.getType() } else emptyList()
-            return MCFPPDataTemplateType(this, ArrayList<MCFPPType>(parents).apply { add(MCFPPBaseType.Object) })
+            building[this]?.let { return it }
+            // Publish the shell first: shared ancestors and recursive shells retain one identity
+            // during this traversal, without retaining mutable descriptors across compilations.
+            val parents = arrayListOf<MCFPPType>()
+            val type = if (this is ObjectDataTemplate) top.mcfpp.type.MCFPPObjectDataTemplateType(this, parents)
+                else MCFPPDataTemplateType(this, parents)
+            building[this] = type
+            parent.filterIsInstance<DataTemplate>().forEach { parents.add(it.getType()) }
+            if (this !is ObjectDataTemplate) parents.add(MCFPPBaseType.Object)
+            return type
         } finally {
-            if (entered) visiting.remove(this)
-            if (visiting.isEmpty()) buildingTypes.remove()
+            if (existing == null) buildingTypes.remove()
         }
     }
 
@@ -708,6 +724,7 @@ open class DataTemplate :
     }
 
     fun flatExtends(): CompoundData {
+        scope.ensureMembers()
         // Namespace resolution may visit restored declarations before all includes are bound.
         // Keep both layout bookkeeping and the once-only effect markers untouched until then.
         if (hasPendingLayoutParents()) return this
@@ -1002,6 +1019,7 @@ open class DataTemplate :
 
     /** Recompute after signature completion; only diagnostics are deduplicated, never validity. */
     internal fun validateInheritance(): Boolean {
+        scope.ensureMembers()
         val result = top.mcfpp.analysis.InheritanceContractValidator.check(this)
         val initialization = top.mcfpp.model.function.ConstructorPlan.build(this)
         (result.diagnostics + initialization.diagnostics).forEach {
@@ -1030,9 +1048,7 @@ open class DataTemplate :
 
     companion object {
 
-        private val buildingTypes = ThreadLocal.withInitial {
-            java.util.Collections.newSetFromMap(java.util.IdentityHashMap<DataTemplate, Boolean>())
-        }
+        private val buildingTypes = ThreadLocal<java.util.IdentityHashMap<DataTemplate, MCFPPDataTemplateType>>()
 
         var currTemplate: DataTemplate? = null
 

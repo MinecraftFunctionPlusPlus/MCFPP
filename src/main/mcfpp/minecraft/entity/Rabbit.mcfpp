@@ -1,5 +1,8 @@
 @MCFPPEntity
+/// 兔子的实体数据。继承的字段由各父数据类型提供。
 data RabbitData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
+    /// 恢复吃胡萝卜前的等待时间。
     @Name("MoreCarrotTicks") var moreCarrotTicks: int
+    /// 兔子的外观种类编号。
     @Name("RabbitType") var rabbitType: int
 }

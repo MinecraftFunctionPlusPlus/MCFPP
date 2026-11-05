@@ -1,5 +1,7 @@
 @MCFPPEntity
+/// 骆驼的实体数据。继承的字段由各父数据类型提供。
 data CamelData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, GeneralHorseData {
     @Name("LastPoseTick")
+    /// 上次改变姿态的游戏时间。
     var lastPoseTick: long
 }

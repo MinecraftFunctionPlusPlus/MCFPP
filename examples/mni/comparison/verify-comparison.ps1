@@ -29,7 +29,7 @@ if (Test-Path -LiteralPath $evidence) {
 New-Item -ItemType Directory -Force -Path $evidence | Out-Null
 $resultPath = Join-Path $evidence 'result.json'
 
-$javaHome = if ($env:JAVA_HOME) { $env:JAVA_HOME } else { 'F:/Java/ms-21.0.12.1' }
+$javaHome = if ($env:JAVA_HOME) { $env:JAVA_HOME } elseif ($env:JDK25_HOME) { $env:JDK25_HOME } else { Split-Path (Split-Path (Get-Command java -ErrorAction Stop).Source) }
 $java = Join-Path $javaHome 'bin/java.exe'
 $javac = Join-Path $javaHome 'bin/javac.exe'
 $jarTool = Join-Path $javaHome 'bin/jar.exe'
@@ -252,7 +252,7 @@ try {
 
     $sourceHashes = [ordered]@{}
     $sourceFiles = @(
-        'examples/mni/comparison/ComparisonProvider.java',
+        'examples/mni/comparison/provider/kotlin/example/mnicomparison/ComparisonProvider.kt',
         'examples/mni/comparison/kernels.mcfpp',
         'examples/mni/comparison/baselines.json',
         'examples/mni/comparison/MeasureComparison.java',
@@ -264,23 +264,10 @@ try {
     }
     $result.sourceHashes = $sourceHashes
 
-    $bootstrapDir = Join-Path $evidence 'bootstrap'
-    $bootstrapClasses = Join-Path $bootstrapDir 'classes'
-    New-Item -ItemType Directory -Force -Path $bootstrapClasses | Out-Null
-    $bootstrapLog = Join-Path $evidence 'bootstrap-compile.log'
-    $bootstrapClasspath = $RuntimeJar + $separator + $ProviderJar
-    & $javac -encoding UTF-8 -cp $bootstrapClasspath -d $bootstrapClasses (Join-Path $repoRoot 'examples/mni/comparison/ComparisonProvider.java') *> $bootstrapLog
-    if ($LASTEXITCODE -ne 0) {
-        throw "ComparisonProvider bootstrap compile failed (exit $LASTEXITCODE); see $bootstrapLog"
+    $providerEntries = & $jarTool --list --file $ProviderJar
+    if ($LASTEXITCODE -ne 0 -or $providerEntries -notcontains 'example/mnicomparison/ComparisonProvider.class') {
+        throw 'Provider JAR must contain the Kotlin ComparisonProvider; build it with ./gradlew mniExamplesJar.'
     }
-    $bootstrapJar = Join-Path $bootstrapDir 'comparison-bootstrap.jar'
-    $bootstrapJarLog = Join-Path $evidence 'bootstrap-jar.log'
-    & $jarTool --create --file $bootstrapJar -C $bootstrapClasses . *> $bootstrapJarLog
-    if ($LASTEXITCODE -ne 0) {
-        throw "ComparisonProvider bootstrap jar failed (exit $LASTEXITCODE); see $bootstrapJarLog"
-    }
-    $result['bootstrapJar'] = $bootstrapJar
-    $result['bootstrapJarSha256'] = Get-FileSha256 $bootstrapJar
 
     $stage = Join-Path $evidence 'stage'
     $stageSource = Join-Path $stage 'project/src'
@@ -293,7 +280,8 @@ try {
         namespace = 'example.comparison'
         version = '26.3'
         description = 'MNI three-way comparison measurement project'
-        jars = @($ProviderJar, $bootstrapJar)
+        noMcLib = $true
+        jars = @($ProviderJar)
     }
     $configText = @('schema = 1', 'name = "mcfpp"') + @($config.GetEnumerator() | ForEach-Object { "$($_.Key) = $(ConvertTo-Json -InputObject $_.Value -Compress -Depth 5)" })
     $configText | Set-Content -LiteralPath (Join-Path $stage 'mcfpp.toml') -Encoding utf8

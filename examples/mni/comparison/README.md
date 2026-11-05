@@ -14,13 +14,13 @@
 
 1. **handwritten**：`baselines.json` 中手写的专用命令映射。直接使用固定 holder、展开的计数/采样和调用点已知的 block 位置；damage 在减伤后执行真实的下界 clamp。
 2. **runtime**：`baselines.json` 中的常规运行时库。调用者把参数写入自己的栈帧，库函数压入自己的适配帧，执行真正的 copy-in / 通用算法 / copy-out；damage 通过通用条件 helper 执行下界 clamp，repeat/ray 从复制进来的调用者值初始化算法状态，repeat 通过 callback 选择器调用回调，ray 通过策略配置选择 stop/continue 回调。没有把最终结果硬编码成命令。
-3. **mni**：`kernels.mcfpp` 由真实 CLI 使用四个已交付的字面 Kotlin provider 生成。`ComparisonProvider.java` 只做 `injectedBy` 引导，不复制或重写任何宏算法；score provider 注册其原有声明处理器。
+3. **mni**：`kernels.mcfpp` 由真实 CLI 使用四个 Kotlin provider 生成。`ComparisonProvider.kt` 做 `injectedBy` 引导，score provider 注册其声明处理器。
 
 ## 文件
 
 ```text
 examples/mni/comparison/
-├── ComparisonProvider.java   # 极小的 provider 注入引导
+├── provider/kotlin/example/mnicomparison/ComparisonProvider.kt
 ├── kernels.mcfpp             # 五个小 kernel + ScoreMapping Player
 ├── baselines.json            # handwritten/runtime 的实际命令映射
 ├── MeasureComparison.java    # 严格执行、等价性检查和指标采集
@@ -31,8 +31,8 @@ examples/mni/comparison/
 `verify-comparison.ps1` 接受显式 `-RuntimeJar` 和 `-ProviderJar`，并在仓库根目录解析以下实际输入：
 
 ```text
-build/libs/MCFPP-1.0.2-SNAPSHOT.jar
-build/inheritance-mni/actual-examples-cli-check/attempt1/provider-build/libs/mni-example-providers.jar
+build/libs/MCFPP-0.1.0.jar
+build/libs/mni-example-providers.jar
 build/classes/kotlin/test                              # 本次 ContextCommandExecutor 编译结果
 examples/mni/comparison/baselines.json                 # handwritten/runtime 字面函数映射
 ```
@@ -56,9 +56,10 @@ build/inheritance-mni/comparison-check/<Attempt>/baseline-packs/<scenario.id>/<v
 在仓库根目录执行（PowerShell 7）：
 
 ```powershell
+./gradlew shadowJar mniExamplesJar
 pwsh -NoProfile -File examples/mni/comparison/verify-comparison.ps1 `
-  -RuntimeJar build/libs/MCFPP-1.0.2-SNAPSHOT.jar `
-  -ProviderJar build/inheritance-mni/actual-examples-cli-check/attempt1/provider-build/libs/mni-example-providers.jar
+  -RuntimeJar build/libs/MCFPP-0.1.0.jar `
+  -ProviderJar build/libs/mni-example-providers.jar
 ```
 
 只有 Windows PowerShell 时可用 `powershell -NoProfile -ExecutionPolicy Bypass -File ...` 替代 `pwsh -NoProfile -File ...`。
@@ -69,8 +70,8 @@ pwsh -NoProfile -File examples/mni/comparison/verify-comparison.ps1 `
 
 脚本实际执行：
 
-1. 用 `javac` 针对运行时 JAR 和字面 provider JAR 编译 `ComparisonProvider.java`，只把它自己的 class 打进 bootstrap JAR；不复制库。
-2. 在 `build/inheritance-mni/comparison-check/<attempt>/stage` 下暂存一个 `example.comparison` 工程，写入 `kernels.mcfpp`、`injectedBy` 指令和同时包含 provider/bootstrap 的 `mcfpp.toml`。
+1. 检查 provider JAR 包含由 `mniExamplesJar` 编译的 Kotlin `ComparisonProvider`。
+2. 在 `build/inheritance-mni/comparison-check/<attempt>/stage` 下暂存一个 `example.comparison` 工程，写入 `kernels.mcfpp`、`injectedBy` 指令和加载 provider 的 `mcfpp.toml`。
 3. 读取本次复制的 `baselines.json`，把 handwritten/runtime 的字面函数映射逐个物化为 `baseline-packs/<scenario.id>/<variant>` 数据包，并记录实际路径与 entry。
 4. 用 `java -jar <RuntimeJar> build --project mcfpp.toml` 只执行一次真实 CLI，捕获包含 JVM 启动的工程级墙钟耗时、exit code、错误/警告数和日志。
 5. 统计实际生成的 `.mcfunction` 文件数、UTF-8 字节数、源文件哈希和生成文件哈希。

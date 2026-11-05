@@ -49,6 +49,15 @@ internal class CompoundImporter(
     private val allocating = hashSetOf<DeclarationId>()
     private val binding = hashSetOf<DeclarationId>()
 
+    internal fun checkpointForReuse(): () -> Unit {
+        check(allocating.isEmpty() && binding.isEmpty()) { "Cannot checkpoint active member binding" }
+        val saved = shells.values.map { shell -> Triple(shell, shell.value, shell.isBound) }
+        return {
+            allocating.clear(); binding.clear()
+            saved.forEach { (shell, value, bound) -> shell.value = value; shell.isBound = bound }
+        }
+    }
+
     fun shell(id: DeclarationId): CompoundShell = shells.getValue(id).also { shell ->
         if (shell.value == null && (shell.declaration is CompoundDeclaration || shell.declaration is EnumDeclaration)) {
             check(allocating.add(id)) { "Cyclic nominal allocation at $id" }
@@ -59,6 +68,7 @@ internal class CompoundImporter(
     }
 
     fun allocate() = shells.keys.forEach(::shell)
+    fun prepareHeaders(id: DeclarationId) = (bindings as ImportCompoundBindings).prepareParents(shell(id))
     fun genericOwner(id: DeclarationId): DeclarationId? {
         val record = model.declarations.declaration(id)
         // A companion's logical owner may be generic while the companion itself is closed.
@@ -66,6 +76,8 @@ internal class CompoundImporter(
         return record.common.owner?.let(::genericOwner)
     }
     fun boundValues(): Map<DeclarationId, Any> = shells.mapNotNull { (id, shell) -> shell.value?.let { id to it } }.toMap()
+    /** Direct protocol declarations only; excludes request-generated generic specializations. */
+    fun boundFunctionHeads(): List<Function> = shells.values.mapNotNull { it.value as? Function }
 
     fun install(id: DeclarationId, value: Any) {
         val shell = shells.getValue(id)
@@ -137,8 +149,13 @@ internal class CompoundImporter(
             val result = CompoundDeclarations.bind(shell, bindings)
             if (result is DataTemplate && shell.declaration is CompoundDeclaration) {
                 val record = shell.declaration
-                if (record.parents.isEmpty() && record.category != CompoundCategory.INTERSECTION)
+                if (record.parents.isEmpty() && record.category != CompoundCategory.INTERSECTION && result.parent.isEmpty())
                     result.extends(DataTemplate.baseDataTemplate)
+                // bind() clears the scope's parent registrations. A prepared root already
+                // owns the nominal base relationship, so reinstall its lookup scope too.
+                if (record.parents.isEmpty() && record.category != CompoundCategory.INTERSECTION &&
+                    DataTemplate.baseDataTemplate.scope !in result.scope.parent)
+                    result.scope.parent.add(DataTemplate.baseDataTemplate.scope)
                 if (!result.hasStructuredParentBinding) result.flatExtends()
             }
             if (result is Property) {
@@ -150,16 +167,23 @@ internal class CompoundImporter(
         } finally { binding.remove(id) }
     }
 
-    fun bindAll() {
+    fun bindAll(deferred: Set<Int> = emptySet()) {
         shells.forEach { (id, shell) -> when (val record = shell.declaration) {
-            is CompoundDeclaration, is EnumDeclaration, is TypeAliasDeclaration -> bind(id)
-            is ValueDeclaration -> if (record.role == ValueRole.MEMBER && genericOwner(id) == null) bind(id)
-            is ConstructorDeclaration, is PropertyDeclaration, is OperatorDeclaration, is EnumMemberDeclaration -> if (genericOwner(id) == null) bind(id)
+            is CompoundDeclaration -> if (id.value.toInt() !in deferred) bind(id)
+            is EnumDeclaration, is TypeAliasDeclaration -> bind(id)
+            is ValueDeclaration -> if (record.role == ValueRole.MEMBER && genericOwner(id) == null && owner(id)?.hasDeferredLibraryMembers != true) bind(id)
+            is ConstructorDeclaration, is PropertyDeclaration, is OperatorDeclaration, is EnumMemberDeclaration ->
+                if (genericOwner(id) == null && owner(id)?.hasDeferredLibraryMembers != true) bind(id)
             else -> Unit
         } }
     }
 
-    fun value(id: DeclarationId): Any = shell(id).let { if (it.isBound) requireNotNull(it.value) else bind(id) }
+    fun value(id: DeclarationId): Any = shell(id).let {
+        // Nominal identity does not require fields, constructors, or accessors. Semantic
+        // member lookup enters the template's scope gate instead.
+        if (it.isBound || (it.value as? DataTemplate)?.hasDeferredLibraryMembers == true) requireNotNull(it.value)
+        else bind(id)
+    }
     fun functions(): List<Function> {
         val templates = arrayListOf<DataTemplate>()
         val seen = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<DataTemplate, Boolean>())
@@ -172,7 +196,7 @@ internal class CompoundImporter(
         shells.values.mapNotNull { it.value as? DataTemplate }.forEach(::collect)
         return shells.values.mapNotNull { it.value as? Function } + templates.flatMap { template ->
             template.scope.functions.values.flatten() + template.scope.operators.values.flatMap { it.values } + template.constructors +
-                template.scope.allProperties.flatMap { property -> listOfNotNull((property.accessor as? FunctionAccessor)?.function,
+                template.scope.registeredProperties.flatMap { property -> listOfNotNull((property.accessor as? FunctionAccessor)?.function,
                     (property.mutator as? FunctionMutator)?.function, (property.accessor as? NativeAccessor)?.function,
                     (property.mutator as? NativeMutator)?.function) }
         }

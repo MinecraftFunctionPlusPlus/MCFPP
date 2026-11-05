@@ -1,6 +1,10 @@
 @MCFPPEntity
+/// 潜影贝的实体数据。继承的字段由各父数据类型提供。
 data ShulkerData: EntityData, CreatureData, AIMobData {
+    /// 附着面的方向编号。
     @Name("AttachFace") var attachFace: byte
+    /// 外观颜色的数值标记。
     @Name("Color") var color: byte
+    /// 壳体打开的程度。
     @Name("Peek") var peek: byte
 }

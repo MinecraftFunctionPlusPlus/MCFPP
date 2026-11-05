@@ -9,14 +9,14 @@ internal object StorageLiveness {
         do {
             var changed = false
             for (block in ir.blocks.asReversed()) {
-                var live = block.terminator.successors().flatMap { entries[it].orEmpty() }.toSet()
+                val live = block.terminator.successors().flatMap { entries[it].orEmpty() }.toMutableSet()
                 for ((index, instruction) in block.instructions.withIndex().reversed()) {
                     when (instruction) {
-                        is Instruction.Call -> calls[block.id to index] = live
-                        is Instruction.Read -> live = live + instruction.place
-                        is Instruction.Write -> live = live.filterNot { it == instruction.place }.toSet()
-                        is Instruction.RawCommand -> live = live + ir.declarations.keys.map(::Place)
-                        is Instruction.View -> live = live + instruction.value.place
+                        is Instruction.Call -> calls[block.id to index] = live.toSet()
+                        is Instruction.Read -> live.add(instruction.place)
+                        is Instruction.Write -> live.remove(instruction.place)
+                        is Instruction.RawCommand -> live.addAll(ir.declarations.keys.map(::Place))
+                        is Instruction.View -> live.add(instruction.value.place)
                         else -> Unit
                     }
                 }

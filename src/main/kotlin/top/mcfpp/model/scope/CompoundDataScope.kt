@@ -23,6 +23,11 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
     IScopeWithType, IScopeWithProperty,
     SimpleScopeWithOperator {
 
+    internal var deferredMembers: top.mcfpp.model.compound.DeferredLibraryMembers? = null
+    internal fun ensureMembers() { deferredMembers?.materialize() }
+    /** Enumerating already-owned functions for cleanup/journaling must never load unused members. */
+    internal val registeredProperties: Collection<Property> get() = property.values
+
     /**
      * 字段
      */
@@ -157,6 +162,7 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
         val savedFunctions = functions
         val savedOperators = operators
         val savedParent = parent
+        val savedDeferred = deferredMembers
         val roots = listOf(
             JournalMap(vars, MapKind.VARIABLE), JournalMap(types, MapKind.TYPE),
             JournalMap(property, MapKind.PROPERTY), JournalMap(functions, MapKind.OVERLOADS),
@@ -278,7 +284,7 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
             // The composing declaration journal restores mutable type identities before this map rehash.
             // Recheck their current dependency shapes before changing any captured relationship.
             keyPreflights.forEach { it() }
-            functions = savedFunctions; operators = savedOperators; parent = savedParent
+            functions = savedFunctions; operators = savedOperators; parent = savedParent; deferredMembers = savedDeferred
             restores.forEach { it() }
         }, { captureRelations(nodes, elements, preparationOnly).snapshot })
         return RelationCapture(snapshot, RawPreparationFact.unordered(relations))
@@ -403,6 +409,8 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
      * @param field 原来的缓存
      */
     constructor(field: CompoundDataScope): this(field.parent) {
+        field.ensureMembers()
+        parent = field.parent
         //变量复制
         for (key in field.vars.keys) {
             val `var`: Var<*> = field.vars[key]!!
@@ -423,6 +431,7 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
      * @receiver
      */
     override fun forEachVar(action: (Var<*>) -> Unit){
+        ensureMembers()
         for (`var` in vars.values){
             action(`var`)
         }
@@ -430,6 +439,7 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
 
     //region Var<*>
     override fun putVar(key: String, `var`: Var<*>, forced: Boolean): Boolean {
+        ensureMembers()
         if(forced){
             `var`.bindDeclaration(key, vars[key])
             vars[key] = `var`
@@ -445,12 +455,14 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
     }
 
     override fun getVar(key: String): Var<*>? {
+        ensureMembers()
         return vars.getOrDefault(key, null)
     }
 
 
     override val allVars: Collection<Var<*>>
         get() {
+            ensureMembers()
             val vs = ArrayList<Var<*>>()
             for (lv in vars.values){
                 vs.add(lv)
@@ -459,10 +471,12 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
         }
 
     override fun containVar(id: String): Boolean {
+        ensureMembers()
         return vars.containsKey(id)
     }
 
     override fun removeVar(id : String): Var<*>?{
+        ensureMembers()
         return vars.remove(id)
     }
 
@@ -470,6 +484,7 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
 
     //region type
     override fun putType(key: String, type: MCFPPType, forced: Boolean): Boolean {
+        ensureMembers()
         if(forced){
             types[key] = type
             return true
@@ -483,6 +498,7 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
     }
 
     override fun getType(key: String): MCFPPType? {
+        ensureMembers()
         if(types.containsKey(key)) return types[key]
         parent.forEach {
             if(it is IScopeWithType){
@@ -494,21 +510,24 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
     }
 
     override fun containType(id: String): Boolean {
+        ensureMembers()
         return types.containsKey(id)
     }
 
     override fun removeType(id: String): MCFPPType? {
+        ensureMembers()
         return types.remove(id)
     }
 
     override fun forEachType(action: (MCFPPType) -> Any?) {
+        ensureMembers()
         for (t in types.values){
             action(t)
         }
     }
 
     override val allTypes: Collection<MCFPPType>
-        get() = types.values
+        get() { ensureMembers(); return types.values }
 
     //endregion
 
@@ -532,6 +551,7 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
         while (pending.isNotEmpty()) {
             val scope = pending.removeLast()
             if (!scopes.add(scope)) continue
+            scope.ensureMembers()
             for (candidate in scope.functions[key].orEmpty()) {
                 if (candidate.accessModifier >= Member.AccessModifier.PRIVATE) {
                     val owner = candidate.owner
@@ -592,13 +612,60 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
     }
 
     override fun hasFunction(function: Function, considerParent: Boolean): Boolean{
+        ensureMembers()
         val candidates = if (considerParent) getFunctionCandidates(function.identifier) else functions[function.identifier].orEmpty()
         return candidates.any { top.mcfpp.model.function.ParameterMatcher.sameSignature(it, function) }
+    }
+
+    override fun forEachFunction(operation: (Function) -> Any?) {
+        ensureMembers()
+        super<SimpleScopeWithFunction>.forEachFunction(operation)
+    }
+
+    override fun removeFunction(function: Function) {
+        ensureMembers()
+        super<SimpleScopeWithFunction>.removeFunction(function)
+    }
+
+    override fun getOperator(identifier: String, type: MCFPPType?): Function? {
+        ensureMembers()
+        return super<SimpleScopeWithOperator>.getOperator(identifier, type)
+    }
+
+    override fun forEachOperator(operation: (Pair<String, Function>) -> Any?) {
+        ensureMembers()
+        super<SimpleScopeWithOperator>.forEachOperator(operation)
+    }
+
+    override fun addOperator(identifier: String, type: MCFPPType?, operator: Function, force: Boolean): Boolean {
+        ensureMembers()
+        return super<SimpleScopeWithOperator>.addOperator(identifier, type, operator, force)
+    }
+
+    override fun hasOperator(itf: Function): Boolean {
+        ensureMembers()
+        return super<SimpleScopeWithOperator>.hasOperator(itf)
+    }
+
+    override fun hasOperator(identifier: String, type: MCFPPType?): Boolean {
+        ensureMembers()
+        return super<SimpleScopeWithOperator>.hasOperator(identifier, type)
+    }
+
+    override fun removeOperator(identifier: String): MutableCollection<Function>? {
+        ensureMembers()
+        return super<SimpleScopeWithOperator>.removeOperator(identifier)
+    }
+
+    override fun removeOperator(identifier: String, type: MCFPPType?): Function? {
+        ensureMembers()
+        return super<SimpleScopeWithOperator>.removeOperator(identifier, type)
     }
     //endregion
 
     //region property
     override fun putProperty(key: String, property: Property, forced: Boolean): Boolean {
+        ensureMembers()
         if(forced){
             this.property[key] = property
             return true
@@ -612,18 +679,22 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
     }
 
     override fun getProperty(key: String): Property? {
+        ensureMembers()
         return property.getOrDefault<String, Property?>(key, null)
     }
 
     override fun containProperty(id: String): Boolean {
+        ensureMembers()
         return property.containsKey(id)
     }
 
     override fun removeProperty(id: String): Property? {
+        ensureMembers()
         return property.remove(id)
     }
 
     override fun forEachProperty(action: (Property) -> Unit) {
+        ensureMembers()
         for (p in property.values){
             action(p)
         }
@@ -631,6 +702,7 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
 
     override val allProperties: Collection<Property>
         get() {
+            ensureMembers()
             val ps = ArrayList<Property>()
             for (lv in property.values){
                 ps.add(lv)

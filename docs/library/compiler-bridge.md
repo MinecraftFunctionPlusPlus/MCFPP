@@ -6,7 +6,7 @@
 
 完整操作见 [本地 Maven 作者/消费者样例](../../examples/libraries/README.md)。库作者在 `mcfpp.toml` 配置 `[library]`，导出 `bin.mclib`、`module.json` 和模块资源，再用 Mcfpm pack/register 发布。消费者通过 MCFPP CLI、`mcfpp-packages.json` 和 `mcfpp.lock` 管理依赖。CLI 在进入编译会话前准备依赖；编译会话只消费已准备的锁图和缓存。
 
-MCFPP 使用 JDK 21。当前构建以 `runtimeOnly` 装配 `moe.afox.mcfpm:core` 与 `mcfpp-adapter`，其传递依赖含 `model`；本地开发先发布这三个 SDK 模块到 Maven local。SDK 构建 toolchain 为 JDK 25，发布字节码目标仍为 Java 17；它不编译依赖 MCFPP jar。不同 Kotlin 版本通过 Java 外观和 JDK 类型交互。
+MCFPP 使用 JDK 25。当前构建以 `runtimeOnly` 装配 `moe.afox.mcfpm:core` 与 `mcfpp-adapter`，其传递依赖含 `model`；本地开发先发布这三个 SDK 模块到 Maven local。SDK 构建 toolchain 为 JDK 25，发布字节码目标仍为 Java 17；它不编译依赖 MCFPP jar。不同 Kotlin 版本通过 Java 外观和 JDK 类型交互。
 
 本地 Maven 样例脚本已实际完成 SDK install、移走作者源码和当前 fat JAR 消费，检查了私有方法生成、静态资源和 lock 不变。标准库也已通过实际源码生成，以及显式目录和内嵌 `%std` 消费验证；这些结果覆盖已执行场景，不代表未来 reader 版本已经验收。
 
@@ -190,7 +190,7 @@ LibrarySource 不把 openBinary 的流所有权交给调用方永久持有：每
 
 ## 7. 独立的 JVM adapter ABI
 
-MCFPP 使用 Java 21；Mcfpm SDK 维持 Java 17 字节码，不能静态依赖编译器的 Kotlin implementation ABI。MCFPP 发布公共外观 `top.mcfpp.api.library.LibraryCompilerApi`，Mcfpm adapter 通过反射加载它；外观的字段/方法只用 JDK 17 可见类型。编译器发行包通过 runtimeOnly 携带 Mcfpm core/adapter 及其传递 model 依赖；SDK adapter 不依赖 MCFPP 生产 jar 编译。
+MCFPP 使用 Java 25；Mcfpm SDK 维持 Java 17 字节码，不能静态依赖编译器的 Kotlin implementation ABI。MCFPP 发布公共外观 `top.mcfpp.api.library.LibraryCompilerApi`，Mcfpm adapter 通过反射加载它；外观的字段/方法只用 JDK 17 可见类型。编译器发行包通过 runtimeOnly 携带 Mcfpm core/adapter 及其传递 model 依赖；SDK adapter 不依赖 MCFPP 生产 jar 编译。
 
 外观是 public final Java 类，具有以下 **public static** 方法；实现可以委托 Kotlin，JVM 方法签名不能依赖 Kotlin object/Companion/default 参数：
 
@@ -218,7 +218,7 @@ request v1 的字段：
 | `datapacks` | List<Map>：坐标/版本/classifier/path/sha256，独立数据包模型 |
 | `hostClassLoader` | ClassLoader，可选；必须能看到当前 MCFPP 公共 API |
 
-libraries 每项为 `coordinate:String, version:String, classifier:String, sha256:byte[32], binary:byte[], moduleJson:byte[], resources:Map<String,byte[]>`。这与当前 `McfppLibraryPayload` 可直接转换；避免把 JVM17 adapter 和 JVM21 编译器都绑定到某个新的 DTO jar。resources 的 key 已是 format-v1 逻辑根路径。编译器仍核对内部清单，外层包校验与路径验证不能代替库语义校验。大载荷将来如需流式 ABI 应另行版本化；v1 不增加依赖字节大小的性能目标。
+libraries 每项为 `coordinate:String, version:String, classifier:String, sha256:byte[32], binary:byte[], moduleJson:byte[], resources:Map<String,byte[]>`。这与当前 `McfppLibraryPayload` 可直接转换；避免把 JVM17 adapter 和 JVM25 编译器都绑定到某个新的 DTO jar。resources 的 key 已是 format-v1 逻辑根路径。编译器仍核对内部清单，外层包校验与路径验证不能代替库语义校验。大载荷将来如需流式 ABI 应另行版本化；v1 不增加依赖字节大小的性能目标。
 
 lockedPackages 每项为 `coordinate:String,version:String,dependencies:List<Map>`，dependency 项为 coordinate/version。当前一次编译同一 coordinate 只能有一个版本；出现不一致时诊断，不能按顺序静默选择。未安装、锁图缺失或下载缓存缺损由 Mcfpm adapter 在 openSession 前报告，编译不更新 lock，也不自动联网选择版本。
 
@@ -230,7 +230,7 @@ Mcfpm `CurrentMcfppCompilerAdapter` 保留 compile(config,libraries) 的上层�
 
 ## 8. CLI、plugin 类型身份与本地入口
 
-`mcfpp install/build` 通过通用 JDK 类型门面复用 Mcfpm 的解析、缓存与校验。`mcfpp build --project mcfpp.toml` 自动准备依赖；有效锁保持已选版本，`--locked` 禁止改锁，`--offline` 禁止联网。生成的 SDK 清单位于 `.mcfpp`，原生锁保存为 `mcfpp.lock`。发行物以 runtimeOnly 装配 SDK core、repository-maven 和 mcfpp-adapter，SDK 不编译依赖 MCFPP；实际 MCFPP 进程使用 Java 21。
+`mcfpp install/build` 通过通用 JDK 类型门面复用 Mcfpm 的解析、缓存与校验。`mcfpp build --project mcfpp.toml` 自动准备依赖；有效锁保持已选版本，`--locked` 禁止改锁，`--offline` 禁止联网。生成的 SDK 清单位于 `.mcfpp`，原生锁保存为 `mcfpp.lock`。发行物以 runtimeOnly 装配 SDK core、repository-maven 和 mcfpp-adapter，SDK 不编译依赖 MCFPP；实际 MCFPP 进程使用 Java 25。
 
 依赖提供者把已校验 FetchedGraph 转成 §7 DTO，统一送交外观。本地 includes、jars 和内置标准库继续使用同一 LibrarySource。启用本地 Java MNI 后，CLI 先调用生成的 Gradle 工程，再以其实际运行 classpath 创建共享公共 API 的宿主加载器；加载器在编译后关闭。
 

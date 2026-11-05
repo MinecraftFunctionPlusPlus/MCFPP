@@ -1,6 +1,8 @@
 @MCFPPEntity
+/// 凋灵的实体数据。继承的字段由各父数据类型提供。
 data WitherData: EntityData, CreatureData, AIMobData {
 
     @Name("Invul")
+    /// 无敌状态的剩余时间。
     var invul: int
 }

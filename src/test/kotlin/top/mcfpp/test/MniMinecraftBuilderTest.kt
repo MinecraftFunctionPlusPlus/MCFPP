@@ -93,6 +93,30 @@ class MniMinecraftBuilderTest {
         assertTrue(statements.all { metadata(it).executionContextId == rotated.context.id })
     }
 
+    @Test fun kotlinReceiversKeepTheChildMinecraftContextThroughNestedControlFlow() {
+        val f = Fixture()
+        val tree = f.quote.kotlin().block {
+            executeAs(entities(EntityQuery.allPlayers())) { self ->
+                at(position(1.0, 2.0, 3.0)) {
+                    rotated(rotation(90.0, 0.0)) {
+                        ifThen(literal(true)) {
+                            score(self, "hp") += 1
+                            evaluate(blockMatches(blockAt(currentPosition()), BlockPredicate.block("minecraft:stone")))
+                        }
+                    }
+                }
+            }
+        }
+        val executor = assertIs<StmtNode.ExecuteAs>(node(tree.statements().single()))
+        val placed = assertIs<StmtNode.At>(node(executor.body.statements().single()))
+        val turned = assertIs<StmtNode.Rotated>(node(placed.body.statements().single()))
+        val branch = assertIs<StmtNode.If>(node(turned.body.statements().single()))
+        val assignment = assertIs<StmtNode.Assign>(node(branch.thenBlock.statements().first()))
+        val score = assertIs<ImmutableMinecraftScoreRef>(assignment.destination)
+        assertSame(executor.self, assertIs<MinecraftScoreTarget.Entity>(score.target).entity)
+        assertTrue(branch.thenBlock.statements().all { metadata(it).executionContextId == turned.context.id })
+    }
+
     @Test fun everyPositionRotationAndBlockOperationRetainsItsActualDependencies() {
         val f = Fixture()
         lateinit var base: PositionHandle

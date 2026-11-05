@@ -1,5 +1,7 @@
 @MCFPPEntity
+/// 恶魂的实体数据。继承的字段由各父数据类型提供。
 data GhastData: EntityData, CreatureData, AIMobData {
     @Name("ExplosionPower")
+    /// 爆炸强度。
     var explosionPower: bool
 }

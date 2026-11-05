@@ -1,4 +1,6 @@
 @MCFPPEntity
+/// 小火球的实体数据。继承的字段由各父数据类型提供。
 data SmallFireballData: EntityData, ProjectileData, FireballData {
+    /// 关联物品的数据。
     @Name("Item") var item: list<ItemData>
 }

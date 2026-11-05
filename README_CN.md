@@ -11,11 +11,15 @@ MCFPP是一个能被编译为Minecraft数据包的全新的面向对象的语言
 
 ## 快速开始
 
-[统一工程与 CLI 使用指南](docs/cli.md)：`mcfpp init hello` 创建工程，`mcfpp build` 生成数据包；`mcfpp init hello --mni` 创建带 Java MNI 和测试的工程。项目配置使用 `mcfpp.toml`，依赖声明使用 `mcfpp-packages.json`。
+安装 JDK 25，完整解压 `mcfpp-0.1.0.zip`（Windows）或 `mcfpp-0.1.0.tar.xz`（Linux/macOS），设置 `JAVA_HOME` 并将解压目录的 `bin` 加入 PATH。重新打开终端，运行 `mcfpp --version`。详见 [安装说明](INSTALL.md) 和 [0.1.0 发行说明](RELEASE-NOTES.md)。
+
+[统一工程与 CLI 使用指南](docs/cli.md)：`mcfpp init hello` 创建工程，`mcfpp build` 生成数据包；`mcfpp init hello --mni` 创建 Kotlin MNI 宏和 Kotlin 测试。项目配置使用 `mcfpp.toml`，依赖声明使用 `mcfpp-packages.json`。
 
 [MCFPP API](https://www.mcfpp.top)
 
-使用 JDK 21，通过 `./gradlew build`（Windows：`./gradlew.bat build`）构建。
+使用 JDK 25，通过 `./gradlew release`（Windows：`./gradlew.bat release`）生成发行物，位于 `build/releases/0.1.0`；源码构建所需的 Mcfpm SDK 准备步骤见 [CLI 指南](docs/cli.md#从源码构建-cli)。
+
+`release` 优先缩小产物体积。日常快速打包继续使用 `shadowJar` 或 `installShadowDist`，跳过发行压缩。
 
 [类型规范](./docs/type-system/specification.md) · [迁移状态与指南](./docs/type-system/migration.md)
 

@@ -1,5 +1,7 @@
 @MCFPPEntity
+/// 铁傀儡的实体数据。继承的字段由各父数据类型提供。
 data IronGolemData: EntityData, CreatureData, AIMobData, NeutralData {
     @Name("PlayerCreated")
+    /// 是否由玩家建造。
     var playerCreated: bool
 }

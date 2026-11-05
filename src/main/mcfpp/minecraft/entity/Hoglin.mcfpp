@@ -1,11 +1,15 @@
 @MCFPPEntity
+/// 疣猪兽的实体数据。继承的字段由各父数据类型提供。
 data HoglinData : EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name("CannotBeHunted")
+    /// 是否免受特定生物的狩猎。
     var cannotBehunted: bool
 
     @Name("IsImmuneToZombification")
+    /// 是否免疫僵尸化。
     var isImmuneToZombification: bool
 
     @Name("TimeInOverworld")
+    /// 在主世界停留的时间。
     var timeInOverworld: int
 }

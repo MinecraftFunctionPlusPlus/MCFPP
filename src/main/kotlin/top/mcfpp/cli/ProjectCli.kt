@@ -26,6 +26,7 @@ object ProjectCli {
         cli.addSubcommand("init", Init(root))
         cli.addSubcommand("build", Build(root))
         cli.addSubcommand("test", TestSources(root))
+        cli.addSubcommand("debug", Debug(root))
         cli.addSubcommand("ide-model", IdeModel(root))
         val actions = linkedMapOf("install" to "Prepare locked dependencies without compiling sources.",
             "update" to "Update dependencies within their declared version ranges.",
@@ -78,7 +79,7 @@ object ProjectCli {
     @Command(description = ["Create an MCFPP project."], mixinStandardHelpOptions = true)
     private class Init(val root: Root) : Callable<Int> {
         @Parameters(index = "0", arity = "0..1", defaultValue = ".") lateinit var directory: Path
-        @Option(names = ["--mni"], description = ["Include Java MNI sources and tests."]) var mni = false
+        @Option(names = ["--mni"], description = ["Include Kotlin MNI sources and tests."]) var mni = false
         override fun call(): Int {
             val project = ProjectTemplates.create(root.directory.resolve(directory), mni)
             root.out.println("Created ${project.file}. Run mcfpp build.")
@@ -103,15 +104,17 @@ object ProjectCli {
                         it.debug = flags.debug; it.ignoreStdLib = flags.ignoreStdLib; it.isLib = flags.isLib
                         it.maxWhileInline = flags.maxWhileInline; it.printAll = flags.printAll; it.level = flags.level
                         it.dumpIR = flags.dumpIR
+                        it.debugInfo = flags.debugInfo
                         it.optimizationLevel = flags.optimizationLevel; it.disabledPasses = flags.disabledPasses
                         it.macroMaxDepth = flags.macroMaxDepth; it.macroMaxNodes = flags.macroMaxNodes; it.dumpMacroExpansion = flags.dumpMacroExpansion
                     }
                     val exit = McfpmCliCompiler.compile(options, prepared.compilerRequest(loader), root.err)
                     if (exit == 0) {
-                        root.out.println("Built ${project.output}")
+                        val output = if ((flags.debugInfo ?: fileFlags.debugInfo) == true) project.output.resolve("debug") else project.output
+                        root.out.println("Built $output")
                         val name = project.values["name"] as? String ?: project.root.fileName.toString()
-                        root.out.println("Data pack: ${project.output.resolve(name)}")
-                        val resourcePack = project.output.resolve(name + "-resources")
+                        root.out.println("Data pack: ${output.resolve(name)}")
+                        val resourcePack = output.resolve(name + "-resources")
                         if (Files.isDirectory(resourcePack)) root.out.println("Resource pack: $resourcePack")
                         (flags.dumpIR ?: fileFlags.dumpIR)?.let { directory ->
                             val path = Path.of(directory).let { if (it.isAbsolute) it else project.output.resolve(it) }
@@ -143,11 +146,30 @@ object ProjectCli {
     }
 
     @Command(mixinStandardHelpOptions = true)
+    private class Debug(val root: Root) : Callable<Int> {
+        @Option(names = ["--stdio"], required = true, description = ["Serve the Debug Adapter Protocol on stdin/stdout."])
+        var stdio = false
+        override fun call(): Int {
+            val selected = root.project?.let { root.directory.resolve(it).normalize() } ?: root.directory
+            val directory = if (Files.isRegularFile(selected)) selected.parent else selected
+            val adapter = top.mcfpp.debug.McfppDebugAdapter(directory)
+            val dispatch = java.util.concurrent.Executors.newCachedThreadPool { task -> Thread(task, "mcfpp-dap-io").apply { isDaemon = true } }
+            val launcher = org.eclipse.lsp4j.debug.launch.DSPLauncher.createServerLauncher(adapter, System.`in`, System.out, dispatch, { it })
+            adapter.connect(launcher.remoteProxy)
+            try { launcher.startListening().get() } finally { adapter.close(); dispatch.shutdownNow() }
+            return 0
+        }
+    }
+
+    @Command(mixinStandardHelpOptions = true)
     private class TestSources(val root: Root) : Callable<Int> {
+        @Option(names = ["--debug-info"], description = ["Compile source tests with debugger metadata."])
+        var debugInfo = false
         @Option(names = ["--dsb-jar"], description = ["Datapack Sandbox CLI JAR (default: DSB_JAR)."])
         var jar: Path? = System.getenv("DSB_JAR")?.takeIf { it.isNotBlank() }?.let(Path::of)
-        @Option(names = ["--dsb-java"], description = ["Java executable for DSB (default: DSB_JAVA or java on PATH)."])
-        var java: String = System.getenv("DSB_JAVA")?.takeIf { it.isNotBlank() } ?: "java"
+        @Option(names = ["--dsb-java"], description = ["Java executable for DSB (default: DSB_JAVA or the current JDK)."])
+        var java: String = System.getenv("DSB_JAVA")?.takeIf { it.isNotBlank() }
+            ?: Path.of(System.getProperty("java.home"), "bin", if (System.getProperty("os.name").startsWith("Windows")) "java.exe" else "java").toString()
         @Option(names = ["--tests"], description = ["Select MCFPP namespace:function IDs; '*' is a wildcard. Runs MCFPP tests only."])
         var filter: String? = null
         @Option(names = ["--list"], description = ["Compile and list MCFPP tests without executing them or Java tests."])
@@ -160,7 +182,7 @@ object ProjectCli {
                 prepared.commit()
                 if (project.mniEnabled && mode == "test") root.out.println("Java tests completed.")
                 top.mcfpp.testing.McfppTestRunner(root.out, root.err, teamcity).run(project, prepared,
-                    jar?.let { root.directory.resolve(it).normalize() }, java, filter, list)
+                    jar?.let { root.directory.resolve(it).normalize() }, java, filter, list, debugInfo)
             }
         }
     }

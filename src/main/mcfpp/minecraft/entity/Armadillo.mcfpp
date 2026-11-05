@@ -1,12 +1,16 @@
 @MCFPPEntity
+/// 犰狳的实体数据。继承的字段由各父数据类型提供。
 data ArmadilloData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name("Scute_Time")
+    /// 距离下一次掉落鳞甲的计时值。
     var scuteTime: int
 
     @Name("State")
+    /// 当前行为状态。
     var state: ArmadilloState
 }
 
+/// 犰狳的行为状态。
 enum ArmadilloState {
     idle,
     rolling,

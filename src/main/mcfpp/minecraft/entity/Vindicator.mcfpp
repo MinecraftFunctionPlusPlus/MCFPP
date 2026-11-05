@@ -1,4 +1,6 @@
 @MCFPPEntity
+/// 卫道士的实体数据。继承的字段由各父数据类型提供。
 data VindicatorData: EntityData, CreatureData, AIMobData, RaiderData {
+    /// 是否使用 Johnny 攻击行为。
     @Name("Johnny") var johnny: bool
 }

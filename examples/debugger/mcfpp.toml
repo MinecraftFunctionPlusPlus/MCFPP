@@ -1,0 +1,6 @@
+schema = 1
+name = "debugger-demo"
+namespace = "debugger_demo"
+version = "26.3"
+sourcePath = "src/main/mcfpp"
+targetPath = "build"

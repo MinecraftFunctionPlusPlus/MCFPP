@@ -39,14 +39,23 @@ interface SyntaxReferenceValidator {
 }
 
 /** B/Q references retain their producer-assigned table positions; N references index [nodes]. */
-class LibrarySyntax(nodes: List<SemanticNode>, scopes: List<ScopeRecord>, bodies: List<BodyRecord>) {
-    val nodes: List<SemanticNode> = frozen(nodes)
-    val scopes: List<ScopeRecord> = frozen(scopes.map { it.copy(bindings = frozen(it.bindings)) })
-    val bodies: List<BodyRecord> = frozen(bodies.map { it.copy(captures = frozen(it.captures)) })
-    private val references = IdentityHashMap<SemanticNode, NodeRef>().apply {
-        nodes.forEachIndexed { index, node ->
-            require(put(node, NodeRef(index + 1L)) == null) { "The same node cannot occupy two N records" }
+class LibrarySyntax private constructor(
+    val nodes: List<SemanticNode>, val scopes: List<ScopeRecord>, val bodies: List<BodyRecord>,
+    private val references: IdentityHashMap<SemanticNode, NodeRef>
+) {
+    constructor(nodes: List<SemanticNode>, scopes: List<ScopeRecord>, bodies: List<BodyRecord>) : this(
+        frozen(nodes), frozen(scopes.map { it.copy(bindings = frozen(it.bindings)) }),
+        frozen(bodies.map { it.copy(captures = frozen(it.captures)) }),
+        IdentityHashMap<SemanticNode, NodeRef>().apply {
+            nodes.forEachIndexed { index, node ->
+                require(put(node, NodeRef(index + 1L)) == null) { "The same node cannot occupy two N records" }
+            }
         }
+    )
+
+    /** Immutable decoder graph/index are shared; mutable validation status belongs to the copy. */
+    internal fun sessionCopy(): LibrarySyntax = LibrarySyntax(nodes, scopes, bodies, references).also {
+        it.externalReferencesValidated = externalReferencesValidated
     }
 
     /** Set only by SyntaxCodec.validateAll after every external reference callback succeeds. */

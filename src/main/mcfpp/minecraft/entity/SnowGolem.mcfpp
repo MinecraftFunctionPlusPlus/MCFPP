@@ -1,4 +1,6 @@
 @MCFPPEntity
+/// 雪傀儡的实体数据。继承的字段由各父数据类型提供。
 data SnowGolemData: EntityData, CreatureData, AIMobData {
+    /// 是否戴有南瓜头。
     @Name("Pumpkin") var pumpkin: bool
 }

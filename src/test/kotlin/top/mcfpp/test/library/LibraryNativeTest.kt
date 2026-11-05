@@ -1,7 +1,6 @@
 package top.mcfpp.test.library
 
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.backend.ReferenceHelperRecipe
 import top.mcfpp.core.lang.ref.ReferenceKind
 import top.mcfpp.core.lang.ref.ReferencePathShape
@@ -58,11 +57,11 @@ class LibraryNativeTest {
 
     companion object {
         @JvmStatic
-        @MNIMacro(identifier = "mixed", params = [
-            MacroParam(name = "input", type = "int"),
-            MacroParam(name = "target", type = "int", mode = ParamMode.REF),
-            MacroParam(name = "literal", type = "int", mode = ParamMode.CONST),
-            MacroParam(name = "body", type = "(ref int, const int, inline (int)->void)->void", mode = ParamMode.INLINE)
+        @MNIMacro(identifier = "mixed", normalParams = [
+            "int",
+            "int",
+            "int",
+            "(ref int, const int, inline (int)->void)->void"
         ])
         @Suppress("UNUSED_PARAMETER")
         fun mixed(context: MacroContext, input: Value<IntT>, target: Ref<IntT>, literal: Const<IntT>, body: InlineFn<VoidT>): Block =
@@ -98,7 +97,8 @@ class LibraryNativeTest {
         val method = LibraryNativeTest::class.java.getDeclaredMethod("mixed", MacroContext::class.java, Value::class.java,
             Ref::class.java, Const::class.java, InlineFn::class.java)
         val descriptor = assertNotNull(MacroFunctionInfo.from(method))
-        val captured = NativeDeclarations.captureMacro("fixture", common("mixed", 11), descriptor, bindings)
+            .declaredAs("sourceAlias", listOf("input", "target", "literal", "body"))
+        val captured = NativeDeclarations.captureMacro("fixture", common("sourceAlias", 11), descriptor, bindings)
         val decoded = assertIs<MacroDeclaration>(roundtrip(captured))
         assertEquals(captured, decoded)
         assertEquals(listOf(MacroParameterMode.VALUE, MacroParameterMode.REF, MacroParameterMode.CONST, MacroParameterMode.INLINE), decoded.binding.parameters.map { it.mode })
@@ -109,6 +109,8 @@ class LibraryNativeTest {
         val first = NativeDeclarations.restoreMacro("fixture", decoded, restore, callbackCatalog(), bindings)
         val second = NativeDeclarations.restoreMacro("fixture", decoded, restore, callbackCatalog(), bindings)
         assertEquals(method, first.javaMethod)
+        assertEquals("sourceAlias", first.identifier)
+        assertEquals(listOf("input", "target", "literal", "body"), first.parameters.map { it.name() })
         assertEquals(listOf(ParamMode.VALUE, ParamMode.REF, ParamMode.CONST, ParamMode.INLINE), first.parameters.map { it.mode() })
         assertEquals(3, first.parameters.last().inlineSignature()!!.parameters().size)
         assertNotEquals(first.reference.key.universe, second.reference.key.universe)

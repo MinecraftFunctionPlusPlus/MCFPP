@@ -1,10 +1,18 @@
 @MCFPPEntity
+/// 海龟的实体数据。继承的字段由各父数据类型提供。
 data TurtleData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
+    /// 是否携带海龟蛋。
     @Name("HasEgg") var hasEgg: bool
+    /// 归属位置的 X 坐标。
     @Name("HomePosX") var homePosx: int
+    /// 归属位置的 Y 坐标。
     @Name("HomePosY") var homePosy: int
+    /// 归属位置的 Z 坐标。
     @Name("HomePosZ") var homePosz: int
+    /// 旅行目标的 X 坐标。
     @Name("TravelPosX") var travelPosx: int
+    /// 旅行目标的 Y 坐标。
     @Name("TravelPosY") var travelPosy: int
+    /// 旅行目标的 Z 坐标。
     @Name("TravelPosZ") var travelPosz: int
 }

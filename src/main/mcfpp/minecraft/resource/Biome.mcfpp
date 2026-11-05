@@ -1,5 +1,7 @@
 @From("top.mcfpp.mni.resource.BiomeData")
+/// 生物群系资源的标识符。通过 id 字段保存资源名称。
 data Biome: ResourceID
 
 @From("top.mcfpp.mni.resource.BiomeObjectData")
+/// 生物群系资源类型的共享成员入口。
 object data Biome: ResourceID

@@ -1,20 +1,27 @@
 @MCFPPEntity
+/// 马类生物共用的驯服和装备数据。
 data GeneralHorseData {
     @Name("Bred")
+    /// 是否参与过繁殖。
     var bred: bool
 
     @Name("EatingHaystack")
+    /// 是否处于进食干草的状态。
     var eatingHaystack: bool
 
     @Name("Owner")
+    /// 所有者的 UUID。
     var owner: IntArray
 
     @Name("SaddleItem")
+    /// 鞍物品数据。
     var saddleItem: ItemData
 
     @Name("Tame")
+    /// 是否已经驯服。
     var tame: bool
 
     @Name("Temper")
+    /// 驯服进度使用的性情值。
     var temper: int
 }

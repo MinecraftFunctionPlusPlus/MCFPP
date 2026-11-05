@@ -1,5 +1,7 @@
 @MCFPPEntity
+/// 炽足兽的实体数据。继承的字段由各父数据类型提供。
 data StriderData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData{
     @Name("Saddle")
+    /// 是否装备鞍。
     var saddle: bool
 }

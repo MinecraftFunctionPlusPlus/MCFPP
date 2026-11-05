@@ -67,14 +67,15 @@ abstract class Annotation : Serializable {
 
     /**
      * The original closed compiler arguments of this annotation. This field is transient because
-     * [CompilerValue] is a compiler graph, not a serialization contract. [argumentPayload] carries
-     * the same facts through field/library copies.
+     * [CompilerValue] is a compiler graph, not a serialization contract. [argumentFacts] carries
+     * the same closed facts through field/library copies without encoding a separate stream.
      */
     @Transient
     private var boundArguments: ArrayList<CompilerValue>? = null
 
-    /** Serializable mirror used only when a copied annotation has to be projected again. */
+    /** Read fallback for annotations copied by the earlier Base64 representation. */
     private var argumentPayload: String? = null
+    private var argumentFacts: CompilerAnnotationFacts.Snapshot? = null
 
     @Suppress("ConvertSecondaryConstructorToPrimary")
     internal constructor(identifier: String, namespace: String, param: ArrayList<String> = ArrayList()) {
@@ -86,13 +87,15 @@ abstract class Annotation : Serializable {
     /** Records the pure declaration-reader facts exactly once for this source annotation. */
     internal fun recordCompilerArguments(arguments: List<CompilerValue>) {
         boundArguments = ArrayList(arguments)
-        argumentPayload = CompilerAnnotationFacts.encode(arguments)
+        argumentFacts = if (arguments.isEmpty()) null else CompilerAnnotationFacts.Snapshot.capture(arguments)
+        argumentPayload = null
     }
 
     /** Immutable view; copied annotations decode their own serialized closed facts on demand. */
     internal fun compilerArguments(): List<CompilerValue> {
         val live = boundArguments
         if (live != null) return Collections.unmodifiableList(ArrayList(live))
+        argumentFacts?.let { return Collections.unmodifiableList(it.arguments()) }
         val payload = argumentPayload
         if (payload.isNullOrEmpty()) return emptyList()
         return Collections.unmodifiableList(CompilerAnnotationFacts.decode(payload))
@@ -188,6 +191,9 @@ abstract class Annotation : Serializable {
             is Char -> RawPreparationFact.row(RawPreparationFact.scalar("char"), RawPreparationFact.scalar(value.code))
             is Float -> RawPreparationFact.row(RawPreparationFact.scalar("float"), RawPreparationFact.scalar(value.toRawBits()))
             is Double -> RawPreparationFact.row(RawPreparationFact.scalar("double"), RawPreparationFact.scalar(value.toRawBits()))
+            // This private snapshot owns only closed, serializable facts. Compare its contents
+            // without enrolling its implementation containers as mutable extension state.
+            is CompilerAnnotationFacts.Snapshot -> RawPreparationFact.sequence(value.arguments().map(RawPreparationFact::closed))
             else -> null
         }
         fun fact(value: Any?, role: Int = 0): RawPreparationFact {

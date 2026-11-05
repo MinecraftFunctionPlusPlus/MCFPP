@@ -11,62 +11,82 @@ import mcfpp.minecraft.other:*
 @From("top.mcfpp.mni.minecraft.EntityTeleportData")
 @From("top.mcfpp.mni.minecraft.PlayerMessageData")
 @From("top.mcfpp.mni.minecraft.EntityAttributeData")
+/// 所有实体共用的数据字段。
 data EntityData {
     @Name("Air")
+    /// 剩余空气值。
     var air: short
 
     @Name("CustomName")
+    /// 实体的自定义名称。
     var customName: string
 
     @Name("CustomNameVisible")
+    /// 是否持续显示自定义名称。
     var customNameVisible: bool
 
     @Name("FallDistance", "1.21.5")
     @Name("fall_distance")
+    /// 累计下落距离。
     var fallDistance: float
 
     @Name("Fire")
+    /// 燃烧时间。
     var fire: short
 
     @Name("Glowing")
+    /// 是否显示发光轮廓。
     var glowing: bool
 
     @Name("HasVisualFire")
+    /// 是否显示火焰效果。
     var hasVisualFire: bool
 
     @Name("Invulnerable")
+    /// 是否免疫通常的伤害。
     var invulnerable: bool
 
     @Name("Motion")
+    /// 速度分量，顺序为 X、Y、Z。
     var motion: list<double>
 
     @Name("NoGravity")
+    /// 是否免受重力影响。
     var noGravity: bool
 
     @Name("onGround")
+    /// 是否接触地面。
     var onGround: bool
 
     @Name("Passengers")
+    /// 乘坐此实体的实体数据。
     var passengers: list<EntityData>
 
     @Name("PortalCooldown")
+    /// 传送门冷却时间。
     var portalCooldown: int
 
     @Name("Pos")
+    /// 位置坐标，顺序为 X、Y、Z。
     var pos: list<double>
 
     @Name("Rotation")
+    /// 朝向角度，顺序为水平角和俯仰角。
     var rotation: list<float>
 
     @Name("Silent")
+    /// 是否保持静音。
     var silent: bool
 
     @Name("Tags")
+    /// 实体标签列表。
     var tags: list<string>
 
     @Name("TicksFrozen")
+    /// 冻结时间。
     var ticksFrozen: int
 
     @Name("UUID")
+    /// 以四个整数保存的实体 UUID。
     var uuid: IntArray
 }

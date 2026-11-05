@@ -1,23 +1,31 @@
 @MCFPPEntity
+/// 蜜蜂的实体数据。继承的字段由各父数据类型提供。
 data BeeData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, NeutralData {
     @Name("CannotEnterHiveTicks")
+    /// 恢复进入蜂巢前的等待时间。
     var cannotEnterHiveTicks: int
 
     @Name("CropsGrownSincePollination")
+    /// 授粉后促进生长的作物数。
     var cropsGrownSincePollination: int
 
     @Name("flower_pos")
+    /// 花的位置坐标。
     var flowerPos: IntArray
 
     @Name("HasNectar")
+    /// 是否携带花蜜。
     var hasNectar: byte
 
     @Name("HasStung")
+    /// 是否已经蜇刺。
     var hasStung: byte
 
     @Name("hive_pos")
+    /// 蜂巢的位置坐标。
     var hivePos: IntArray
 
     @Name("TicksSincePollination")
+    /// 距离上次授粉的时间。
     var ticksSincePollination: int
 }

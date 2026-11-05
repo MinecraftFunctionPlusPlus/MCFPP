@@ -3,7 +3,6 @@
 package top.mcfpp.test
 
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.mni.api.*
 import top.mcfpp.mni.expand.*
 import kotlin.test.Test
@@ -53,7 +52,7 @@ class MniMacroRegistrationTest {
         assertEquals(13, diagnostics.size)
         assertEquals(3, diagnostics.count { it.code == MacroRegistrationCode.UNRESOLVED_TYPE })
         assertEquals(10, diagnostics.count { it.code == MacroRegistrationCode.INVALID_METADATA })
-        assertTrue(diagnostics.any { it.reason.contains("duplicate parameter") })
+        assertTrue(diagnostics.any { it.reason.contains("missing source type") })
         assertTrue(diagnostics.any { it.reason.contains("INLINE callbacks cannot accept INLINE") })
     }
 
@@ -263,11 +262,11 @@ class ValidMacroEntries {
     companion object {
         @JvmStatic
         @MNIMacro(
-            params = [
-                MacroParam(name = "value", type = "int"),
-                MacroParam(name = "reference", type = "int", mode = ParamMode.REF),
-                MacroParam(name = "constant", type = "int", mode = ParamMode.CONST),
-                MacroParam(name = "body", type = "(int)->void", mode = ParamMode.INLINE)
+            normalParams = [
+                "int",
+                "int",
+                "int",
+                "(int)->void"
             ]
         )
         fun all(context: MacroContext, value: Value<IntT>, ref: Ref<IntT>, constant: Const<IntT>, body: InlineFn<*>): Block = registrationMustNotExecute()
@@ -291,17 +290,17 @@ class InvalidMacroJvm {
         @JvmStatic @MNIMacro
         fun missing(): Block = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "x", type = "int")])
-        fun value(context: MacroContext, x: Ref<IntT>): Block = registrationMustNotExecute()
+        @MNIMacro(normalParams = ["int"])
+        fun value(context: MacroContext, x: Any): Block = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "x", type = "int", mode = ParamMode.REF)])
+        @MNIMacro(normalParams = ["int"])
         fun ref(context: MacroContext, x: Local<IntT>): Block = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "x", type = "int", mode = ParamMode.CONST)])
-        fun constant(context: MacroContext, x: Value<IntT>): Block = registrationMustNotExecute()
+        @MNIMacro(normalParams = ["int"])
+        fun constant(context: MacroContext, x: Any): Block = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "x", type = "(int)->void", mode = ParamMode.INLINE)])
-        fun inline(context: MacroContext, x: Value<IntT>): Block = registrationMustNotExecute()
+        @MNIMacro(normalParams = ["(int)->void"])
+        fun inline(context: MacroContext, x: Any): Block = registrationMustNotExecute()
         @JvmStatic @MNIMacro
         fun voidExpr(context: MacroContext): Expr<IntT> = registrationMustNotExecute()
         @JvmStatic
@@ -317,31 +316,31 @@ class InvalidMacroJvm {
 class InvalidMacroMetadata {
     companion object {
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "x", type = "int"), MacroParam(name = "x", type = "int")])
+        @MNIMacro(normalParams = ["int", ""])
         fun duplicateNames(c: MacroContext, x: Value<IntT>, y: Value<IntT>): Block = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = " ", type = "int")])
+        @MNIMacro(normalParams = [" "])
         fun blankName(c: MacroContext, x: Value<IntT>): Block = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "x", type = "void")])
+        @MNIMacro(normalParams = ["void"])
         fun voidParam(c: MacroContext, x: Value<IntT>): Block = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "x", type = "missing")])
+        @MNIMacro(normalParams = ["missing"])
         fun unknownParam(c: MacroContext, x: Value<IntT>): Block = registrationMustNotExecute()
         @JvmStatic
         @MNIMacro(returnType = "missing")
         fun unknownResult(c: MacroContext): Expr<IntT> = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "x", type = "int", mode = ParamMode.INLINE)])
+        @MNIMacro(normalParams = ["int"])
         fun notSignature(c: MacroContext, x: InlineFn<*>): Block = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "x", type = "(inline int)->void", mode = ParamMode.INLINE)])
+        @MNIMacro(normalParams = ["(inline int)->void"])
         fun higherOrder(c: MacroContext, x: InlineFn<*>): Block = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "x", type = "(int,)->void", mode = ParamMode.INLINE)])
+        @MNIMacro(normalParams = ["(int,)->void"])
         fun emptyInlineType(c: MacroContext, x: InlineFn<*>): Block = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "x", type = "(missing)->void", mode = ParamMode.INLINE)])
+        @MNIMacro(normalParams = ["(missing)->void"])
         fun unknownInlineType(c: MacroContext, x: InlineFn<*>): Block = registrationMustNotExecute()
         @JvmStatic
         @MNIMacro(identifier = "has space")
@@ -350,10 +349,10 @@ class InvalidMacroMetadata {
         @MNIMacro(identifier = "ref")
         fun keyword(c: MacroContext): Block = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "has space", type = "int")])
+        @MNIMacro(normalParams = [""])
         fun badParameter(c: MacroContext, x: Value<IntT>): Block = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "1number", type = "int")])
+        @MNIMacro(normalParams = [""])
         fun numericParameter(c: MacroContext, x: Value<IntT>): Block = registrationMustNotExecute()
     }
 }
@@ -361,19 +360,19 @@ class InvalidMacroMetadata {
 class DuplicateMacroEntries {
     companion object {
         @JvmStatic
-        @MNIMacro(identifier = "duplicate", params = [MacroParam(name = "x", type = "int")])
+        @MNIMacro(identifier = "duplicate", normalParams = ["int"])
         fun aValue(c: MacroContext, x: Value<IntT>): Block = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(identifier = "duplicate", params = [MacroParam(name = "x", type = "integer", mode = ParamMode.REF)])
+        @MNIMacro(identifier = "duplicate", normalParams = ["integer"])
         fun bRef(c: MacroContext, x: Ref<IntT>): Block = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(identifier = "duplicate", returnType = "int", params = [MacroParam(name = "x", type = "int", mode = ParamMode.CONST)])
+        @MNIMacro(identifier = "duplicate", returnType = "int", normalParams = ["int"])
         fun cConst(c: MacroContext, x: Const<IntT>): Expr<IntT> = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(identifier = "callbackMode", params = [MacroParam(name = "x", type = "(int)->void", mode = ParamMode.INLINE)])
+        @MNIMacro(identifier = "callbackMode", normalParams = ["(int)->void"])
         fun dInline(c: MacroContext, x: InlineFn<*>): Block = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(identifier = "callbackMode", params = [MacroParam(name = "x", type = "callbackInt")])
+        @MNIMacro(identifier = "callbackMode", normalParams = ["callbackInt"])
         fun eCallbackValue(c: MacroContext, x: Value<Any>): Block = registrationMustNotExecute()
     }
 }
@@ -381,10 +380,10 @@ class DuplicateMacroEntries {
 class DistinctMacroTypes {
     companion object {
         @JvmStatic
-        @MNIMacro(identifier = "choose", params = [MacroParam(name = "x", type = "int")])
+        @MNIMacro(identifier = "choose", normalParams = ["int"])
         fun first(c: MacroContext, x: Value<IntT>): Block = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(identifier = "choose", params = [MacroParam(name = "x", type = "otherInt")])
+        @MNIMacro(identifier = "choose", normalParams = ["otherInt"])
         fun second(c: MacroContext, x: Value<IntT>): Block = registrationMustNotExecute()
     }
 }
@@ -392,7 +391,7 @@ class DistinctMacroTypes {
 class InlineMacroEntries {
     companion object {
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "body", type = "(int, ref Map<int,bool>, const int)->int", mode = ParamMode.INLINE)])
+        @MNIMacro(normalParams = ["(int, ref Map<int,bool>, const int)->int"])
         fun callback(c: MacroContext, body: InlineFn<*>): Block = registrationMustNotExecute()
     }
 }
@@ -401,17 +400,13 @@ class NestedMacroEntries {
     companion object {
         @JvmStatic
         @MNIMacro(
-            params = [
-                MacroParam(
-                    name = "body",
-                    type = "(inline (ref int)->int, const Map<int,bool>)->void",
-                    mode = ParamMode.INLINE
-                )
+            normalParams = [
+                "(inline (ref int)->int, const Map<int,bool>)->void"
             ]
         )
         fun nested(context: MacroContext, body: InlineFn<*>): Block = registrationMustNotExecute()
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "body", type = "(Box<\"x)>[,]\">)->void", mode = ParamMode.INLINE)])
+        @MNIMacro(normalParams = ["(Box<\"x)>[,]\">)->void"])
         fun literalType(context: MacroContext, body: InlineFn<*>): Block = registrationMustNotExecute()
     }
 }
@@ -424,7 +419,7 @@ object ObjectMacroEntries {
 class DefaultMacroEntries {
     companion object {
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "x", type = "int")])
+        @MNIMacro(normalParams = ["int"])
         fun withDefault(context: MacroContext, x: Value<IntT>? = null): Block = registrationMustNotExecute()
     }
 }

@@ -3,6 +3,7 @@ package top.mcfpp.library.format
 import top.mcfpp.library.model.*
 import top.mcfpp.library.syntax.*
 import java.util.Collections
+import java.security.MessageDigest
 
 /** Explicit v1 T/C and structural ABI-key codecs. The shared S table is supplied by the caller. */
 object TypeTableCodec {
@@ -273,13 +274,41 @@ object TypeTableCodec {
 
     /** Checks bounds and closed-value cycles; declaration edges are leaves, enabling recursive shells. */
     fun validate(tables: LibraryTables) {
-        val keys = StructuralKeys(tables, object : CanonicalIdentityBindings {
-                // Validation needs bounds/cycles, not ordering identities; these markers are never persisted.
-                override fun localDeclaration(reference: DeclarationId) = byteArrayOf()
-                override fun dependency(index: Long) = byteArrayOf()
-                override fun node(reference: NodeRef) = byteArrayOf()
-                override fun environment(reference: EnvironmentId) = byteArrayOf()
-            })
+        val typeState = ByteArray(tables.types.size)
+        val constantState = ByteArray(tables.constants.size)
+        lateinit var type: (TypeRef) -> Unit
+        lateinit var constant: (ConstantRef) -> Unit
+        fun visit(reference: Long, states: ByteArray, kind: String, body: () -> Unit) {
+            require(reference in 1..states.size.toLong()) { "$kind reference is out of bounds: $reference" }
+            val index = reference.toInt() - 1
+            if (states[index] == 2.toByte()) return
+            require(states[index] == 0.toByte()) { "Cycle in structural T/C graph at $kind$reference" }
+            states[index] = 1
+            body()
+            states[index] = 2
+        }
+        type = { ref -> visit(ref.value, typeState, "T") { when (val value = tables.type(ref)) {
+            is LibraryType.Applied -> { type(value.constructor); value.arguments.forEach(type) }
+            is LibraryType.Specialized -> { type(value.constructor); value.arguments.forEach(constant) }
+            is LibraryType.Union -> value.alternatives.forEach(type)
+            is LibraryType.Intersection -> value.components.forEach(type)
+            is LibraryType.Function -> { value.parameters.forEach(type); type(value.result) }
+            is LibraryType.NbtRef -> type(value.value)
+            else -> Unit
+        } } }
+        constant = { ref -> visit(ref.value, constantState, "C") { when (val value = tables.constant(ref)) {
+            is ConstantValue.TypeValue -> type(value.value)
+            is ConstantValue.Sequence -> value.elements.forEach(constant)
+            is ConstantValue.Record -> {
+                require(value.fields.zipWithNext().all { (a, b) -> compareUtf8(a.name, b.name) < 0 }) {
+                    "Constant record fields must be sorted and unique"
+                }
+                value.fields.forEach { constant(it.value) }
+            }
+            is ConstantValue.Typed -> { type(value.type); constant(value.value) }
+            is ConstantValue.FunctionValue -> { type(value.type); value.captures.forEach { constant(it.value) } }
+            else -> Unit
+        } } }
         fun check(section: Int, index: Int, operation: () -> Unit) {
             try {
                 operation()
@@ -288,36 +317,29 @@ object TypeTableCodec {
                     failure.message ?: "Invalid T/C graph", 0, section, index + 1L, failure)
             }
         }
-        tables.types.indices.forEach { index -> check(LibrarySectionId.TYPES, index) { keys.type(TypeRef(index + 1L)) } }
-        tables.constants.indices.forEach { index -> check(LibrarySectionId.CONSTANTS, index) {
-            keys.constant(ConstantRef(index + 1L))
-            (tables.constants[index] as? ConstantValue.Record)?.let { record ->
-                require(record.fields.zipWithNext().all { (a, b) -> compareUtf8(a.name, b.name) < 0 }) {
-                    "Constant record fields must be sorted and unique"
-                }
-            }
-        } }
+        tables.types.indices.forEach { index -> check(LibrarySectionId.TYPES, index) { type(TypeRef(index + 1L)) } }
+        tables.constants.indices.forEach { index -> check(LibrarySectionId.CONSTANTS, index) { constant(ConstantRef(index + 1L)) } }
     }
 
     fun canonicalize(tables: LibraryTables, identities: CanonicalIdentityBindings): CanonicalLibraryTables {
         val keys = StructuralKeys(tables, identities).also { it.all() }
         val typeOrder = tables.types.indices.map { TypeRef(it + 1L) }
-            .distinctBy { keys.type(it).toList() }.sortedWith { a, b -> compareBytes(keys.type(a), keys.type(b)) }
+            .distinctBy { keys.type(it).id }.sortedWith { a, b -> keys.compare(keys.type(a), keys.type(b)) }
         val constantOrder = tables.constants.indices.map { ConstantRef(it + 1L) }
-            .distinctBy { keys.constant(it).toList() }.sortedWith { a, b -> compareBytes(keys.constant(a), keys.constant(b)) }
-        val typeByKey = typeOrder.mapIndexed { index, ref -> keys.type(ref).toList() to TypeRef(index + 1L) }.toMap()
-        val constantByKey = constantOrder.mapIndexed { index, ref -> keys.constant(ref).toList() to ConstantRef(index + 1L) }.toMap()
-        val types = tables.types.indices.associate { TypeRef(it + 1L).let { old -> old to typeByKey.getValue(keys.type(old).toList()) } }
+            .distinctBy { keys.constant(it).id }.sortedWith { a, b -> keys.compare(keys.constant(a), keys.constant(b)) }
+        val typeByKey = typeOrder.mapIndexed { index, ref -> keys.type(ref).id to TypeRef(index + 1L) }.toMap()
+        val constantByKey = constantOrder.mapIndexed { index, ref -> keys.constant(ref).id to ConstantRef(index + 1L) }.toMap()
+        val types = tables.types.indices.associate { TypeRef(it + 1L).let { old -> old to typeByKey.getValue(keys.type(old).id) } }
         val constants = tables.constants.indices.associate {
-            ConstantRef(it + 1L).let { old -> old to constantByKey.getValue(keys.constant(old).toList()) }
+            ConstantRef(it + 1L).let { old -> old to constantByKey.getValue(keys.constant(old).id) }
         }
         fun t(ref: TypeRef) = types.getValue(ref)
         fun c(ref: ConstantRef) = constants.getValue(ref)
         val result = LibraryTables(typeOrder.map { ref -> when (val value = tables.type(ref)) {
             is LibraryType.Applied -> value.copy(constructor = t(value.constructor), arguments = value.arguments.map(::t))
             is LibraryType.Specialized -> value.copy(constructor = t(value.constructor), arguments = value.arguments.map(::c))
-            is LibraryType.Union -> value.copy(alternatives = value.alternatives.distinctBy { keys.type(it).toList() }
-                .sortedWith { a, b -> compareBytes(keys.type(a), keys.type(b)) }.map(::t))
+            is LibraryType.Union -> value.copy(alternatives = value.alternatives.distinctBy { keys.type(it).id }
+                .sortedWith { a, b -> keys.compare(keys.type(a), keys.type(b)) }.map(::t))
             is LibraryType.Intersection -> value.copy(components = value.components.map(::t))
             is LibraryType.Function -> value.copy(parameters = value.parameters.map(::t), result = t(value.result))
             is LibraryType.NbtRef -> value.copy(value = t(value.value))
@@ -336,8 +358,30 @@ object TypeTableCodec {
     }
 
     private class StructuralKeys(val tables: LibraryTables, val identities: CanonicalIdentityBindings) {
-        private val types = HashMap<TypeRef, ByteArray>()
-        private val constants = HashMap<ConstantRef, ByteArray>()
+        /** IDs are local equality tokens, never serialized. Ordering uses content, not visit order. */
+        class Key(val id: Int, val payload: ByteArray, val children: List<Key>, val digest: ByteArray)
+        private class Shape(val payload: ByteArray, val children: List<Int>) {
+            override fun hashCode() = 31 * payload.contentHashCode() + children.hashCode()
+            override fun equals(other: Any?) = other is Shape && payload.contentEquals(other.payload) && children == other.children
+        }
+        private val interned = HashMap<Shape, Key>()
+        private val digest = MessageDigest.getInstance("SHA-256")
+        private fun intern(payload: ByteArray, children: List<Key>): Key {
+            val shape = Shape(payload, children.map { it.id })
+            return interned.getOrPut(shape) { Key(interned.size, payload, children, digest.digest(payload)) }
+        }
+        fun compare(left: Key, right: Key): Int {
+            if (left === right) return 0
+            compareBytes(left.digest, right.digest).takeIf { it != 0 }?.let { return it }
+            // Digest collisions never establish equality or make ordering depend on file-local IDs.
+            compareBytes(left.payload, right.payload).takeIf { it != 0 }?.let { return it }
+            for (index in 0 until minOf(left.children.size, right.children.size)) {
+                compare(left.children[index], right.children[index]).takeIf { it != 0 }?.let { return it }
+            }
+            return left.children.size.compareTo(right.children.size)
+        }
+        private val types = HashMap<TypeRef, Key>()
+        private val constants = HashMap<ConstantRef, Key>()
         private val activeTypes = HashSet<TypeRef>()
         private val activeConstants = HashSet<ConstantRef>()
 
@@ -356,60 +400,65 @@ object TypeTableCodec {
             }
         }
 
-        fun type(ref: TypeRef): ByteArray {
+        fun type(ref: TypeRef): Key {
             types[ref]?.let { return it }
             require(activeTypes.add(ref)) { "Cycle in structural T/C graph at T${ref.value}" }
-            val result = LibraryBinaryWriter().apply { when (val value = tables.type(ref)) {
+            val children = arrayListOf<Key>()
+            fun LibraryBinaryWriter.child(key: Key) { children.add(key); bytes(key.digest) }
+            val payload = LibraryBinaryWriter().apply { when (val value = tables.type(ref)) {
                 is LibraryType.Builtin -> tagged(1) { string(value.key) }
                 is LibraryType.Declaration -> tagged(2) { declaration(value.target) }
                 is LibraryType.Parameter -> tagged(3) { declaration(value.owner); u8(value.role.wireValue); u32(value.index) }
-                is LibraryType.Applied -> tagged(4) { bytes(type(value.constructor)); list(value.arguments) { bytes(type(it)) } }
-                is LibraryType.Specialized -> tagged(5) { bytes(type(value.constructor)); list(value.arguments) { bytes(constant(it)) } }
+                is LibraryType.Applied -> tagged(4) { child(type(value.constructor)); list(value.arguments) { child(type(it)) } }
+                is LibraryType.Specialized -> tagged(5) { child(type(value.constructor)); list(value.arguments) { child(constant(it)) } }
                 is LibraryType.Union -> tagged(6) {
-                    val alternatives = value.alternatives.map { type(it).toList() }.distinct()
-                        .sortedWith { a, b -> compareBytes(a.toByteArray(), b.toByteArray()) }
-                    list(alternatives) { bytes(it.toByteArray()) }
+                    val alternatives = value.alternatives.map(::type).distinctBy { it.id }.sortedWith(::compare)
+                    list(alternatives) { child(it) }
                 }
                 is LibraryType.Intersection -> tagged(7) {
-                    list(value.components) { bytes(type(it)) }; optional(value.declaration) { bytes(identities.localDeclaration(it)) }
+                    list(value.components) { child(type(it)) }; optional(value.declaration) { bytes(identities.localDeclaration(it)) }
                 }
                 is LibraryType.Function -> tagged(8) {
-                    u8(value.execution.wireValue); list(value.parameters) { bytes(type(it)) }; bytes(type(value.result))
+                    u8(value.execution.wireValue); list(value.parameters) { child(type(it)) }; child(type(value.result))
                 }
-                is LibraryType.NbtRef -> tagged(9) { bytes(type(value.value)) }
+                is LibraryType.NbtRef -> tagged(9) { child(type(value.value)) }
                 is LibraryType.Dependent -> tagged(10) {
                     bytes(identities.node(value.syntax)); bytes(identities.environment(value.environment))
                     bytes(identities.localDeclaration(value.owner))
                 }
                 is LibraryType.UnresolvedNominal -> tagged(11) { string(value.kind); string(value.namespace); string(value.name) }
             } }.toByteArray()
+            val result = intern(payload, children)
             activeTypes.remove(ref); types[ref] = result
             return result
         }
 
-        fun constant(ref: ConstantRef): ByteArray {
+        fun constant(ref: ConstantRef): Key {
             constants[ref]?.let { return it }
             require(activeConstants.add(ref)) { "Cycle in structural T/C graph at C${ref.value}" }
-            val result = LibraryBinaryWriter().apply { when (val value = tables.constant(ref)) {
+            val children = arrayListOf<Key>()
+            fun LibraryBinaryWriter.child(key: Key) { children.add(key); bytes(key.digest) }
+            val payload = LibraryBinaryWriter().apply { when (val value = tables.constant(ref)) {
                 ConstantValue.Null -> tagged(1) { }
                 is ConstantValue.Integral -> tagged(2) { i64(value.value) }
                 is ConstantValue.FloatBits -> tagged(3) { u32(value.bits.toLong() and 0xffff_ffffL) }
                 is ConstantValue.DoubleBits -> tagged(4) { u64(value.bits.toULong()) }
                 is ConstantValue.Bool -> tagged(5) { bool(value.value) }
                 is ConstantValue.Text -> tagged(6) { string(value.value) }
-                is ConstantValue.TypeValue -> tagged(7) { bytes(type(value.value)) }
+                is ConstantValue.TypeValue -> tagged(7) { child(type(value.value)) }
                 is ConstantValue.Nbt -> tagged(8) { string(value.snbt) }
-                is ConstantValue.Sequence -> tagged(9) { list(value.elements) { bytes(constant(it)) } }
+                is ConstantValue.Sequence -> tagged(9) { list(value.elements) { child(constant(it)) } }
                 is ConstantValue.Record -> tagged(10) {
                     require(value.fields.map { it.name }.distinct().size == value.fields.size) { "Duplicate constant field" }
-                    list(value.fields.sortedWith { a, b -> compareUtf8(a.name, b.name) }) { string(it.name); bytes(constant(it.value)) }
+                    list(value.fields.sortedWith { a, b -> compareUtf8(a.name, b.name) }) { string(it.name); child(constant(it.value)) }
                 }
-                is ConstantValue.Typed -> tagged(11) { bytes(type(value.type)); bytes(constant(value.value)) }
+                is ConstantValue.Typed -> tagged(11) { child(type(value.type)); child(constant(value.value)) }
                 is ConstantValue.FunctionValue -> tagged(12) {
-                    declaration(value.target); list(value.captures) { declaration(it.declaration); bytes(constant(it.value)) }
-                    bytes(type(value.type))
+                    declaration(value.target); list(value.captures) { declaration(it.declaration); child(constant(it.value)) }
+                    child(type(value.type))
                 }
             } }.toByteArray()
+            val result = intern(payload, children)
             activeConstants.remove(ref); constants[ref] = result
             return result
         }

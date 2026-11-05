@@ -1,7 +1,12 @@
 @MCFPPEntity
+/// 恼鬼的实体数据。继承的字段由各父数据类型提供。
 data VexData: EntityData, CreatureData, AIMobData {
+    /// 活动中心的 X 坐标。
     @Name("BoundX") var boundX: int
+    /// 活动中心的 Y 坐标。
     @Name("BoundY") var boundY: int
+    /// 活动中心的 Z 坐标。
     @Name("BoundZ") var boundZ: int
+    /// 剩余存活时间。
     @Name("LifeTicks") var lifeTicks: int
 }

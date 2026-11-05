@@ -1,5 +1,7 @@
 @From("top.mcfpp.mni.resource.EnchantData")
+/// 附魔资源的标识符。通过 id 字段保存资源名称。
 data Enchant: ResourceID
 
 @From("top.mcfpp.mni.resource.EnchantObjectData")
+/// 附魔资源类型的共享成员入口。
 object data Enchant: ResourceID

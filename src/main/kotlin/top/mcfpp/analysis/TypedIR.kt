@@ -94,6 +94,7 @@ object FlowAnalysis {
         val pending = ArrayDeque<Int>().apply { add(ir.entry) }
         val symbols = ir.declarations + declarations + ir.blocks.flatMap { it.instructions }.filterIsInstance<Instruction.Declare>()
             .associate { it.symbol.id to it.symbol }
+        val declarationsByPlace = symbols.values.associateBy { Place(it.id) }
         while (pending.isNotEmpty()) {
             val id = pending.removeFirst()
             val block = blocks.getValue(id)
@@ -140,7 +141,7 @@ object FlowAnalysis {
                 is Instruction.Read -> {
                     if (instruction.location.keys.isNotEmpty()) beforeWrites[id to position] = state.fork()
                     val resolved = MapFacts.resolve(state, instruction.location)
-                    val existing = state.readAccess(resolved, symbols.values.associateBy { Place(it.id) }, boundTypes)
+                    val existing = state.readAccess(resolved, declarationsByPlace, boundTypes)
                     val read = existing ?: ValueFacts(
                         if (instruction.type in setOf(top.mcfpp.type.MCFPPBaseType.Any.typeId, top.mcfpp.type.MCFPPBaseType.Object.typeId)) TypeKnowledge.Unknown else TypeKnowledge.Exact(instruction.type),
                         ValueKnowledge.Unknown, state.read(Place(instruction.place.root))?.state ?: ValueState.UNINITIALIZED)

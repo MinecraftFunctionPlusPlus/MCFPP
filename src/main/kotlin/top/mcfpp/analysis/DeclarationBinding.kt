@@ -960,7 +960,7 @@ internal class DeclarationBinding private constructor(
         if (top.mcfpp.antlr.LegacyReferenceSyntax.argument(context.arguments()) != null)
             throw Failure(top.mcfpp.antlr.LegacyReferenceSyntax.MESSAGE)
         if (preparation != null) return preparedCall(context, receiver)
-        if (receiver == null) top.mcfpp.mni.expand.MacroCallPipeline.declaredResultType(context, function)?.let {
+        if (receiver == null) top.mcfpp.mni.expand.MacroCallPipeline.declaredResultType(context, function, values, contextDeclarations)?.let {
             return Bound(it)
         }
         val (namespace, name) = context.namespaceID().text.splitNamespaceID()

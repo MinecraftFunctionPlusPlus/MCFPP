@@ -1,11 +1,16 @@
 @MCFPPEntity
+/// 哞菇的实体数据。继承的字段由各父数据类型提供。
 data MooshroomData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name("Stew_Effects")
+    /// 可疑的炖菜携带的状态效果。
     var stew_effects: list<data {
+        /// 持续时间。
         var duration: int
+        /// 资源标识符。
         var id: string
     }>
 
     @Name("Type")
+    /// 种类标记。
     var type: string
 }

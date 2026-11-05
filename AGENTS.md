@@ -16,3 +16,14 @@ For the saved workflow only, read `.codex-workflow-graph/BUDGET_POLICY.json` bef
 The user requested higher project concurrency on 2026-10-30. Use a workflow concurrency limit of 8 for this project; workflow 01b97d67-a4fe-4c04-a49c-c65ea9f204b0 is configured to 8. Project Codex configuration sets agents.max_threads = 8. Actual host-provided capacity, dependencies and writer conflicts still govern dispatch. This changes concurrency only; preserve all validation budgets, consumption, source artifacts and authorship.
 <!-- codex-project-concurrency:end -->
 
+## MNI authoring
+
+Design MNI APIs, macro DSLs, examples and project templates for Kotlin first. Java interoperability
+means Java can call the emitted JVM methods; Java authoring convenience is not a design requirement.
+Implement built-in MNI providers and annotations in Kotlin. Preserve the JVM names and static entry
+points used by MCFPP registration when migrating an existing provider.
+
+Expose every MNI macro through an explicit MCFPP `func ... = Provider.method` declaration, using the
+same syntax as native MNI functions. `injectedBy` does not expose macros. Keep annotation signatures
+as type lists (`normalParams`, `returnType`); infer parameter modes from JVM wrappers.
+

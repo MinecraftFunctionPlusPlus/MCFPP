@@ -1,5 +1,7 @@
 import mcfpp.minecraft.std:CommandResult
 
 // Targets may be ordinary entities or active context executors; bound positions retain dimension.
+/// 将目标实体传送到给定坐标。返回命令的数值结果和成功状态。
 func tp(target: entity, position: pos3): mcfpp.minecraft.std:CommandResult = top.mcfpp.mni.minecraft.EntityTeleportData.teleportEntitiesToPosition
+/// 将目标实体传送到上下文位置，使用该位置保存的维度。返回命令的数值结果和成功状态。
 func tp(target: entity, position: ContextPosition): mcfpp.minecraft.std:CommandResult = top.mcfpp.mni.minecraft.EntityTeleportData.teleportEntitiesToContextPosition

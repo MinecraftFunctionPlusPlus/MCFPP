@@ -157,6 +157,25 @@ object Project {
     private var templateSignatureCollectionDepth = 0
     private var completingTemplateContracts = false
     private var inheritanceHeaderSnapshot = emptySet<TypeId>()
+    private var inheritanceHeaderRevision = 0L
+    private var checkedInheritanceHeaderRevision = -1L
+    private var inheritanceHeaderBatchDepth = 0
+
+    /** Derived header caches are invalidated, rather than rolled back to a reused revision. */
+    internal fun invalidateTemplateInheritanceHeaders() {
+        inheritanceHeaderRevision++
+        checkedInheritanceHeaderRevision = -1L
+    }
+
+    /** Only compiler-owned declaration batches reuse a checked graph. Re-entering a public
+     * barrier also observes callers that edited the legacy public maps/lists directly. */
+    private inline fun <T> withTemplateHeaderBatch(action: () -> T): T {
+        if (inheritanceHeaderBatchDepth++ == 0) invalidateTemplateInheritanceHeaders()
+        try { return action() } finally {
+            inheritanceHeaderBatchDepth--
+            if (inheritanceHeaderBatchDepth == 0) checkedInheritanceHeaderRevision = -1L
+        }
+    }
     private val invalidInheritanceHeaders = hashSetOf<TypeId>()
     private val boundTemplateParents = hashSetOf<TypeId>()
     internal var templateDeclarationsReady = false
@@ -220,6 +239,7 @@ object Project {
             objectInitializerDependencies.clear(); activeObjectInitializers.clear()
             invalidInheritanceHeaders.clear(); boundTemplateParents.clear()
             inheritanceHeaderSnapshot = emptySet()
+            invalidateTemplateInheritanceHeaders()
             templateSignatureCollectionDepth = 0; completingTemplateContracts = false
             templateDeclarationsReady = false
             projectTickSlot = null; projectLoadSlot = null; projectInitSlot = null
@@ -290,6 +310,7 @@ object Project {
         templateSignatureCollectionDepth = 0
         completingTemplateContracts = false
         inheritanceHeaderSnapshot = emptySet()
+        invalidateTemplateInheritanceHeaders()
         invalidInheritanceHeaders.clear()
         boundTemplateParents.clear()
         templateDeclarationsReady = false
@@ -333,7 +354,13 @@ object Project {
     /**
      * 读取库文件，并将库写入缓存
      */
-    fun readProject(installedLibraries: List<LibBinReader.Payload> = emptyList()) {
+    fun readProject(installedLibraries: List<LibBinReader.Payload> = emptyList()) =
+        readProjectInputs(installedLibraries, readSources = true)
+
+    /** A prepared kernel loads the library without manufacturing a placeholder source file. */
+    internal fun prepareLibraryKernel() = readProjectInputs(emptyList(), readSources = false)
+
+    private fun readProjectInputs(installedLibraries: List<LibBinReader.Payload>, readSources: Boolean) {
         check(libraryImportSession == null) {
             "Library inputs are already open; call Project.init() or Project.closeCompilation() before reading another project"
         }
@@ -376,6 +403,7 @@ object Project {
                 val session = LibraryImportSession(LibraryCompatibility(minecraftVersion = config.version))
                 libraryImportSession = session
                 session.configureNative(managed, codecs, librarySourceProviders)
+                if (!readSources) session.enablePreparedBuiltin()
             } catch (failure: Throwable) {
                 codecs.close()
                 throw failure
@@ -397,7 +425,7 @@ object Project {
             val session = requireNotNull(libraryImportSession)
             sources.forEach { source ->
                 try {
-                    session.stage(source.binary, source.identity, source.resources)
+                    session.stage(source)
                     val metadata = JSONObject.parse(source.moduleJson.toString(Charsets.UTF_8))
                     require(metadata is JSONObject) { "module.json must be a JSON object" }
                     pendingModules += Module.fromJson(metadata)
@@ -418,15 +446,32 @@ object Project {
         //函数参数解析
         GlobalScope.importedLibNamespaces.clear()
         //读取所有文件
-        if (config.sourcePath != null) {
+        if (readSources && config.sourcePath != null) {
             MCFPPFile.findFiles(config.sourcePath!!.absolutePathString()).forEach {
                 files.add(MCFPPFile(it.toFile()))
             }
         }
-        if(files.isEmpty() && config.sourcePath != null){
+        if(readSources && files.isEmpty() && config.sourcePath != null){
             LogProcessor.error("Cannot find any mcfpp file in path: ${config.sourcePath}")
         }
         stageProcessor[compileStage.ordinal].forEach { it() }
+    }
+
+    /** Install only the request's inputs after the kernel has restored its library baseline. */
+    internal fun beginKernelCompilation(configuration: ProjectConfig, source: String) {
+        check(libraryImportSession != null) { "The prepared library is unavailable" }
+        invalidateExpansionSessions()
+        TemplateProcessorRunner.reset()
+        top.mcfpp.io.PackEntrypoints.reset()
+        config = configuration
+        macroExpansionBudgetSlot = configuration.newExpansionBudget()
+        currNamespace = configuration.rootNamespace
+        files.clear()
+        val directory = requireNotNull(configuration.sourcePath)
+        Files.createDirectories(directory)
+        val path = directory.resolve("main.mcfpp")
+        Files.writeString(path, source)
+        files.add(MCFPPFile(path.toFile()))
     }
 
     /** Bind declaration imports after the last include, before any body or call graph is analyzed. */
@@ -440,6 +485,7 @@ object Project {
         }
         fun restoreCompound(compound: top.mcfpp.model.compound.CompoundData) {
             if (!compounds.add(compound)) return
+            if (compound is DataTemplate && compound.hasDeferredLibraryMembers) return
             if (compound is DataTemplate) {
                 compound.restoreDeclarationEnvironment()
                 compound.constructors.forEach(::restoreFunction)
@@ -457,11 +503,12 @@ object Project {
         }
     }
 
-    internal fun resolveImportedTemplateParents() {
+    internal fun resolveImportedTemplateParents(): Unit = withTemplateHeaderBatch {
         for (namespace in GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values) {
             val scope = namespace.scope
             for (template in scope.template.values + scope.genericTemplate.values +
                 scope.objects.filterIsInstance<DataTemplate>()) {
+                if (template.hasDeferredLibraryMembers) continue
                 if (template.hasRestoredParentTypes || template !is GenericDataTemplate && template.parentID.isNotEmpty()) {
                     resolveTemplateInheritance(template)
                 }
@@ -553,16 +600,18 @@ object Project {
         stageProcessor[compileStage.ordinal].forEach { it() }
     }
 
-    fun completeTemplateDeclarations() {
-        if (compileStage == CompileStage.READ_LIB) return
+    fun completeTemplateDeclarations(): Unit = withTemplateHeaderBatch {
+        if (compileStage == CompileStage.READ_LIB) return@withTemplateHeaderBatch
         val namespaces = GlobalScope.localNamespaces.values + GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values
         val declarations = namespaces.flatMap { namespace ->
             val scope = namespace.scope
             scope.template.values + scope.genericTemplate.values +
                 scope.objects.filterIsInstance<DataTemplate>()
-        }
-        val functions = namespaces.flatMap { it.scope.functions.values.flatten() } +
-            declarations.flatMap { it.constructors + it.scope.functions.values.flatten() }
+        }.filterNot { it.hasDeferredLibraryMembers }
+        val preparedSignatures = libraryImportSession?.preparedBuiltinSignatures().orEmpty()
+        val functions = (namespaces.flatMap { it.scope.functions.values.flatten() } +
+            declarations.flatMap { it.constructors + it.scope.functions.values.flatten() })
+            .filterNot { it in preparedSignatures }
         // Revoke old evidence at the start of this explicit declaration pass, including
         // instances already materialized while loading a library or resolving a signature.
         (declarations.filterNot { it is GenericDataTemplate } +
@@ -588,7 +637,7 @@ object Project {
                 .flatMap { it.scope.template.values + it.scope.objects.filterIsInstance<DataTemplate>() }
                 .filter { it !is GenericDataTemplate && (it.parentID.isNotEmpty() || it.hasRestoredParentTypes) } +
             declarations.filterIsInstance<GenericDataTemplate>().flatMap { it.materializedInstances() }
-        (templates + anonymousTemplates).forEach { template ->
+        (templates + anonymousTemplates).filterNot { it.hasDeferredLibraryMembers }.forEach { template ->
             pendingTemplateContracts.add(template)
         }
         completePendingTemplateContracts(functions)
@@ -661,8 +710,8 @@ object Project {
     }
 
     /** One barrier for source declarations and concrete bindings created after the source pass. */
-    private fun completePendingTemplateContracts(extraFunctions: List<Function> = emptyList()) {
-        if (compileStage == CompileStage.READ_LIB || completingTemplateContracts || templateSignatureCollectionDepth != 0) return
+    private fun completePendingTemplateContracts(extraFunctions: List<Function> = emptyList()): Unit = withTemplateHeaderBatch {
+        if (compileStage == CompileStage.READ_LIB || completingTemplateContracts || templateSignatureCollectionDepth != 0) return@withTemplateHeaderBatch
         completingTemplateContracts = true
         val attempts = java.util.IdentityHashMap<DataTemplate, Long>()
         var succeeded = false
@@ -672,6 +721,7 @@ object Project {
             val functions = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Function, Boolean>())
             val resolved = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Function, Boolean>())
             val refreshed = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Function, Boolean>())
+            val preparedSignatures = libraryImportSession?.preparedBuiltinSignatures().orEmpty()
             functions.addAll(extraFunctions)
             while (true) {
                 val roots = pendingTemplateContracts.filter { it.inheritanceIdentity !in completedIds }
@@ -680,7 +730,10 @@ object Project {
                 val additions = completeTemplateInheritance(roots, completed, attempts)
                 completed.addAll(additions)
                 completedIds.addAll(additions.map { it.inheritanceIdentity })
-                additions.forEach { functions.addAll(it.constructors + it.scope.functions.values.flatten()) }
+                additions.forEach { template ->
+                    functions.addAll((template.constructors + template.scope.functions.values.flatten())
+                        .filterNot { it in preparedSignatures })
+                }
                 functions.filter { resolved.add(it) }.forEach { function ->
                     templateCompletionStage(function.owner as? DataTemplate) {
                         function.normalParams.forEach { it.type.tryResolve() }
@@ -740,6 +793,7 @@ object Project {
     }
 
     fun registerAnonymousTemplate(template: DataTemplate) {
+        invalidateTemplateInheritanceHeaders()
         requestTemplateCompletion(template)
         anonymousTemplates.add(template)
         resolveTemplateInheritance(template)
@@ -758,10 +812,14 @@ object Project {
 
     /** Check declaration heads before resolving arguments, which may instantiate another generic head. */
     internal fun prepareTemplateInheritanceHeaders() {
+        if (inheritanceHeaderBatchDepth > 0 && checkedInheritanceHeaderRevision == inheritanceHeaderRevision) return
+        val revision = inheritanceHeaderRevision
         val declarations = templateDeclarations() + anonymousTemplates
         val snapshot = declarations.mapTo(hashSetOf()) { it.inheritanceIdentity }
-        if (snapshot == inheritanceHeaderSnapshot) return
         inheritanceHeaderSnapshot = snapshot
+        // Parent spellings may change without changing the set of declaration identities.
+        val previouslyInvalid = invalidInheritanceHeaders.toSet()
+        invalidInheritanceHeaders.clear()
         val edges = declarations.associate { declaration ->
             val file = declaration.restoreDeclarationEnvironment()
             val resolve = {
@@ -794,7 +852,7 @@ object Project {
                     1 -> {
                         val start = stack.indexOfFirst { it.first.inheritanceIdentity == parent.inheritanceIdentity }
                         val cycle = stack.drop(start).map { it.first } + parent
-                        if (cycle.any { it.inheritanceIdentity !in invalidInheritanceHeaders }) {
+                        if (cycle.any { it.inheritanceIdentity !in previouslyInvalid && it.inheritanceIdentity !in invalidInheritanceHeaders }) {
                             LogProcessor.error("Cyclic inheritance: " + cycle.joinToString(" -> ") { it.namespaceID })
                         }
                         invalidInheritanceHeaders.addAll(cycle.map { it.inheritanceIdentity })
@@ -807,6 +865,7 @@ object Project {
                 }
             }
         }
+        checkedInheritanceHeaderRevision = revision
     }
 
     internal fun hasValidTemplateInheritance(template: DataTemplate): Boolean {
@@ -965,6 +1024,7 @@ object Project {
             templateSignatureCollectionDepth = depth
             completingTemplateContracts = completing
             inheritanceHeaderSnapshot = headers
+            invalidateTemplateInheritanceHeaders()
             templateDeclarationsReady = ready
             projectTickSlot = tick; projectLoadSlot = load; projectInitSlot = init
             macroExpansionBudgetSlot = expansionBudget

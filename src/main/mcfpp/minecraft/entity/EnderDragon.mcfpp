@@ -1,8 +1,11 @@
 @MCFPPEntity
+/// 末影龙的实体数据。继承的字段由各父数据类型提供。
 data EnderDragonData: EntityData, CreatureData {
     @Name("DragonDeathTime")
+    /// 末影龙死亡过程的计时值。
     var dragonDeathTime: int
 
     @Name("DragonPhase")
+    /// 末影龙当前行为阶段的数值标记。
     var dragonPhase: int
 }

@@ -21,9 +21,8 @@ raycast(samples: CONST int, initial: int, step: (int,int)->int, keepGoing: (int)
 ```text
 examples/mni/raycast/
 ├── build --project mcfpp.toml                         # 从 build/raycast-macro.jar 加载 provider
-├── project/src/.mcfpp                 # injectedBy 指令（默认启用 Kotlin provider）
+├── project/src/main.mcfpp              # 显式宏声明与调用
 ├── project/src/main.mcfpp             # 同一宏的停止/继续两种源码回调
-├── provider/java/.../JavaRaycastMacro.java
 └── provider/kotlin/.../KotlinRaycastMacro.kt
 ```
 
@@ -41,43 +40,16 @@ examples/mni/raycast/
 
 ## 构建 provider
 
-在仓库根目录先构建编译器（JDK 21）：
+在仓库根目录先构建编译器（JDK 25）：
 
 ```bash
-./gradlew shadowJar
+./gradlew shadowJar mniExamplesJar
 ```
 
-下面的命令使用 `build/libs/MCFPP-1.0.2-SNAPSHOT.jar`。
+下面的命令使用 `build/libs/MCFPP-0.1.0.jar`。
 
-Java：
-
-```bash
-javac -cp build/libs/MCFPP-1.0.2-SNAPSHOT.jar \
-  -d examples/mni/raycast/build/classes \
-  examples/mni/raycast/provider/java/example/mniraycast/JavaRaycastMacro.java
-
-jar --create --file examples/mni/raycast/build/raycast-macro.jar \
-  -C examples/mni/raycast/build/classes .
-```
-
-Kotlin：
-
-```bash
-kotlinc examples/mni/raycast/provider/kotlin \
-  -cp build/libs/MCFPP-1.0.2-SNAPSHOT.jar \
-  -d examples/mni/raycast/build/classes
-
-jar --create --file examples/mni/raycast/build/raycast-macro.jar \
-  -C examples/mni/raycast/build/classes .
-```
-
-`project/src/.mcfpp` 默认注入 Kotlin provider。使用 Java provider 时，把第一行替换为：
-
-```text
-//> injectedBy example.mniraycast.JavaRaycastMacro
-```
-
-同一个命名空间内不能同时注册两个同名 `raycast` 宏。`injectedBy` 指令必须位于文件开头。
+`mniExamplesJar` 生成 `build/libs/mni-example-providers.jar`，示例配置直接加载它。
+`project/src/main.mcfpp` 显式声明两个 raycast 重载，分别绑定 `KotlinRaycastMacro.raycastFold` 和 `KotlinRaycastMacro.raycast`。
 
 ## 运行
 
@@ -85,7 +57,7 @@ jar --create --file examples/mni/raycast/build/raycast-macro.jar \
 
 ```bash
 cd examples/mni/raycast
-java -jar ../../../build/libs/MCFPP-1.0.2-SNAPSHOT.jar build --project mcfpp.toml
+java -jar ../../../build/libs/MCFPP-0.1.0.jar build --project mcfpp.toml
 ```
 
 产物写入 `examples/mni/raycast/project/build`。

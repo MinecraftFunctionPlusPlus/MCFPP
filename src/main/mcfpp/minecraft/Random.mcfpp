@@ -1,18 +1,22 @@
 import mcfpp.minecraft.std:*
 
 @From("top.mcfpp.mni.minecraft.RandomData")
+/// 以序列标识符选择的随机数序列。
 data Random {
     private var id: string
 
+    /// 使用种子 0 重置序列，并包含世界种子和序列标识符。
     constructor(){
         /random reset ${this.id} 0 true true
     }
 
+    /// 保存序列标识符，并用种子 0 重置该序列。
     constructor(id: string){
         this.id = id
         /random reset ${this.id} 0 true true
     }
 
+    /// 创建指定的随机序列并用给定种子重置。两个布尔参数控制种子是否包含世界种子和序列标识符。
     constructor(id: string, seed: int, includeWorldSeed: bool, includeGameSeed: bool){
         this.id = id
         /random reset ${this.id} ${seed} ${includeWorldSeed} ${includeGameSeed}
@@ -20,4 +24,5 @@ data Random {
 }
 
 @From("top.mcfpp.mni.minecraft.RandomObjectData")
+/// 随机数生成和序列重置操作的共享入口。
 object data Random

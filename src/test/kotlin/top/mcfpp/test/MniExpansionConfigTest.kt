@@ -45,7 +45,7 @@ class MniExpansionConfigTest {
             MniSourceMacroCallTest.Entries.hostCalls = 0
             GlobalScope.localNamespaces[namespace.identifier] = namespace
             namespace.scope.journalFileFields.add(file.field)
-            namespace.injectedBy(MniSourceMacroCallTest.Entries::class.java)
+            namespace.declareMniFixtures(MniSourceMacroCallTest.Entries::class.java)
             val bodySource = "{\n$source\n}"
             val parser = P(CommonTokenStream(mcfppLexer(CharStreams.fromString(bodySource, "macro-config-source.mcfpp"))))
             val body = parser.curlBlock()

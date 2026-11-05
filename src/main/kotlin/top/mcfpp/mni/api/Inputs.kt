@@ -1,43 +1,68 @@
 package top.mcfpp.mni.api
 
+/** A macro argument bound by the compiler at the MCFPP call site. */
 sealed interface MacroInput : Code
+/** A VALUE argument. The compiler evaluates the caller's expression once and supplies its value. */
 sealed interface Value<T> : MacroInput {
+    /** Returns the argument's MCFPP type. */
     fun type(): TypeRef<T>
+    /** Returns an expression for the bound value. Repeated calls reuse that value. */
     fun expr(): Expr<T>
 }
+/** A REF argument that identifies a writable MCFPP location. Assign through [CodeBuilder.assign]. */
 sealed interface Ref<T> : MacroInput {
+    /** Returns the MCFPP type stored at this location. */
     fun type(): TypeRef<T>
+    /** Creates an expression that reads this location when the generated code runs. */
     fun load(): Expr<T>
 }
+/** A CONST argument whose value the compiler knows during macro expansion. */
 sealed interface Const<T> : Value<T> {
+    /** Returns the immutable value available to the provider during expansion. */
     fun value(): ConstantValue
+    /** Returns an MCFPP int constant as a JVM Int. Other constant types raise [CodeModelException]. */
     fun intValue(): Int
+    /** Returns an MCFPP bool constant as a JVM Boolean. Other constant types raise [CodeModelException]. */
     fun boolValue(): Boolean
 }
+/** An INLINE argument containing a source callback to insert with [CodeBuilder.inline]. */
 sealed interface InlineFn<S> : MacroInput {
+    /** Returns the callback's parameter modes, parameter types, and result type. */
     fun signature(): InlineSignature<*>
 }
 
-/** Explicit modes prevent a writable position from accidentally becoming a copied value. */
+/** An argument for [CodeBuilder.call]. The factory selects how the generated call passes the argument. */
 class CallArgument internal constructor(internal val payload: ArgumentPayload) {
+    /** Returns the selected argument mode. */
     fun mode(): ParamMode = payload.mode
+    /** Returns the source location of the supplied expression, reference, constant, or callback. */
     fun source(): SourceSpan = payload.code.source()
 
     companion object {
+        /** Passes the result of [expression] by value. */
         @JvmStatic fun <T> value(expression: Expr<T>): CallArgument = CallArgument(ArgumentPayload.Value(expression))
+        /** Passes [reference] as a writable location. Aliases retain their shared location. */
         @JvmStatic fun <T> ref(reference: Ref<T>): CallArgument = CallArgument(ArgumentPayload.Reference(reference))
+        /** Passes a value known during expansion to a CONST parameter. */
         @JvmStatic fun <T> constant(constant: Const<T>): CallArgument = CallArgument(ArgumentPayload.Constant(constant))
+        /** Passes a source callback to an INLINE parameter. */
         @JvmStatic fun inline(callback: InlineFn<*>): CallArgument = CallArgument(ArgumentPayload.Inline(callback))
     }
 }
 
+/** An argument for an inserted source callback. Use the factory that matches the callback parameter mode. */
 class InlineArgument internal constructor(internal val payload: ArgumentPayload) {
+    /** Returns the selected argument mode. */
     fun mode(): ParamMode = payload.mode
+    /** Returns the source location of the supplied argument. */
     fun source(): SourceSpan = payload.code.source()
 
     companion object {
+        /** Passes the result of [expression] by value. */
         @JvmStatic fun <T> value(expression: Expr<T>): InlineArgument = InlineArgument(ArgumentPayload.Value(expression))
+        /** Passes the writable location identified by [reference]. */
         @JvmStatic fun <T> ref(reference: Ref<T>): InlineArgument = InlineArgument(ArgumentPayload.Reference(reference))
+        /** Supplies a constant for the compiler to use while inserting the callback. */
         @JvmStatic fun <T> constant(constant: Const<T>): InlineArgument = InlineArgument(ArgumentPayload.Constant(constant))
     }
 }

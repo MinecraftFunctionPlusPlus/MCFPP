@@ -1,4 +1,6 @@
 @MCFPPEntity
+/// 僵尸猪灵的实体数据。继承的字段由各父数据类型提供。
 data ZombifiedPiglinData: EntityData, CreatureData, AIMobData {
+    /// 是否为幼年个体。
     var isBaby: bool
 }

@@ -19,6 +19,12 @@ class SessionAnnotationCloner(
     private val phases = IdentityHashMap<Annotation, AnnotationPhase>()
     private var closed = false
 
+    internal fun checkpointForReuse(): () -> Unit {
+        check(!closed)
+        val saved = IdentityHashMap(phases)
+        return { check(!closed); phases.clear(); phases.putAll(saved) }
+    }
+
     fun phase(value: Annotation): AnnotationPhase = phases[value] ?: originalPhase(value)
 
     fun clone(roots: List<Annotation>): TemplateAnnotationClone {

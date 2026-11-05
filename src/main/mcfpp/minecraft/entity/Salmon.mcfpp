@@ -1,9 +1,13 @@
 @MCFPPEntity
+/// 鲑鱼的实体数据。继承的字段由各父数据类型提供。
 data SalmonData: EntityData, CreatureData, AIMobData {
+    /// 是否通过桶放出。
     @Name("FromBucket") var fromBucket: bool
+    /// 种类标记。
     @Name("Type") var type: SalmonType
 }
 
+/// 鲑鱼的体型种类。
 enum SalmonType {
     small, medium, large
 }

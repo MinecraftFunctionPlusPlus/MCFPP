@@ -1,17 +1,23 @@
 @MCFPPEntity
+/// 海豚的实体数据。继承的字段由各父数据类型提供。
 data DolphinData: EntityData, CreatureData, AIMobData, GrowableData {
     @Name("Moistness")
+    /// 湿润程度的计时值。
     var moistness: int
 
     @Name("GotFish")
+    /// 是否已经获得鱼。
     var gotFish: byte
 
     @Name("TreasurePosX")
+    /// 宝藏位置的 X 坐标。
     var treasurePosX: int
 
     @Name("TreasurePosY")
+    /// 宝藏位置的 Y 坐标。
     var treasurePosY: int
 
     @Name("TreasurePosZ")
+    /// 宝藏位置的 Z 坐标。
     var treasurePosZ: int
 }

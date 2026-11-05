@@ -1,6 +1,11 @@
+/// 僵尸类生物共用的转化和行为数据。
 data GeneralZombieData {
+    /// 是否可以破坏门。
     @Name("CanBreakDoors") var canBreakDoors: bool
+    /// 转化为溺尸的计时值。
     @Name("DrownedConversionTime") var drownedConversionTime: int
+    /// 连续浸水时间。
     @Name("InWaterTime") var inWaterTime: int
+    /// 是否为幼年个体。
     @Name("IsBaby") var isBaby: bool
 }

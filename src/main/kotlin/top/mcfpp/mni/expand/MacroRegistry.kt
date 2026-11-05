@@ -161,7 +161,7 @@ internal class MacroRegistry(
 
 /** The single metadata parser, independent of source catalogs, code arenas and provider execution. */
 internal object MacroSignatureParser {
-    fun prepare(method: Method, source: SourceSpan = SourceSpan.unknown()): PreparedMacroSignature? {
+    fun prepare(method: Method, source: SourceSpan = SourceSpan.unknown(), sourceIdentifier: String? = null): PreparedMacroSignature? {
         if (method.isBridge || method.isSynthetic) return null
         val metadata = method.getAnnotation(MNIMacro::class.java) ?: return null
         jvm(Modifier.isPublic(method.modifiers) && Modifier.isStatic(method.modifiers), "entry must be public static")
@@ -169,38 +169,35 @@ internal object MacroSignatureParser {
             generateSequence(method.declaringClass) { it.enclosingClass }.all { Modifier.isPublic(it.modifiers) },
             "entry provider and its enclosing classes must be public"
         )
-        val declared = metadata.params
+        val declared = metadata.normalParams
         jvm(
             method.parameterCount == declared.size + 1,
             "expected MacroContext followed by ${declared.size} parameters, found ${method.parameterCount}"
         )
         jvm(method.parameterTypes.first() == MacroContext::class.java, "first parameter must be exactly MacroContext")
-        declared.forEachIndexed { index, parameter ->
-            val wrapper = when (parameter.mode) {
-                ParamMode.VALUE -> Value::class.java
-                ParamMode.REF -> Ref::class.java
-                ParamMode.CONST -> Const::class.java
-                ParamMode.INLINE -> InlineFn::class.java
-            }
-            jvm(
-                method.parameterTypes[index + 1] == wrapper,
-                "parameter '${parameter.name}' (${parameter.mode}) must use exactly ${wrapper.simpleName}"
-            )
-        }
         jvm(
             method.returnType == Block::class.java || method.returnType == Expr::class.java,
             "entry must return exactly Block or Expr"
         )
-        val identifier = if (metadata.identifier.isEmpty()) method.name else metadata.identifier
+        val modes = declared.indices.map { index ->
+            val wrapper = method.parameterTypes[index + 1]
+            when (wrapper) {
+                Value::class.java -> ParamMode.VALUE
+                Ref::class.java -> ParamMode.REF
+                Const::class.java -> ParamMode.CONST
+                InlineFn::class.java -> ParamMode.INLINE
+                else -> invalid(MacroRegistrationCode.INVALID_JVM,
+                    "parameter ${index + 1} must use exactly Value, Ref, Const or InlineFn, found ${wrapper.simpleName}")
+            }
+        }
+        val identifier = sourceIdentifier ?: metadata.identifier.ifEmpty { method.name }
         requireMetadata(isIdentifier(identifier), "invalid macro identifier '$identifier'")
-        val names = hashSetOf<String>()
-        val parameters = declared.map { parameter ->
-            requireMetadata(isIdentifier(parameter.name), "invalid parameter name '${parameter.name}'")
-            requireMetadata(names.add(parameter.name), "duplicate parameter name '${parameter.name}'")
-            val type = parseType(parameter.type, source)
-            if (parameter.mode == ParamMode.INLINE)
+        val parameters = declared.mapIndexed { index, expression ->
+            val mode = modes[index]
+            val type = parseType(expression, source)
+            if (mode == ParamMode.INLINE)
                 requireMetadata(type is PreparedMacroType.Callback, "INLINE type must be a function signature '(types)->result'")
-            PreparedMacroParameter(parameter.name, parameter.mode, type, source)
+            PreparedMacroParameter("p$index", mode, type, source)
         }
         return PreparedMacroSignature(identifier, method, parameters, parseType(metadata.returnType, source), source)
     }

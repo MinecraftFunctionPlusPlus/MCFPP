@@ -7,7 +7,6 @@ import org.antlr.v4.runtime.CommonTokenStream
 import top.mcfpp.Project
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.io.LibBinReader
@@ -49,7 +48,7 @@ class MniMacroLoadingTest {
         MCFPPPrivateType.Void
     )
 
-    private fun namespace(provider: Class<*> = LoadingMacroEntries::class.java) = Namespace("fixture.loading").apply { injectedBy(provider) }
+    private fun namespace(provider: Class<*> = LoadingMacroEntries::class.java) = Namespace("fixture.loading").apply { declareMniFixtures(provider) }
 
     private fun prepare(namespace: Namespace, extra: List<MCFPPType> = emptyList(), names: Map<String, MCFPPType> = emptyMap()) = MacroLoadingSnapshot.prepare(listOf(namespace), bases + extra, names, report = {})
 
@@ -90,7 +89,7 @@ class MniMacroLoadingTest {
                 import top.mcfpp.annotations.*;
                 import top.mcfpp.mni.api.*;
                 public class JavaLoadingMacro {
-                    @MNIMacro(params={@MacroParam(name="value", type="int")}, returnType="int")
+                    @MNIMacro(normalParams ={"int"}, returnType="int")
                     public static Expr<IntT> expression(MacroContext context, Value<IntT> value) {
                         throw new AssertionError("registration invoked Java macro");
                     }
@@ -108,7 +107,7 @@ class MniMacroLoadingTest {
                 )
             )
             URLClassLoader(arrayOf(directory.toUri().toURL()), Project.classLoader).use { loader ->
-                val java = Namespace("fixture.java").apply { injectedBy("JavaLoadingMacro", loader) }
+                val java = Namespace("fixture.java").apply { declareMniFixtures("JavaLoadingMacro", loader) }
                 val kotlin = namespace()
                 val snapshot = MacroLoadingSnapshot.prepare(listOf(java, kotlin), bases, loader = loader, report = {})
                 assertTrue(snapshot.diagnostics.isEmpty())
@@ -184,7 +183,7 @@ class MniMacroLoadingTest {
     @Test fun requiredNativeReadonlyParameterDistinguishesAnOrdinaryDeclarationFromAMacro() {
         Project.init()
         val namespace = namespace(LoadingCollisionMacro::class.java).apply {
-            injectedBy(LoadingReadonlyNative::class.java)
+            declareMniFixtures(LoadingReadonlyNative::class.java)
         }
         val ordinary = namespace.scope.functions.getValue("collide").single() as NativeFunction
         assertEquals(1, ordinary.readOnlyParams.size)
@@ -205,7 +204,7 @@ class MniMacroLoadingTest {
         val first = namespace(LoadingCollisionMacro::class.java)
         val second = namespace(LoadingDuplicateMacro::class.java)
         first.merge(second)
-        first.injectedBy(LoadingCollisionMacro::class.java) // Repeated discovery is idempotent.
+        first.declareMniFixtures(LoadingCollisionMacro::class.java) // Repeated discovery is idempotent.
         assertEquals(2, first.macroDeclarations().size)
         val snapshot = prepare(first)
         assertEquals(MacroLoadingCode.DUPLICATE, snapshot.diagnostics.single().code)
@@ -366,7 +365,7 @@ class MniMacroLoadingTest {
     @Test fun namespaceSpecificPreparedNamesShareOneCatalogAndDescriptorsDefensivelyCopyCollections() {
         Project.init()
         val first = namespace(LoadingGenericMacro::class.java)
-        val second = Namespace("fixture.second").apply { injectedBy(LoadingGenericMacro::class.java) }
+        val second = Namespace("fixture.second").apply { declareMniFixtures(LoadingGenericMacro::class.java) }
         val firstList = MCFPPListType(MCFPPBaseType.Int)
         val secondList = MCFPPListType(MCFPPBaseType.Bool)
         val snapshot = MacroLoadingSnapshot.prepare(
@@ -400,7 +399,7 @@ class MniMacroLoadingTest {
     @Test fun nestedCallbackAliasesFromDifferentNamespacesResolveBeforeOneGraphIsFrozen() {
         Project.init()
         val first = namespace(LoadingNestedCallbackMacro::class.java)
-        val second = Namespace("fixture.nested").apply { injectedBy(LoadingNestedCallbackMacro::class.java) }
+        val second = Namespace("fixture.nested").apply { declareMniFixtures(LoadingNestedCallbackMacro::class.java) }
         val commands = Function.currFunction.commands.toList()
         val snapshot = MacroLoadingSnapshot.prepare(
             listOf(first, second),
@@ -441,7 +440,7 @@ class MniMacroLoadingTest {
         val old = prepare(namespace)
         val unknown = FunctionSignature.of(emptyList(), old.types.ref(MCFPPBaseType.Int))
         assertNull(old.types.inlineType(unknown))
-        namespace.injectedBy(LoadingReturningCallbackMacro::class.java)
+        namespace.declareMniFixtures(LoadingReturningCallbackMacro::class.java)
         val fresh = prepare(namespace)
         assertTrue(fresh.diagnostics.isEmpty())
         val callback = fresh.namespaces.getValue(namespace.identifier).find("returning").single().parameters.single().type()
@@ -529,11 +528,11 @@ class LoadingMacroEntries {
     companion object {
         @JvmStatic
         @MNIMacro(
-            params = [
-                MacroParam(name = "value", type = "int"),
-                MacroParam(name = "destination", type = "int", mode = ParamMode.REF),
-                MacroParam(name = "constant", type = "int", mode = ParamMode.CONST),
-                MacroParam(name = "callback", type = "(int)->void", mode = ParamMode.INLINE)
+            normalParams = [
+                "int",
+                "int",
+                "int",
+                "(int)->void"
             ]
         )
         fun all(context: MacroContext, value: Value<IntT>, destination: Ref<IntT>, constant: Const<IntT>, callback: InlineFn<VoidT>): Block = error("registration invoked macro")
@@ -542,7 +541,7 @@ class LoadingMacroEntries {
         fun empty(context: MacroContext): Block = error("registration invoked macro")
 
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "value", type = "int")], returnType = "int")
+        @MNIMacro(normalParams = ["int"], returnType = "int")
         fun expression(context: MacroContext, value: Value<IntT>): Expr<IntT> = error("registration invoked macro")
     }
 }
@@ -550,7 +549,7 @@ class LoadingMacroEntries {
 class LoadingCollisionMacro {
     companion object {
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "value", type = "int", mode = ParamMode.REF)])
+        @MNIMacro(normalParams = ["int"])
         fun collide(context: MacroContext, value: Ref<IntT>): Block = error("registration invoked macro")
     }
 }
@@ -558,7 +557,7 @@ class LoadingCollisionMacro {
 class LoadingDuplicateMacro {
     companion object {
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "value", type = "int", mode = ParamMode.CONST)])
+        @MNIMacro(normalParams = ["int"])
         fun collide(context: MacroContext, value: Const<IntT>): Block = error("registration invoked macro")
     }
 }
@@ -580,7 +579,7 @@ class LoadingMemberMacro {
 class LoadingBaseMacro {
     companion object {
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "value", type = "Base")])
+        @MNIMacro(normalParams = ["Base"])
         fun accept(context: MacroContext, value: Value<Any>): Block = error("registration invoked macro")
     }
 }
@@ -588,7 +587,7 @@ class LoadingBaseMacro {
 class LoadingGenericMacro {
     companion object {
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "value", type = "PreparedList")])
+        @MNIMacro(normalParams = ["PreparedList"])
         fun acceptList(context: MacroContext, value: Value<Any>): Block = error("registration invoked macro")
     }
 }
@@ -596,7 +595,7 @@ class LoadingGenericMacro {
 class LoadingNestedCallbackMacro {
     companion object {
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "callback", type = "(inline (ref Item)->Item)->void", mode = ParamMode.INLINE)])
+        @MNIMacro(normalParams = ["(inline (ref Item)->Item)->void"])
         fun nested(context: MacroContext, callback: InlineFn<VoidT>): Block = error("registration invoked macro")
         @JvmStatic
         @MNIMacro(returnType = "()->(ref Item)->Item")
@@ -607,7 +606,7 @@ class LoadingNestedCallbackMacro {
 class LoadingReturningCallbackMacro {
     companion object {
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "callback", type = "()->int", mode = ParamMode.INLINE)])
+        @MNIMacro(normalParams = ["()->int"])
         fun returning(context: MacroContext, callback: InlineFn<IntT>): Block = error("registration invoked macro")
     }
 }
@@ -615,7 +614,7 @@ class LoadingReturningCallbackMacro {
 class LoadingDeclaredCallbackMacro {
     companion object {
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "callback", type = "PreparedHandler")])
+        @MNIMacro(normalParams = ["PreparedHandler"])
         fun declared(context: MacroContext, callback: Value<Any>): Block = error("registration invoked macro")
     }
 }
@@ -623,13 +622,13 @@ class LoadingDeclaredCallbackMacro {
 class LoadingInvalidCallbackMacros {
     companion object {
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "callback", type = "(void)->int", mode = ParamMode.INLINE)])
+        @MNIMacro(normalParams = ["(void)->int"])
         fun invalidVoid(context: MacroContext, callback: InlineFn<IntT>): Block = error("registration invoked macro")
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "callback", type = "int", mode = ParamMode.INLINE)])
+        @MNIMacro(normalParams = ["int"])
         fun invalidInline(context: MacroContext, callback: InlineFn<IntT>): Block = error("registration invoked macro")
         @JvmStatic
-        @MNIMacro(params = [MacroParam(name = "callback", type = "(MissingType)->int", mode = ParamMode.INLINE)])
+        @MNIMacro(normalParams = ["(MissingType)->int"])
         fun missing(context: MacroContext, callback: InlineFn<IntT>): Block = error("registration invoked macro")
         @JvmStatic @MNIMacro
         fun valid(context: MacroContext): Block = error("registration invoked macro")

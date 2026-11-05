@@ -1,8 +1,11 @@
 @MCFPPEntity
+/// 美西螈的实体数据。继承的字段由各父数据类型提供。
 data AxolotlData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name("FromBucket")
+    /// 是否通过桶放出。
     var fromBucket: bool
 
     @Name("Variant")
+    /// 外观变种。
     var variant: int
 }

@@ -1,5 +1,7 @@
 @From("top.mcfpp.mni.resource.BlockTagData")
+/// 方块标签资源的标识符。通过 id 字段保存资源名称。
 data BlockTag: ResourceID
 
 @From("top.mcfpp.mni.resource.BlockTagObjectData")
+/// 方块标签资源类型的共享成员入口。
 object data BlockTag: ResourceID

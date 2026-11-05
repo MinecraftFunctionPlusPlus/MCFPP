@@ -1,17 +1,23 @@
 @MCFPPEntity
+/// 猪灵的实体数据。继承的字段由各父数据类型提供。
 data PiglinData: EntityData, CreatureData, AIMobData, AnimalData {
     @Name("CannotHunt")
+    /// 是否停用狩猎行为。
     var cannotHunt: bool
 
     @Name("Inventory")
+    /// 物品栏数据。
     var inventory: list<ItemData>
 
     @Name("IsBaby")
+    /// 是否为幼年个体。
     var isBaby: bool
 
     @Name("IsImmuneToZombification")
+    /// 是否免疫僵尸化。
     var isImmuneToZombification: bool
 
     @Name("TimeInOverworld")
+    /// 在主世界停留的时间。
     var timeInOverworld: int
 }

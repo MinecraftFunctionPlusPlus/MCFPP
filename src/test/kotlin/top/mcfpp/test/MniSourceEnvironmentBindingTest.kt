@@ -9,7 +9,6 @@ import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
 import top.mcfpp.analysis.*
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.antlr.ReadonlyParamsDeclarationSyntax
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.core.lang.MCInt
@@ -49,7 +48,7 @@ class MniSourceEnvironmentBindingTest {
     class Entries {
         companion object {
             @JvmStatic
-            @MNIMacro(identifier = "macroValue", params = [MacroParam(name = "value", type = "int")], returnType = "int")
+            @MNIMacro(identifier = "macroValue", normalParams = ["int"], returnType = "int")
             fun expression(context: MacroContext, value: Value<IntT>): Expr<IntT> {
                 executions++
                 error("macro body executed")
@@ -138,7 +137,7 @@ class MniSourceEnvironmentBindingTest {
 
     @Test fun freshRootsKeepOriginalAliasesCapturedLocationsAndCallableIdentitiesWithoutEagerWork() = isolated {
         val file = file("bindings.original")
-        file.namespace.injectedBy(Entries::class.java)
+        file.namespace.declareMniFixtures(Entries::class.java)
         val generic = GenericFunction("copy", file.namespace.identifier, parser("{}").curlBlock()).apply {
             declarationFile = file
             readOnlyParams.add(FunctionParam(MCFPPConcreteType.Type, "T", this, isReadOnly = true))

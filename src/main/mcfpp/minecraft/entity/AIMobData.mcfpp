@@ -1,42 +1,56 @@
 import mcfpp.minecraft.item:ItemStackData
 
+/// 具有自主行为的生物所用的装备和行为数据。
 data AIMobData {
     @Name("ArmorDropChances")
+    /// 各护甲槽位的掉落概率。
     var armorDropChances: list<float>
 
     @Name("ArmorItems")
+    /// 各护甲槽位的物品。
     var armorItems: list<ItemData>
 
     @Name("body_armor_drop_chance")
+    /// 身体护甲的掉落概率。
     var bodyArmorDropChance: float
 
     @Name("body_armor_item")
+    /// 身体护甲物品。
     var bodyArmorItem: list<ItemData>
 
     @Name("CanPickUpLoot")
+    /// 是否可以拾取地面物品。
     var canPickUpLoot: bool
 
     @Name("DeathLootTable")
+    /// 死亡掉落表数据。
     var deathLootTable: list<AIMobData>
 
     @Name("DeathLootTableSeed")
+    /// 死亡掉落表使用的种子。
     var deathLootTableSeed: long
 
     @Name("HandDropChances")
+    /// 主手和副手物品的掉落概率。
     var handDropChances: list<float>
 
     @Name("HandItems")
+    /// 主手和副手物品。
     var handItems: list<ItemData>
 
     @Name("leash")
+    /// 拴绳连接对象的数据。
     var leash: (IntArray|nbt)
 
     @Name("LeftHanded")
+    /// 是否使用左手作为主手。
     var leftHanded: bool
 
     @Name("NoAI")
+    /// 是否停用自主行为。
     var noAI: bool
 
     @Name("PersistenceRequired")
+    /// 是否持续保留此实体。
     var persistenceRequired: bool
 }

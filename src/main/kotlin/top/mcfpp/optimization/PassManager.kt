@@ -6,11 +6,11 @@ enum class AnalysisKind { FLOW, CALL_GRAPH, EFFECTS, LIVENESS, STORAGE }
 
 /** Analysis ownership is one compilation/module; transformed IR never reuses stale facts. */
 class AnalysisManager {
-    private val values = mutableMapOf<Pair<AnalysisKind, Any>, Any>()
+    private val values = mutableMapOf<AnalysisKind, java.util.IdentityHashMap<Any, Any>>()
     @Suppress("UNCHECKED_CAST")
     fun <T : Any> get(kind: AnalysisKind, owner: Any, compute: () -> T): T =
-        values.getOrPut(kind to owner, compute) as T
-    fun invalidate(kinds: Set<AnalysisKind>) { values.keys.removeAll { it.first in kinds } }
+        values.getOrPut(kind) { java.util.IdentityHashMap() }.getOrPut(owner, compute) as T
+    fun invalidate(kinds: Set<AnalysisKind>) { kinds.forEach(values::remove) }
 }
 
 interface FunctionPass {
@@ -34,10 +34,11 @@ class PassContext(
     val analyses: AnalysisManager = AnalysisManager(),
     val trace: (String, TypedIR, TypedIR) -> Unit = { _, _, _ -> },
 ) {
+    private val summarize by lazy { ReturnTypeAnalysis.summarizer(module) }
     fun flow(ir: TypedIR): FlowAnalysis.Result = analyses.get(AnalysisKind.FLOW, ir) {
         FlowAnalysis.analyze(ir, initial, PrimitiveEvaluation::binary,
             canFoldBranch = { it !is ValueRef.Result || it.instruction !in ir.runtimeValues },
-            callSummary = { call, args -> ReturnTypeAnalysis.summarize(call, module, args) },
+            callSummary = summarize,
             declarations = ir.declarations, boundTypes = ir.boundTypes)
     }
 }
@@ -56,9 +57,11 @@ class PassManager(private val passes: List<FunctionPass>) {
         var ir = input
         for (pass in passes) if (context.config.enabled(pass.id)) {
             val next = pass.run(ir, context)
-            if (next != ir) context.analyses.invalidate(pass.invalidates)
+            val changed = next != ir
+            if (changed) context.analyses.invalidate(pass.invalidates)
             context.trace(pass.id, ir, next)
-            ir = next
+            // Preserve the owner of cached analyses when a pass only rebuilt equal containers.
+            if (changed) ir = next
         }
         return ir
     }
@@ -69,8 +72,10 @@ class ModulePassManager(private val passes: List<ModulePass>) {
         var module = input
         for (pass in passes) {
             val next = pass.run(module, context)
-            if (next != module) context.analyses.invalidate(pass.invalidates)
-            module = next
+            if (next != module) {
+                context.analyses.invalidate(pass.invalidates)
+                module = next
+            }
         }
         return module
     }

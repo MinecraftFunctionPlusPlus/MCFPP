@@ -193,7 +193,7 @@ class MniExecutionContextModelTest {
                 .map { Path.of(it.protectionDomain.codeSource.location.toURI()).toString() }.distinct()
                 .joinToString(java.io.File.pathSeparator)
             val output = ByteArrayOutputStream()
-            val compiler = assertNotNull(ToolProvider.getSystemJavaCompiler(), "The Java 21 toolchain requires a JDK")
+            val compiler = assertNotNull(ToolProvider.getSystemJavaCompiler(), "The Java 25 toolchain requires a JDK")
             val exit = compiler.run(
                 null, output, output, "-proc:none", "--release", "21", "-classpath", classpath,
                 "-d", directory.toString(), file.toString()

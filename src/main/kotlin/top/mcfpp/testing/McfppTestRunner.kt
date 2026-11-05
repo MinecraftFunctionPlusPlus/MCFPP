@@ -21,7 +21,7 @@ data class McfppTestCase(val id: String, val function: String, val file: String,
 /** Compiles main + test sources, then executes each case in a fresh DSB world. */
 class McfppTestRunner(private val out: PrintWriter, private val err: PrintWriter, private val teamcity: Boolean = false) {
     fun run(project: ProjectDefinition, prepared: PreparedProject, jar: Path?, java: String,
-            filter: String?, list: Boolean): Int {
+            filter: String?, list: Boolean, debugInfo: Boolean = false): Int {
         val tests = project.root.resolve("src/test/mcfpp")
         val hasTests = Files.isDirectory(tests) && Files.walk(tests).use { paths ->
             paths.anyMatch { Files.isRegularFile(it) && it.toString().endsWith(".mcfpp") }
@@ -77,10 +77,11 @@ class McfppTestRunner(private val out: PrintWriter, private val err: PrintWriter
         val exit = try {
             URLClassLoader(prepared.classpath.map { it.toUri().toURL() }.toTypedArray(), javaClass.classLoader).use { loader ->
                 val request = prepared.compilerRequest(loader).toMutableMap().apply { put("configuration", config) }
-                McfpmCliCompiler.compile(CompilerOptions().also { it.file = config.toFile() }, request, err)
+                McfpmCliCompiler.compile(CompilerOptions().also { it.file = config.toFile(); it.debugInfo = debugInfo }, request, err)
             }
         } finally { init.remove(register); emitted.remove(collect) }
         if (exit != 0) return exit
+        if (debugInfo) remapDebugSources(work.resolve("compiled/debug/mcfpp.debug.json"), origins)
         val pattern = filter?.let { glob(it) }
         cases = cases.filter { pattern == null || pattern.matches(it.id) }
         require(cases.isNotEmpty()) { if (filter == null) "No @Test functions found in src/test/mcfpp" else "No MCFPP tests match '$filter'" }
@@ -92,7 +93,7 @@ class McfppTestRunner(private val out: PrintWriter, private val err: PrintWriter
         require(cases.all { it.disabled != null } || jar != null && Files.isRegularFile(jar)) {
             "Set --dsb-jar <datapack-sandbox-cli.jar> or DSB_JAR. See https://dbs.afox.moe/workflows/installation.html"
         }
-        val pack = work.resolve("compiled").resolve(project.values["name"] as? String ?: configRoot.fileName.toString())
+        val pack = work.resolve(if (debugInfo) "compiled/debug" else "compiled").resolve(project.values["name"] as? String ?: configRoot.fileName.toString())
         event("testSuiteStarted", "name" to "MCFPP")
         val results = try { cases.mapIndexed { index, test -> execute(test, index, project, work, pack, jar, java) } }
             finally { event("testSuiteFinished", "name" to "MCFPP") }
@@ -103,6 +104,33 @@ class McfppTestRunner(private val out: PrintWriter, private val err: PrintWriter
         out.println("MCFPP tests: ${results.size - failed - skipped} passed, $failed failed, $skipped skipped.")
         out.println("MCFPP test report: ${work.resolve("TEST-mcfpp.xml")}")
         return if (failed == 0) 0 else 1
+    }
+
+    private fun remapDebugSources(path: Path, origins: Map<Path, Path>) {
+        val metadata = JSON.parseObject(Files.readString(path))
+        val sources = metadata.getJSONObject("sources")
+        val mapped = linkedMapOf<String, String>()
+        sources.keys.forEach { file ->
+            val original = origins[Path.of(file).toAbsolutePath().normalize()] ?: Path.of(file)
+            mapped[original.toString()] = top.mcfpp.debug.DebugMetadata.hash(original)
+        }
+        metadata["sources"] = mapped
+        metadata.getJSONObject("functions").values.forEach { function ->
+            (function as com.alibaba.fastjson2.JSONObject).getJSONArray("locations").forEach { entry ->
+                val point = (entry as com.alibaba.fastjson2.JSONObject).getJSONObject("point")
+                val original = origins[Path.of(point.getString("file")).toAbsolutePath().normalize()]
+                if (original != null) {
+                    point["statement"] = point.getString("statement").replace(point.getString("file"), original.toString())
+                    point.getString("scope")?.let { point["scope"] = it.replace(point.getString("file"), original.toString()) }
+                    point["file"] = original.toString()
+                }
+                point.getJSONArray("expansion")?.forEach { frame ->
+                    val expansion = frame as com.alibaba.fastjson2.JSONObject
+                    origins[Path.of(expansion.getString("file")).toAbsolutePath().normalize()]?.let { expansion["file"] = it.toString() }
+                }
+            }
+        }
+        atomicWrite(path, JSON.toJSONBytes(metadata, JSONWriter.Feature.PrettyFormat))
     }
 
     private fun discover(origins: Map<Path, Path>): List<McfppTestCase> {

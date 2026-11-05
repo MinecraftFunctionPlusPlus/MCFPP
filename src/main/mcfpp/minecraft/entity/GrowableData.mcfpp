@@ -1,7 +1,10 @@
+/// 可成长生物的年龄数据。
 data GrowableData {
     @Name("Age")
+    /// 年龄值。
     var age: int
 
     @Name("ForcedAge")
+    /// 通过喂食等操作增加的年龄值。
     var forcedAge: int
 }

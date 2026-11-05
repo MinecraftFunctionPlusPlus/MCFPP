@@ -1,5 +1,7 @@
 @From("top.mcfpp.mni.resource.LootTablePredicateData")
+/// 谓词资源的标识符。通过 id 字段保存资源名称。
 data Predicate: ResourceID
 
 @From("top.mcfpp.mni.resource.LootTablePredicateObjectData")
+/// 谓词资源类型的共享成员入口。
 object data Predicate: ResourceID

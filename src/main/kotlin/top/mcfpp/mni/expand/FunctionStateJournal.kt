@@ -4,6 +4,7 @@ import top.mcfpp.analysis.Effect
 import top.mcfpp.analysis.EffectAnalysis
 import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.analysis.StorageCheckpoint
+import top.mcfpp.analysis.StorageCheckpointCollector
 import top.mcfpp.analysis.StoredData
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.Var
@@ -39,8 +40,9 @@ internal class FunctionStateJournal private constructor(
     /** Retains detached before-state objects as well as newly reachable after-state objects. */
     fun captureCurrent(): FunctionStateJournal = capture(enrolled, storage, effects)
 
-    internal fun captureCurrent(functions: Iterable<Function>, values: Iterable<Var<*>>): FunctionStateJournal =
-        capture(enrolled + functions + values, storage, effects)
+    internal fun captureCurrent(
+        functions: Iterable<Function>, values: Iterable<Var<*>>, collector: StorageCheckpointCollector? = null
+    ): FunctionStateJournal = capture(enrolled + functions + values, storage, effects, collector)
 
     /** Executes preparation once, then leaves the compiler at the before-state even on failure. */
     fun prepare(action: () -> Unit): PreparedCompilerCommit {
@@ -71,12 +73,15 @@ internal class FunctionStateJournal private constructor(
     }
 
     companion object {
-        fun checkpoint(functions: Iterable<Function>, values: Iterable<Var<*>> = emptyList()): FunctionStateJournal = capture(functions.toList() + values.toList(), null)
+        fun checkpoint(
+            functions: Iterable<Function>, values: Iterable<Var<*>> = emptyList(), collector: StorageCheckpointCollector? = null
+        ): FunctionStateJournal = capture(functions.toList() + values.toList(), null, collector = collector)
 
         private fun capture(
             roots: Iterable<Any>,
             retainedStorage: StorageCheckpoint?,
-            retainedEffects: EffectAnalysis.EffectGraphSnapshot? = null
+            retainedEffects: EffectAnalysis.EffectGraphSnapshot? = null,
+            collector: StorageCheckpointCollector? = null
         ): FunctionStateJournal {
             val pending = ArrayDeque<Any>().apply { roots.forEach(::addLast) }
             val seen = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
@@ -351,7 +356,7 @@ internal class FunctionStateJournal private constructor(
                 }
             }
             val storageRoots = values + stores
-            val savedStorage = retainedStorage?.captureCurrent(storageRoots) ?: StorageAccess.checkpointGraph(storageRoots)
+            val savedStorage = retainedStorage?.captureCurrent(storageRoots, collector) ?: StorageAccess.checkpointGraph(storageRoots, collector)
             val savedEffects = retainedEffects?.captureCurrent(runtimeEffects) ?: EffectAnalysis.checkpointEffectGraph(runtimeEffects)
             return FunctionStateJournal(enrolled, restores, savedStorage, savedEffects)
         }

@@ -1,6 +1,9 @@
+/// 资源资源的标识符。通过 id 字段保存资源名称。
 data ResourceID {
+    /// 资源名称，通常写为 namespace:path，例如 minecraft:stone。
     var id: string
 }
 
 @From("top.mcfpp.mni.resource.ResourceIDObjectData")
+/// 资源资源类型的共享成员入口。
 object data ResourceID

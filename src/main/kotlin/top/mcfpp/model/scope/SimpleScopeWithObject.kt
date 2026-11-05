@@ -37,11 +37,13 @@ interface SimpleScopeWithObject : IScopeWithObject {
         if(existing >= 0){
             if(force){
                 objects[existing] = obj
+                top.mcfpp.Project.invalidateTemplateInheritanceHeaders()
                 return true
             }
             return false
         }
         objects.add(obj)
+        top.mcfpp.Project.invalidateTemplateInheritanceHeaders()
         return true
     }
 
@@ -49,6 +51,8 @@ interface SimpleScopeWithObject : IScopeWithObject {
         for (e in objects) {
             if(e.identifier == identifier){
                 objects.remove(e)
+                top.mcfpp.Project.invalidateTemplateInheritanceHeaders()
+                return e
             }
         }
         return null

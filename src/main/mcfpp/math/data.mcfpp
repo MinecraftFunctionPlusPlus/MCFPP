@@ -1,9 +1,15 @@
+/// 带可选上下限的浮点数范围。
 data DecimalRange {
+    /// 包含在范围内的下限，省略时向下延伸。
     var min: float?
+    /// 包含在范围内的上限，省略时向上延伸。
     var max: float?
 }
 
+/// 带可选上下限的整数范围。
 data IntRange {
+    /// 包含在范围内的下限，省略时向下延伸。
     var min: int?
+    /// 包含在范围内的上限，省略时向上延伸。
     var max: int?
 }

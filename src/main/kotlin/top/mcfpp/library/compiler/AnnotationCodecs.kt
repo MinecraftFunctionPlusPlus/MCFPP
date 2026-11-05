@@ -49,13 +49,21 @@ interface AnnotationRestoreBindings {
 data class CapturedAnnotations(val annotations: List<AnnotationRecord>, val stateCells: List<StateCell>, val roots: List<AnnotationId>)
 
 class RestoredAnnotations internal constructor(
-    private val values: List<Annotation>, private val phases: List<AnnotationPhase>
+    private val values: List<Annotation?>, private val phases: List<AnnotationPhase>
 ) {
-    fun annotation(reference: AnnotationId): Annotation = values[arenaIndex(reference.value, values.size, "annotation")]
+    internal var resolveMissing: ((Int) -> Annotation)? = null
+    internal var onLoaded: ((AnnotationId, Annotation) -> Unit)? = null
+    internal var checkpointState: (() -> (() -> Unit))? = null
+    fun annotation(reference: AnnotationId): Annotation {
+        val index = arenaIndex(reference.value, values.size, "annotation")
+        return values[index] ?: requireNotNull(resolveMissing) { "Annotation is not allocated" }(index)
+    }
     fun phase(reference: AnnotationId): AnnotationPhase = phases[arenaIndex(reference.value, phases.size, "annotation")]
     fun phase(value: Annotation): AnnotationPhase = phases[values.indexOfFirst { it === value }.also {
         require(it >= 0) { "Annotation is not owned by this restored arena" }
     }]
+    internal fun checkpointForReuse(): () -> Unit = checkpointState?.invoke() ?: {}
+    internal fun loadedCount(): Int = values.count { it != null }
 }
 
 class PortableAnnotationException(message: String) : IllegalArgumentException("LIB_ANNOTATION_UNSUPPORTED: $message") {
@@ -142,6 +150,12 @@ class PortableAnnotationCodecs : AutoCloseable {
     fun restore(annotations: List<AnnotationRecord>, stateCells: List<StateCell>, bindings: AnnotationRestoreBindings): RestoredAnnotations {
         checkOpen()
         return AnnotationRestoreArena(this, annotations, stateCells, bindings).restore()
+    }
+    /** Closed built-ins can restore a reachable annotation group only when its member is used. */
+    internal fun restoreLazily(annotations: List<AnnotationRecord>, stateCells: List<StateCell>,
+                               bindings: AnnotationRestoreBindings, hints: Map<Int, AnnotationCellHint>): RestoredAnnotations {
+        checkOpen()
+        return AnnotationRestoreArena(this, annotations, stateCells, bindings).restoreLazily(hints)
     }
     internal fun writer(value: Annotation): AnnotationCodecEntry {
         checkOpen()
@@ -303,8 +317,111 @@ internal class AnnotationRestoreArena(
 ) {
     private val annotations = arrayOfNulls<Annotation>(records.size)
     private val cells = arrayOfNulls<Any>(states.size)
-    private val hints = mutableMapOf<StateCellRef, AnnotationCellHint>()
+    private val hints = arrayOfNulls<AnnotationCellHint>(states.size)
+    private val pendingCells = ArrayDeque<Int>()
+    private var fillingCells = false
     private var filled = false
+
+    /**
+     * Each requested group closes over A/H references before allocating shells. Shared cells
+     * stay in one arena, so aliases and finite cycles retain their identities across groups.
+     * Hint decoding was performed by the build-time plan, rather than by every browser import.
+     */
+    internal fun restoreLazily(preparedHints: Map<Int, AnnotationCellHint>): RestoredAnnotations {
+        validateParents(records)
+        preparedHints.forEach { (index, hint) -> hints[index] = hint }
+        val completed = BooleanArray(records.size)
+        val allocated = Collections.newSetFromMap(IdentityHashMap<Annotation, Boolean>())
+        var restoring = false
+        val result = RestoredAnnotations(annotations.asList(), records.map { it.phase })
+        result.resolveMissing = { requested ->
+            check(!restoring) { "A built-in provider requested an annotation outside its prepared dependency group" }
+            restoring = true
+            try {
+                val selected = sortedSetOf<Int>()
+                val pendingAnnotations = ArrayDeque<Int>()
+                val pendingValues = ArrayDeque<PortableValue>()
+                val visitedCells = hashSetOf<Int>()
+                fun include(index: Int) {
+                    if (!completed[index] && selected.add(index)) pendingAnnotations.add(index)
+                }
+                include(requested)
+                while (pendingAnnotations.isNotEmpty() || pendingValues.isNotEmpty()) {
+                    while (pendingAnnotations.isNotEmpty()) {
+                        val record = records[pendingAnnotations.removeFirst()]
+                        record.parents.forEach { include(arenaIndex(it.value, records.size, "annotation")) }
+                        requireNotNull(record.state).fields.filter { it.name != CELL_HINTS }.forEach { pendingValues.add(it.value) }
+                    }
+                    while (pendingValues.isNotEmpty()) when (val value = pendingValues.removeFirst()) {
+                        is PortableValue.Annotation -> include(arenaIndex(value.value.value, records.size, "annotation"))
+                        is PortableValue.Cell -> {
+                            val index = arenaIndex(value.value.value, states.size, "cell")
+                            if (visitedCells.add(index)) when (val cell = states[index]) {
+                                is StateCell.Sequence -> pendingValues.addAll(cell.values)
+                                is StateCell.Map -> pendingValues.addAll(cell.entries.map { it.value })
+                                is StateCell.Set -> Unit
+                            }
+                        }
+                        else -> Unit
+                    }
+                }
+                filled = false
+                val entries = selected.associateWith { index -> registry.reader(bindings.provider(records[index].provider)).also { entry ->
+                    val state = requireNotNull(records[index].state)
+                    require(state.schema == entry.key.schema && state.version == entry.key.version)
+                } }
+                val readers = selected.associateWith { PortableAnnotationReader(this, records[it]) }
+                selected.forEach { index ->
+                    val entry = entries.getValue(index)
+                    val reader = readers.getValue(index)
+                    val shell = entry.codec.allocateShell(reader)
+                    require(shell.javaClass === entry.codec.annotationClass && allocated.add(shell))
+                    require(shell.identifier == reader.identifier && shell.namespace == reader.namespace)
+                    annotations[index] = shell
+                }
+                selected.forEach { index ->
+                    val reader = readers.getValue(index)
+                    @Suppress("UNCHECKED_CAST") val parameters = rawCell(reader.field(BASE_PARAMS)) as ArrayList<String>
+                    @Suppress("UNCHECKED_CAST") val parents = rawCell(reader.field(BASE_PARENTS)) as ArrayList<Annotation>
+                    annotations[index]!!.restorePortableContainers(parameters, parents)
+                    records[index].state!!.fields.forEach { field ->
+                        if (field.name != CELL_HINTS && field.value is PortableValue.Cell) rawCell(field.value)
+                    }
+                }
+                fillPendingCells()
+                selected.forEach { index ->
+                    val value = annotations[index]!!
+                    require((value.params as List<*>).all { it is String })
+                    require(value.parents.size == records[index].parents.size && value.parents.indices.all { position ->
+                        value.parents[position] === annotations[arenaIndex(records[index].parents[position].value, records.size, "annotation")]
+                    })
+                    value.recordCompilerArguments(records[index].arguments.map(bindings::constant))
+                }
+                filled = true
+                selected.forEach { index ->
+                    entries.getValue(index).codec.restore(annotations[index]!!, readers.getValue(index))
+                    completed[index] = true
+                    result.onLoaded?.invoke(AnnotationId(index + 1L), annotations[index]!!)
+                }
+                requireNotNull(annotations[requested])
+            } finally { restoring = false }
+        }
+        result.checkpointState = {
+            check(!restoring && pendingCells.isEmpty())
+            val savedAnnotations = annotations.copyOf()
+            val savedCells = cells.copyOf()
+            val savedCompleted = completed.copyOf()
+            val savedFilled = filled
+            val restore: () -> Unit = {
+                check(!restoring)
+                savedAnnotations.copyInto(annotations); savedCells.copyInto(cells); savedCompleted.copyInto(completed)
+                allocated.clear(); savedAnnotations.filterNotNull().forEach(allocated::add)
+                pendingCells.clear(); fillingCells = false; filled = savedFilled
+            }
+            restore
+        }
+        return result
+    }
 
     fun restore(): RestoredAnnotations {
         validateParents(records)
@@ -321,9 +438,6 @@ internal class AnnotationRestoreArena(
             require(shell.identifier == readers[index].identifier && shell.namespace == readers[index].namespace) { "Codec shell has a different language identity" }
             annotations[index] = shell
         }
-        states.forEachIndexed { index, state -> cells[index] = when (state) {
-            is StateCell.Sequence -> arrayListOf<Any?>(); is StateCell.Map -> linkedMapOf<Any?, Any?>(); is StateCell.Set -> linkedSetOf<Any?>()
-        } }
         readHints()
         records.forEachIndexed { index, record ->
             val reader = readers[index]
@@ -333,32 +447,14 @@ internal class AnnotationRestoreArena(
                 ?: unsupported("Base parents must be a sequence cell")
             annotations[index]!!.restorePortableContainers(parameters, parents)
         }
-        // Every target exists now; filling a cell may safely refer to itself or a later cell/annotation.
-        states.forEachIndexed { index, state ->
-            val reference = StateCellRef(index + 1L)
-            val hint = hints[reference]
-            when (state) {
-                is StateCell.Sequence -> {
-                    require(hint == null || hint.keys.isEmpty() && hint.values.size == state.values.size)
-                    @Suppress("UNCHECKED_CAST") val target = cells[index] as ArrayList<Any?>
-                    state.values.forEachIndexed { position, item -> target.add(decode(item, hint?.values?.get(position) ?: "native")) }
-                }
-                is StateCell.Map -> {
-                    require(hint == null || hint.keys.size == state.entries.size && hint.values.size == state.entries.size)
-                    @Suppress("UNCHECKED_CAST") val target = cells[index] as MutableMap<Any?, Any?>
-                    state.entries.forEachIndexed { position, item ->
-                        target[key(bindings.constant(item.key), hint?.keys?.get(position))] = decode(item.value, hint?.values?.get(position) ?: "native")
-                    }
-                    require(target.size == state.entries.size) { "Portable keys collide in the provider's host key domain" }
-                }
-                is StateCell.Set -> {
-                    require(hint == null || hint.keys.size == state.values.size && hint.values.isEmpty())
-                    @Suppress("UNCHECKED_CAST") val target = cells[index] as MutableSet<Any?>
-                    state.values.forEachIndexed { position, item -> target.add(key(bindings.constant(item), hint?.keys?.get(position))) }
-                    require(target.size == state.values.size) { "Portable set values collide in the host key domain" }
-                }
-            }
-        }
+        // CELL_HINTS is encoding metadata, already read directly from the protocol table. It can
+        // dwarf the actual state (three extra cells per hinted container). Only restore cells
+        // reachable from annotation fields; otherwise every import builds thousands of unused
+        // lists. Allocate each shell before following its contents so aliases and cycles survive.
+        records.forEach { record -> requireNotNull(record.state).fields.forEach { field ->
+            if (field.name != CELL_HINTS && field.value is PortableValue.Cell) rawCell(field.value)
+        } }
+        fillPendingCells()
         records.forEachIndexed { index, record ->
             val annotation = annotations[index]!!
             require((annotation.params as List<*>).all { it is String }) { "Base params contain a non-string value" }
@@ -370,6 +466,41 @@ internal class AnnotationRestoreArena(
         filled = true
         entries.forEachIndexed { index, entry -> entry.codec.restore(annotations[index]!!, readers[index]) }
         return RestoredAnnotations(immutable(annotations.map { requireNotNull(it) }), immutable(records.map { it.phase }))
+    }
+
+    /** Drain iteratively: a provider's state may contain shared containers and finite cycles. */
+    private fun fillPendingCells() {
+        fillingCells = true
+        try {
+            while (pendingCells.isNotEmpty()) {
+                val index = pendingCells.removeFirst()
+                val state = states[index]
+                val hint = hints[index]
+                when (state) {
+                    is StateCell.Sequence -> {
+                        require(hint == null || hint.keys.isEmpty() && hint.values.size == state.values.size)
+                        @Suppress("UNCHECKED_CAST") val target = cells[index] as ArrayList<Any?>
+                        state.values.forEachIndexed { position, item -> target.add(decode(item, hint?.values?.get(position) ?: "native")) }
+                    }
+                    is StateCell.Map -> {
+                        require(hint == null || hint.keys.size == state.entries.size && hint.values.size == state.entries.size)
+                        @Suppress("UNCHECKED_CAST") val target = cells[index] as MutableMap<Any?, Any?>
+                        state.entries.forEachIndexed { position, item ->
+                            target[key(bindings.constant(item.key), hint?.keys?.get(position))] = decode(item.value, hint?.values?.get(position) ?: "native")
+                        }
+                        require(target.size == state.entries.size) { "Portable keys collide in the provider's host key domain" }
+                    }
+                    is StateCell.Set -> {
+                        require(hint == null || hint.keys.size == state.values.size && hint.values.isEmpty())
+                        @Suppress("UNCHECKED_CAST") val target = cells[index] as MutableSet<Any?>
+                        state.values.forEachIndexed { position, item -> target.add(key(bindings.constant(item), hint?.keys?.get(position))) }
+                        require(target.size == state.values.size) { "Portable set values collide in the host key domain" }
+                    }
+                }
+            }
+        } finally {
+            fillingCells = false
+        }
     }
 
     fun value(value: PortableValue): Any? {
@@ -387,11 +518,22 @@ internal class AnnotationRestoreArena(
             ?: unsupported("Annotation shell is not allocated yet")
         is PortableValue.Cell -> rawCell(value)
     }
-    private fun rawCell(value: PortableValue): Any = cells[arenaIndex((value as? PortableValue.Cell)?.value?.value
-        ?: unsupported("Expected a state cell reference"), cells.size, "cell")] ?: unsupported("Cell shell is not allocated")
+    private fun rawCell(value: PortableValue): Any {
+        val index = arenaIndex((value as? PortableValue.Cell)?.value?.value
+            ?: unsupported("Expected a state cell reference"), cells.size, "cell")
+        val cell = cells[index] ?: when (states[index]) {
+            is StateCell.Sequence -> arrayListOf<Any?>()
+            is StateCell.Map -> linkedMapOf<Any?, Any?>()
+            is StateCell.Set -> linkedSetOf<Any?>()
+        }.also { cells[index] = it; pendingCells.addLast(index) }
+        // Custom codecs may explicitly read reserved metadata too. Materialize it on demand,
+        // preserving the reader API without paying that allocation cost for ordinary providers.
+        if (filled && !fillingCells) fillPendingCells()
+        return cell
+    }
 
     private fun readHints() {
-        val read = hashSetOf<StateCellRef>()
+        val read = BooleanArray(states.size)
         fun sequence(value: PortableValue): List<PortableValue> = (states[arenaIndex((value as? PortableValue.Cell)?.value?.value
             ?: unsupported("Malformed cell hint"), states.size, "cell")] as? StateCell.Sequence)?.values ?: unsupported("Hint is not a sequence")
         fun strings(value: PortableValue): List<String> = sequence(value).map {
@@ -402,14 +544,18 @@ internal class AnnotationRestoreArena(
             val metadata = requireNotNull(record.state).fields.singleOrNull { it.name == CELL_HINTS }?.value
                 ?: unsupported("Shared cell hints are missing")
             val reference = (metadata as? PortableValue.Cell)?.value ?: unsupported("Malformed shared cell hints")
-            if (read.add(reference)) sequence(metadata).forEach { entry ->
+            val metadataIndex = arenaIndex(reference.value, states.size, "cell")
+            if (read[metadataIndex]) return@forEach
+            read[metadataIndex] = true
+            sequence(metadata).forEach { entry ->
                 val values = sequence(entry); require(values.size == 3)
                 val target = (values[0] as? PortableValue.Cell)?.value ?: unsupported("Hint target is not a cell")
-                arenaIndex(target.value, states.size, "cell")
+                val targetIndex = arenaIndex(target.value, states.size, "cell")
                 val hint = AnnotationCellHint(strings(values[1]), strings(values[2]))
                 require(hint.keys.all { it in setOf("null", "byte", "short", "int", "long", "float", "double", "char", "string", "boolean") } &&
                     hint.values.all { it == "native" || it == "fact" || it == "char" }) { "Unknown shared cell hint" }
-                require(hints.putIfAbsent(target, hint)?.let { it == hint } != false) { "Conflicting cell hints" }
+                require(hints[targetIndex]?.let { it == hint } != false) { "Conflicting cell hints" }
+                hints[targetIndex] = hint
             }
         }
     }

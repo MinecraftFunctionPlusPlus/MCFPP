@@ -15,15 +15,19 @@ sealed interface CompilerValue {
     data class Nbt(val snbt: String) : CompilerValue
     class Sequence(elements: List<CompilerValue>) : CompilerValue {
         val elements: List<CompilerValue> = Collections.unmodifiableList(ArrayList(elements))
-        override fun equals(other: Any?) = other is Sequence && elements == other.elements
-        override fun hashCode() = elements.hashCode()
-        override fun toString() = "Sequence(elements=$elements)"
+        private val structuralHash = this.elements.hashCode()
+        override fun equals(other: Any?) = other is Sequence && structuralHash == other.structuralHash &&
+            StructuralEquality.compare(this, other) { elements == other.elements }
+        override fun hashCode() = structuralHash
+        override fun toString() = StructuralDisplay.render(this)
     }
     class Record(fields: Map<String, CompilerValue>) : CompilerValue {
         val fields: Map<String, CompilerValue> = Collections.unmodifiableMap(fields.toSortedMap())
-        override fun equals(other: Any?) = other is Record && fields == other.fields
-        override fun hashCode() = fields.hashCode()
-        override fun toString() = "Record(fields=$fields)"
+        private val structuralHash = this.fields.hashCode()
+        override fun equals(other: Any?) = other is Record && structuralHash == other.structuralHash &&
+            StructuralEquality.compare(this, other) { fields == other.fields }
+        override fun hashCode() = structuralHash
+        override fun toString() = StructuralDisplay.render(this)
     }
     data class Typed(val type: TypeId, val payload: CompilerValue) : CompilerValue
 

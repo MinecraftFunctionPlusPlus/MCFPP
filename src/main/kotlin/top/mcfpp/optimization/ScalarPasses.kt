@@ -195,18 +195,37 @@ internal class ControlFlowSimplification : FunctionPass {
         fun visit(id: Int) { if (reachable.add(id)) blocks.getValue(id).terminator.successors().forEach(::visit) }
         visit(ir.entry)
         blocks.keys.retainAll(reachable)
-        // Only merge a successor with a single predecessor. Snapshot result IDs remain unique.
-        while (true) {
-            val predecessors = blocks.values.flatMap { b -> b.terminator.successors().map { it to b.id } }.groupBy({ it.first }, { it.second })
-            val candidate = blocks.values.firstOrNull { b ->
-                val target = (b.terminator as? Terminator.Jump)?.block
-                target != null && target != b.id && target != ir.entry && predecessors[target]?.size == 1
-            } ?: break
-            val target = blocks.getValue((candidate.terminator as Terminator.Jump).block)
-            blocks[candidate.id] = candidate.copy(instructions = candidate.instructions + target.instructions, terminator = target.terminator)
-            blocks.remove(target.id)
+        // Maintain predecessors as blocks disappear. Instruction chunks concatenate in O(1),
+        // then flatten once, so even a reverse-ordered chain does not copy growing suffixes.
+        class Chunk(val instructions: List<Instruction>?, val left: Chunk? = null, val right: Chunk? = null)
+        val chunks = blocks.mapValues { Chunk(it.value.instructions) }.toMutableMap()
+        val predecessors = blocks.keys.associateWith { linkedSetOf<Int>() }
+        blocks.values.forEach { b -> b.terminator.successors().forEach { predecessors.getValue(it).add(b.id) } }
+        val pending = ArrayDeque(blocks.keys)
+        while (pending.isNotEmpty()) {
+            val candidate = blocks[pending.removeFirst()] ?: continue
+            val targetId = (candidate.terminator as? Terminator.Jump)?.block ?: continue
+            if (targetId == candidate.id || targetId == ir.entry || predecessors.getValue(targetId).size != 1) continue
+            val target = blocks.getValue(targetId)
+            chunks[candidate.id] = Chunk(null, chunks.getValue(candidate.id), chunks.remove(targetId)!!)
+            blocks[candidate.id] = candidate.copy(instructions = emptyList(), terminator = target.terminator)
+            blocks.remove(targetId)
+            target.terminator.successors().forEach { successor ->
+                predecessors.getValue(successor).remove(targetId)
+                predecessors.getValue(successor).add(candidate.id)
+            }
+            pending.add(candidate.id)
         }
-        return ir.copy(blocks = blocks.values.toList())
+        return ir.copy(blocks = blocks.values.map { block ->
+            val instructions = arrayListOf<Instruction>()
+            val work = ArrayDeque<Chunk>().apply { add(chunks.getValue(block.id)) }
+            while (work.isNotEmpty()) {
+                val chunk = work.removeLast()
+                if (chunk.instructions != null) instructions.addAll(chunk.instructions)
+                else { work.add(chunk.right!!); work.add(chunk.left!!) }
+            }
+            block.copy(instructions = instructions)
+        })
     }
 }
 
@@ -214,41 +233,51 @@ internal class DeadValues(private val observable: Set<SymbolId>) : FunctionPass 
     override val id = PassIds.DEAD
     override val requires = setOf(AnalysisKind.LIVENESS)
     override fun run(ir: TypedIR, context: PassContext): TypedIR {
-        var current = ir
-        do {
-            val used = current.blocks.flatMap { block -> block.instructions.flatMap { it.references() } + when (val t = block.terminator) {
+        val definitions = ir.blocks.flatMap { it.instructions }.mapNotNull { i -> i.resultId()?.let { it to i } }.toMap()
+        val uses = hashMapOf<Int, Int>()
+        ir.blocks.forEach { block ->
+            val references = block.instructions.flatMap { it.references() } + when (val t = block.terminator) {
                 is Terminator.Return -> t.value?.resultReferences().orEmpty()
                 is Terminator.Branch -> t.condition.resultReferences()
                 else -> emptySet()
-            } }.toSet()
-            val next = current.copy(blocks = current.blocks.map { block -> block.copy(instructions = block.instructions.filter { i ->
-                val pure = i is Instruction.Binary && i.operation !in setOf("/", "%") || i is Instruction.Read || i is Instruction.Promote
-                return@filter !pure || i.resultId() in used
-            }) })
-            val changed = next != current
-            current = next
-        } while (changed)
+            }
+            references.forEach { uses[it] = uses.getOrDefault(it, 0) + 1 }
+        }
+        fun removable(i: Instruction) = i is Instruction.Binary && i.operation !in setOf("/", "%") || i is Instruction.Read || i is Instruction.Promote
+        val pending = ArrayDeque(definitions.keys.filter { uses.getOrDefault(it, 0) == 0 && removable(definitions.getValue(it)) })
+        val removed = hashSetOf<Int>()
+        while (pending.isNotEmpty()) {
+            val id = pending.removeFirst()
+            if (!removed.add(id)) continue
+            definitions.getValue(id).references().forEach { used ->
+                val remaining = uses.getValue(used) - 1
+                uses[used] = remaining
+                if (remaining == 0 && definitions[used]?.let(::removable) == true) pending.add(used)
+            }
+        }
+        val current = ir.copy(blocks = ir.blocks.map { b -> b.copy(instructions = b.instructions.filter { it.resultId() !in removed }) })
         // Backwards storage liveness removes only proven dead, non-escaping scalar stores.
         val incoming = current.blocks.associate { it.id to emptySet<Place>() }.toMutableMap()
         val kept = mutableMapOf<Int, List<Instruction>>()
         do {
             var changed = false
             for (block in current.blocks.asReversed()) {
-                var live = block.terminator.successors().flatMap { incoming[it].orEmpty() }.toSet() +
-                    if (block.terminator is Terminator.Return) observable.map(::Place) else emptyList()
+                val live = block.terminator.successors().flatMap { incoming[it].orEmpty() }.toMutableSet().apply {
+                    if (block.terminator is Terminator.Return) addAll(observable.map(::Place))
+                }
                 val instructions = mutableListOf<Instruction>()
                 for (i in block.instructions.asReversed()) {
                     if (i is Instruction.Write && i.place.path.isEmpty() && i.place.root !in ir.externalRoots &&
                         ir.declarations[i.place.root]?.forceRuntime != true &&
                         i.value.type in setOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.Bool.typeId)) {
                         if (live.none { it.overlaps(i.place) }) continue
-                        live = live.filterNot { it == i.place }.toSet()
+                        live.remove(i.place)
                     }
-                    if (i is Instruction.Read) live = live + i.place
+                    if (i is Instruction.Read) live.add(i.place)
                     if (i is Instruction.RawCommand && EffectAnalysis.rawCommandEffect(i.command) == Effect.Unknown ||
                         i is Instruction.Call || i is Instruction.View || i is Instruction.Construct ||
                         i is Instruction.ListMember || i is Instruction.MapMember || i is Instruction.DictionaryMember)
-                        live = live + current.declarations.keys.map(::Place)
+                        live.addAll(current.declarations.keys.map(::Place))
                     instructions.add(i)
                 }
                 kept[block.id] = instructions.asReversed()

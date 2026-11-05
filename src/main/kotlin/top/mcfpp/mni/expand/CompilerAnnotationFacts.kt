@@ -61,6 +61,18 @@ internal object CompilerAnnotationFacts {
         data class Opaque(val declaration: Long) : TypeFact
     }
 
+    /** Owned serializable facts, copied by the enclosing annotation's serialization stream.
+     * Keeping these as data avoids opening a nested ObjectOutputStream for every restored
+     * annotation. No live compiler declaration or mutable source container is retained.
+     */
+    class Snapshot private constructor(private val facts: ArrayList<ValueFact>) : Serializable {
+        fun arguments(): List<CompilerValue> = facts.map(::value)
+
+        companion object {
+            fun capture(arguments: List<CompilerValue>): Snapshot = Snapshot(ArrayList(arguments.map(::fact)))
+        }
+    }
+
     fun encode(arguments: List<CompilerValue>): String {
         if (arguments.isEmpty()) return ""
         val bytes = ByteArrayOutputStream().use { output ->

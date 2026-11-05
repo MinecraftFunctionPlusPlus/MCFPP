@@ -37,12 +37,37 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.IdentityHashMap
 
-enum class LibraryImportState { OPEN, BOUND, COMMITTED, FAILED, CLOSED }
+/** Progress of a [LibraryImportSession]. */
+enum class LibraryImportState {
+    /** Accepts library payloads through stage. */
+    OPEN,
+    /** All staged declarations and dependencies are resolved. */
+    BOUND,
+    /** Imported declarations are published in compiler namespaces. */
+    COMMITTED,
+    /** Import failed and released its body repository. */
+    FAILED,
+    /** Session resources and imported registrations are released. */
+    CLOSED
+}
+/** An import failure with a machine-readable [code] and a human-readable explanation. */
 class LibraryImportException(val code: String, message: String) : IllegalStateException("$code: $message")
+/**
+ * A function tag contribution resolved to compiler functions.
+ * @property tag Target Minecraft function tag.
+ * @property members Functions contributed in their declared order.
+ * @property replace Whether this contribution replaces earlier tag contents.
+ */
 data class BoundLibraryTag(val tag: TagKey, val members: List<Function>, val replace: Boolean)
 
-/** Closed v1 source declarations, isolated until all libraries have been bound and preflighted. */
+/**
+ * Imports version 1 libraries into the current compiler.
+ * Stage every library and dependency, call [bindAll], then call [commit] to publish the declarations.
+ * Keep the session open while imported functions are in use. [close] releases their registrations and body data.
+ * @param compatibility Accepted library format and semantic versions.
+ */
 class LibraryImportSession(private val compatibility: LibraryCompatibility = LibraryCompatibility()) : AutoCloseable {
+    /** Current import phase. Methods advance this state as they complete. */
     var state: LibraryImportState = LibraryImportState.OPEN
         private set
     private val units = linkedMapOf<LibraryIdentity, ImportedUnit>()
@@ -54,25 +79,52 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
     private val registeredAnonymous = java.util.Collections.newSetFromMap(IdentityHashMap<DataTemplate, Boolean>())
     private val registeredTypes = linkedMapOf<TypeId, MCFPPType>()
     private val nominalViews = IdentityHashMap<DataTemplate, MutableSet<MCFPPDataTemplateType>>()
+    private var typeDirectoryVersion = 0L
 
     private fun rememberType(type: MCFPPType): MCFPPType {
-        registeredTypes.putIfAbsent(type.typeId, type)
-        if (type is MCFPPDataTemplateType && type !is MCFPPGenericDataTemplateType) {
-            nominalViews.getOrPut(type.template) { java.util.Collections.newSetFromMap(IdentityHashMap<MCFPPDataTemplateType, Boolean>()) }.add(type)
-        }
+        if (registeredTypes.putIfAbsent(type.typeId, type) == null) typeDirectoryVersion++
+        rememberNominalViews(type)
         return type
     }
 
-    /** Binding a delayed parent graph must also refresh previously restored signature views. */
-    private fun refreshNominalViews() {
-        nominalViews.forEach { (owner, views) ->
-            val parents = owner.getType().parentType
-            views.forEach { it.parentType = ArrayList(parents) }
+    /** Enroll nested parent descriptors too: changing B then updates A's existing B view in place.
+     * The index is session-owned and never resolves a generic shell while inspecting it. */
+    private fun rememberNominalViews(root: MCFPPType) {
+        val seen = java.util.Collections.newSetFromMap(IdentityHashMap<MCFPPType, Boolean>())
+        val pending = ArrayDeque<MCFPPType>()
+        pending.add(root)
+        while (pending.isNotEmpty()) {
+            val type = pending.removeLast()
+            if (!seen.add(type)) continue
+            if (type is MCFPPDataTemplateType) {
+                val views = nominalViews.getOrPut(type.rawTemplateDeclaration()) {
+                    java.util.Collections.newSetFromMap(IdentityHashMap<MCFPPDataTemplateType, Boolean>())
+                }
+                if (!views.add(type) && type !== root) continue
+            }
+            pending.addAll(type.parentType)
         }
+    }
+
+    /** Generic descriptors replace their unresolved shell after initial import enrollment. */
+    internal fun trackResolvedTypeView(type: MCFPPDataTemplateType) {
+        requireUsable()
+        rememberNominalViews(type)
+    }
+
+    /** A resolved parent list changes only this declaration's descriptors. Their parents are
+     * shared within this update and enrolled for later delayed-parent notifications. */
+    private fun refreshNominalViews(owner: DataTemplate) {
+        typeDirectoryVersion++
+        val views = nominalViews[owner]?.filter { it.rawTemplateDeclaration() === owner }.orEmpty().toMutableList()
+        // A generic descriptor can replace its unresolved raw shell after initial enrollment.
         registeredTypes.values.filterIsInstance<MCFPPGenericDataTemplateType>().forEach { type ->
-            val owner = type.checkpointPrivateState().elements.singleOrNull() as? CompiledGenericDataTemplate
-            if (owner != null) type.parentType = ArrayList(owner.getType().parentType)
+            if (type.rawTemplateDeclaration() === owner && views.none { it === type }) views.add(type)
         }
+        if (views.isEmpty()) return
+        val parents = owner.getType().parentType
+        views.forEach { it.parentType = ArrayList(parents) }
+        parents.forEach(::rememberNominalViews)
     }
 
     /** Exact session directory lookup; querying never materializes a new generic binding. */
@@ -92,6 +144,13 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
     }
     private var codecs = PortableAnnotationCodecs.builtins()
     private var nativeDirectory: PreparedNativeDirectory? = null
+    private var preparedBuiltinMode = false
+
+    /** Only the bundled, digest-checked build plan may defer completed declarations. */
+    internal fun enablePreparedBuiltin() {
+        check(state == LibraryImportState.OPEN && units.isEmpty())
+        preparedBuiltinMode = true
+    }
     private var helperLease: AutoCloseable? = null
     private val functionTargets = FunctionTargetResolver { identifier ->
         repository.requireOpen()
@@ -99,6 +158,36 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
     }
     private val sourceProviders = linkedMapOf<String, PackageKey?>()
 
+    /**
+     * The prepared kernel retains this import session. Its object graph is restored by the
+     * compiler journal; these private indexes must also release every request-owned object.
+     * Keep this list explicit so new mutable caches have an obvious lifecycle owner.
+     */
+    internal fun checkpointForReuse(): () -> Unit {
+        check(state == LibraryImportState.COMMITTED) { "Only a committed library can back a compiler kernel" }
+        // Materialize stable provider metadata before the deep baseline captures its types.
+        nativeDirectory?.sourceTypes
+        val savedVersion = typeDirectoryVersion
+        val snapshot = ReusableState()
+        snapshot.map(registeredTypes); snapshot.map(nominalViews)
+        nominalViews.values.forEach(snapshot::set)
+        snapshot.add(identities.checkpointForReuse())
+        snapshot.add(repository.checkpointForReuse())
+        units.values.forEach { snapshot.add(it.checkpointForReuse()) }
+        return {
+            check(state == LibraryImportState.COMMITTED) { "The prepared library session is no longer usable" }
+            snapshot.restore()
+            typeDirectoryVersion = savedVersion
+        }
+    }
+
+    /** Small, allocation-free counters used to verify that request-owned indexes reset. */
+    internal fun retainedStateCounts(): List<Int> = listOf(
+        registeredTypes.size, nominalViews.size, nominalViews.values.sumOf { it.size },
+        units.values.sumOf { it.retainedRequestEntries() }
+    )
+
+    /** Configures provider loading and annotation decoding before the first library is staged. */
     fun configureNative(managed: ManagedNativeBindings, codecs: PortableAnnotationCodecs, sourceProviders: Map<String, PackageKey?> = emptyMap()) {
         check(state == LibraryImportState.OPEN && units.isEmpty()) { "Configure providers before staging" }
         if (this.codecs !== codecs) this.codecs.close()
@@ -110,7 +199,9 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
         override fun loader(provider: PackageKey?): ClassLoader { requireUsable(); return managed.loader(provider) }
         override fun provider(owner: Class<*>): PackageKey? { requireUsable(); return managed.provider(owner) }
     }
+    /** Returns the provider loader associated with this usable session. */
     fun nativeBindings(): ManagedNativeBindings { requireUsable(); return managedView }
+    /** Returns the annotation codecs owned by this usable session. */
     fun annotationCodecs(): PortableAnnotationCodecs { requireUsable(); return codecs }
     private fun requireUsable() { check(state != LibraryImportState.FAILED && state != LibraryImportState.CLOSED) { "Library session is not usable" } }
     private fun requireBound() { check(state == LibraryImportState.BOUND || state == LibraryImportState.COMMITTED) { "Library session is not bound" } }
@@ -120,7 +211,9 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
             ?: compareUtf8(a.identity.library.version, b.identity.library.version).takeIf { it != 0 }
             ?: compareUtf8(a.identity.classifier, b.identity.classifier)
     }
+    /** Returns bound dependencies in reproducible package order for a later library export. */
     fun exportDependencies(): List<LibraryDependency> { requireBound(); return inventory().map { LibraryDependency(it.identity.library, it.identity.classifier) } }
+    /** Returns ownership information that lets an exporter retain references to imported declarations. */
     fun exportOwnership(): LibraryExportOwnership {
         requireBound()
         fun reference(value: Any): DeclarationReference.Dependency? {
@@ -177,10 +270,12 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
         val loader = NativeDeclarations::class.java.classLoader
         return try { Class.forName(ownerClass, false, loader).classLoader === loader } catch (_: ClassNotFoundException) { false }
     }
+    /** Tests whether the bound session can identify the JVM provider class named by [ownerClass]. */
     fun hasSourceProvider(ownerClass: String): Boolean {
         requireBound()
         return providerPackages(ownerClass).isNotEmpty() || sourceProviders.containsKey(ownerClass) || isCoreProvider(ownerClass)
     }
+    /** Resolves the package providing [ownerClass]. Null identifies a compiler-provided class. */
     fun sourceProvider(ownerClass: String): PackageKey? {
         requireBound()
         val bindings = providerPackages(ownerClass)
@@ -195,12 +290,14 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
         require(managed.provider(owner) == provider)
         return provider
     }
+    /** Returns paths whose saved function commands yield to a retained, recompiled source body. */
     fun suppressedResourcePaths(): Set<String> {
         requireBound()
         return units.values.flatMap { unit -> unit.model.runtime.filterIsInstance<RuntimeRecord.FunctionBinding>().filter {
             it.policy == RuntimePolicy.REANALYZABLE_FALLBACK && unit.retainsBody(it.declaration)
         }.map { it.resourcePath } }.toSet()
     }
+    /** Returns copies of bound static resource bytes, after removing paths replaced by recompiled bodies. */
     fun resources(): Map<String, ByteArray> {
         requireBound()
         val suppressed = suppressedResourcePaths()
@@ -212,14 +309,16 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
         } } }
         return result
     }
+    /** Returns runtime records from all bound libraries in reproducible package order. */
     fun runtime(): List<RuntimeRecord> { requireBound(); return inventory().flatMap { it.model.runtime } }
+    /** Returns function tag contributions with each member resolved to its compiler function. */
     fun tagContributions(): List<BoundLibraryTag> {
         requireBound()
         return inventory().flatMap { unit -> unit.model.runtime.filterIsInstance<RuntimeRecord.TagContribution>().map { record ->
             BoundLibraryTag(record.tag, record.members.map { reference -> val (owner, id) = resolve(unit, reference); owner.callable(id) }, record.replace)
         } }
     }
-    /** Called at the Project declaration barrier; loading bytes never executes a language body. */
+    /** Compiles initializer and tag functions after commit, then registers initialization in dependency order. Returns the prepared functions. */
     fun prepareInitializers(): List<Function> = guarded {
         check(state == LibraryImportState.COMMITTED) { "Initializers require a committed directory" }
         val ordered = arrayListOf<ImportedUnit>()
@@ -258,6 +357,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
         FunctionTag.LOAD.functions.clear(); FunctionTag.LOAD.functions.addAll(load)
         targets
     }
+    /** Returns whether the imported annotation's declaration effect is pending or completed. */
     fun annotationPhase(value: Annotation): AnnotationPhase {
         requireBound()
         return units.values.firstNotNullOfOrNull { it.phase(value) } ?: error("Annotation is outside the import session")
@@ -272,21 +372,38 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
         return left.size - right.size
     }
 
+    /** Reads and stages a library file. [expectedIdentity], when supplied, must match its manifest. */
     fun stage(path: Path, expectedIdentity: LibraryIdentity? = null): LibraryModel = guarded { stage(Files.readAllBytes(path), expectedIdentity) }
 
+    /** Decodes and stages [bytes], checks package identity, and copies resources after validating their lengths and SHA-256 digests. */
     fun stage(bytes: ByteArray, expectedIdentity: LibraryIdentity? = null, resources: Map<String, ByteArray> = emptyMap()): LibraryModel = guarded {
         check(state == LibraryImportState.OPEN) { "Libraries must all be staged before binding" }
-        val model = codec.decode(bytes, compatibility)
+        stageDecoded(codec.decode(bytes, compatibility), expectedIdentity, resources)
+    }
+
+    /** Archive-owned builtin snapshots share only immutable protocol nodes, never session state. */
+    internal fun stage(source: top.mcfpp.io.LibBinReader.Payload): LibraryModel = guarded {
+        check(state == LibraryImportState.OPEN) { "Libraries must all be staged before binding" }
+        val model = source.builtinSnapshot?.decode(source.binary, codec, compatibility) ?: codec.decode(source.binary, compatibility)
+        if (model.importPlan == null) source.builtinPlan?.let {
+            model.importPlan = BuiltinImportPlan.decode(it, source.binary, model)
+        }
+        stageDecoded(model, source.identity, source.resources)
+    }
+
+    private fun stageDecoded(model: LibraryModel, expectedIdentity: LibraryIdentity?, resources: Map<String, ByteArray>): LibraryModel {
+        check(state == LibraryImportState.OPEN) { "Libraries must all be staged before binding" }
         val identity = LibraryIdentity(model.manifest.library, model.manifest.classifier)
         if (expectedIdentity != null && identity != expectedIdentity) problem("LIB_DEPENDENCY", "Payload identity differs from the resolved package: $identity")
         if (identity in units) problem("LIB_DECL_CONFLICT", "Library has already been staged: $identity")
         if (units.keys.any { it.library.coordinate == identity.library.coordinate && it.library.version != identity.library.version })
             problem("LIB_DEPENDENCY", "Multiple versions of one package are not supported")
         validateResourceBytes(model, resources)
-        val keys = model.declarations.declarations.mapNotNull { it.common.key }.map { TypeTableCodec.declarationKeyBytes(it).toList() }
+        val keys = model.importPlan?.publicKeys?.values?.toList()
+            ?: model.declarations.declarations.mapNotNull { it.common.key }.map { TypeTableCodec.declarationKeyBytes(it).toList() }
         if (keys.distinct().size != keys.size) problem("LIB_DECL_CONFLICT", "Duplicate public declaration key")
         units[identity] = ImportedUnit(identity, model, resources.mapValues { it.value.copyOf() })
-        model
+        return model
     }
 
     private fun validateResourceBytes(model: LibraryModel, resources: Map<String, ByteArray>) {
@@ -299,6 +416,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
         }
     }
 
+    /** Resolves all staged libraries together, checks their dependencies and declarations, and advances to [LibraryImportState.BOUND]. */
     fun bindAll() = guarded {
         val ambient = top.mcfpp.mni.expand.CompilerStateJournal.checkpoint()
         try {
@@ -332,8 +450,9 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
         } finally { ambient.restore() }
     }
 
-    /** All possibly failing registration work precedes the first global publication. */
+    /** Publishes bound declarations and provider registrations. A failed publication restores the earlier compiler state. */
     fun commit() = guarded {
+        top.mcfpp.Project.invalidateTemplateInheritanceHeaders()
         check(state == LibraryImportState.BOUND) { "bindAll must succeed before commit" }
         val changes = preflight()
         val extensions = units.values.flatMap { it.extensions() }
@@ -390,12 +509,21 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
         }
     }
 
-    /** Includes private implementation targets for command output; namespace name lookup exposes only public heads. */
+    /** Returns bound functions, including private functions needed to generate command output. */
     fun functions(): List<Function> {
         check(state == LibraryImportState.BOUND || state == LibraryImportState.COMMITTED) { "Library functions are not bound" }
         return ownedFunctions()
     }
+    /** Returns bound functions whose bodies are compiled. */
     fun compiledFunctions(): List<Function> = functions().filter { it.bodyCompiled }
+
+    /** Bundled signatures already carry their validated declaration/type references. Do not
+     * resolve every nominal parameter's member layout at each source completion barrier.
+     * Dependent signatures still resolve in their invocation's readonly/receiver context. */
+    internal fun preparedBuiltinSignatures(): Set<Function> =
+        java.util.Collections.newSetFromMap(IdentityHashMap<Function, Boolean>()).apply {
+            units.values.forEach { unit -> if (unit.usesPreparedBuiltin()) addAll(unit.compounds.boundFunctionHeads()) }
+        }
 
     private fun ownedFunctions(): List<Function> {
         val seen = java.util.Collections.newSetFromMap(IdentityHashMap<Function, Boolean>())
@@ -438,10 +566,12 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
         return namespaces.mapValues { (name, incomingNamespace) ->
             val scopes = listOfNotNull(GlobalScope.localNamespaces[name], GlobalScope.libNamespaces[name], GlobalScope.stdNamespaces[name])
             val incoming = incomingNamespace.scope.functions.flatMap { (key, functions) -> functions.filter { !it.actualCallBody }.map { key to it } }
-            incoming.forEachIndexed { index, (key, function) ->
+            val previousByName = hashMapOf<String, MutableList<Function>>()
+            incoming.forEach { (key, function) ->
                 if (scopes.any { it.scope.getFunctionCandidates(key).any { previous -> ParameterMatcher.sameSignature(previous, function) } } ||
-                    incoming.take(index).any { previous -> previous.first == key && ParameterMatcher.sameSignature(previous.second, function) })
+                    previousByName[key].orEmpty().any { ParameterMatcher.sameSignature(it, function) })
                     problem("LIB_DECL_CONFLICT", "Function conflicts in namespace $name: $key")
+                previousByName.getOrPut(key) { arrayListOf() }.add(function)
             }
             val contents = NamespaceContents(publicationRegistry(name)[name] ?: Namespace(name))
             incoming.forEach { (key, function) -> contents.functions.getOrPut(key) { arrayListOf() }.add(function) }
@@ -492,6 +622,23 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
     }
 
     private inner class ImportedUnit(val identity: LibraryIdentity, val model: LibraryModel, val resourceBytes: Map<String, ByteArray>) : StructuredSessionBindings, StatementProjectionBindings, StructuredFunctionSignatures {
+        // Protocol tables are immutable. Build these directories once per import, rather than
+        // scanning every declaration for each source environment and every runtime for each head.
+        // Keep declaration IDs and table order: overload selection and private names rely on both.
+        private val declarationsByNamespace = model.importPlan?.namespaces?.mapValues { (_, ids) ->
+            ids.map { IndexedValue(it - 1, model.declarations.declarations[it - 1]) }
+        } ?: model.declarations.declarations.withIndex().groupBy {
+            model.declarations.environment(it.value.common.environment).namespace
+        }
+        private val namespaceNames = model.declarations.declarations.filterIsInstance<NamespaceDeclaration>()
+            .mapTo(hashSetOf()) { it.common.name }
+        private val runtimeByDeclaration = model.runtime.filterIsInstance<RuntimeRecord.FunctionBinding>()
+            .groupBy { it.declaration }
+        private val propertiesByBacking = linkedMapOf<DeclarationId, PropertyDeclaration>().apply {
+            model.declarations.declarations.filterIsInstance<PropertyDeclaration>().forEach { property ->
+                (property.backing as? DeclarationReference.Local)?.target?.let { putIfAbsent(it, property) }
+            }
+        }
         val heads = linkedMapOf<DeclarationId, RestoredFunctionHead>()
         private val parameterViews = linkedMapOf<DeclarationId, MCFPPGenericParamType>()
         private val nativeParameterViews = linkedMapOf<Pair<DeclarationId, Long>, MCFPPGenericParamType>()
@@ -504,12 +651,15 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
         }.toMap()
         private val constantFunctions = arrayListOf<Function>()
         private lateinit var restoredAnnotations: RestoredAnnotations
+        private val lazyPlan = model.importPlan?.takeIf { preparedBuiltinMode && model.manifest.dependencies.isEmpty() }
+        private val deferredCompounds = lazyPlan?.compounds?.values?.filter { it.deferred }?.map { it.declaration }?.toSet().orEmpty()
+        fun usesPreparedBuiltin(): Boolean = lazyPlan != null
         private var annotationsReady = false
         private val annotationPhases = IdentityHashMap<Annotation, AnnotationPhase>()
         private lateinit var annotationCloner: SessionAnnotationCloner
         val publicKeys = model.declarations.declarations.mapIndexedNotNull { index, declaration ->
             declaration.common.key?.takeIf { declaration.common.access != DeclarationAccess.PRIVATE }?.let {
-                TypeTableCodec.declarationKeyBytes(it).toList() to DeclarationId(index + 1L)
+                (model.importPlan?.publicKeys?.get(index + 1) ?: TypeTableCodec.declarationKeyBytes(it).toList()) to DeclarationId(index + 1L)
             }
         }.toMap()
         private val files = linkedMapOf<EnvironmentId, MCFPPFile>()
@@ -538,8 +688,18 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
             is ConstantValue.FunctionValue -> unresolved(value.type) || value.captures.any { unresolved(it.value) }
             else -> false
         } }
-        private fun descriptors(): Map<TypeId, MCFPPType> = model.tables.types.indices.map { TypeRef(it + 1L) }
-            .filterNot(::unresolved).associate { reference -> types.type(reference).let { it.typeId to it } }
+        private var descriptorVersion = -1L
+        private var descriptorCache: Map<TypeId, MCFPPType>? = null
+        private fun descriptors(): Map<TypeId, MCFPPType> {
+            descriptorCache?.takeIf { descriptorVersion == typeDirectoryVersion }?.let { return it }
+            val result = model.tables.types.indices.asSequence().map { TypeRef(it + 1L) }
+                .filterNot(::unresolved).associate { reference -> types.type(reference).let { it.typeId to it } }
+            // This directory is session-owned. Keep the concrete map supported by the raw
+            // declaration journal; RestoredDefault retains and checkpoints this same identity.
+            descriptorCache = result
+            descriptorVersion = typeDirectoryVersion
+            return descriptorCache!!
+        }
         private val types: CompilerTypeTableRestore = CompilerTypeTableRestore(model.tables, object : CompilerTypeBindings {
             override fun restoreDeclaration(reference: DeclarationReference): MCFPPType {
                 val (unit, id) = resolve(this@ImportedUnit, reference)
@@ -574,7 +734,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
             override fun shell(reference: DeclarationId) = compounds.shell(reference)
             override fun reference(reference: DeclarationReference): Any {
                 val (unit, id) = resolve(this@ImportedUnit, reference)
-                return unit.compounds.value(id)
+                return unit.boundValue(id)
             }
             override fun type(reference: TypeRef) = types.type(reference)
             override fun constant(reference: ConstantRef) = restoredConstant(reference)
@@ -585,6 +745,19 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
             override fun bindGeneric(shell: CompoundShell) = bindGenericPrototype(shell)
             override fun prepareParents(shell: CompoundShell) {
                 val record = shell.declaration as? CompoundDeclaration ?: return
+                if (shell.id.value.toInt() in deferredCompounds) {
+                    // The build plan admits only closed nominal parents here. Publish the
+                    // stable inheritance header without asking a parent to build its members.
+                    val template = shell.value as DataTemplate
+                    template.parent.clear(); template.scope.parent.clear()
+                    record.parents.forEach { parent ->
+                        val type = types.type(requireNotNull(parent.type)) as MCFPPDataTemplateType
+                        template.extends(type.rawTemplateDeclaration())
+                    }
+                    if (record.parents.isEmpty()) template.extends(DataTemplate.baseDataTemplate)
+                    template.scope.parent.add(files.getValue(record.common.environment).field)
+                    return
+                }
                 if (record.parents.isEmpty()) return
                 // Raw generic expression parents are resolved with each materialization's readonly facts.
                 if (record.readonly.isNotEmpty() && record.parents.any { it.type == null }) return
@@ -596,7 +769,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                             ?: resolveTypeNode(model.syntax.node(requireNotNull(parent.expression)) as TypeSyntax, null, emptyMap())
                         type as? MCFPPDataTemplateType ?: error("Retained parent is not a data template")
                     }
-                }, onResolved = ::refreshNominalViews)
+                }, onResolved = { refreshNominalViews(template) })
             }
             override fun expression(body: BodyId): top.mcfpp.antlr.mcfppParser.ExpressionContext {
                 val projection = CurrentSyntaxProjection(this@ImportedUnit, this@ImportedUnit)
@@ -651,6 +824,8 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                         bindIdentity(parameterId, parameter)
                     }
                 }
+                if (annotationsReady) shell.value?.takeUnless { (it as? DataTemplate)?.hasDeferredLibraryMembers == true }
+                    ?.let { attachAnnotations(shell.id, it) }
             }
         })
         private lateinit var library: SessionLibraryId
@@ -664,6 +839,34 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
         private val annotationIds = IdentityHashMap<Annotation, AnnotationId>()
         private val pendingAnnotations = arrayListOf<() -> Unit>()
         private val functionConstantCache = IdentityHashMap<ConstantValue.FunctionValue, CompilerValue>()
+
+        fun checkpointForReuse(): () -> Unit {
+            val snapshot = ReusableState()
+            snapshot.map(heads); snapshot.map(parameterViews); snapshot.map(nativeParameterViews)
+            snapshot.map(dependentTypes); snapshot.map(openSyntaxTypes)
+            snapshot.list(constantFunctions); snapshot.map(annotationPhases)
+            snapshot.map(files); snapshot.map(environmentScopes)
+            snapshot.map(frames); frames.values.forEach(snapshot::map)
+            snapshot.map(parameters); snapshot.map(globals); snapshot.map(structuralIntersections)
+            snapshot.map(unresolvedTypeClosure); snapshot.map(unresolvedConstantClosure)
+            snapshot.map(materialized); snapshot.map(annotationIds)
+            snapshot.list(pendingAnnotations); snapshot.map(functionConstantCache)
+            snapshot.add(types.checkpointForReuse())
+            snapshot.add(compounds.checkpointForReuse())
+            if (::annotationCloner.isInitialized) snapshot.add(annotationCloner.checkpointForReuse())
+            if (::restoredAnnotations.isInitialized) snapshot.add(restoredAnnotations.checkpointForReuse())
+            val savedDescriptorVersion = descriptorVersion
+            val savedDescriptorCache = descriptorCache
+            return {
+                snapshot.restore()
+                descriptorVersion = savedDescriptorVersion
+                descriptorCache = savedDescriptorCache
+            }
+        }
+
+        fun retainedRequestEntries(): Int = frames.size + materialized.size + constantFunctions.size +
+            functionConstantCache.size + openSyntaxTypes.size + structuralIntersections.size + heads.size +
+            (if (::restoredAnnotations.isInitialized) restoredAnnotations.loadedCount() else 0)
 
         fun retainsBody(reference: DeclarationReference): Boolean {
             val (unit, id) = resolve(this, reference)
@@ -679,7 +882,13 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                     values[DeclarationId(index + 1L)] as? DataTemplate else null
             } + structuralIntersections.values
         }
-        fun callable(id: DeclarationId): Function = heads[id]?.function ?: compounds.value(id) as Function
+        private fun boundValue(id: DeclarationId): Any {
+            val record = model.declarations.declaration(id)
+            if (record !is CompoundDeclaration && record !is EnumDeclaration && record !is NamespaceDeclaration)
+                compounds.owner(id)?.scope?.ensureMembers()
+            return compounds.value(id)
+        }
+        fun callable(id: DeclarationId): Function = heads[id]?.function ?: boundValue(id) as Function
         fun extensions(): List<Function> = heads.values.map { it.function }.filterIsInstance<ExtensionFunction>()
         fun ownsFile(file: MCFPPFile) = files.values.any { it === file }
         fun macroDeclarations(): List<Pair<DeclarationId, MacroDeclaration>> = model.declarations.declarations.mapIndexedNotNull { index, record ->
@@ -724,19 +933,29 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 override fun type(reference: TypeRef) = types.type(reference)
                 override fun declaration(reference: DeclarationReference): Any {
                     val (unit, id) = resolve(this@ImportedUnit, reference)
-                    return unit.compounds.value(id)
+                    return unit.boundValue(id)
                 }
             }
-            restoredAnnotations = nativeDirectory?.restoreAnnotations(model.annotations, model.stateCells, bindings)
-                ?: codecs.restore(model.annotations, model.stateCells, bindings)
-            model.annotations.forEachIndexed { index, record ->
-                val id = AnnotationId(index + 1L)
-                val value = restoredAnnotations.annotation(id)
-                annotationIds[value] = id; annotationPhases[value] = record.phase
+            restoredAnnotations = lazyPlan?.let { plan ->
+                requireNotNull(nativeDirectory).restoreAnnotationsLazily(model.annotations, model.stateCells, bindings, plan.cellHints)
+            } ?: (nativeDirectory?.restoreAnnotations(model.annotations, model.stateCells, bindings)
+                ?: codecs.restore(model.annotations, model.stateCells, bindings))
+            restoredAnnotations.onLoaded = { id, value ->
+                annotationIds[value] = id; annotationPhases[value] = model.annotations[(id.value - 1).toInt()].phase
+            }
+            if (lazyPlan == null) model.annotations.forEachIndexed { index, record ->
+                val value = restoredAnnotations.annotation(AnnotationId(index + 1L))
+                annotationIds[value] = AnnotationId(index + 1L); annotationPhases[value] = record.phase
             }
             annotationCloner = SessionAnnotationCloner(codecs) { value -> phase(value) ?: restoredAnnotations.phase(value) }
             annotationsReady = true
             compounds.boundValues().forEach { (id, value) ->
+                if ((value as? DataTemplate)?.hasDeferredLibraryMembers != true) attachAnnotations(id, value)
+            }
+            materialized.values.toList().forEach { it.attachAnnotations() }
+        }
+
+        private fun attachAnnotations(id: DeclarationId, value: Any) {
                 val record = model.declarations.declaration(id)
                 val annotations = record.common.annotations.map(restoredAnnotations::annotation)
                 when (value) {
@@ -764,9 +983,11 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                         completeAnnotation(annotation)
                     }
                 }
-                if (value is Var<*>) StorageAccess.bindFunctionTargets(value, functionTargets)
-            }
-            materialized.values.toList().forEach { it.attachAnnotations() }
+                // Restoring a closed value already seeds its callable-target evidence. Ordinary
+                // field declarations have no payload to bind: ensure() would eagerly allocate
+                // storage for thousands of unused standard-library fields during import.
+                if (value is Var<*> && value.storageBinding?.data?.callableTargets?.isNotEmpty() == true)
+                    StorageAccess.bindFunctionTargets(value, functionTargets)
         }
 
         fun applyPendingAnnotations() {
@@ -775,7 +996,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 batch.forEach { it() }
             }
             compounds.boundValues().values.filterIsInstance<DataTemplate>().forEach { template ->
-                top.mcfpp.Project.registerTemplateContract(template)
+                if (!template.hasDeferredLibraryMembers) top.mcfpp.Project.registerTemplateContract(template)
             }
         }
 
@@ -1597,11 +1818,15 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
 
         fun registerIdentities() {
             val children = model.declarations.declarations.withIndex().groupBy { it.value.common.owner }
+            val positions = children.values.flatMap { siblings -> siblings.mapIndexed { index, record ->
+                DeclarationId(record.index + 1L) to index
+            } }.toMap()
+            val paths = hashMapOf<DeclarationId, List<String>>()
             fun path(id: DeclarationId): List<String> {
+                paths[id]?.let { return it }
                 val record = model.declarations.declaration(id)
-                val siblings = children.getValue(record.common.owner)
-                val position = siblings.indexOfFirst { it.index + 1L == id.value }
-                return record.common.owner?.let(::path).orEmpty() + "${record.tag}:${record.common.name}:$position"
+                val position = positions.getValue(id)
+                return (record.common.owner?.let(::path).orEmpty() + "${record.tag}:${record.common.name}:$position").also { paths[id] = it }
             }
             identities.register(identity, model.manifest.dependencies.map { LibraryIdentity(it.library, it.classifier) },
                 model.declarations.declarations.mapIndexed { index, declaration ->
@@ -1636,12 +1861,35 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                     identities.parameter(identity, DeclarationReference.Local(requireNotNull(record.common.owner)),
                         if (record.role == ValueRole.LAMBDA_PARAMETER) ParameterRole.LAMBDA_TYPE else ParameterRole.READONLY, requireNotNull(record.parameterIndex)))
             } }
-            nativeUnit = NativeLibraryUnit(model.declarations, types, managed)
+            nativeUnit = NativeLibraryUnit(model.declarations, types, managed).also { it.importPlan = model.importPlan }
         }
         fun allocateCompounds() {
             model.declarations.declarations.forEachIndexed { index, record -> if (record is NamespaceDeclaration)
                 compounds.install(DeclarationId(index + 1L), namespaces.getValue(record.common.name)) }
             compounds.allocate()
+            deferredCompounds.forEach { number ->
+                val id = DeclarationId(number.toLong())
+                val template = compounds.shell(id).value as DataTemplate
+                val record = model.declarations.declaration(id) as CompoundDeclaration
+                template.declarationFile = files.getValue(record.common.environment)
+                template.declarationEnvironment = null
+                template.isAbstract = record.common.flags and DeclarationFlags.ABSTRACT != 0L
+                template.isFinal = record.common.flags and DeclarationFlags.FINAL != 0L
+                val layout = requireNotNull(lazyPlan).compounds.getValue(number)
+                template.deferLibraryMembers(DeferredLibraryMembers(repository::requireOpen, load = {
+                    layout.functions.forEach { allocateHead(DeclarationId(it.toLong())) }
+                    layout.functions.forEach { function ->
+                        val functionId = DeclarationId(function.toLong())
+                        finishBody(functionId, heads.getValue(functionId))
+                    }
+                    compounds.bind(id)
+                }, onLoaded = {
+                    if (annotationsReady) attachAnnotations(id, template)
+                    if (state == LibraryImportState.COMMITTED) top.mcfpp.Project.registerTemplateContract(template)
+                }))
+                compounds.prepareHeaders(id)
+            }
+            deferredCompounds.forEach { refreshNominalViews(compounds.shell(DeclarationId(it.toLong())).value as DataTemplate) }
         }
         private fun defaultHandle(id: DeclarationId): BodyHandle? {
             val record = model.declarations.declaration(id) as ValueDeclaration
@@ -1666,10 +1914,9 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
         }
 
         private fun fillScope(scope: NamespaceScope, namespace: String, only: String? = null, alias: String? = null, includePrivate: Boolean = false) {
-            model.declarations.declarations.forEachIndexed { index, record ->
-                if (model.declarations.environment(record.common.environment).namespace != namespace) return@forEachIndexed
-                if (!includePrivate && (record.common.key == null || record.common.access != DeclarationAccess.PUBLIC)) return@forEachIndexed
-                if (only != null && record.common.name != only) return@forEachIndexed
+            declarationsByNamespace[namespace].orEmpty().forEach { (index, record) ->
+                if (!includePrivate && (record.common.key == null || record.common.access != DeclarationAccess.PUBLIC)) return@forEach
+                if (only != null && record.common.name != only) return@forEach
                 val id = DeclarationId(index + 1L)
                 val name = alias ?: record.common.name
                 when (record) {
@@ -1701,7 +1948,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 environment.imports.forEachIndexed { ordinal, item ->
                     val sources = units.values.filter { unit -> unit.identity in allowed &&
                         (item.resolvedPackages.isEmpty() || unit.identity.library in item.resolvedPackages) &&
-                        unit.model.declarations.declarations.filterIsInstance<NamespaceDeclaration>().any { it.common.name == item.targetNamespace } }
+                        item.targetNamespace in unit.namespaceNames }
                     if (sources.isEmpty()) problem("LIB_DEPENDENCY", "Author import has no staged package namespace: ${item.targetNamespace}")
                     val scope = NamespaceScope("@library/$privatePrefix/environment/${id.value}/import/$ordinal")
                     sources.forEach { it.fillScope(scope, item.targetNamespace, item.member, if (item.member != null) item.alias else null) }
@@ -1713,9 +1960,15 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
         }
 
         fun allocateHeads() {
-            model.declarations.declarations.forEachIndexed { index, record -> if (record is FunctionDeclaration) {
-                val id = DeclarationId(index + 1L)
-                if (id in lambdaNodes) return@forEachIndexed
+            val ids = model.importPlan?.signatures?.keys ?: model.declarations.declarations.indices
+                .filter { model.declarations.declarations[it] is FunctionDeclaration }.map { it + 1 }
+            ids.filter { lazyPlan?.signatures?.get(it)?.owner !in deferredCompounds }
+                .forEach { allocateHead(DeclarationId(it.toLong())) }
+        }
+
+        private fun allocateHead(id: DeclarationId) {
+                if (id in heads || id in lambdaNodes) return
+                val record = model.declarations.declaration(id) as FunctionDeclaration
                 val directOwner = record.common.owner?.let { model.declarations.declaration(it) }
                 val hidden = record.common.access != DeclarationAccess.PUBLIC && directOwner !is CompoundDeclaration
                 val allocation = record.copy(common = record.common.copy(annotations = emptyList(),
@@ -1734,7 +1987,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                             parameter.function.scope.putType(parameter.identifier, value, true)
                         }
                     })
-                val linked = model.runtime.filterIsInstance<RuntimeRecord.FunctionBinding>().singleOrNull { it.declaration == DeclarationReference.Local(id) }
+                val linked = runtimeByDeclaration[DeclarationReference.Local(id)]?.singleOrNull()
                 if (linked?.policy == RuntimePolicy.LINK_ONLY && record.body == null && record.execution == FunctionExecutionKind.ORDINARY &&
                     record.normal.isEmpty() && record.readonly.isEmpty() && (record.result == null || types.type(record.result) == MCFPPPrivateType.Void)) {
                     val path = linked.resourcePath.substringAfter("/data/")
@@ -1756,12 +2009,24 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                     if (candidates.any { ParameterMatcher.sameSignature(it, head.function) }) problem("LIB_DECL_CONFLICT", "Duplicate staged function ${record.common.name}")
                     candidates.add(head.function)
                 }
-            } }
         }
 
         fun finishBodies() {
-            heads.forEach { (id, head) ->
-                val runtime = model.runtime.filterIsInstance<RuntimeRecord.FunctionBinding>().singleOrNull { it.declaration == DeclarationReference.Local(id) }
+            heads.forEach { (id, head) -> finishBody(id, head) }
+            model.declarations.declarations.forEachIndexed { index, record ->
+                val value: Any? = when (record) {
+                    is AnnotationProviderDeclaration -> NativeDeclarations.restoreAnnotationProvider(record.binding, managed)
+                    is MacroDeclaration -> requireNotNull(top.mcfpp.io.info.MacroFunctionInfo.from(requireNotNull(nativeDirectory).nativeMethod(nativeUnit, record.binding.native)))
+                        .declaredAs(record.binding.sourceName, record.binding.parameters.map { it.name })
+                    is ReferenceHelperDeclaration -> NativeDeclarations.restoreReference(record, types)
+                    else -> null
+                }
+                if (value != null) compounds.install(DeclarationId(index + 1L), value)
+            }
+        }
+
+        private fun finishBody(id: DeclarationId, head: RestoredFunctionHead) {
+                val runtime = runtimeByDeclaration[DeclarationReference.Local(id)]?.singleOrNull()
                 if (runtime?.policy == RuntimePolicy.LINK_ONLY) {
                     val content = resourceBytes.getValue(runtime.resourcePath)
                     val text = Charsets.UTF_8.newDecoder().onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
@@ -1779,21 +2044,11 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                     value.frozen?.let { constant -> restoredConstant(constant).let { restored -> parameter.defaultValue = restored.value; parameter.defaultTypes = restored.types } }
                     parameter.defaultBodyHandle = defaultHandle(parameterId)
                 }
-            }
-            model.declarations.declarations.forEachIndexed { index, record ->
-                val value: Any? = when (record) {
-                    is AnnotationProviderDeclaration -> NativeDeclarations.restoreAnnotationProvider(record.binding, managed)
-                    is MacroDeclaration -> requireNotNull(top.mcfpp.io.info.MacroFunctionInfo.from(requireNotNull(nativeDirectory).nativeMethod(nativeUnit, record.binding.native)))
-                    is ReferenceHelperDeclaration -> NativeDeclarations.restoreReference(record, types)
-                    else -> null
-                }
-                if (value != null) compounds.install(DeclarationId(index + 1L), value)
-            }
         }
 
         fun finishCompounds() {
             val errors = top.mcfpp.Project.errorCount
-            compounds.bindAll()
+            compounds.bindAll(deferredCompounds)
             model.declarations.declarations.forEachIndexed { index, record -> if (record is ValueDeclaration && record.role == ValueRole.GLOBAL) {
                 val id = DeclarationId(index + 1L)
                 val type = types.type(requireNotNull(record.type))
@@ -1840,6 +2095,11 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
         }
 
         fun validateReferences() {
+            // The bundled plan is generated from an already validated, closed protocol model
+            // and checked against its exact digest. Resolving every syntax reference here
+            // would construct the very members and annotation arenas it defers. External
+            // libraries retain the full semantic validation below.
+            if (lazyPlan != null) return
             SyntaxCodec.validateAll(model.syntax, object : SyntaxReferenceValidator {
                 override fun declaration(reference: DeclarationReference) {
                     val (unit, id) = resolve(this@ImportedUnit, reference)
@@ -1862,7 +2122,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
             val record = unit.model.declarations.declaration(id)
             return when (record) {
                 is MacroDeclaration -> macroBinding(listOf(unit to id))
-                is FunctionDeclaration -> StructuredNameBinding.Functions(listOf(unit.heads.getValue(id).function))
+                is FunctionDeclaration -> StructuredNameBinding.Functions(listOf(unit.callable(id)))
                 is ValueDeclaration -> {
                     if (record.role == ValueRole.GLOBAL) StructuredNameBinding.Value { unit.globals.getValue(id) }
                     else if (record.role == ValueRole.MEMBER) StructuredNameBinding.Value { frame ->
@@ -1877,7 +2137,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                     }
                 }
                 is CompoundDeclaration, is EnumDeclaration, is TypeAliasDeclaration -> StructuredNameBinding.Type(unit.compounds.type(id))
-                is ConstructorDeclaration, is OperatorDeclaration -> StructuredNameBinding.Functions(listOf(unit.compounds.value(id) as Function))
+                is ConstructorDeclaration, is OperatorDeclaration -> StructuredNameBinding.Functions(listOf(unit.boundValue(id) as Function))
                 is PropertyDeclaration -> record.backing?.let { unit.declaration(it) }
                     ?: problem("LIB_SYMBOL_UNRESOLVED", "Property has no bound value backing: $reference")
                 is EnumMemberDeclaration -> {
@@ -2124,9 +2384,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
             }
             return when (record) {
                 is ValueDeclaration -> {
-                    val property = model.declarations.declarations.filterIsInstance<PropertyDeclaration>().firstOrNull {
-                        (it.backing as? DeclarationReference.Local)?.target == declaration
-                    }
+                    val property = propertiesByBacking[declaration]
                     ProjectionTemplateDeclaration.Field(record.common.name, record.storage == ValueStorage.CONST,
                         record.declaredType?.let { declaredType(it, record.type) }, record.common.flags and DeclarationFlags.NULLABLE != 0L,
                         record.defaultBody ?: frozenBodies[declaration], property?.getter?.let(::accessor), property?.setter?.let(::accessor), access)
@@ -2193,6 +2451,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
         throw failure
     }
 
+    /** Releases imported registrations, body data, provider services, and annotation codecs. Repeated calls keep the session closed. */
     override fun close() {
         if (state == LibraryImportState.CLOSED) return
         val imported = ownedFunctions()

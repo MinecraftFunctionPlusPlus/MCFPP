@@ -2,7 +2,7 @@ param(
     [ValidateSet('all', 'producer', 'install', 'consumer', 'verify')][string]$Step = 'all',
     [Parameter(Mandatory = $true)][string]$CompilerJar,
     [string]$McfpmCommand = 'mcfpm',
-    [string]$JavaHome21,
+    [string]$JavaHome25,
     [string]$WorkDirectory = (Join-Path $PSScriptRoot 'work')
 )
 $ErrorActionPreference = 'Stop'
@@ -12,7 +12,7 @@ $producerRoot = Join-Path $workRoot 'producer'
 $consumerRoot = Join-Path $workRoot 'consumer'
 $installHome = Join-Path $workRoot 'host-home'
 $repositoryRoot = Join-Path $workRoot 'repository'
-$javaExecutable = if ($JavaHome21) { Join-Path $JavaHome21 'bin/java.exe' } else { 'java' }
+$javaExecutable = if ($JavaHome25) { Join-Path $JavaHome25 'bin/java.exe' } else { 'java' }
 if (!(Test-Path -LiteralPath $CompilerJar -PathType Leaf)) { throw "Compiler jar not found: $CompilerJar" }
 if ($McfpmCommand -ne 'mcfpm') { $McfpmCommand = [IO.Path]::GetFullPath($McfpmCommand) }
 
@@ -81,7 +81,7 @@ function Invoke-ExampleStep([string]$CurrentStep) {
 }
 $savedJavaHome = $env:JAVA_HOME
 try {
-    if ($JavaHome21) { $env:JAVA_HOME = [IO.Path]::GetFullPath($JavaHome21) }
+    if ($JavaHome25) { $env:JAVA_HOME = [IO.Path]::GetFullPath($JavaHome25) }
     $steps = if ($Step -eq 'all') { @('producer', 'install', 'consumer', 'verify') } else { @($Step) }
     foreach ($currentStep in $steps) { Invoke-ExampleStep $currentStep }
 } finally { $env:JAVA_HOME = $savedJavaHome }

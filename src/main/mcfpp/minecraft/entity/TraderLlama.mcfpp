@@ -1,4 +1,6 @@
 @MCFPPEntity
+/// 行商羊驼的实体数据。继承的字段由各父数据类型提供。
 data TraderLlamaData: LlamaData {
+    /// 自然消失前的等待时间。
     @Name("DespawnDelay") var despawnDelay: int
 }

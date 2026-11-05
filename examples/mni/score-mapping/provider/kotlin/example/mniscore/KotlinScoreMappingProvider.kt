@@ -1,6 +1,6 @@
 package example.mniscore
 
-import java.util.function.Consumer
+import top.mcfpp.mni.api.kotlin
 import top.mcfpp.Project
 import top.mcfpp.core.lang.Var
 import top.mcfpp.mni.api.BoolT
@@ -80,39 +80,38 @@ class KotlinScoreMappingProcessor : TemplateProcessor {
         val noArgsVoid = FunctionSignature.of(emptyList(), context.types().voidType())
         val declarations = context.declarations()
         val load = declarations.method(owner, "load", noArgsVoid) { body ->
-            val builder = body.builder()
-            val minecraft = builder.minecraft()
+            body.builder().kotlin {
             for (mapping in mappings) {
-                val score = minecraft.score(ScoreHolder.named(holder), mapping.objective)
+                val score = score(ScoreHolder.named(holder), mapping.objective)
                 if (mapping.integer) {
                     @Suppress("UNCHECKED_CAST")
                     val field = mapping.field as FieldRef<IntT>
-                    builder.assign(builder.fieldRef(body.self(), field), score.load())
+                    fieldRef(body.self(), field).value = score.value
                 } else {
                     @Suppress("UNCHECKED_CAST")
                     val field = mapping.field as FieldRef<BoolT>
-                    builder.assign(builder.fieldRef(body.self(), field),
-                        builder.ne(score.load(), builder.intLiteral(0)))
+                    fieldRef(body.self(), field).value = score.value ne literal(0)
                 }
+            }
             }
         }
         val save = declarations.method(owner, "save", noArgsVoid) { body ->
-            val builder = body.builder()
-            val minecraft = builder.minecraft()
+            body.builder().kotlin {
             for (mapping in mappings) {
-                val score = minecraft.score(ScoreHolder.named(holder), mapping.objective)
+                val score = score(ScoreHolder.named(holder), mapping.objective)
                 if (mapping.integer) {
                     @Suppress("UNCHECKED_CAST")
                     val field = mapping.field as FieldRef<IntT>
-                    builder.assign(score, builder.fieldRef(body.self(), field).load())
+                    score.value = fieldRef(body.self(), field).value
                 } else {
                     @Suppress("UNCHECKED_CAST")
                     val field = mapping.field as FieldRef<BoolT>
-                    val value = builder.fieldRef(body.self(), field)
-                    builder.ifElse(value.load(),
-                        Consumer { branch -> branch.assign(score, branch.intLiteral(1)) },
-                        Consumer { branch -> branch.assign(score, branch.intLiteral(0)) })
+                    val value = fieldRef(body.self(), field)
+                    ifElse(value.value,
+                        { score.value = literal(1) },
+                        { score.value = literal(0) })
                 }
+            }
             }
         }
         val marker = declarations.metadata(owner, GENERATED_MEMBERS, emptyMap())

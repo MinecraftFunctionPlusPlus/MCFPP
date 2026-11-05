@@ -8,6 +8,8 @@ import java.io.File
 // AI 很不喜欢给代码写详细的注释，即使我要求了
 /** Nullable options distinguish an explicit override from an omitted option. */
 open class CompilerFlags {
+    @CommandLine.Option(names = ["--debug-info"], description = ["Build an unoptimized datapack with source debugger metadata under debug/."])
+    var debugInfo: Boolean? = null
     @CommandLine.Option(names = ["-O", "--optimization-level"], description = ["Optimization level: 0, 1 or 2 (default: 2)."])
     var optimizationLevel: Int? = null
 

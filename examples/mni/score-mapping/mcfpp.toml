@@ -5,4 +5,5 @@ targetPath = "project/build"
 namespace = "example.score"
 version = "26.3"
 description = "MNI score mapping example"
-jars = ["build/score-mapping-macro.jar"]
+noMcLib = true
+jars = ["../../../build/libs/mni-example-providers.jar"]

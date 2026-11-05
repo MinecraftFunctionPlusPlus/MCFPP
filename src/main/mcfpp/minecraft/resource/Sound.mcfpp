@@ -1,5 +1,7 @@
 @From("top.mcfpp.mni.resource.SoundData")
+/// 声音文件资源的标识符。通过 id 字段保存资源名称。
 data Sound: ResourceID
 
 @From("top.mcfpp.mni.resource.SoundObjectData")
+/// 声音文件资源类型的共享成员入口。
 object data Sound: ResourceID

@@ -1,19 +1,37 @@
 package top.mcfpp.mni.api
 
-/** Phantom types describe MCFPP values, rather than their JVM representation. */
+/** Marks an MCFPP int in generated code. Obtain its type descriptor from [TypeService.intType]. */
 class IntT private constructor()
+/** Marks an MCFPP bool in generated code. */
 class BoolT private constructor()
+/** Marks an MCFPP float in generated code. */
 class FloatT private constructor()
+/** Marks an MCFPP string in generated code. */
 class StringT private constructor()
+/** Marks an MCFPP void result. */
 class VoidT private constructor()
+/** Marks an MCFPP entity value in generated code. */
 class EntityT private constructor()
+/** Marks an MCFPP position value in generated code. */
 class PositionT private constructor()
+/** Marks an MCFPP block value in generated code. */
 class BlockT private constructor()
-/** Owned public address values; these do not model compiler Ref<IntT>/Ref<T> locations. */
+/** Marks an MCFPP ScoreRef value, which stores a Minecraft scoreboard address. */
 class ScoreRefT private constructor()
+/** Marks an MCFPP NBTRef value, which stores a Minecraft NBT address for values of type [T]. */
 class NBTRefT<T> private constructor()
 
-/** A source range uses zero-based, half-open offsets and one-based line/column numbers. */
+/**
+ * A source range for compiler messages.
+ *
+ * @property file Logical source file name.
+ * @property startOffset Zero-based offset of the first character.
+ * @property endOffset Zero-based offset immediately after the range.
+ * @property startLine One-based line number at the start.
+ * @property startColumn One-based column number at the start.
+ * @property endLine One-based line number at the end.
+ * @property endColumn One-based column number immediately after the range.
+ */
 data class SourceSpan(
     val file: String,
     val startOffset: Int,
@@ -33,81 +51,131 @@ data class SourceSpan(
     override fun toString(): String = "$file:$startLine:$startColumn"
 
     companion object {
+        /** Returns an empty range in the logical file `<generated>`. */
         @JvmStatic
         fun unknown(): SourceSpan = SourceSpan("<generated>", 0, 0, 1, 1, 1, 1)
     }
 }
 
-/** Only compiler-created descriptors implement this view. A Java type parameter is not a type proof. */
+/** A compiler-provided MCFPP type. Obtain descriptors through [TypeService] or declaration views. */
 sealed interface TypeRef<T> {
+    /** Returns the type's display name. */
     fun name(): String
+    /** Tests whether [other] identifies the same MCFPP type in the same compilation. */
     fun sameType(other: TypeRef<*>): Boolean
+    /** Tests whether a value of [other] can be assigned to this type. */
     fun isAssignableFrom(other: TypeRef<*>): Boolean
+    /** Returns the fields visible on this type. */
     fun fields(): List<FieldRef<*>>
+    /** Returns the callback signature for a function type, or null for other types. */
     fun inlineSignature(): InlineSignature<*>? = null
 }
 
+/** Identifies an MCFPP field for [CodeBuilder.field] or [CodeBuilder.fieldRef]. */
 sealed interface FieldRef<T> {
+    /** Returns the field name. */
     fun name(): String
+    /** Returns the type of the field value. */
     fun type(): TypeRef<T>
+    /** Returns true when the field supports assignment. */
     fun writable(): Boolean
+    /** Returns the field's source location. */
     fun source(): SourceSpan
 }
 
-enum class ParamMode { VALUE, REF, CONST, INLINE }
+/** How a generated function or macro receives an argument. */
+enum class ParamMode {
+    /** Evaluates the argument once and passes its value. */
+    VALUE,
+    /** Passes a writable location shared with the caller. */
+    REF,
+    /** Supplies a value known during compilation. */
+    CONST,
+    /** Supplies a source callback for insertion during expansion. */
+    INLINE
+}
 
+/** A parameter's name, MCFPP type, and argument mode. */
 sealed interface ParameterView {
+    /** Returns the name used in the function signature. */
     fun name(): String
+    /** Returns the parameter's MCFPP type. */
     fun type(): TypeRef<*>
+    /** Returns how callers pass the argument. */
     fun mode(): ParamMode
+    /** Returns the callback signature when this parameter describes a callback, or null otherwise. */
     fun inlineSignature(): InlineSignature<*>? = null
 
     companion object {
+        /** Creates a parameter description, deriving a callback signature from [type] when available. */
         @JvmStatic
         fun of(name: String, type: TypeRef<*>, mode: ParamMode): ParameterView = ImmutableParameterView(name, type, mode)
+        /** Creates a parameter description with an explicit callback signature. */
         @JvmStatic
         fun of(name: String, type: TypeRef<*>, mode: ParamMode, inlineSignature: InlineSignature<*>): ParameterView = ImmutableParameterView(name, type, mode, inlineSignature)
     }
 }
 
+/** The ordered parameters and result type of an MCFPP callback. */
 sealed interface InlineSignature<R> {
+    /** Returns parameters in call order. */
     fun parameters(): List<ParameterView>
+    /** Returns the MCFPP result type. */
     fun returnType(): TypeRef<R>
 }
 
+/** A function signature used when constructing generated declarations. */
 sealed interface FunctionSignature<R> : InlineSignature<R> {
     companion object {
+        /** Creates a signature from a parameter list with unique names and a result type. */
         @JvmStatic
         fun <R> of(parameters: List<ParameterView>, returnType: TypeRef<R>): FunctionSignature<R> = ImmutableFunctionSignature(parameters, returnType)
     }
 }
 
+/** Identifies an MCFPP function that generated code can call. */
 sealed interface FunctionRef<R> {
+    /** Returns the function name. */
     fun name(): String
+    /** Returns ordinary parameters in call order. */
     fun parameters(): List<ParameterView>
+    /** Returns the MCFPP result type. */
     fun returnType(): TypeRef<R>
+    /** Returns parameters from the function's readonly parameter list, in declaration order. */
     fun readonlyParameters(): List<ParameterView> = emptyList()
 }
 
-/** Closed immutable payloads; mutable tags and arbitrary host objects cannot become constants. */
+/** An immutable value available during compilation, such as an annotation argument or CONST input. */
 sealed class ConstantValue private constructor() {
+    /** An integer stored as a signed 64-bit JVM value. */
     data class Integral(val value: Long) : ConstantValue()
+    /** A 32-bit floating-point value stored by its IEEE 754 bits. */
     data class FloatBits(val bits: Int) : ConstantValue()
+    /** A 64-bit floating-point value stored by its IEEE 754 bits. */
     data class DoubleBits(val bits: Long) : ConstantValue()
+    /** A Boolean value. */
     data class Bool(val value: Boolean) : ConstantValue()
+    /** A string value. */
     data class Text(val value: String) : ConstantValue()
+    /** NBT data represented as SNBT text. */
     data class Nbt(val snbt: String) : ConstantValue()
+    /** An MCFPP type used as a constant value. */
     data class TypeValue(val type: TypeRef<*>) : ConstantValue()
+    /** The MCFPP null value. */
     object NullValue : ConstantValue()
 
+    /** An ordered immutable copy of [elements]. */
     class Sequence(elements: List<ConstantValue>) : ConstantValue() {
+        /** Constant elements in their original order. */
         val elements: List<ConstantValue> = immutableList(elements)
         override fun equals(other: Any?): Boolean = other is Sequence && elements == other.elements
         override fun hashCode(): Int = elements.hashCode()
         override fun toString(): String = "Sequence($elements)"
     }
 
+    /** An immutable copy of named [fields], sorted by field name. */
     class Record(fields: Map<String, ConstantValue>) : ConstantValue() {
+        /** Constant values indexed by field name. */
         val fields: Map<String, ConstantValue> = immutableMap(fields.toSortedMap())
         override fun equals(other: Any?): Boolean = other is Record && fields == other.fields
         override fun hashCode(): Int = fields.hashCode()
@@ -115,14 +183,24 @@ sealed class ConstantValue private constructor() {
     }
 
     companion object {
+        /** Creates an integer constant. */
         @JvmStatic fun integral(value: Long): ConstantValue = Integral(value)
+        /** Creates a Boolean constant. */
         @JvmStatic fun bool(value: Boolean): ConstantValue = Bool(value)
+        /** Creates a string constant. */
         @JvmStatic fun text(value: String): ConstantValue = Text(value)
+        /** Copies [elements] into an immutable sequence constant. */
         @JvmStatic fun sequence(elements: List<ConstantValue>): ConstantValue = Sequence(elements)
+        /** Copies [fields] into an immutable record constant. */
         @JvmStatic fun record(fields: Map<String, ConstantValue>): ConstantValue = Record(fields)
     }
 }
 
+/**
+ * Reports invalid generated code or an invalid use of a code builder.
+ * @property source Source location included in the error message.
+ * @param message Explanation of the invalid operation.
+ */
 class CodeModelException(val source: SourceSpan, message: String) : IllegalArgumentException("$message at $source")
 
 internal data class TypeKey(val universe: Long, val id: Long, val revision: Long = 0)

@@ -1,8 +1,11 @@
 @MCFPPEntity
+/// 鸡的实体数据。继承的字段由各父数据类型提供。
 data ChickenData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name("EggLayTime")
+    /// 距离下一次产蛋的计时值。
     var eggLayTime: int
 
     @Name("IsChickenJockey")
+    /// 是否属于鸡骑士组合。
     var isChickenJockey: bool
 }

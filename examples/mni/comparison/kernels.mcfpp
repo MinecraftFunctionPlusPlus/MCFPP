@@ -1,5 +1,11 @@
 namespace example.comparison
 
+func damage(health: ScoreRef, amount: int): void = example.mnidamage.KotlinDamageMacro.damage
+func repeat(times: int, initial: int, body: (int,int)->int): int = example.mnirepeat.KotlinRepeatMacro.repeatFold
+func repeat(times: int, body: (int)->void): void = example.mnirepeat.KotlinRepeatMacro.repeat
+func raycast(samples: int, initial: int, step: (int,int)->int, keepGoing: (int)->bool): int = example.mniraycast.KotlinRaycastMacro.raycastFold
+func raycast(samples: int, body: (int)->bool): void = example.mniraycast.KotlinRaycastMacro.raycast
+
 // One small behavior-equivalent kernel per measured scenario. All five functions are compiled
 // once by a single real CLI invocation; the comparison runner observes only these entry points.
 

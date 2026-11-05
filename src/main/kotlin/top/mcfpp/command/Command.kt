@@ -28,6 +28,8 @@ import java.util.*
  * @see MacroPart
  */
 open class Command: Serializable {
+    var debugPoint: top.mcfpp.debug.DebugPoint? = null
+    var debugPointCaptured: Boolean = false
 
     /**
      * 命令片段的列表

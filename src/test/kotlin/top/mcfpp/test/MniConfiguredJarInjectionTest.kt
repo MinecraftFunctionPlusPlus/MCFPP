@@ -37,6 +37,8 @@ class MniConfiguredJarInjectionTest {
             val sourceRoot = Files.createDirectories(root.resolve("src"))
             val instruction = sourceRoot.resolve(".mcfpp")
             Files.writeString(instruction, "//> injectedBy jarfixture.JarProvider\n")
+            Files.writeString(sourceRoot.resolve("macros.mcfpp"),
+                "func jarAlias(value: int): int = jarfixture.JarProvider.jarMacro\n")
             assertEquals("", instruction.toFile().nameWithoutExtension)
             val configFile = root.resolve("mcfpp.toml")
             fun jsonPath(path: Path) = path.toAbsolutePath().toString().replace('\\', '/')
@@ -62,6 +64,10 @@ class MniConfiguredJarInjectionTest {
             projectLoader = assertIs<URLClassLoader>(Project.classLoader)
             Project.indexType()
 
+            assertTrue(GlobalScope.localNamespaces.getValue("fixture.configured").macroDeclarations().isEmpty(),
+                "injectedBy must not expose macros before source declarations are indexed")
+            Project.resolveField()
+
             val namespace = GlobalScope.localNamespaces.getValue("fixture.configured")
             val providerClass = Project.classLoader.loadClass("jarfixture.JarProvider")
             assertEquals(Project.classLoader, providerClass.classLoader)
@@ -77,7 +83,8 @@ class MniConfiguredJarInjectionTest {
             )
             val prepared = MacroLoadingSnapshot.prepare(listOf(namespace), bases, loader = Project.classLoader, report = {})
             assertTrue(prepared.diagnostics.isEmpty(), prepared.diagnostics.joinToString { it.message })
-            assertEquals(1, prepared.namespaces.getValue(namespace.identifier).find("jarMacro").size)
+            assertEquals(1, prepared.namespaces.getValue(namespace.identifier).find("jarAlias").size)
+            assertTrue(prepared.namespaces.getValue(namespace.identifier).find("jarMacro").isEmpty())
 
             val legacy = assertIs<NativeFunction>(namespace.scope.functions.getValue("jarLegacy").single())
             assertFalse(namespace.scope.functions.containsKey("jarInvalid"))
@@ -117,8 +124,7 @@ class MniConfiguredJarInjectionTest {
             package jarfixture;
             import top.mcfpp.annotations.MNIFunction;
             import top.mcfpp.annotations.MNIMacro;
-            import top.mcfpp.annotations.MacroParam;
-            import top.mcfpp.mni.api.Block;
+                        import top.mcfpp.mni.api.Block;
             import top.mcfpp.mni.api.Expr;
             import top.mcfpp.mni.api.IntT;
             import top.mcfpp.mni.api.MacroContext;
@@ -127,7 +133,7 @@ class MniConfiguredJarInjectionTest {
             public final class JarProvider {
                 public static int legacyCalls = 0;
 
-                @MNIMacro(params = {@MacroParam(name = "value", type = "int")}, returnType = "int")
+                @MNIMacro(normalParams = {"int"}, returnType = "int")
                 public static Expr<IntT> jarMacro(MacroContext context, Value<IntT> value) {
                     throw new AssertionError("macro discovery must not invoke provider code");
                 }

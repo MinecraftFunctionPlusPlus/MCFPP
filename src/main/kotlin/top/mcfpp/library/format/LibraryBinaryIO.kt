@@ -7,11 +7,16 @@ import java.nio.CharBuffer
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
+import java.nio.charset.CharsetEncoder
+import java.nio.charset.CharsetDecoder
 
 /** Explicit big-endian primitives. These methods never serialize implementation classes. */
-class LibraryBinaryWriter {
+class LibraryBinaryWriter private constructor(private val encoder: CharsetEncoder) {
+    constructor() : this(StandardCharsets.UTF_8.newEncoder()
+        .onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT))
     private val buffer = ByteArrayOutputStream()
     private val output = DataOutputStream(buffer)
+    private var spareChild: LibraryBinaryWriter? = null
 
     val size: Int get() = buffer.size()
 
@@ -36,10 +41,7 @@ class LibraryBinaryWriter {
 
     fun string(value: String) {
         val encoded = try {
-            StandardCharsets.UTF_8.newEncoder()
-                .onMalformedInput(CodingErrorAction.REPORT)
-                .onUnmappableCharacter(CodingErrorAction.REPORT)
-                .encode(CharBuffer.wrap(value))
+            encoder.reset().encode(CharBuffer.wrap(value))
         } catch (failure: CharacterCodingException) {
             throw LibraryFormatException(LibraryFormatCode.CORRUPT,
                 "String contains an unpaired UTF-16 surrogate", size.toLong(), cause = failure)
@@ -58,9 +60,16 @@ class LibraryBinaryWriter {
     fun rawBytes(value: ByteArray) = output.write(value)
 
     fun record(write: LibraryBinaryWriter.() -> Unit) {
-        val child = LibraryBinaryWriter()
-        write(child)
-        bytes(child.toByteArray())
+        // A writer owns its scratch child. Taking it out of the slot also permits reentrant
+        // record writes; no published payload array is ever recycled.
+        val child = spareChild ?: LibraryBinaryWriter(encoder)
+        spareChild = null
+        child.buffer.reset()
+        try {
+            write(child)
+            u32(child.size.toLong())
+            child.buffer.writeTo(output)
+        } finally { spareChild = child }
     }
 
     fun tagged(tag: Int, write: LibraryBinaryWriter.() -> Unit) {
@@ -89,13 +98,15 @@ class LibraryBinaryReader private constructor(
     private val baseOffset: Long,
     val sectionId: Int?,
     val recordIndex: Long?,
+    private val decoder: CharsetDecoder,
 ) {
     constructor(
         bytes: ByteArray,
         baseOffset: Long = 0,
         sectionId: Int? = null,
         recordIndex: Long? = null,
-    ) : this(bytes.copyOf(), 0, bytes.size, baseOffset, sectionId, recordIndex)
+    ) : this(bytes.copyOf(), 0, bytes.size, baseOffset, sectionId, recordIndex,
+        StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT))
 
     init {
         require(baseOffset >= 0 && baseOffset <= Long.MAX_VALUE - (end - start)) {
@@ -171,10 +182,7 @@ class LibraryBinaryReader private constructor(
         val length = length()
         val offset = byteOffset
         val result = try {
-            StandardCharsets.UTF_8.newDecoder()
-                .onMalformedInput(CodingErrorAction.REPORT)
-                .onUnmappableCharacter(CodingErrorAction.REPORT)
-                .decode(ByteBuffer.wrap(data, cursor, length)).toString()
+            decoder.reset().decode(ByteBuffer.wrap(data, cursor, length)).toString()
         } catch (failure: CharacterCodingException) {
             throw LibraryFormatException(LibraryFormatCode.CORRUPT,
                 "Invalid UTF-8 string", offset, sectionId, recordIndex, failure)
@@ -185,7 +193,7 @@ class LibraryBinaryReader private constructor(
 
     fun <T> record(index: Long? = recordIndex, read: LibraryBinaryReader.() -> T): T {
         val length = length()
-        val child = LibraryBinaryReader(data, cursor, cursor + length, byteOffset, sectionId, index)
+        val child = LibraryBinaryReader(data, cursor, cursor + length, byteOffset, sectionId, index, decoder)
         cursor += length
         val result = read(child)
         child.requireEnd()

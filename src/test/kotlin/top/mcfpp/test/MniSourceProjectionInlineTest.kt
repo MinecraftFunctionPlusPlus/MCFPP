@@ -16,7 +16,6 @@ import top.mcfpp.analysis.ValueFacts
 import top.mcfpp.analysis.ValueKnowledge
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.command.Comment
@@ -61,9 +60,9 @@ class MniSourceProjectionInlineTest {
             @JvmStatic
             @MNIMacro(
                 identifier = "runTwice",
-                params = [
-                    MacroParam(name = "body", type = "(ref int,int)->int", mode = ParamMode.INLINE),
-                    MacroParam(name = "destination", type = "int", mode = ParamMode.REF)
+                normalParams = [
+                    "(ref int,int)->int",
+                    "int"
                 ],
                 returnType = "int"
             )
@@ -82,11 +81,11 @@ class MniSourceProjectionInlineTest {
             @JvmStatic
             @MNIMacro(
                 identifier = "runConst",
-                params = [
-                    MacroParam(name = "body", type = "(const int)->int", mode = ParamMode.INLINE),
-                    MacroParam(name = "first", type = "int", mode = ParamMode.CONST),
-                    MacroParam(name = "second", type = "int", mode = ParamMode.CONST),
-                    MacroParam(name = "destination", type = "int", mode = ParamMode.REF)
+                normalParams = [
+                    "(const int)->int",
+                    "int",
+                    "int",
+                    "int"
                 ],
                 returnType = "int"
             )
@@ -113,11 +112,11 @@ class MniSourceProjectionInlineTest {
             @JvmStatic
             @MNIMacro(
                 identifier = "runNested",
-                params = [
-                    MacroParam(name = "prefix", type = "int"),
-                    MacroParam(name = "seed", type = "int", mode = ParamMode.CONST),
-                    MacroParam(name = "body", type = "(ref int,const int)->int", mode = ParamMode.INLINE),
-                    MacroParam(name = "destination", type = "int", mode = ParamMode.REF)
+                normalParams = [
+                    "int",
+                    "int",
+                    "(ref int,const int)->int",
+                    "int"
                 ],
                 returnType = "int"
             )
@@ -142,8 +141,8 @@ class MniSourceProjectionInlineTest {
             @JvmStatic
             @MNIMacro(
                 identifier = "bump",
-                params = [
-                    MacroParam(name = "value", type = "int", mode = ParamMode.VALUE)
+                normalParams = [
+                    "int"
                 ],
                 returnType = "int"
             )
@@ -233,8 +232,8 @@ class MniSourceProjectionInlineTest {
             NativeEntries.effects.clear()
             GlobalScope.localNamespaces[namespace.identifier] = namespace
             namespace.scope.journalFileFields.add(file.field)
-            namespace.injectedBy(InlineEntries::class.java)
-            namespace.injectedBy(NativeEntries::class.java)
+            namespace.declareMniFixtures(InlineEntries::class.java)
+            namespace.declareMniFixtures(NativeEntries::class.java)
             val bodySource = "{\n$source\n}"
             val parser = P(CommonTokenStream(mcfppLexer(CharStreams.fromString(bodySource, "source-inline.mcfpp"))))
             val body = parser.curlBlock()

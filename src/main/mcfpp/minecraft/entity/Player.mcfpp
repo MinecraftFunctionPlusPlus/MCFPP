@@ -2,64 +2,119 @@ import mcfpp.minecraft.other:*
 import mcfpp.minecraft.item:ItemStackData
 
 @MCFPPEntity
+/// 玩家的实体数据。继承的字段由各父数据类型提供。
 data PlayerData: EntityData, CreatureData {
+    /// 保存数据时的版本编号。
     @Name("DataVersion") var dataVersion: int
+    /// 玩家能力和移动参数。
     @Name("Abilities") var abilities: data {
+        /// 是否处于飞行状态。
         @Name("Flying") var flying: bool
+        /// 飞行速度参数。
         @Name("FlySpeed") var flySpeed: float
+        /// 是否启用即时建造能力。
         @Name("Instabuild") var instabuild: bool
+        /// 是否免疫通常的伤害。
         @Name("Invulnerable") var invulnerable: bool
+        /// 是否允许建造。
         @Name("MayBuild") var mayBuild: bool
+        /// 是否允许飞行。
         @Name("MayFly") var mayFly: bool
+        /// 步行速度参数。
         @Name("WalkSpeed") var walkSpeed: float
     }
+    /// 当前爆炸影响的位置。
     @Name("current_explosion_impact_pos") var currentExplosionImpactPos: list<double>
+    /// 当前冲量记录的重置宽限时间。
     @Name("current_impulse_context_reset_grace_time") var currentImpulseContextResetGraceTime: int
+    /// 维度标识符。
     @Name("Dimension") var dimension: string
+    /// 关联的末影珍珠数据。
     @Name("ender_pearls") var enderPearls: list<data: EnderPearlData {
+        /// 末影珍珠所在的维度。
         @Name("ender_pearl_dimension") var enderPearlDimension: string
     }>
+    /// 末影箱物品。
     @Name("EnderItems") var enderItems: list<ItemData>
+    /// 进入下界前的位置。
     var enteredNetherPosition: list<double>
+    /// 饥饿消耗值。
     var foodExhaustionLevel: float
+    /// 饥饿值。
     var foodLevel: int
+    /// 饱和度。
     var foodSaturationLevel: float
+    /// 食物状态更新的计时值。
     var foodTickTimer: int
+    /// 是否免疫当前爆炸导致的摔落伤害。
     @Name("ignore_fall_damage_from_current_explosion") var ignoreFallDamageFromCurrentExplosion: bool
+    /// 物品栏数据。
     @Name("Inventory") var inventory: list<ItemData>
+    /// 上次死亡的位置和维度。
     @Name("LastDeathLocation") var lastDeathLocation: data {
+        /// 维度标识符。
         var dimension: string
+        /// 位置坐标，顺序为 X、Y、Z。
         var pos: IntArray
     }
+    /// 当前游戏模式编号。
     var playerGameType: int
+    /// 上一个游戏模式编号。
     var previousplayerGameType: int
+    /// 袭击之兆关联的位置。
     @Name("raid_omen_position") var raidOmenPosition: IntArray
+    /// 配方书状态。
     @Name("RecipeBook") var recipeBook: list<RecipeBook>
+    /// 最外层坐骑及乘坐连接的数据。
     @Name("RootVehicle") var rootVehicle: data {
+        /// 乘坐连接目标的 UUID。
         @Name("Attach") var attach: IntArray
+        /// 坐骑实体的数据。
         @Name("Entity") var _entity: EntityData
     }
+    /// 玩家分数。
     @Name("Score") var score: int
+    /// 是否观看过终末之诗。
     var seenCredits: byte
+    /// 主手选中的物品。
     @Name("SelectedItem") var selectedItem: ItemStackData
+    /// 选中的快捷栏槽位。
     @Name("SelectedItemSlot") var selectedItemSlot: int
+    /// 左肩实体的数据。
     @Name("ShoulderEntityLeft") var shoulderEntityLeft: EntityData
+    /// 右肩实体的数据。
     @Name("ShoulderEntityRight") var shoulderEntityRight: EntityData
+    /// 睡眠计时值。
     @Name("SleepTimer") var sleepTimer: short
+    /// 是否在落地时生成额外粒子。
     @Name("spawn_extra_particles_on_fall") var spawnExtraParticlesOnFall: bool
+    /// 重生时的水平朝向角。
     @Name("SpawnAngle") var spawnAngle: float
+    /// 重生维度标识符。
     @Name("SpawnDimension") var spawnDimension: string
+    /// 是否强制使用保存的重生点。
     @Name("SpawnForced") var spawnForced: bool
+    /// 重生点的 X 坐标。
     @Name("SpawnX") var spawnX: int
+    /// 重生点的 Y 坐标。
     @Name("SpawnY") var spawnY: int
+    /// 重生点的 Z 坐标。
     @Name("SpawnZ") var spawnZ: int
+    /// 监守者召唤警告的状态。
     @Name("warden_spawn_tracker") var wardenSpawnTracker: data {
+        /// 冷却时间。
         @Name("cooldown_ticks") var cooldownTicks: int
+        /// 距离上一次警告的时间。
         @Name("ticks_since_last_warning") var ticksSinceLastWarning: int
+        /// 当前警告等级。
         @Name("warning_level") var warningLevel: int
     }
+    /// 经验等级。
     @Name("XpLevel") var xpLevel: int
+    /// 当前等级的经验进度。
     @Name("XpP") var xpP: float
+    /// 附魔使用的经验种子。
     @Name("XpSeed") var xpSeed: int
+    /// 经验总量。
     @Name("XpTotal") var xpTotal: int
 }

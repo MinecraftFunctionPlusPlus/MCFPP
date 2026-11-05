@@ -21,6 +21,7 @@ class NoStackFunctionScope(parent: FunctionScope) : FunctionScope(parent) {
     }
 
     override fun putVar(key: String, `var`: Var<*>, forced: Boolean): Boolean {
+        if (top.mcfpp.Project.config.debugInfo && vars.containsKey(key)) return super.putVar(key, `var`, forced)
         return (parent[0] as FunctionScope).putVar(key, `var`, forced)
     }
 

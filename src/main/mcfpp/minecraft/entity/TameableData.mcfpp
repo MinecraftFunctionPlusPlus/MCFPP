@@ -1,4 +1,7 @@
+/// 可驯服生物的数据类型。
 data TameableData {
+    /// 所有者的 UUID。
     @Name("Owner") var owner: IntArray
+    /// 是否处于坐姿。
     @Name("Sitting") var sitting: bool
 }

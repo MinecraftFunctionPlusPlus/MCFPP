@@ -1,21 +1,28 @@
 @MCFPPEntity
+/// 狐狸的实体数据。继承的字段由各父数据类型提供。
 data FoxData : EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name("Crouching")
+    /// 是否处于潜行姿态。
     var crouching: bool
 
     @Name("Sitting")
+    /// 是否处于坐姿。
     var sitting: bool
 
     @Name("Sleeping")
+    /// 是否处于睡眠状态。
     var sleeping: bool
 
     @Name("Trusted")
+    /// 信任的玩家 UUID 列表。
     var trusted: list<IntArray>
 
     @Name("Type")
+    /// 种类标记。
     var type: FoxType
 }
 
+/// 狐狸的外观种类。
 enum FoxType {
     red, snow
 }

@@ -2,17 +2,26 @@ package top.mcfpp.mni.api
 
 import java.util.Collections
 
+/** Generated MCFPP code with a source location for compiler messages. */
 sealed interface Code {
+    /** Returns the source location associated with this code. */
     fun source(): SourceSpan
 }
+/** An expression that produces an MCFPP value of type [T] when the generated code runs. */
 sealed interface Expr<T> : Code {
+    /** Returns the MCFPP type of the expression result. */
     fun type(): TypeRef<T>
 }
+/** A generated statement, such as an assignment or a loop. */
 sealed interface Stmt : Code
+/** An ordered group of generated statements. Create one with [Quote.block]. */
 sealed interface Block : Code {
+    /** Returns the statements in execution order. */
     fun statements(): List<Stmt>
 }
+/** A writable local variable created by [CodeBuilder.local]. Each declaration receives its own generated name. */
 sealed interface Local<T> : Ref<T> {
+    /** Returns the suggested name used when the compiler names this variable. */
     fun hint(): String
 }
 

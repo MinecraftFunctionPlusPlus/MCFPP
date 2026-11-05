@@ -15,7 +15,6 @@ import top.mcfpp.analysis.Symbol
 import top.mcfpp.analysis.SymbolId
 import top.mcfpp.annotations.MNIMacro
 import top.mcfpp.annotations.MNIFunction
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.antlr.MCFPPAnnotationVisitor
 import top.mcfpp.antlr.MCFPPErrorListener
 import top.mcfpp.antlr.MCFPPFieldVisitor
@@ -73,9 +72,9 @@ class MniNbtReferenceTest {
             @JvmStatic
             @MNIMacro(
                 identifier = "damage",
-                params = [
-                    MacroParam(name = "health", type = "int", mode = ParamMode.REF),
-                    MacroParam(name = "amount", type = "int", mode = ParamMode.VALUE)
+                normalParams = [
+                    "int",
+                    "int"
                 ],
                 returnType = "void"
             )
@@ -184,8 +183,8 @@ class MniNbtReferenceTest {
             MCFPPFile.currFile!!.field.namespaceField =
                 GlobalScope.localNamespaces[Project.currNamespace]!!.scope
             GlobalScope.localNamespaces.getValue(Project.currNamespace).apply {
-                injectedBy(DamageEntries::class.java)
-                injectedBy(IndexEntries::class.java)
+                declareMniFixtures(DamageEntries::class.java)
+                declareMniFixtures(IndexEntries::class.java)
             }
             Project.pairTemplateCompanions()
             Project.stageProcessor[Project.compileStage.ordinal].forEach { it() }
@@ -352,7 +351,7 @@ class MniNbtReferenceTest {
     fun unstableExecutorReferenceIsRejectedBeforeCommandPublication() = SourceProjectionFixture.isolated {
         DamageEntries.hostCalls = 0
         val file = file("fixture.nbtref.context")
-        file.namespace.injectedBy(DamageEntries::class.java)
+        file.namespace.declareMniFixtures(DamageEntries::class.java)
         val caller = caller(file)
         val place = Place(SymbolId.fresh())
         // The physical score keeps the original int location and objective, but its holder is

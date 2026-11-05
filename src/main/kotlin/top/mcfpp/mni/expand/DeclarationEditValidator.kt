@@ -431,7 +431,7 @@ internal class DeclarationEditValidator(
     private val context = object : DeclarationContext {
         override fun quote(): Quote {
             active()
-            return quote
+            return this@DeclarationEditValidator.quote
         }
         override fun types(): TypeService {
             active()

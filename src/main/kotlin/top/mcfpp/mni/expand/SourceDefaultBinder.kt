@@ -58,7 +58,7 @@ internal class SourceDefaultBinder(private val binder: SourceCodeBinder = Snapsh
             environment.scopeId,
             environment.executionContextId,
             environment.sourceFile,
-            structuredSymbols = environment.structuredSymbols
+            structuredSymbols = environment.structuredSymbols, sourceTextOffset = environment.sourceTextOffset
         )
         val readonly = declaration.readonlyDefaultExpressions + readonlyDefaults.mapValues { binder.expression(it.value, scope) }
         val normal = declaration.normalDefaultExpressions + normalDefaults.mapValues { binder.expression(it.value, scope) }
@@ -76,7 +76,7 @@ internal class SourceDefaultBinder(private val binder: SourceCodeBinder = Snapsh
             environment.sourceText,
             environment.scopeId,
             environment.executionContextId,
-            environment.sourceFile
+            environment.sourceFile, sourceTextOffset = environment.sourceTextOffset
         )
         readonly.values.forEach(::closedTemplate)
         return result

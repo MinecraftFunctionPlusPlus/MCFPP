@@ -40,6 +40,11 @@ class DeclarationShell<D : Any> internal constructor(
     }
 
     fun binding(): D = checkNotNull(value) { "Declaration ${declaration.id.value} is not bound yet" }
+
+    internal fun checkpointForReuse(): () -> Unit {
+        val saved = value
+        return { value = saved }
+    }
 }
 
 /** One instance belongs to one import session, never to GlobalScope or a process-wide cache. */
@@ -121,6 +126,15 @@ class LibraryIdentities<D : Any> {
     }
 
     fun clear() { parameters.clear(); locals.clear(); libraries.clear() }
+
+    internal fun checkpointForReuse(): () -> Unit {
+        val state = top.mcfpp.library.api.ReusableState()
+        state.map(parameters); state.map(locals)
+        libraries.values.forEach { registered ->
+            registered.declarations.values.forEach { state.add(it.checkpointForReuse()) }
+        }
+        return state::restore
+    }
 
     private fun locatorBytes(value: LibraryDeclarationIdentity): ByteArray = LibraryBinaryWriter().apply {
         when {
@@ -282,11 +296,20 @@ class CompilerTypeTableCapture(private val bindings: CompilerTypeBindings) : Com
 /** Restores compiler types only through registered language constructors and explicit bindings. */
 class CompilerTypeTableRestore(private val tables: LibraryTables, private val bindings: CompilerTypeBindings) {
     private val types = HashMap<TypeRef, MCFPPType>()
+    private val identities = HashMap<TypeRef, TypeId>()
     private val constants = HashMap<ConstantRef, CompilerValue>()
     private val activeTypes = HashSet<TypeRef>()
     private val activeConstants = HashSet<ConstantRef>()
 
     init { TypeTableCodec.validate(tables) }
+
+    internal fun checkpointForReuse(): () -> Unit {
+        check(activeTypes.isEmpty() && activeConstants.isEmpty()) { "Cannot checkpoint an active type restoration" }
+        val state = top.mcfpp.library.api.ReusableState()
+        state.map(types); state.map(identities); state.map(constants)
+        state.set(activeTypes); state.set(activeConstants)
+        return state::restore
+    }
 
     fun type(reference: TypeRef): MCFPPType {
         types[reference]?.let { return it }
@@ -345,7 +368,7 @@ class CompilerTypeTableRestore(private val tables: LibraryTables, private val bi
     }
 
     /** Restore identity data without specializing a generic declaration or executing a body. */
-    fun identity(reference: TypeRef): TypeId = when (val value = tables.type(reference)) {
+    fun identity(reference: TypeRef): TypeId = identities.getOrPut(reference) { when (val value = tables.type(reference)) {
         is LibraryType.Builtin -> if (value.key in setOf("list", "ImmutableList", "map", "dict", "NBTRef") || value.key.startsWith("constructor:"))
             TypeId.Builtin(value.key) else LibraryBuiltinTypes.restore(value.key).typeId
         is LibraryType.Declaration -> bindings.restoreDeclaration(value.target).typeId
@@ -361,5 +384,5 @@ class CompilerTypeTableRestore(private val tables: LibraryTables, private val bi
             FunctionExecution.NORMAL -> "normal"; FunctionExecution.PAUSED -> "paused"; FunctionExecution.GENERATOR -> "generator"
         })
         is LibraryType.NbtRef -> TypeId.Applied(TypeId.Builtin("NBTRef"), listOf(identity(value.value)))
-    }
+    } }
 }

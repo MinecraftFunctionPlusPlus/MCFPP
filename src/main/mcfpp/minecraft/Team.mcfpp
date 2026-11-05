@@ -1,21 +1,27 @@
 import mcfpp.minecraft.std:*
 
 @From("top.mcfpp.mni.minecraft.TeamData")
+/// 队伍标识符和显示名称。
 data Team {
+    /// Minecraft 队伍名称。
     var id: string
+    /// 显示名称。
     var displayName: text
 
+    /// 保存队伍名称，并将其用作显示名称。调用 register() 在游戏中创建队伍。
     constructor(id: string){
         this.id = id
         this.displayName = id
     }
 
+    /// 保存队伍名称和显示名称。调用 register() 在游戏中创建队伍。
     constructor(id: string, displayName: text){
         this.id = id
         this.displayName = displayName
     }
 }
 
+/// 队伍成员名称的显示规则。
 enum NametagVisibility {
     never,
     hideForOtherTeams,
@@ -23,6 +29,7 @@ enum NametagVisibility {
     always
 }
 
+/// 队伍成员死亡消息的显示规则。
 enum DeathMessageVisibility {
     never,
     hideForOtherTeams,
@@ -30,6 +37,7 @@ enum DeathMessageVisibility {
     always
 }
 
+/// 队伍成员之间的碰撞规则。
 enum CollisionRule {
     pushOtherTeams,
     pushOwnTeam,

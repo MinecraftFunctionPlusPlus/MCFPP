@@ -1,5 +1,7 @@
 @From("top.mcfpp.mni.resource.RecipeTypeData")
+/// 配方类型资源的标识符。通过 id 字段保存资源名称。
 data RecipeType: ResourceID
 
 @From("top.mcfpp.mni.resource.RecipeTypeObjectData")
+/// 配方类型资源类型的共享成员入口。
 object data RecipeType: ResourceID

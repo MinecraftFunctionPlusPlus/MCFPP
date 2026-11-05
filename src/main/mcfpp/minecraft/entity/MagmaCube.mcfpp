@@ -1,8 +1,11 @@
 @MCFPPEntity
+/// 岩浆怪的实体数据。继承的字段由各父数据类型提供。
 data MagmaCube: EntityData, CreatureData, AIMobData {
     @Name("Size")
+    /// 体型数值。
     var size: int
 
     @Name("WasOnGround")
+    /// 上一次记录时是否接触地面。
     var wasOnGround: bool
 }

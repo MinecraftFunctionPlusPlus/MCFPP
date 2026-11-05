@@ -63,30 +63,46 @@ data class LibraryDebug(
 )
 
 /** Pure protocol document. Successful decoding does not bind dependency language symbols or load providers. */
-class LibraryModel(
+class LibraryModel private constructor(
     val manifest: LibraryManifest,
     val declarations: LibraryDeclarations,
     val tables: LibraryTables,
     val syntax: LibrarySyntax,
-    annotations: List<AnnotationRecord> = emptyList(),
-    stateCells: List<StateCell> = emptyList(),
-    runtime: List<RuntimeRecord> = emptyList(),
-    resources: List<LibraryResource> = emptyList(),
-    val debug: LibraryDebug? = null,
+    annotations: List<AnnotationRecord>,
+    stateCells: List<StateCell>,
+    runtime: List<RuntimeRecord>,
+    resources: List<LibraryResource>,
+    val debug: LibraryDebug?,
+    sharedDecodedGraph: Boolean,
 ) {
-    val annotations = frozen(annotations.map { it.copy(arguments = frozen(it.arguments), parents = frozen(it.parents),
+    constructor(manifest: LibraryManifest, declarations: LibraryDeclarations, tables: LibraryTables, syntax: LibrarySyntax,
+                annotations: List<AnnotationRecord> = emptyList(), stateCells: List<StateCell> = emptyList(),
+                runtime: List<RuntimeRecord> = emptyList(), resources: List<LibraryResource> = emptyList(),
+                debug: LibraryDebug? = null) : this(manifest, declarations, tables, syntax, annotations, stateCells, runtime, resources, debug, false)
+
+    val annotations = if (sharedDecodedGraph) annotations else frozen(annotations.map { it.copy(arguments = frozen(it.arguments), parents = frozen(it.parents),
         state = it.state?.copy(fields = frozen(it.state.fields))) })
-    val stateCells = frozen(stateCells.map { when (it) {
+    val stateCells = if (sharedDecodedGraph) stateCells else frozen(stateCells.map { when (it) {
         is StateCell.Sequence -> it.copy(values = frozen(it.values))
         is StateCell.Map -> it.copy(entries = frozen(it.entries))
         is StateCell.Set -> it.copy(values = frozen(it.values))
     } })
-    val runtime = frozen(runtime)
-    val resources = frozen(resources.map { it.copy(sha256 = frozen(it.sha256)) })
+    val runtime = if (sharedDecodedGraph) runtime else frozen(runtime)
+    val resources = if (sharedDecodedGraph) resources else frozen(resources.map { it.copy(sha256 = frozen(it.sha256)) })
     var localReferencesValidated: Boolean = false
         internal set
+    /** Optional build-generated directories, shared only with this exact decoded protocol. */
+    internal var importPlan: top.mcfpp.library.compiler.BuiltinImportPlan? = null
     /** This codec never resolves dependency declarations or makes a runnable compiler session. */
     val requiresDependencyBinding: Boolean get() = manifest.dependencies.isNotEmpty()
+
+    /** Only a private, fully decoded builtin snapshot calls this. Compiler declarations, parser
+     * projections, providers and language-binding proofs are never included in the cache. */
+    internal fun sessionCopy(): LibraryModel = LibraryModel(manifest, declarations, tables,
+        syntax.sessionCopy(), annotations, stateCells, runtime, resources, debug, true).also {
+        it.localReferencesValidated = localReferencesValidated
+        it.importPlan = importPlan
+    }
 }
 
 /** Target checks are caller-selected; omitted target fields mean target binding is deferred. */

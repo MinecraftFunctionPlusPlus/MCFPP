@@ -21,6 +21,11 @@ class MCFPPGenericDataTemplateType @JvmOverloads constructor(
     /** Read existing checkpoint state without invoking the template getter's lazy resolution. */
     private fun rawTemplate(): DataTemplate = checkpointPrivateState().elements.single()
 
+    private fun refreshParents(owner: DataTemplate) {
+        parentType = owner.getType().parentType
+        Project.libraryImportSession?.trackResolvedTypeView(this)
+    }
+
     override val typeName: String
         get() {
             sessionGuard?.invoke()
@@ -36,14 +41,14 @@ class MCFPPGenericDataTemplateType @JvmOverloads constructor(
             val canonical = resolve() ?: return
             require(canonical.inheritanceIdentity == typeId) { "Session specialization differs from the descriptor identity" }
             template = canonical
-            parentType = canonical.getType().parentType
+            refreshParents(canonical)
             return
         }
         if (template is CompiledGenericDataTemplate) return
         val boundPrototype = template as? GenericDataTemplate
         if (boundPrototype?.sessionIdentity != null && boundPrototype.nominalIdentity == typeId.constructor) {
             template = MCFPPType.resolveSpecialization(typeId, boundPrototype) ?: return
-            parentType = template.getType().parentType
+            refreshParents(template)
             return
         }
         val declaration = typeId.constructor as? TypeId.Declaration ?: return
@@ -57,6 +62,6 @@ class MCFPPGenericDataTemplateType @JvmOverloads constructor(
             val canonical = MCFPPType.resolveSpecialization(typeId) ?: return
             template = canonical
         }
-        parentType = template.getType().parentType
+        refreshParents(template)
     }
 }

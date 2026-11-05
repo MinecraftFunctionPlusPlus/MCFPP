@@ -1,40 +1,54 @@
 import mcfpp.minecraft.other:*
+/// 生物共用的生命、效果和行为数据。
 data CreatureData{
     @Name("AbsorptionAmount")
+    /// 伤害吸收生命值。
     var absorptionAmount: float
 
     @Name("active_effects")
+    /// 当前状态效果。
     var activeEffects: list<PotionEffectData>
 
+    /// 生物属性列表。
     var attributes: list<Attribute>
 
     @Name("Brain")
+    /// 生物行为记忆数据。
     var brain: nbt
 
     @Name("DeathTime")
+    /// 死亡过程的计时值。
     var deathTime: short
 
     @Name("FallFlying")
+    /// 是否处于鞘翅滑翔状态。
     var fallFlying: bool
 
     @Name("Health")
+    /// 生命值。
     var health: float
 
     @Name("HurtByTimestamp")
+    /// 最近一次受攻击的时间记录。
     var hurtByTimestamp: int
 
     @Name("HurtTime")
+    /// 受伤动画的剩余时间。
     var hurtTime: short
 
     @Name("SleepingX")
+    /// 睡眠位置的 X 坐标。
     var sleepingX: int
 
     @Name("SleepingY")
+    /// 睡眠位置的 Y 坐标。
     var sleepingY: int
 
     @Name("SleepingZ")
+    /// 睡眠位置的 Z 坐标。
     var sleepingZ: int
 
     @Name("Team")
+    /// 所属队伍名称。
     var team: string
 }

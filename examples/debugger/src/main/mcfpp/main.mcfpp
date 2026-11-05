@@ -1,0 +1,19 @@
+func increment(value: int): int {
+    var copy = value
+    copy += 1
+    return copy
+}
+
+func main() {
+    var count = 1
+    count = increment(count)
+    var decimal: float = 1.5
+    decimal += 0.5
+    while count < 4 {
+        count += 1
+    }
+    /say Debugger demo finished
+    /scoreboard objectives add debugger_query dummy
+    /scoreboard players set #visible debugger_query 23
+    /scoreboard players get #visible debugger_query
+}

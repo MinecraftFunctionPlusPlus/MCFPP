@@ -1,14 +1,16 @@
 # MNI 公共 API 与教程（实验性）
 
-MNI 让 **Java/Kotlin 在编译期构造 MCFPP 运行时代码**：MCFPP 仍然表达运行时程序，宏作者只使用 `top.mcfpp.mni.api` 中的结构化代码模型，不接触 ANTLR 解析树、`Function.currFunction`、`Var` 或命令字符串拼接。
+MNI 让 **Kotlin 在编译期构造 MCFPP 运行时代码**：MCFPP 仍然表达运行时程序，宏作者只使用 `top.mcfpp.mni.api` 中的结构化代码模型，不接触 ANTLR 解析树、`Function.currFunction`、`Var` 或命令字符串拼接。
+
+API、DSL、示例与工程模板以 Kotlin 为主要设计对象。Java 互操作保留调用 Kotlin JVM 方法的能力，Java 编写便利性不再作为新增 API 的设计约束。内置 provider 与相关注解实现位于 `src/main/kotlin`；已有的低层 builder 调用方式继续可用。
 
 本目录是公开 API 的入口：
 
-- [tutorial.md](tutorial.md)：Java/Kotlin 对照教程，覆盖求值顺序、`VALUE`/`CONST`/`REF`/`INLINE`、执行上下文、声明生成和调试。
+- [tutorial.md](tutorial.md)：Kotlin 宏与 DSL 教程，覆盖求值顺序、`VALUE`/`CONST`/`REF`/`INLINE`、执行上下文与声明生成。
 - [api-versioning.md](api-versioning.md)：独立于编译器发行版的实验 API 版本与兼容策略。
 - [implementation-contract.md](implementation-contract.md)、[source-projection-contract.md](source-projection-contract.md)、[kotlin-compatibility.md](kotlin-compatibility.md)：实现契约与 Kotlin/JVM 兼容范围。
 
-当前 API 版本由 [`ApiVersion`](../../src/main/kotlin/top/mcfpp/mni/api/ApiVersion.kt) 给出：`0.1.0-experimental`。它**不是**编译器版本，也不表示 API 已经稳定或所有计划目标已完成。
+当前 API 版本由 [`ApiVersion`](../../src/main/kotlin/top/mcfpp/mni/api/ApiVersion.kt) 给出：`0.2.0-experimental`。它**不是**编译器版本，也不表示 API 已经稳定或所有计划目标已完成。
 
 ## 1. 设计边界
 
@@ -32,14 +34,13 @@ MNI 让 **Java/Kotlin 在编译期构造 MCFPP 运行时代码**：MCFPP 仍然�
 
 ## 2. 注册与调用链
 
-宏通过现有 `injectedBy` 类加载链注册，provider JAR 由工程的 `jars` 配置加入：
+宏与 MNI 函数一样，在 MCFPP 中显式声明并绑定 JVM 方法。provider JAR 由工程的 `jars` 配置加入，CLI 生成的 MNI 工程会自动加载构建产物：
 
-```text
-project/src/.mcfpp        //> injectedBy example.mnidamage.KotlinDamageMacro
-mcfpp.json               "jars": ["build/damage-macro.jar"]
+```mcfpp
+func damage(health: ScoreRef, amount: int): void = example.mnidamage.KotlinDamageMacro.damage
 ```
 
-`injectedBy` 必须位于文件开头；解析器在第一条普通源码/注释之后停止读取后续指令。一个命名空间内不能注册两个同名、同 MCFPP 参数类型的宏。
+`@MNIMacro(normalParams = ["ScoreRef", "int"], returnType = "void")` 描述实现签名；公开名称、参数名和命名空间来自源码声明。`injectedBy` 不会自动暴露宏。一个命名空间内不能声明两个同名、同 MCFPP 参数类型的宏；同一个 JVM 方法可以绑定到不同源码名称。
 
 从 MCFPP 源码到生成代码的固定顺序：
 
@@ -59,24 +60,14 @@ mcfpp.json               "jars": ["build/damage-macro.jar"]
 
 ### `@MNIMacro` JVM ABI
 
-```java
-@MNIMacro(
-    identifier = "damage",
-    params = {
-        @MacroParam(name = "health", type = "int", mode = ParamMode.REF),
-        @MacroParam(name = "amount", type = "int", mode = ParamMode.VALUE)
-    },
-    returnType = "void"
-)
-public static Block damage(MacroContext context, Ref<IntT> health, Value<IntT> amount)
-```
+Kotlin 宏入口见 [KotlinDamageMacro.kt](../../examples/mni/damage/provider/kotlin/example/mnidamage/KotlinDamageMacro.kt)。公开地址参数为 `Value<ScoreRefT>` / `Value<NBTRefT<T>>`，对应源码中的 `ScoreRef` / `NBTRef<T>`。宏体使用 `context.quote.block { ... }`，通过 DSL 构造不可变代码树。
 
 - 入口必须是 `public static`，provider 类及其外部类必须是 `public`。
 - 首参数必须精确为 `MacroContext`。
-- 后续 JVM 参数必须与注解模式一一对应：`Value<T>`、`Ref<T>`、`Const<T>`、`InlineFn<S>`。
+- 注解的 `normalParams` 按顺序列出类型；模式直接从 JVM wrapper 推导：`Value<T>`、`Ref<T>`、`Const<T>`、`InlineFn<S>`。
 - `void` 宏返回 `Block`；非 `void` 宏返回 `Expr<T>`。
-- `identifier` 为空时使用 JVM 方法名。
-- `type` 是现有 MCFPP 类型的元数据字符串；`INLINE` 使用 `(int, ref int)->bool` 这类函数签名描述。
+- `func` 声明提供源码名称，显式绑定时不需要注解的 `identifier`。
+- `normalParams` 中每项是现有 MCFPP 类型的字符串；`INLINE` 使用 `(int, ref int)->bool` 这类函数签名描述。
 - 跳过 bridge/synthetic 方法；`suspend`、默认参数 mask、未映射的扩展 receiver/value class 不能作为入口。
 - 同名候选只按 MCFPP 名称与参数类型选择；参数模式、返回类型和 JVM wrapper 不参与重载区分。同名同参数签名的宏/普通函数冲突会在声明准备阶段诊断。
 
@@ -101,7 +92,7 @@ Kotlin 入口可以使用顶层函数、`object` 的 `@JvmStatic` 方法或 comp
 - 函数类型为 `(int,int)->int`、`()->void`；lambda 为 `{ i -> ... }`，可写 `{ i: int -> ... }`，单参数目标可隐式使用 `it`，零参数用 `{ ... }`。具名 `func` 声明保持原形式。旧箭头写法只作为迁移反例并诊断拒绝。
 - 回调尾表达式返回值，尾随分号丢弃值，`void` 目标丢弃尾值；`return` 只结束当前回调，`break`/`continue` 不得跨回调边界。复用现有 lambda/存储/回收体系。
 
-详细示例见 [tutorial.md](tutorial.md#3-参数求值规则)。
+详细示例见 [tutorial.md](tutorial.md#5-参数模式与公开地址)。
 
 ## 4. API 地图
 
@@ -126,7 +117,7 @@ Kotlin 入口可以使用顶层函数、`object` 的 `@JvmStatic` 方法或 comp
 
 ## 5. 示例
 
-所有示例的宏入口和 processor 主体都只使用公开代码 API；注册沿用现有 `injectedBy`/`importToMNI` 钩子，旧字段注解适配器仍实现 `FieldAnnotation`。示例不出现 ANTLR 或 `Function.currFunction`。
+所有示例的宏入口和 processor 主体都只使用公开代码 API。宏由 MCFPP 显式绑定；processor 沿用 `injectedBy`/`importToMNI` 钩子，旧字段注解适配器仍实现 `FieldAnnotation`。示例不出现 ANTLR 或 `Function.currFunction`。
 
 | 示例 | 演示 | lambda 迁移前历史状态 |
 |---|---|---|
@@ -159,9 +150,9 @@ public static Block damage(MacroContext context, Ref<IntT> health, Value<IntT> a
 @JvmStatic
 @MNIMacro(
     identifier = "damage",
-    params = [
-        MacroParam(name = "health", type = "int", mode = ParamMode.REF),
-        MacroParam(name = "amount", type = "int", mode = ParamMode.VALUE)
+    normalParams = [
+        "int",
+        "int"
     ],
     returnType = "void"
 )
@@ -203,7 +194,7 @@ DSB 不是 Minecraft 服务端：它覆盖数据包命令语义、函数/回调�
 ## 8. 当前边界
 
 - **功能回归**：全量运行中的 6 项失败已由定向运行解释并修复；合并证据、复用边界和字符串 DSB 结果见 [regression-results.md](regression-results.md)。本文不把合并证据写成一次新的全量同轮执行。
-- **API 稳定性**：仍为 `0.1.0-experimental`；兼容规则见 [api-versioning.md](api-versioning.md)。独立最终验收见 [acceptance.md](../implementation-review/acceptance.md)。
+- **API 稳定性**：仍为 `0.2.0-experimental`；兼容规则见 [api-versioning.md](api-versioning.md)。独立最终验收见 [acceptance.md](../implementation-review/acceptance.md)。
 - **验收范围**：示例功能已由 DSB 十例覆盖；性能、MSPT 和真实游戏实机验证已按用户要求取消，不属于未完成项。
 
 ## 9. 相关文档

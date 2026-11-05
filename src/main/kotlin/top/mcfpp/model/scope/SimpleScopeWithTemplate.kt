@@ -27,10 +27,12 @@ interface SimpleScopeWithTemplate: IScopeWithTemplate {
     override fun addTemplate(identifier: String, template: DataTemplate, force: Boolean): Boolean {
         return if (force){
             this.template[identifier] = template
+            top.mcfpp.Project.invalidateTemplateInheritanceHeaders()
             true
         }else{
             if(!this.template.containsKey(identifier)){
                 this.template[identifier] = template
+                top.mcfpp.Project.invalidateTemplateInheritanceHeaders()
                 true
             }else{
                 false
@@ -46,6 +48,7 @@ interface SimpleScopeWithTemplate: IScopeWithTemplate {
      */
     override fun removeTemplate(identifier: String): DataTemplate? {
         return if(template.containsKey(identifier)) {
+            top.mcfpp.Project.invalidateTemplateInheritanceHeaders()
             template.remove(identifier)
         }else{
             null

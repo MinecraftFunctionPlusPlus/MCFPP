@@ -1,5 +1,8 @@
 @MCFPPEntity
+/// 史莱姆的实体数据。继承的字段由各父数据类型提供。
 data SlimeData: EntityData, CreatureData, AIMobData {
+    /// 体型数值。
     @Name("Size") var size: int
+    /// 上一次记录时是否接触地面。
     @Name("WasOnGround") var wasOnGround: bool
 }

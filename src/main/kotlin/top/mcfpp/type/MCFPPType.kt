@@ -50,7 +50,14 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
 
     open val hasRuntimeRepresentation: Boolean get() = isValueType
 
-    open val objectData: CompoundData = CompoundData("unknown", "mcfpp")
+    // Subclasses usually supply their own declaration. Do not construct an unused scope graph
+    // in the base constructor. The getter remains stable for types using the default declaration.
+    private var defaultObjectData: CompoundData? = null
+    open val objectData: CompoundData
+        get() = defaultObjectData ?: CompoundData("unknown", "mcfpp").also { defaultObjectData = it }
+
+    internal fun rawDefaultObjectData(): CompoundData? = defaultObjectData
+    internal fun restoreDefaultObjectData(value: CompoundData?) { defaultObjectData = value }
 
     open val instanceData: CompoundData get() = CompoundData(typeName, "mcfpp")
 

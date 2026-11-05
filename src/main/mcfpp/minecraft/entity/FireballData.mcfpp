@@ -1,5 +1,7 @@
 @MCFPPEntity
+/// 火球共用的运动数据。
 data FireballData {
     @Name("acceleration_power")
+    /// 加速度强度。
     var accelerationPower: double
 }

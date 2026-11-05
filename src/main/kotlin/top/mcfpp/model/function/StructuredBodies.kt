@@ -91,6 +91,18 @@ class SessionBodyRepository : AutoCloseable {
         return ProjectedSyntax(body, syntax, context).also(StructuredBodyContexts::register)
     }
 
+    /** Drop per-request callback libraries and parser projections when a prepared kernel resets. */
+    internal fun checkpointForReuse(): () -> Unit {
+        requireOpen()
+        val saved = libraries.toMap()
+        val restoreContexts = StructuredBodyContexts.checkpoint(this)
+        return {
+            requireOpen()
+            libraries.clear(); libraries.putAll(saved)
+            restoreContexts()
+        }
+    }
+
     override fun close() {
         if (!open) return
         open = false
@@ -111,6 +123,13 @@ object StructuredBodyContexts {
     }
     internal fun release(repository: SessionBodyRepository) {
         contexts.entries.removeIf { it.value.handle.repository === repository }
+    }
+    internal fun checkpoint(repository: SessionBodyRepository): () -> Unit {
+        val saved = contexts.entries.filter { it.value.handle.repository === repository }.map { it.key to it.value }
+        return {
+            release(repository)
+            saved.forEach { (context, body) -> contexts[context] = body }
+        }
     }
     fun projected(context: ParserRuleContext): ProjectedSyntax? = contexts[context]?.also { it.handle.requireOpen() }
     fun origin(context: ParserRuleContext): ProjectionOrigin? = projected(context)?.origin(context)

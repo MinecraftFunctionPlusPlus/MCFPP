@@ -34,25 +34,11 @@ object data $id: ResourceID
     val file = File("src/main/mcfpp/minecraft/resource/$id.mcfpp")
     file.writeText(template)
 
-    //生成java文件
-    val javaTemplate =
-"""package top.mcfpp.mni.resource;
-
-public class ${id}Data {
-
-}        
-"""
-    val javaFile = File("src/main/java/top/mcfpp/mni/resource/${id}Data.java")
-    javaFile.writeText(javaTemplate)
-
-    //javaConcrete
-    val javaConcreteTemplate =
-"""package top.mcfpp.mni.resource;
-
-public class ${id}ObjectData {
-
-}
-"""
-    val javaConcreteFile = File("src/main/java/top/mcfpp/mni/resource/${id}ObjectData.java")
-    javaConcreteFile.writeText(javaConcreteTemplate)
+    // Keep hand-written provider methods when regenerating resource declarations.
+    for (suffix in listOf("Data", "ObjectData")) {
+        val provider = File("src/main/kotlin/top/mcfpp/mni/resource/$id$suffix.kt")
+        if (!provider.exists()) {
+            provider.writeText("package top.mcfpp.mni.resource\n\nobject $id$suffix {}\n")
+        }
+    }
 }

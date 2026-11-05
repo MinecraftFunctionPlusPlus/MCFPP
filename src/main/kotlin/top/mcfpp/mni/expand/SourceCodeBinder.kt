@@ -100,7 +100,7 @@ internal class SnapshotSourceCodeBinder : SourceCodeBinder {
                 val callback = if (lambda != null) callback(lambda, signature, env) else if (empty != null) {
                     if (signature.parameters().size > 1) fail(span(empty, env), "An implicit callback can only have zero or one parameter")
                     val site = span(empty, env)
-                    val text = env.sourceText?.substring(site.startOffset, site.endOffset)
+                    val text = env.sourceSlice(site.startOffset, site.endOffset)
                         ?: fail(site, "Inline source binding requires the original source buffer")
                     SourceCallbackSyntax(if (signature.parameters().size == 1) listOf("it") else emptyList(), signature,
                         env.types.inlineType(signature) ?: fail(span(empty, env), "Callback signature is outside the type snapshot"),
@@ -209,9 +209,9 @@ internal class SnapshotSourceCodeBinder : SourceCodeBinder {
             if (env.types.conversionRank(signature.parameters()[index].type(), declared) == null)
                 fail(span(parameter, env), "Callback parameter '${parameter.Identifier().text}' does not accept the target parameter type")
         } }
-        val source = env.sourceText ?: fail(span(syntax, env), "Inline source binding requires the original source buffer")
         val sourceSpan = span(syntax, env)
-        if (sourceSpan.endOffset > source.length) fail(sourceSpan, "Inline source range is outside the original source buffer")
+        val text = env.sourceSlice(sourceSpan.startOffset, sourceSpan.endOffset)
+            ?: fail(sourceSpan, "Inline source range is outside the original source buffer")
         val callbackType = env.types.inlineType(signature)
             ?: fail(sourceSpan, "The callback signature is outside the current type snapshot")
         val structured = StructuredCallbackSyntax.capture(syntax)
@@ -219,9 +219,9 @@ internal class SnapshotSourceCodeBinder : SourceCodeBinder {
             immutableList(names),
             signature,
             callbackType,
-            source.substring(sourceSpan.startOffset, sourceSpan.endOffset),
+            text,
             sourceSpan,
-            frozenSyntax = if (structured == null) FrozenCallbackSyntax.capture(syntax, source.substring(sourceSpan.startOffset, sourceSpan.endOffset)) else null,
+            frozenSyntax = if (structured == null) FrozenCallbackSyntax.capture(syntax, text) else null,
             structuredSyntax = structured, structuredRequired = structured != null
         )
     }
@@ -270,13 +270,13 @@ internal class SnapshotSourceCodeBinder : SourceCodeBinder {
         val callbackType = env.types.inlineType(signature)
             ?: fail(span(syntax, env), "Static callback signature is outside the type snapshot")
         val source = span(syntax, env)
-        val sourceBuffer = env.sourceText ?: fail(source, "Static inline binding requires the original source buffer")
-        if (source.endOffset > sourceBuffer.length) fail(source, "Static function range is outside the original source buffer")
+        val text = env.sourceSlice(source.startOffset, source.endOffset)
+            ?: fail(source, "Static function range is outside the original source buffer")
         return SourceCallbackSyntax(
             emptyList(),
             signature,
             callbackType,
-            sourceBuffer.substring(source.startOffset, source.endOffset),
+            text,
             source,
             target
         )

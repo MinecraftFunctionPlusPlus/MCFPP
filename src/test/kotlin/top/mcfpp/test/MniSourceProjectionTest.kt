@@ -9,7 +9,6 @@ import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
 import top.mcfpp.analysis.*
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.antlr.ReadonlyParamsDeclarationSyntax
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.core.lang.MCInt
@@ -147,11 +146,11 @@ class MniSourceProjectionTest {
             @JvmStatic
             @MNIMacro(
                 identifier = "sequence",
-                params = [
-                    MacroParam(name = "unused", type = "int"),
-                    MacroParam(name = "first", type = "int", mode = ParamMode.REF),
-                    MacroParam(name = "later", type = "int"),
-                    MacroParam(name = "alias", type = "int", mode = ParamMode.REF)
+                normalParams = [
+                    "int",
+                    "int",
+                    "int",
+                    "int"
                 ],
                 returnType = "void"
             )
@@ -275,7 +274,7 @@ class MniSourceProjectionTest {
     @Test fun realMacroArgumentsFreezeEveryPrefixAndIndexOnceAndKeepPhysicalAliasesAfterLaterEffects() = SourceProjectionFixture.isolated {
         hostExecutions = 0
         val file = file("projection.references")
-        file.namespace.injectedBy(Entries::class.java)
+        file.namespace.declareMniFixtures(Entries::class.java)
         val effects = listOf("effectA", "first", "second", "effectB").map { function(file, it) }
         val caller = caller(file)
         val nested = MCFPPListType(MCFPPListType(MCFPPBaseType.Int))

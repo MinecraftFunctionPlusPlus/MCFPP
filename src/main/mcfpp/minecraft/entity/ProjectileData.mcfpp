@@ -1,5 +1,9 @@
+/// 投射物共用的数据类型。
 data ProjectileData {
+    /// 是否已经发射。
     @Name("HasBeenShot") var hasBeenShot: bool
+    /// 是否已经离开发射者的碰撞范围。
     @Name("LeftOwner") var leftOwner: bool
+    /// 所有者的 UUID。
     @Name("Owner") var owner: IntArray
 }

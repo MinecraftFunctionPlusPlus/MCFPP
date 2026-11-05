@@ -15,7 +15,7 @@ import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 
 open class NBTList : NBTBasedData {
-    override var type: MCFPPType
+    override lateinit var type: MCFPPType
     val genericType: MCFPPType get() = (type as MCFPPTypeWithGeneric).generic.single()
     override val nbtType = NBTTypeWithTag.LIST
     constructor(identifier: String = TempPool.getVarIdentify(), genericType: MCFPPType) : super(identifier) {

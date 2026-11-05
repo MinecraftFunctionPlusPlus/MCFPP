@@ -3,22 +3,20 @@ package top.mcfpp.test
 import com.alibaba.fastjson2.JSON
 import com.alibaba.fastjson2.JSONWriter
 import top.mcfpp.Project
+import top.mcfpp.antlr.parseCompilationUnit
 import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.command.Commands
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.StorageSource
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.mni.api.*
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
-import java.io.File
 import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
-import javax.tools.ToolProvider
 import kotlin.test.*
 import kotlin.test.Test
 
@@ -26,9 +24,9 @@ class MniLambdaMigrationTest {
     class Entries {
         companion object {
             @JvmStatic
-            @MNIMacro(identifier = "observe", params = [
-                MacroParam(name = "body", type = "()->int", mode = ParamMode.INLINE),
-                MacroParam(name = "observed", type = "int", mode = ParamMode.VALUE)
+            @MNIMacro(identifier = "observe", normalParams = [
+                "()->int",
+                "int"
             ], returnType = "int")
             fun observe(context: MacroContext, body: InlineFn<IntT>, observed: Value<IntT>): Expr<IntT> =
                 context.quote().expression(context.types().intType()) { builder ->
@@ -37,24 +35,39 @@ class MniLambdaMigrationTest {
         }
     }
 
+    class AddressEntries {
+        companion object {
+            @JvmStatic
+            @MNIMacro(identifier = "acceptScore", normalParams = ["ScoreRef"])
+            fun acceptScore(context: MacroContext, value: Value<ScoreRefT>): Block = context.quote.block {}
+
+            @JvmStatic
+            @MNIMacro(identifier = "acceptNbt", normalParams = ["NBTRef<int>"])
+            fun acceptNbt(context: MacroContext, value: Value<NBTRefT<IntT>>): Block = context.quote.block {}
+        }
+    }
+
     private fun providers(): URLClassLoader {
-        val classes = Files.createDirectories(Path.of("build/lambda/mni-provider-classes"))
-        val classpath = listOf(MNIMacro::class.java, MacroContext::class.java, kotlin.Unit::class.java)
-            .map { Path.of(it.protectionDomain.codeSource.location.toURI()).toString() }.distinct().joinToString(File.pathSeparator)
-        val compiler = assertNotNull(ToolProvider.getSystemJavaCompiler())
-        assertEquals(0, compiler.run(null, null, null, "-proc:none", "-classpath", classpath, "-d", classes.toString(),
-            "examples/mni/repeat/provider/java/example/mnirepeat/JavaRepeatMacro.java",
-            "examples/mni/raycast/provider/java/example/mniraycast/JavaRaycastMacro.java"))
-        return URLClassLoader(arrayOf(classes.toUri().toURL()), javaClass.classLoader)
+        // Gradle compiles these actual provider sources with the Kotlin test source set.
+        return URLClassLoader(emptyArray(), javaClass.classLoader)
     }
 
     private fun compile(source: String, loader: ClassLoader): List<String> {
+        val declarations = """
+            func repeat(times: int, initial: int, body: (int,int)->int): int = example.mnirepeat.KotlinRepeatMacro.repeatFold
+            func repeat(times: int, body: (int)->void): void = example.mnirepeat.KotlinRepeatMacro.repeat
+            func raycast(samples: int, initial: int, step: (int,int)->int, keepGoing: (int)->bool): int = example.mniraycast.KotlinRaycastMacro.raycastFold
+            func raycast(samples: int, body: (int)->bool): void = example.mniraycast.KotlinRaycastMacro.raycast
+            func observe(body: ()->int, observed: int): int = top.mcfpp.test.LambdaObservationMacro.observe
+        """.trimIndent().lines().filter { declaration ->
+            val name = declaration.substringAfter("func ").substringBefore('(')
+            !source.contains("func $name(")
+        }.joinToString("\n")
+        val firstFunction = Regex("(?m)^\\s*func\\s").find(source)?.range?.first ?: 0
+        val declaredSource = source.substring(0, firstFunction) + declarations + "\n" + source.substring(firstFunction)
         val publication = LogProcessor.beginDiagnosticCapture().use { capture ->
-            MCFPPStringTest.readFromString(source, version = "26.3", afterFileCreated = { file ->
+            MCFPPStringTest.readFromString(declaredSource, version = "26.3", afterFileCreated = {
                 Project.classLoader = loader
-                file.namespace.injectedBy(loader.loadClass("example.mnirepeat.JavaRepeatMacro"))
-                file.namespace.injectedBy(loader.loadClass("example.mniraycast.JavaRaycastMacro"))
-                file.namespace.injectedBy(Entries::class.java)
             })
             capture.seal()
         }
@@ -91,6 +104,25 @@ class MniLambdaMigrationTest {
         compile(Files.readString(Path.of("examples/mni/repeat/project/src/main.mcfpp")), loader)
         assertEquals(0, Project.errorCount)
         export("mni-repeat", linkedMapOf("total" to 10, "guarded" to 8, "tail" to 9, "nested" to 22))
+    }
+
+    @Test fun kotlinAddressMacroSignaturesResolveScoreAndNbtReferenceBuiltins() {
+        MCFPPStringTest.readFromString(
+            """
+                func acceptScore(value: ScoreRef): void = top.mcfpp.test.AddressInputMacros.acceptScore
+                func acceptNbt(value: NBTRef<int>): void = top.mcfpp.test.AddressInputMacros.acceptNbt
+                func main() {
+                    var score = scoreRef("#health", "hp");
+                    var stored = nbtStorageRef<int>("example:health", "hp");
+                    acceptScore(score);
+                    acceptNbt(stored);
+                }
+            """.trimIndent(),
+            version = "26.3",
+            afterFileCreated = { }
+        )
+        assertEquals(0, Project.errorCount)
+        assertTrue(GlobalScope.localNamespaces.getValue("default.test").scope.functions.containsKey("main"))
     }
 
     @Test fun realMigratedRayExampleExportsContinueStopAndCallerTails() = providers().use { loader ->
@@ -176,7 +208,7 @@ class MniLambdaMigrationTest {
             val text = Files.readString(Path.of(source))
             val parser = top.mcfpp.antlr.mcfppParser(org.antlr.v4.runtime.CommonTokenStream(
                 top.mcfpp.antlr.mcfppLexer(org.antlr.v4.runtime.CharStreams.fromString(text))))
-            val unit = parser.compilationUnit()
+            val unit = parser.parseCompilationUnit()
             assertEquals(0, parser.numberOfSyntaxErrors)
             fun scan(node: org.antlr.v4.runtime.tree.ParseTree) {
                 if (node is top.mcfpp.antlr.mcfppParser.InlineLambdaContext) {
@@ -207,4 +239,18 @@ class MniLambdaMigrationTest {
             scan(unit)
         }
     }
+}
+
+object LambdaObservationMacro {
+    @JvmStatic
+    @MNIMacro(normalParams = ["()->int", "int"], returnType = "int")
+    fun observe(context: MacroContext, body: InlineFn<IntT>, observed: Value<IntT>): Expr<IntT> =
+        MniLambdaMigrationTest.Entries.observe(context, body, observed)
+}
+
+object AddressInputMacros {
+    @JvmStatic @MNIMacro(normalParams = ["ScoreRef"])
+    fun acceptScore(context: MacroContext, value: Value<ScoreRefT>): Block = context.quote.block {}
+    @JvmStatic @MNIMacro(normalParams = ["NBTRef<int>"])
+    fun acceptNbt(context: MacroContext, value: Value<NBTRefT<IntT>>): Block = context.quote.block {}
 }

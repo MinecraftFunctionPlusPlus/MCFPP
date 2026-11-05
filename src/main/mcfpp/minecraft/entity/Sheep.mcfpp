@@ -1,5 +1,8 @@
 @MCFPPEntity
+/// 绵羊的实体数据。继承的字段由各父数据类型提供。
 data SheepData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
+    /// 外观颜色的数值标记。
     @Name("Color") var color: byte
+    /// 是否已经剪毛。
     @Name("Sheared") var sheared: bool
 }

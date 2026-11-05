@@ -3,6 +3,7 @@
 本示例复用 [damage provider](../damage/README.md) 的 `damageNbt` 宏。它接收普通 `VALUE NBTRef<int>`，将地址描述传给源码函数 `applyNbtDamage`，通过同步 `tryRead` 和 `set` 修改显式命名存储。
 
 ```mcfpp
+func damageNbt(health: NBTRef<int>, amount: int): void = example.mnidamage.KotlinDamageMacro.damageNbt
 damageNbt(nbtStorageRef<int>("example:health", "normal.hp"), 30)
 ```
 
@@ -10,15 +11,15 @@ damageNbt(nbtStorageRef<int>("example:health", "normal.hp"), 30)
 
 ## 构建与运行
 
-先按 [damage README](../damage/README.md) 重建所选 Java/Kotlin provider。`mcfpp.toml` 使用同一 JAR：
+先按 [damage README](../damage/README.md) 构建 Kotlin provider。`mcfpp.toml` 使用同一 JAR：
 
 ```toml
-jars = ["../damage/build/damage-macro.jar"]
+jars = ["../../../build/libs/mni-example-providers.jar"]
 ```
 
 ```bash
 cd examples/mni/nbt-reference
-java -jar ../../../build/libs/MCFPP-1.0.2-SNAPSHOT.jar build --project mcfpp.toml
+java -jar ../../../build/libs/MCFPP-0.1.0.jar build --project mcfpp.toml
 ```
 
 执行 `/function example.nbtreference:main` 后，命名存储 `example:health` 中的结果为：
@@ -32,4 +33,4 @@ java -jar ../../../build/libs/MCFPP-1.0.2-SNAPSHOT.jar build --project mcfpp.tom
 
 `alias.tryRead` 提供普通值快照；后续写入同一引用不会回改该快照。引用描述可保存和传递，引用重赋会更换描述。
 
-旧局部位置 `REF int` 示例的历史 CLI/DSB 证据不适用于此次迁移。当前版本的实际验证由本次集成记录报告；本页未重新执行构建或 CLI。
+此版本已通过上面的 CLI 构建命令。[damage 的验证命令](../damage/README.md#验证) 同时运行本例的回归测试：读取原始源码、导出数据包，并用仓库的命令执行器检查字段、列表元素和嵌套回调写入后的最终数值。

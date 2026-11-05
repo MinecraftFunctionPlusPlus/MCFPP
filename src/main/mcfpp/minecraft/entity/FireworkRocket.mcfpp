@@ -1,16 +1,21 @@
 import mcfpp.minecraft.item:ItemStackData
 
 @MCFPPEntity
+/// 烟花火箭的实体数据。继承的字段由各父数据类型提供。
 data FireworkRocketData {
     @Name("FireworksItem")
+    /// 烟花物品数据。
     var fireworksItem: list<ItemStackData>
 
     @Name("Life")
+    /// 已经存在的时间。
     var life: int
 
     @Name("LifeTime")
+    /// 预定存活时间。
     var lifeTime: int
 
     @Name("ShotAtAngle")
+    /// 是否以倾斜角度发射。
     var shotAtAngle: byte
 }

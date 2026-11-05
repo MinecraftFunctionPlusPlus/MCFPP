@@ -1,14 +1,19 @@
 @MCFPPEntity
+/// 幻翼的实体数据。继承的字段由各父数据类型提供。
 data PhantomData: EntityData, CreatureData, AIMobData {
     @Name("AX")
+    /// 盘旋中心的 X 坐标。
     var ax: int
 
     @Name("AY")
+    /// 盘旋中心的 Y 坐标。
     var ay: int
 
     @Name("AZ")
+    /// 盘旋中心的 Z 坐标。
     var az: int
 
     @Name("Size")
+    /// 体型数值。
     var size: int
 }

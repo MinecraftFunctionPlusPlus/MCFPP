@@ -1,2 +1,3 @@
 @MCFPPEntity
+/// 北极熊的实体数据。继承的字段由各父数据类型提供。
 data PolarBearData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, NeutralData

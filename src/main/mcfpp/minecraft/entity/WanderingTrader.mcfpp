@@ -1,9 +1,15 @@
 @MCFPPEntity
+/// 流浪商人的实体数据。继承的字段由各父数据类型提供。
 data WanderingTraderData: EntityData, CreatureData, AIMobData, GrowableData {
+    /// 自然消失前的等待时间。
     @Name("DespawnDelay") var despawnDelay: int
+    /// 可提供的交易。
     @Name("Offers") var offers: data {
+        /// 配方或交易记录列表。
         @Name("Recipes") var recipes: list<VillagerRecipe>
     }
+    /// 物品栏数据。
     @Name("Inventory") var inventory: list<ItemData>
+    /// 游走目标的坐标。
     @Name("wander_target") var wanderTarget: IntArray
 }

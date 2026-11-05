@@ -1,8 +1,11 @@
 @MCFPPEntity
+/// 猫的实体数据。继承的字段由各父数据类型提供。
 data CatData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, TameableData {
     @Name("CollarColor")
+    /// 项圈颜色的数值标记。
     var collarColor: byte
 
     @Name("Variant")
+    /// 外观变种。
     var variant: string
 }

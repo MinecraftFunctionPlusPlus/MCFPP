@@ -1,20 +1,27 @@
 @MCFPPEntity
+/// 掉落物的实体数据。继承的字段由各父数据类型提供。
 data ItemData: EntityData {
     @Name("Age")
+    /// 年龄值。
     var age: short
 
     @Name("Health")
+    /// 生命值。
     var health: short
 
     @Name("Item")
+    /// 关联物品的数据。
     var item: list<ItemData>
 
     @Name("Owner")
+    /// 所有者的 UUID。
     var owner: IntArray
 
     @Name("PickupDelay")
+    /// 恢复物品拾取前的等待时间。
     var pickupDelay: short
 
     @Name("Thrower")
+    /// 投掷者的 UUID。
     var thrower: IntArray
 }

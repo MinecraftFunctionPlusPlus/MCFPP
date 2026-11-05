@@ -1,5 +1,7 @@
 @MCFPPEntity
+/// 鳕鱼的实体数据。继承的字段由各父数据类型提供。
 data CodData: EntityData, CreatureData, AIMobData {
     @Name("FromBucket")
+    /// 是否通过桶放出。
     var fromBucket: bool
 }

@@ -1,4 +1,6 @@
 @MCFPPEntity
+/// 三叉戟的实体数据。继承的字段由各父数据类型提供。
 data TridentData: EntityData, ProjectileData, GeneralArrowData {
+    /// 是否已经造成命中伤害。
     @Name("DealtDamage") var dealtDamage: bool
 }

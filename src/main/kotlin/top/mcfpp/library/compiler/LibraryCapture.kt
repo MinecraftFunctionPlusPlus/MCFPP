@@ -395,7 +395,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
             val binding = NativeBinding(services.sourceProvider(descriptor.providerClass), descriptor.providerClass, descriptor.methodName,
                 descriptor.parameterClasses, descriptor.returnClass)
             val method = NativeDeclarations.resolveMethod(binding, services.native)
-            val prepared = top.mcfpp.mni.expand.MacroSignatureParser.prepare(method) ?: unsupported("Native macro has no prepared source signature")
+            val prepared = descriptor.prepare(method)
             fun type(value: top.mcfpp.mni.expand.PreparedMacroType) { when (value) {
                 is top.mcfpp.mni.expand.PreparedMacroType.Source -> compounds.include(services.sourceType(macro.namespace, value.expression))
                 is top.mcfpp.mni.expand.PreparedMacroType.Callback -> { value.signature.parameters.forEach { type(it.type) }; type(value.signature.returnType) }
@@ -431,7 +431,8 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
         }
     }
     private fun captureMacros() {
-        selection.macros.sortedWith { a, b -> compareUtf8(a.namespace + ":" + a.descriptor.methodDescriptor, b.namespace + ":" + b.descriptor.methodDescriptor) }.forEach { macro ->
+        selection.macros.sortedWith { a, b -> compareUtf8(a.namespace + ":" + a.descriptor.identifier + ":" + a.descriptor.methodDescriptor,
+            b.namespace + ":" + b.descriptor.identifier + ":" + b.descriptor.methodDescriptor) }.forEach { macro ->
             val id = reserve()
             val name = macro.descriptor.identifier.ifEmpty { macro.descriptor.methodName }
             val common = DeclCommon(null, null, name, namespaces.getValue(macro.namespace), environment(macro.source, macro.namespace), DeclarationAccess.PUBLIC, 0)

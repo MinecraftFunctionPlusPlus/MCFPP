@@ -12,17 +12,22 @@ internal class AutomaticInlining(
     private val observable: Set<SymbolId>,
     private val estimator: InlineCostEstimator,
     private val displayNames: Map<SymbolId, String> = emptyMap(),
+    private val analysis: ProgramAnalysis = ProgramAnalysis(graph),
 ) : FunctionPass {
     override val id = PassIds.INLINE
     override val requires = setOf(AnalysisKind.CALL_GRAPH, AnalysisKind.EFFECTS)
+    private fun size(ir: TypedIR): Long = ir.blocks.size.toLong() + ir.blocks.sumOf { it.instructions.size.toLong() }
+    private val moduleSize by lazy { graph.values.sumOf(::size) }
     override fun run(ir: TypedIR, context: PassContext): TypedIR {
-        val analysis = ProgramAnalysis(graph)
         val prepared = mutableMapOf<SymbolId, TypedIR>()
         fun eligible(body: TypedIR) = body.blocks.none { block -> block.instructions.any {
             it is Instruction.RawCommand && EffectAnalysis.rawCommandEffect(it.command) == Effect.Unknown
         } }
         fun optimize(input: TypedIR, localContext: PassContext): TypedIR {
             var current = input
+            // Inlining is optional. Bound each prepared body by the original input/module size
+            // so a shared call DAG cannot turn preparation itself into exponential code growth.
+            val budget = moduleSize + size(input)
             // Every inserted callee is prepared bottom-up. Recursive SCCs are never unfolded.
             val sites = input.blocks.flatMap { b -> b.instructions.filterIsInstance<Instruction.Call>().map { b.id to it } }
             for ((_, call) in sites) {
@@ -37,7 +42,9 @@ internal class AutomaticInlining(
                     } }
                     optimize(callee, PassContext(localContext.config, initial, localContext.module, trace = localContext.trace))
                 }
+                if (size(current) + size(body) > budget) continue
                 val trial = splice(current, call, body)
+                if (size(trial) > budget) continue
                 val cleaned = PassManager(scalarPasses(observable + input.parameters)).simplify(trial, localContext)
                 val before = estimator.cost(current, localContext.config.costs)
                 val after = estimator.cost(cleaned, localContext.config.costs)

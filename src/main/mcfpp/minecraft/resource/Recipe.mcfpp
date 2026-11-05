@@ -1,7 +1,9 @@
 import mcfpp.minecraft.std:*
 
 @From("top.mcfpp.mni.resource.RecipeData")
+/// 配方资源的标识符。通过 id 字段保存资源名称。
 data Recipe: ResourceID
 
 @From("top.mcfpp.mni.resource.RecipeObjectData")
+/// 配方资源类型的共享成员入口。
 object data Recipe: ResourceID

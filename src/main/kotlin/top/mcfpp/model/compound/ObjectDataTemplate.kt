@@ -17,8 +17,5 @@ open class ObjectDataTemplate(identifier: String, namespace: String = Project.cu
     /**
      * 获取这个类对于的classType
      */
-    override fun getType(): MCFPPObjectDataTemplateType =
-        MCFPPObjectDataTemplateType(this,
-            ArrayList(parent.filterIsInstance<DataTemplate>().map { it.getType() })
-        )
+    override fun getType(): MCFPPObjectDataTemplateType = super.getType() as MCFPPObjectDataTemplateType
 }

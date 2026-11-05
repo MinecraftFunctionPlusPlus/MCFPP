@@ -1,38 +1,55 @@
 @From("top.mcfpp.mni.minecraft.ItemPredicatePartData")
+/// 物品匹配条件的组成部分。
 data ItemPredicatePart
 
+/// 要求物品携带指定组件的条件。
 data ContainPart: ItemPredicatePart {
+    /// 要求物品携带的组件标识符。
     var predicate: string
 }
 
+/// 要求组件数据等于指定值的条件。
 data MatchPart: ItemPredicatePart {
+    /// 要检查的组件标识符。
     var predicate: string
+    /// 组件需要匹配的 NBT 数据。
     var value: nbt
 }
 
+/// 对指定组件应用子匹配条件。
 data SubPredicatePart: ItemPredicatePart {
+    /// 要检查的组件标识符。
     var predicate: string
+    /// 用于检查组件内容的子匹配条件。
     var value: ItemSubPredicate
 }
 
+/// 物品数量条件的基础类型。
 data CountPart: ItemPredicatePart
 
+/// 要求物品数量等于指定值的条件。
 data CountMatchPart: ItemPredicatePart {
+    /// 匹配元素数量的条件。
     var count: int
 }
 
+/// 要求物品数量落在指定范围的条件。
 data CountRangePart: ItemPredicatePart {
+    /// 匹配元素数量的条件。
     var count: range
 }
 
+/// 反转物品匹配结果的条件。
 data NotItemPredicate: ItemPredicatePart {
+    /// 匹配条件。
     var predicate: ItemPredicate
 }
 
-/// 由一个`|`隔开的两个测试项组成的测试项，两个测试项的关系为或
-
+/// 由 | 组合的两个条件，任意一个成立时匹配。
 data OrItemPredicatePart: ItemPredicatePart {
+    /// 第一个匹配条件。
     var predicate1: ItemPredicatePart
+    /// 第二个匹配条件。
     var predicate2: ItemPredicatePart
 }
 
@@ -40,9 +57,12 @@ data OrItemPredicatePart: ItemPredicatePart {
 /// 对应于`minecraft:item_predicate`，用于指定某个物品需要满足的特征。
 
 @From("top.mcfpp.mni.minecraft.ItemPredicateData")
+/// 由多个组成部分构成的物品匹配条件。
 data ItemPredicate {
+    /// 按顺序组合的物品匹配条件。
     var parts: list<ItemPredicatePart> = []
 }
 
 @From("top.mcfpp.mni.minecraft.ItemPredicateObjectData")
+/// 由多个组成部分构成的物品匹配条件的共享成员入口。
 object data ItemPredicate

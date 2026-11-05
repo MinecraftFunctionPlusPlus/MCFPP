@@ -1,6 +1,5 @@
 package top.mcfpp
 
-import com.ibm.icu.impl.data.ResourceReader
 import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
 import top.mcfpp.io.DatapackCreator

@@ -134,6 +134,28 @@ class MniBuilderTest {
     }
 
     @Test
+    fun kotlinOperatorsAndPropertiesGenerateRuntimeLoopAndPreserveScopeLifetime() {
+        val fixture = Fixture()
+        lateinit var retained: CodeScope
+        lateinit var counter: Local<IntT>
+        val expression = fixture.quote.kotlin().expression(fixture.int) {
+            retained = this
+            counter = local("i", literal(0))
+            val total = local("total", literal(0))
+            whileLoop({ counter.value lt literal(3) }) {
+                total += counter.value
+                counter += 1
+            }
+            ifThen(total.value eq literal(3)) {
+                total.value = total.value + 4
+            }
+            yield(total.value)
+        }
+        assertEquals(7L, Machine().expression(expression))
+        assertFailsWith<CodeModelException> { with(retained) { counter += 1 } }
+    }
+
+    @Test
     fun kotlinDslAndJavaConsumersExecuteTheSameConstruction() {
         fun build(dsl: Boolean): Pair<Fixture, Pair<Ref<IntT>, Block>> {
             val fixture = Fixture()

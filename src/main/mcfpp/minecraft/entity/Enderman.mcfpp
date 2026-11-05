@@ -1,6 +1,8 @@
 import mcfpp.minecraft.other:*
 
 @MCFPPEntity
+/// 末影人的实体数据。继承的字段由各父数据类型提供。
 data EndermanData: EntityData, CreatureData, AIMobData, NeutralData {
+    /// 携带方块的状态。
     var carriedBlockState: BlockState
 }

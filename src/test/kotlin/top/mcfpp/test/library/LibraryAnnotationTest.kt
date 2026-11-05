@@ -171,6 +171,40 @@ class LibraryAnnotationTest {
     }
 
     @Test
+    fun encodingMetadataReadOnDemandKeepsAliasesAndRestorationsIndependent() {
+        val first = Probe(1, 1f)
+        val second = Probe(2, 2f).apply { shared = first.shared }
+        first.shared.add(first.shared)
+        val capture = Capture()
+        val metadata = arrayListOf<MutableList<Any?>>()
+        val codec = object : PortableAnnotationCodec<Probe> by ProbeCodec {
+            override fun restore(value: Probe, reader: PortableAnnotationReader) {
+                ProbeCodec.restore(value, reader)
+                // A provider can explicitly inspect the reserved directory through the public
+                // reader. Its cell references must point at the same restored state containers.
+                metadata.add(reader.list("@mcfpp.cell-hints"))
+            }
+        }
+        PortableAnnotationCodecs.builtins().register(codec, providerPackage, managed).use { codecs ->
+            val captured = codecs.capture(listOf(first, second), capture)
+            val model = bytes(capture.model(captured))
+            val restored = codecs.restore(model.annotations, model.stateCells, Restore(model))
+            val a = restored.annotation(captured.roots[0]) as Probe
+            val b = restored.annotation(captured.roots[1]) as Probe
+            assertSame(a.shared, b.shared)
+            assertSame(a.shared, a.shared.single())
+            assertSame(metadata[0], metadata[1])
+            assertTrue(metadata[0].any { (it as List<*>)[0] === a.shared })
+            val next = codecs.restore(model.annotations, model.stateCells, Restore(model))
+                .annotation(captured.roots[0]) as Probe
+            a.shared.add("first compilation only")
+            assertEquals(1, next.shared.size)
+            assertSame(next.shared, next.shared.single())
+            assertNotSame(a.params, next.params)
+        }
+    }
+
+    @Test
     fun builtinsRetainProviderStateAndOriginalEntityParentsAcrossActualAhBytes() {
         val source = listOf<Annotation>(ConcreteOnly.restorePortable(), DataOnly(), Dynamic(), Load(), Tick(), MCFPPEntity(),
             NoInstance.restorePortable(), From("example.Source"), To("example.Target"), Name("display", "v2"), Name("without-version"))
@@ -192,6 +226,38 @@ class LibraryAnnotationTest {
             assertEquals("v2", (restored.annotation(captured.roots[9]) as Name).version)
             assertNull((restored.annotation(captured.roots[10]) as Name).version)
             assertEquals(source[9].compilerArguments(), restored.annotation(captured.roots[9]).compilerArguments())
+        }
+    }
+
+    @Test
+    fun preparedArenaLoadsOnlyReachableAnnotationsAndDropsRequestCellsOnReset() {
+        val first = Probe(1, 1f)
+        val second = Probe(2, 2f).apply { shared = first.shared }
+        val unused = Probe(3, 3f)
+        first.link = first
+        first.shared.add(first.shared)
+        val capture = Capture()
+        registry().use { codecs ->
+            val captured = codecs.capture(listOf(first, second, unused), capture)
+            val model = bytes(capture.model(captured))
+            val plan = BuiltinImportPlan.build(model)
+            val arena = codecs.restoreLazily(model.annotations, model.stateCells, Restore(model), plan.cellHints)
+            assertEquals(0, arena.loadedCount())
+            val reset = arena.checkpointForReuse()
+            val a = arena.annotation(captured.roots[0]) as Probe
+            assertEquals(1, arena.loadedCount())
+            assertSame(a, a.link)
+            assertSame(a.shared, a.shared.single())
+            val b = arena.annotation(captured.roots[1]) as Probe
+            assertEquals(2, arena.loadedCount())
+            assertSame(a.shared, b.shared)
+            a.shared.add("request only")
+            reset()
+            assertEquals(0, arena.loadedCount())
+            val next = arena.annotation(captured.roots[0]) as Probe
+            assertNotSame(a, next)
+            assertEquals(1, next.shared.size)
+            assertSame(next.shared, next.shared.single())
         }
     }
 
@@ -223,6 +289,25 @@ class LibraryAnnotationTest {
             val pendingRoot = Probe(2, 1f).apply { parents += source }
             assertFailsWith<IllegalArgumentException> { codecs.capture(listOf(pendingRoot), Capture(pending = pendingRoot)) }
         }
+    }
+
+    @Test
+    fun fieldAnnotationCopiesKeepClosedArgumentsWithoutLiveCompilerObjects() {
+        val source = Name("display")
+        val arguments = listOf(
+            CompilerValue.Typed(MCFPPBaseType.Int.typeId, CompilerValue.Integral(7)),
+            CompilerValue.FloatBits((-0.0f).toRawBits()),
+            CompilerValue.TypeValue(MCFPPBaseType.Int.typeId),
+            CompilerValue.Record(mapOf("nested" to CompilerValue.Sequence(listOf(CompilerValue.Text("value")))))
+        )
+        source.recordCompilerArguments(arguments)
+        val copied = top.mcfpp.model.property.Property.copyAnnotations(listOf(source)).single() as Name
+        assertNotSame(source, copied)
+        assertEquals("display", copied.name)
+        assertEquals(arguments, copied.compilerArguments())
+        copied.recordCompilerArguments(listOf(CompilerValue.Integral(9)))
+        assertEquals(arguments, source.compilerArguments())
+        assertEquals(listOf(CompilerValue.Integral(9)), copied.compilerArguments())
     }
 
     @Test

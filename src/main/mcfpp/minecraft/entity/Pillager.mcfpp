@@ -1,5 +1,7 @@
 @MCFPPEntity
+/// 掠夺者的实体数据。继承的字段由各父数据类型提供。
 data PillagerData: EntityData, CreatureData, AIMobData, RaiderData {
     @Name("Inventory")
+    /// 物品栏数据。
     var inventory: list<ItemData>
 }

@@ -1,4 +1,5 @@
 .gradle
+.kotlin/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
@@ -44,3 +45,7 @@ bin/
 .DS_Store
 /gradle.properties
 .repo_memory/
+/.codex-workflow-graph/
+/output/
+**/.mcfpp/
+**/mcfpp.lock

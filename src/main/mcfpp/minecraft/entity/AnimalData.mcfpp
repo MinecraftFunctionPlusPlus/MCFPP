@@ -1,7 +1,10 @@
+/// 动物的繁殖状态数据。
 data AnimalData{
     @Name("InLove")
+    /// 繁殖状态的剩余时间。
     var inLove: int
 
     @Name("LoveCause")
+    /// 触发繁殖状态的玩家 UUID。
     var loveCause: IntArray
 }

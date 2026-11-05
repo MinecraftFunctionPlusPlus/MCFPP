@@ -18,24 +18,8 @@ class ProgramAnalysis(val functions: Map<SymbolId, TypedIR>) {
     val effects: Map<SymbolId, FunctionEffects>
     init {
         val cycles = linkedSetOf<SymbolId>()
-        val stack = mutableListOf<SymbolId>()
-        val indices = hashMapOf<SymbolId, Int>()
-        val low = hashMapOf<SymbolId, Int>()
-        var next = 0
-        fun visit(id: SymbolId) {
-            indices[id] = next; low[id] = next++
-            stack.add(id)
-            for (target in calls[id].orEmpty().filter { it in functions }) {
-                if (target !in indices) { visit(target); low[id] = minOf(low.getValue(id), low.getValue(target)) }
-                else if (target in stack) low[id] = minOf(low.getValue(id), indices.getValue(target))
-            }
-            if (low[id] == indices[id]) {
-                val component = mutableListOf<SymbolId>()
-                do { val member = stack.removeAt(stack.lastIndex); component.add(member) } while (member != id)
-                if (component.size > 1 || id in calls[id].orEmpty()) cycles.addAll(component)
-            }
-        }
-        functions.keys.filter { it !in indices }.forEach { if (it !in indices) visit(it) }
+        val components = graphComponents(functions.keys) { calls[it].orEmpty() }
+        components.filter { it.size > 1 || it.single() in calls[it.single()].orEmpty() }.forEach(cycles::addAll)
         recursive = cycles
         val summaries = functions.mapValues { (id, ir) ->
             val instructions = ir.blocks.flatMap { it.instructions }
@@ -45,19 +29,29 @@ class ProgramAnalysis(val functions: Map<SymbolId, TypedIR>) {
                 raw.isNotEmpty(), raw.any { EffectAnalysis.rawCommandEffect(it.command) == Effect.Unknown } || calls[id].orEmpty().any { it !in functions },
                 id in cycles)
         }.toMutableMap()
-        do {
-            var changed = false
-            for (id in functions.keys) {
-                var summary = summaries.getValue(id)
-                for (target in calls[id].orEmpty()) {
-                    val callee = summaries[target] ?: FunctionEffects(observable = true, unknown = true, mayReenter = true)
-                    summary = FunctionEffects(summary.reads + callee.reads, summary.writes + callee.writes,
-                        summary.observable || callee.observable, summary.unknown || callee.unknown,
-                        summary.mayReenter || callee.mayReenter || callee.unknown)
-                }
-                if (summary != summaries[id]) { summaries[id] = summary; changed = true }
+        val callers = functions.keys.associateWith { linkedSetOf<SymbolId>() }
+        calls.forEach { (id, targets) -> targets.forEach { callers[it]?.add(id) } }
+        val pending = ArrayDeque(functions.keys)
+        val queued = functions.keys.toMutableSet()
+        while (pending.isNotEmpty()) {
+            val id = pending.removeFirst()
+            queued.remove(id)
+            var summary = summaries.getValue(id)
+            val reads = summary.reads.toMutableSet()
+            val writes = summary.writes.toMutableSet()
+            for (target in calls[id].orEmpty()) {
+                val callee = summaries[target] ?: FunctionEffects(observable = true, unknown = true, mayReenter = true)
+                reads.addAll(callee.reads)
+                writes.addAll(callee.writes)
+                summary = FunctionEffects(reads, writes,
+                    summary.observable || callee.observable, summary.unknown || callee.unknown,
+                    summary.mayReenter || callee.mayReenter || callee.unknown)
             }
-        } while (changed)
+            if (summary != summaries[id]) {
+                summaries[id] = summary
+                callers.getValue(id).forEach { if (queued.add(it)) pending.add(it) }
+            }
+        }
         effects = summaries
     }
     fun reaches(from: SymbolId, target: SymbolId): Boolean {

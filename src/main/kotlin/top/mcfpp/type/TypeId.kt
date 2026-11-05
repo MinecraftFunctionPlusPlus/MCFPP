@@ -2,6 +2,8 @@ package top.mcfpp.type
 
 import java.util.concurrent.atomic.AtomicLong
 import java.util.Collections
+import top.mcfpp.analysis.StructuralEquality
+import top.mcfpp.analysis.StructuralDisplay
 
 /** Language identity. Display names and JVM implementation inheritance are deliberately absent. */
 sealed interface TypeId {
@@ -12,23 +14,29 @@ sealed interface TypeId {
 
     class Applied(val constructor: TypeId, arguments: List<TypeId>) : TypeId {
         val arguments: List<TypeId> = Collections.unmodifiableList(ArrayList(arguments))
-        override fun equals(other: Any?) = other is Applied && constructor == other.constructor && arguments == other.arguments
-        override fun hashCode() = 31 * constructor.hashCode() + arguments.hashCode()
-        override fun toString() = "Applied(constructor=$constructor, arguments=$arguments)"
+        private val structuralHash = 31 * constructor.hashCode() + this.arguments.hashCode()
+        override fun equals(other: Any?) = other is Applied && structuralHash == other.structuralHash &&
+            StructuralEquality.compare(this, other) { constructor == other.constructor && arguments == other.arguments }
+        override fun hashCode() = structuralHash
+        override fun toString() = StructuralDisplay.render(this)
     }
 
     class Specialized(val constructor: TypeId, arguments: List<top.mcfpp.analysis.CompilerValue>) : TypeId {
         val arguments: List<top.mcfpp.analysis.CompilerValue> = Collections.unmodifiableList(ArrayList(arguments))
-        override fun equals(other: Any?) = other is Specialized && constructor == other.constructor && arguments == other.arguments
-        override fun hashCode() = 31 * constructor.hashCode() + arguments.hashCode()
-        override fun toString() = "Specialized(constructor=$constructor, arguments=$arguments)"
+        private val structuralHash = 31 * constructor.hashCode() + this.arguments.hashCode()
+        override fun equals(other: Any?) = other is Specialized && structuralHash == other.structuralHash &&
+            StructuralEquality.compare(this, other) { constructor == other.constructor && arguments == other.arguments }
+        override fun hashCode() = structuralHash
+        override fun toString() = StructuralDisplay.render(this)
     }
 
     class Union(alternatives: Set<TypeId>) : TypeId {
         val alternatives: Set<TypeId> = Collections.unmodifiableSet(LinkedHashSet(alternatives.sortedBy { it.toString() }))
-        override fun equals(other: Any?) = other is Union && alternatives == other.alternatives
-        override fun hashCode() = alternatives.hashCode()
-        override fun toString() = "Union(alternatives=$alternatives)"
+        private val structuralHash = this.alternatives.hashCode()
+        override fun equals(other: Any?) = other is Union && structuralHash == other.structuralHash &&
+            StructuralEquality.compare(this, other) { alternatives == other.alternatives }
+        override fun hashCode() = structuralHash
+        override fun toString() = StructuralDisplay.render(this)
     }
 
     class Selector(val limit: Int?, entities: List<String>?, val isName: Boolean) : TypeId {

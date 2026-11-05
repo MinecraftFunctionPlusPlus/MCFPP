@@ -61,6 +61,17 @@ object FileUtils {
 
 
     fun extractFolderFromInner(folderInJar: String, outputDir: String) {
+        BuiltinResourcePack.open(DatapackCreator::class.java.classLoader)?.let { pack ->
+            val names = pack.names.filter { it.startsWith("$folderInJar/") || it == folderInJar }
+            if (names.isNotEmpty()) {
+                names.forEach { name ->
+                    val output = Paths.get(outputDir).resolve(name.removePrefix(folderInJar).trimStart('/'))
+                    Files.createDirectories(output.parent)
+                    Files.write(output, pack.read(name))
+                }
+                return
+            }
+        }
         val f = File(DatapackCreator::class.java.getProtectionDomain().codeSource.location.toURI())
         if(!f.isFile){
             val source = File("src/main/resources/$folderInJar")
@@ -92,6 +103,9 @@ object FileUtils {
     fun extractFileFromInner(fileInJar: String, outputFile: String) {
         // 尝试从 ClassLoader 获取资源
         val inputStream: InputStream? = DatapackCreator::class.java.classLoader.getResourceAsStream(fileInJar)
+            ?: BuiltinResourcePack.open(DatapackCreator::class.java.classLoader)?.let { pack ->
+                if (fileInJar in pack.names) pack.read(fileInJar).inputStream() else null
+            }
             ?: run {
                 // 如果资源不存在，尝试从文件系统加载
                 val file = File(fileInJar)

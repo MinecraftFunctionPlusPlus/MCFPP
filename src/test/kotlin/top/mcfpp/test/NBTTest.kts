@@ -1,5 +1,5 @@
 package top.mcfpp.test
 
-import net.querz.nbt.io.SNBTUtil
+import top.mcfpp.nbt.tags.Tag
 
-val nbt = SNBTUtil.fromSNBT("[[a],[1]]")
+val nbt = Tag.toNBT("[[a],[1]]")

@@ -1,5 +1,7 @@
 @From("top.mcfpp.mni.resource.DimensionData")
+/// 维度资源的标识符。通过 id 字段保存资源名称。
 data Dimension: ResourceID
 
 @From("top.mcfpp.mni.resource.DimensionObjectData")
+/// 维度资源类型的共享成员入口。
 object data Dimension: ResourceID

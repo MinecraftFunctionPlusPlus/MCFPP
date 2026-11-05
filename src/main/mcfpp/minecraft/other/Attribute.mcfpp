@@ -1,15 +1,24 @@
+/// 生物属性及其基础值和修饰符。
 data Attribute {
+    /// 资源标识符。
     var id: string
+    /// 属性的基础值。
     var base: double
+    /// 属性修饰符列表。
     var modifiers: list<AttributeModifier>
 }
 
+/// 一项属性数值修饰。
 data AttributeModifier {
+    /// 种类标记。
     var type: AttributeModifierType
+    /// 修饰数值或匹配范围。
     var amount: double
+    /// 资源标识符。
     var id: string
 }
 
+/// 属性修饰符的数值计算方式。
 enum AttributeModifierType {
     add_value,
     add_multiplied_base,

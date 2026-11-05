@@ -1,44 +1,65 @@
 import mcfpp.minecraft.item:ItemStackData
 
 @MCFPPEntity
+/// 悦灵的实体数据。继承的字段由各父数据类型提供。
 data AllayData: EntityData, AIMobData, CreatureData {
     @Name("CanDuplicate")
+    /// 是否可以复制自身。
     var canDuplicate: byte
 
     @Name("DuplicationCooldown")
+    /// 复制行为的冷却时间。
     var duplicationCooldown: long
 
     @Name("Inventory")
+    /// 物品栏数据。
     var inventory: list<ItemStackData>
 
     @Name("Listener")
+    /// 振动监听数据。
     var listener: Listener
 }
 
+/// 实体的振动事件监听数据。
 data Listener {
+    /// 振动事件数据。
     var event: data {
+        /// 振动传播距离。
         var distance: float
         @Name("game_event")
+        /// 游戏事件标识符。
         var gameEvent: string
         
+        /// 位置坐标，顺序为 X、Y、Z。
         var pos: list<double>
         
         @Name("projectile_owner")
+        /// 触发事件的投射物所有者 UUID。
         var projectileOwner: IntArray
+        /// 触发事件的实体 UUID。
         var source: IntArray
     }
     @Name("event_delay")
+    /// 事件处理延迟。
     var eventDelay: int
     @Name("selector")
+    /// 待处理振动事件的选择记录。
     var _selector: data {
+        /// 记录事件时的游戏时间。
         var tick: long
+        /// 振动事件数据。
         var event: data {
+            /// 振动传播距离。
             var distance: float
             @Name("game_event")
+            /// 游戏事件标识符。
             var gameEvent: string
+            /// 位置坐标，顺序为 X、Y、Z。
             var pos: list<double>
             @Name("projectile_owner")
+            /// 触发事件的投射物所有者 UUID。
             var projectileOwner: IntArray
+            /// 触发事件的实体 UUID。
             var source: IntArray
         }
     }

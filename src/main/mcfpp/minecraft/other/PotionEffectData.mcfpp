@@ -1,12 +1,19 @@
+/// 状态效果的标识符、持续时间和显示参数。
 data PotionEffectData {
+    /// 是否使用信标式状态效果显示。
     var ambient: bool?
+    /// 状态效果等级标记。
     var amplifier: bool?
+    /// 持续时间。
     var duration: bool?
+    /// 资源标识符。
     var id: string
 
     @Name("show_icon")
+    /// 是否显示状态效果图标。
     var showIcon: bool?
 
     @Name("show_particles")
+    /// 是否显示状态效果粒子。
     var showParticles: bool?
 }

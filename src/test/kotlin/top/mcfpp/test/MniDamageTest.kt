@@ -14,7 +14,6 @@ import top.mcfpp.analysis.ValueFacts
 import top.mcfpp.analysis.ValueKnowledge
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.command.Comment
@@ -59,9 +58,9 @@ class MniDamageTest {
             @JvmStatic
             @MNIMacro(
                 identifier = "damage",
-                params = [
-                    MacroParam(name = "health", type = "int", mode = ParamMode.REF),
-                    MacroParam(name = "amount", type = "int", mode = ParamMode.VALUE)
+                normalParams = [
+                    "int",
+                    "int"
                 ],
                 returnType = "void"
             )
@@ -105,8 +104,8 @@ class MniDamageTest {
         init {
             GlobalScope.localNamespaces[namespaceName] = namespace
             namespace.scope.journalFileFields.add(file.field)
-            namespace.injectedBy(DamageEntries::class.java)
-            namespace.injectedBy(EffectEntries::class.java)
+            namespace.declareMniFixtures(DamageEntries::class.java)
+            namespace.declareMniFixtures(EffectEntries::class.java)
 
             val bodySource = "{\n$source\n}"
             val parser = P(CommonTokenStream(mcfppLexer(CharStreams.fromString(bodySource, "$namespaceName.mcfpp"))))

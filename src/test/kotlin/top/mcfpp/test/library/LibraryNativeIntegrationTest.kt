@@ -3,7 +3,6 @@ package top.mcfpp.test.library
 import top.mcfpp.Project
 import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.backend.ReferenceAccessHelpers
 import top.mcfpp.backend.ReferenceHelperRecipe
 import top.mcfpp.core.lang.MCFPPTypeVar
@@ -92,10 +91,10 @@ class LibraryNativeIntegrationTest {
             context.withArguments { arguments -> context.publishResult(MCInt(requireNotNull((arguments.last() as MCInt).value) * 2)) }
         }
         @JvmStatic
-        @MNIMacro(identifier = "adapt", params = [
-            MacroParam(name = "input", type = "int"), MacroParam(name = "destination", type = "int", mode = ParamMode.REF),
-            MacroParam(name = "seed", type = "int", mode = ParamMode.CONST),
-            MacroParam(name = "body", type = "(int)->int", mode = ParamMode.INLINE)
+        @MNIMacro(identifier = "adapt", normalParams = [
+            "int", "int",
+            "int",
+            "(int)->int"
         ], returnType = "int")
         fun adapt(context: MacroContext, input: Value<IntT>, destination: Ref<IntT>, seed: Const<IntT>, body: InlineFn<IntT>): Expr<IntT> {
             macroCalls++

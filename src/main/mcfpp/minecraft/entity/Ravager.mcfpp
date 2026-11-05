@@ -1,6 +1,10 @@
 @MCFPPEntity
+/// 劫掠兽的实体数据。继承的字段由各父数据类型提供。
 data RavagerData: EntityData, CreatureData, AIMobData, RaiderData {
+    /// 攻击动作的计时值。
     @Name("AttackTick") var attackTick: int
+    /// 咆哮动作的计时值。
     @Name("RoarTick") var roarTick: int
+    /// 眩晕状态的计时值。
     @Name("StunTick") var stunTick: int
 }

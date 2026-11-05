@@ -46,7 +46,7 @@ class MniExpansionDiagnosticsTest {
             MniSourceMacroCallTest.Entries.hostCalls = 0
             GlobalScope.localNamespaces[namespace.identifier] = namespace
             namespace.scope.journalFileFields.add(file.field)
-            namespace.injectedBy(MniSourceMacroCallTest.Entries::class.java)
+            namespace.declareMniFixtures(MniSourceMacroCallTest.Entries::class.java)
             val bodySource = "{\n$source\n}"
             val parser = P(
                 CommonTokenStream(

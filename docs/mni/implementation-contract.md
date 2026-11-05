@@ -221,21 +221,23 @@ internal class ExpansionBudget(val maxDepth: Int = 64, val maxNodes: Int = 100_0
 
 ## 6. 注册与纯源绑定（R_ENTRY、R_SYNTAX、R_BIND）
 
-新增 Java 注解协议：
+Kotlin 注解协议与显式源码绑定：
 
-```java
-@Retention(RetentionPolicy.RUNTIME) @Target(ElementType.METHOD)
-@interface MNIMacro {
-    String identifier() default "";
-    MacroParam[] params() default {};
-    String returnType() default "void";
-}
-@Retention(RetentionPolicy.RUNTIME) @Target({})
-@interface MacroParam { String name(); String type(); ParamMode mode() default ParamMode.VALUE; }
-enum ParamMode { VALUE, REF, CONST, INLINE }
+```kotlin
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.FUNCTION)
+annotation class MNIMacro(
+    val identifier: String = "",
+    val normalParams: Array<String> = [],
+    val returnType: String = "void",
+)
 ```
 
-ParamMode/签名描述类型公开在 api，Java 注解在 annotations。INLINE 的 type 采用明确函数签名描述，例如 `(int)->void`；源码函数类型同样采用 `(int,int)->int`、`()->void`，不带 `func` 前缀，普通具名 `func` 声明保持原形式。首期只支持具名 namespace 宏，receiver 为显式参数，不注册成员宏、不添加宏通用类型参数。元数据 type 字符串通过已有声明类型解析投影 TypeRef，不能注册未解析类型。
+```mcfpp
+func addOne(value: int): int = example.macros.MathMacros.addOne
+```
+
+`normalParams` 只列 MCFPP 类型，模式从 JVM wrapper 推导：Value 为 VALUE、Ref 为 REF、Const 为 CONST、InlineFn 为 INLINE。公开名称和参数名由 MCFPP 声明决定，显式绑定忽略注解 identifier；`injectedBy` 不会自动暴露宏。ParamMode/签名描述类型公开在 api，注解在 annotations。INLINE 的类型采用明确函数签名描述，例如 `(int)->void`；源码函数类型同样采用 `(int,int)->int`、`()->void`，不带 `func` 前缀，普通具名 `func` 声明保持原形式。首期只支持具名 namespace 宏，receiver 为显式参数，不注册成员宏、不添加宏通用类型参数。元数据类型字符串通过已有声明类型解析投影 TypeRef，不能注册未解析类型。
 
 JVM 入口必须 `public static`，形如 `(MacroContext, Ref, Value, Const, InlineFn) -> Block/Expr`。首参数精确 MacroContext，后续 erased wrapper 按 mode 精确匹配，void 宏返回 Block，非 void 返回 Expr；检查数目、可见性、static、重复有效入口，跳过无关 bridge/synthetic。非空返回值仍需在展开后检查实际 TypeRef，不能相信反射泛型。suspend、额外默认参数 mask、未经明确映射的扩展 receiver/value class 不能作为入口。Kotlin 顶层、object @JvmStatic、外部类的 companion @JvmStatic 均走同一反射链，默认参数不转 MCFPP 默认实参。
 

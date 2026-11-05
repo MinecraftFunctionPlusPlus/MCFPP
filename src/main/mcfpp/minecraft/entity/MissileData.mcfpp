@@ -1,4 +1,6 @@
+/// 携带物品的投射物数据。
 data MissileData {
     @Name("Item")
+    /// 关联物品的数据。
     var item: ItemData
 }

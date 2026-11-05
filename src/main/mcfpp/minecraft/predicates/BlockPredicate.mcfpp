@@ -1,3 +1,4 @@
+/// 方块匹配条件的数据类型。
 data BlockPredicate {
 
 }

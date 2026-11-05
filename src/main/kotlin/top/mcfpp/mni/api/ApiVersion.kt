@@ -1,31 +1,31 @@
 package top.mcfpp.mni.api
 
 /**
- * The public MNI API version, independent of the compiler release version.
+ * The version of the public MNI API, tracked separately from compiler releases.
  *
- * This identifier covers the provider-facing API in `top.mcfpp.mni.api` and the
- * `@MNIMacro`/`MacroParam` annotation protocol. It does not track `MCFPP.VERSION`, the
- * compiler's own release, or the historical `@MNIFunction` ABI. The API is experimental:
- * until a stable major release, a different minor version may change source or behaviour.
+ * This version covers `top.mcfpp.mni.api`, `@MNIMacro`, and explicit macro declarations in MCFPP source.
+ * During the experimental 0.x series, a minor version change may require provider changes.
  *
- * Java and Kotlin providers may compare their required version at bootstrap:
+ * A Kotlin provider can check its required version during initialization:
  *
- * ```java
- * if (!ApiVersion.isCompatibleWith("0.1"))
- *     throw new IllegalStateException("Provider requires MNI API 0.1, compiler has " + ApiVersion.VERSION);
+ * ```kotlin
+ * require(ApiVersion.isCompatibleWith("0.2")) { "Provider requires MNI API 0.2" }
  * ```
  *
  * See `docs/mni/api-versioning.md` for the compatibility policy.
  */
 object ApiVersion {
+    /** Major API version. Zero identifies the experimental series. */
     const val MAJOR: Int = 0
-    const val MINOR: Int = 1
+    /** Minor API version. In the 0.x series, providers require the same minor version. */
+    const val MINOR: Int = 2
+    /** Patch API version for compatible corrections within this minor version. */
     const val PATCH: Int = 0
 
-    /** Stability channel; this is deliberately not "stable". */
+    /** Release channel appended to [VERSION]. */
     const val STABILITY: String = "experimental"
 
-    /** Full identifier, for example `0.1.0-experimental`. */
+    /** Full identifier, for example `0.2.0-experimental`. */
     const val VERSION: String = "$MAJOR.$MINOR.$PATCH-$STABILITY"
 
     /** Convenience flag for providers that branch on the experimental contract. */
@@ -38,11 +38,11 @@ object ApiVersion {
     /**
      * True when a provider requiring [required] can run on this API.
      *
-     * Accepted inputs are `major.minor`, `major.minor.patch`, optionally followed by a
-     * pre-release suffix such as `-experimental`. For the experimental `0.x` series the minor
-     * version is a compatibility boundary: the same major/minor is required, and patch releases
-     * are forward-compatible. From `1.0` onward, a newer minor remains compatible with an older
-     * required minor within the same major.
+     * [required] accepts `major.minor` or `major.minor.patch`, with an optional suffix such as `-experimental`.
+     * An omitted patch means zero. The comparison uses the numeric components.
+     * In the 0.x series, major and minor must match, and the current patch must meet the required patch.
+     * From 1.0, a newer minor also satisfies an older required minor within the same major.
+     * Returns false for malformed versions or negative components.
      */
     @JvmStatic
     fun isCompatibleWith(required: String): Boolean {

@@ -1,5 +1,8 @@
 @MCFPPEntity
+/// 热带鱼的实体数据。继承的字段由各父数据类型提供。
 data TropicalFishData: EntityData, CreatureData, AIMobData {
+    /// 是否通过桶放出。
     @Name("FromBucket") var fromBucket: bool
+    /// 外观变种。
     @Name("Variant") var variant: int
 }

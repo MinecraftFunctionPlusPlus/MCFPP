@@ -131,11 +131,12 @@ object PrimitiveCompiler {
                 prepared.mapValues { it.value.lowering.finish() }
             val effects = EffectAnalysis.analyze(graph)
             graph = graph.mapValues { (_, ir) -> EffectAnalysis.bind(ir, graph, effects) }
+            val summarize = ReturnTypeAnalysis.summarizer(graph)
             val before = prepared.mapValues { it.value.lowering.finish() }
             for ((id, entry) in prepared.toMap()) {
                 val draft = entry.lowering
                 val binding = FlowAnalysis.analyze(graph.getValue(id), initial = draft.initialFacts, evaluator = PrimitiveEvaluation::binary,
-                    callSummary = { call, args -> ReturnTypeAnalysis.summarize(call, graph, args) },
+                    callSummary = summarize,
                     declarations = draft.symbols.values.associateBy { it.id }, boundTypes = draft.types)
                 val valueTypes = draft.valueSites.mapValues { (_, result) -> binding.values[result]?.type ?: TypeKnowledge.Unknown }
                 val valueConstants = draft.valueSites.mapNotNull { (site, result) ->
@@ -205,25 +206,26 @@ object PrimitiveCompiler {
             }
             else binding.data.registerLayout(binding.place, layout)
         }
+        val module = top.mcfpp.optimization.OptimizationPipeline.Module(graph)
         for (entry in prepared) entry.function.runInFunction {
-            generate(entry, graph)
+            generate(entry, graph, module)
             entry.function.bodyCompiled = true
         }
         return true
     }
 
-    private fun generate(entry: Prepared, graph: Map<SymbolId, TypedIR>) {
+    private fun generate(entry: Prepared, graph: Map<SymbolId, TypedIR>, module: top.mcfpp.optimization.OptimizationPipeline.Module) {
         val function = entry.function
         val lowering = entry.lowering
         val diagnostics = entry.diagnostics.toMutableList()
         val ir = graph.getValue(function.declarationId)
         val evaluator = if (top.mcfpp.CompileSettings.foldIRConstants) PrimitiveEvaluation::binary else { _: String, _: CompilerValue, _: CompilerValue -> null }
         val facts = FlowAnalysis.analyze(ir, initial = lowering.initialFacts, evaluator = evaluator, canFoldBranch = { !lowering.runtime(it) },
-            callSummary = { call, args -> ReturnTypeAnalysis.summarize(call, graph, args) }, foldIntrinsics = top.mcfpp.CompileSettings.foldIRConstants,
+            callSummary = module.summarize, foldIntrinsics = top.mcfpp.CompileSettings.foldIRConstants,
             declarations = lowering.symbols.values.associateBy { it.id }, boundTypes = lowering.types)
         val typeFacts = if (top.mcfpp.CompileSettings.foldIRConstants) facts else FlowAnalysis.analyze(ir,
             initial = lowering.initialFacts, evaluator = PrimitiveEvaluation::binary, canFoldBranch = { !lowering.runtime(it) },
-            callSummary = { call, args -> ReturnTypeAnalysis.summarize(call, graph, args) },
+            callSummary = module.summarize,
             declarations = lowering.symbols.values.associateBy { it.id }, boundTypes = lowering.types)
         diagnostics += IRCollectionValidation.validate(ir, typeFacts, lowering.types,
             top.mcfpp.command.TargetCapabilities.forVersion(top.mcfpp.Project.config.version)!!)
@@ -289,17 +291,17 @@ object PrimitiveCompiler {
             function.optimizedStaticFrame = null
         }
         val optimized = if (valid) top.mcfpp.optimization.OptimizationPipeline.optimize(function, ir, graph,
-            lowering.initialFacts, lowering.exportedSymbols.map { it.id }.toSet()) else ir
+            lowering.initialFacts, lowering.exportedSymbols.map { it.id }.toSet(), module) else ir
         val foldGeneration = top.mcfpp.CompileSettings.foldIRConstants && Project.config.optimization.enabled(top.mcfpp.optimization.PassIds.CONSTANTS)
         val generationFacts = if (optimized == ir && foldGeneration) facts else FlowAnalysis.analyze(optimized, initial = lowering.initialFacts,
             evaluator = if (foldGeneration) PrimitiveEvaluation::binary else { _: String, _: CompilerValue, _: CompilerValue -> null },
             canFoldBranch = { foldGeneration && (it !is ValueRef.Result || it.instruction !in optimized.runtimeValues) },
-            callSummary = { call, args -> ReturnTypeAnalysis.summarize(call, graph, args) },
+            callSummary = module.summarize,
             declarations = optimized.declarations, boundTypes = optimized.boundTypes, foldIntrinsics = foldGeneration)
         val generationTypes = if (optimized == ir) typeFacts else FlowAnalysis.analyze(optimized, initial = lowering.initialFacts,
             evaluator = PrimitiveEvaluation::binary,
             canFoldBranch = { it !is ValueRef.Result || it.instruction !in optimized.runtimeValues },
-            callSummary = { call, args -> ReturnTypeAnalysis.summarize(call, graph, args) },
+            callSummary = module.summarize,
             declarations = optimized.declarations, boundTypes = optimized.boundTypes)
         val backend = Backend(function, lowering, optimized, generationFacts, generationTypes, graph)
         backend.prepareLayout()
@@ -433,6 +435,9 @@ object PrimitiveCompiler {
         }
         private data class Block(val id: Int, val instructions: MutableList<Instruction> = mutableListOf(), var terminator: Terminator? = null)
         private val blocks = mutableListOf(Block(0))
+        data class DebugSite(val context: ParserRuleContext, val variables: List<Symbol>)
+        val debugSites = mutableMapOf<Pair<Int, Int>, DebugSite>()
+        val debugExits = mutableMapOf<Int, DebugSite>()
         private var current = blocks.first()
         private val instructions get() = current.instructions
         private val visible = linkedMapOf<String, Symbol>()
@@ -712,7 +717,7 @@ object PrimitiveCompiler {
             val modifier = context.fieldModifier()?.start?.text
             val storedName = if (depth == 0) name else "\$local_${context.start.tokenIndex}_$name"
             val symbol = Symbol(declarationIds.getOrPut(context.start.tokenIndex, SymbolId::fresh), name,
-                type, modifier != "const", forceRuntime = context.fieldModifier()?.EXTERNAL() != null)
+                type, modifier != "const", forceRuntime = context.fieldModifier()?.EXTERNAL() != null || Project.config.debugInfo && modifier != "const")
             symbols[storedName] = symbol
             declarationSites[symbol.id] = context
             top.mcfpp.model.function.StructuredBodyContexts.declaration(context)?.let { semanticLocals[it] = symbol }
@@ -723,6 +728,9 @@ object PrimitiveCompiler {
         }
 
         fun statement(context: Parser.StatementContext) {
+            val debugSite = if (Project.config.debugInfo) DebugSite(context, visible.values.toList()) else null
+            val debugStarts = if (debugSite != null) blocks.associate { it.id to it.instructions.size } else emptyMap()
+            val debugTerminators = if (debugSite != null) blocks.associate { it.id to it.terminator } else emptyMap()
             // An error in a nested statement must not erase the loop's remaining body or backedge.
             try { lowerStatement(context) } catch (invalid: Invalid) {
                 diagnostics += invalid.diagnostic
@@ -730,6 +738,11 @@ object PrimitiveCompiler {
                 context.fieldDeclaration()?.takeIf { invalid.recoverDeclaration }?.let { declaration ->
                     val name = declaration.Identifier().text
                     if (name !in declaredHere) declare(declaration, declaration.type()?.let(::type)?.typeId ?: any)
+                }
+            } finally {
+                if (debugSite != null) for (block in blocks) {
+                    (debugStarts.getOrDefault(block.id, 0) until block.instructions.size).forEach { debugSites.putIfAbsent(block.id to it, debugSite) }
+                    if (block.terminator != null && debugTerminators[block.id] !== block.terminator) debugExits.putIfAbsent(block.id, debugSite)
                 }
             }
         }
@@ -1486,15 +1499,16 @@ object PrimitiveCompiler {
             do {
                 var changed = false
                 for (block in blocks.asReversed()) {
-                    var live = when (val exit = block.terminator) {
+                    val live = when (val exit = block.terminator) {
                         is Terminator.Jump -> incoming[exit.block].orEmpty()
                         is Terminator.Branch -> incoming[exit.whenTrue].orEmpty() + incoming[exit.whenFalse].orEmpty() + references(exit.condition)
                         is Terminator.Return -> exit.value?.let(::references).orEmpty()
                         Terminator.Unreachable -> emptySet()
-                    }
+                    }.toMutableSet()
                     for ((position, instruction) in block.instructions.withIndex().reversed()) {
                         if (instruction is Instruction.Call) calls[block.id to position] = live - setOfNotNull(instruction.result)
-                        live = (live - setOfNotNull(result(instruction))) + instructionReferences(instruction)
+                        result(instruction)?.let(live::remove)
+                        live.addAll(instructionReferences(instruction))
                     }
                     if (incoming[block.id] != live) { incoming[block.id] = live; changed = true }
                 }
@@ -1932,6 +1946,7 @@ object PrimitiveCompiler {
             for (block in reachable) {
                 blockId = block.id
                 commands.clear()
+                val debugCommands = linkedMapOf<Int, top.mcfpp.debug.DebugPoint?>()
                 if (block.id == 0 && hasControlFlow && !supportsReturn) commands.add("execute unless data storage mcfpp:system ir_branch_stack run data modify storage mcfpp:system ir_branch_stack set value []")
                 results.clear()
                 nbtResults.clear()
@@ -1945,7 +1960,9 @@ object PrimitiveCompiler {
                     it is Instruction.Read && nbt(symbols.getValue(it.place.root).declaredType) ||
                     it is Instruction.Write && storageNames.getValue(it.place.root).startsWith("$") && nbt(symbols.getValue(it.place.root).declaredType) } }))
                     emit(Commands.dataSetValue(frame().memberIndex("\$ir"), top.mcfpp.nbt.tags.CompoundTag()))
-                for ((position, instruction) in block.instructions.withIndex()) when (instruction) {
+                for ((position, instruction) in block.instructions.withIndex()) {
+                    if (Project.config.debugInfo) debugCommands[commands.size] = debugPoint(lowering.debugSites[block.id to position], block.id, position)
+                    when (instruction) {
                     is Instruction.Declare -> {
                         val root = Place(instruction.symbol.id)
                         initialized.removeAll { it.root == root.root }
@@ -2156,6 +2173,10 @@ object PrimitiveCompiler {
                     is Instruction.Call -> call(instruction, position)
                     else -> error("Unsupported primitive instruction")
                 }
+                }
+                if (Project.config.debugInfo) debugCommands[commands.size] =
+                    if (block.terminator is Terminator.Jump) null
+                    else debugPoint(lowering.debugExits[block.id], block.id, block.instructions.size)
                 fun jump(target: Int) {
                     val prefix = if (supportsReturn) "return run function" else "function"
                     commands += "$prefix ${destinations.getValue(target).namespaceID}"
@@ -2206,9 +2227,34 @@ object PrimitiveCompiler {
                     Terminator.Unreachable -> error("Reachable block without terminator")
                 }
                 val destination = destinations.getValue(block.id)
-                destination.runInFunction { commands.forEach(Function::addCommand) }
+                destination.runInFunction { commands.forEachIndexed { index, text ->
+                    val command = Command(text)
+                    if (Project.config.debugInfo) {
+                        command.debugPointCaptured = true
+                        command.debugPoint = debugCommands.entries.lastOrNull { it.key <= index }?.value
+                    }
+                    Function.addCommand(command)
+                } }
             }
             function.frameExits.addAll(exits)
+        }
+
+        private fun debugPoint(site: Lowering.DebugSite?, block: Int, position: Int): top.mcfpp.debug.DebugPoint? {
+            site ?: return null
+            val state = typeFacts.beforeWrites[block to position] ?: typeFacts.entries[block]
+            val variables = site.variables.map { symbol ->
+                val place = Place(symbol.id)
+                val type = types[symbol.declaredType]?.typeName ?: symbol.declaredType.toString()
+                val constant = if (!symbol.mutable) state?.read(place)?.value as? ValueKnowledge.Constant else null
+                if (constant != null) top.mcfpp.debug.DebugVariable(symbol.name, type, "constant",
+                    value = top.mcfpp.debug.DebugMetadata.constantJson(constant.value))
+                else {
+                    val address = address(lowering.location(symbol))
+                    val layout = layout(place).let { if (it is StorageLayout.Nbt) StorageLayout.Nbt(address.source.toCommand().toString(), address.pathToCommandPart().toString()) else it }
+                    top.mcfpp.debug.DebugMetadata.variable(symbol.name, type, layout, address.toCommandPart().toString())
+                }
+            }
+            return top.mcfpp.debug.DebugMetadata.source(function, site.context, variables)
         }
     }
 }

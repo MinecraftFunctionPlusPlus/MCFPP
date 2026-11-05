@@ -1,5 +1,7 @@
 @From("top.mcfpp.mni.resource.TextureData")
+/// 纹理资源的标识符。通过 id 字段保存资源名称。
 data Texture: ResourceID
 
 @From("top.mcfpp.mni.resource.TextureObjectData")
+/// 纹理资源类型的共享成员入口。
 object data Texture: ResourceID

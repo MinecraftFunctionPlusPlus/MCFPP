@@ -1,12 +1,23 @@
+/// 玩家配方书的界面状态和配方列表。
 data RecipeBook {
+    /// 高炉配方界面是否只显示可合成配方。
     var isBlastingFurnaceFilteringCraftable: bool
+    /// 高炉配方书是否展开。
     var isBlastingFurnaceGuiOpen: bool
+    /// 工作台配方界面是否只显示可合成配方。
     var isFilteringCraftable: bool
+    /// 熔炉配方界面是否只显示可合成配方。
     var isFurnaceFilteringCraftable: bool
+    /// 熔炉配方书是否展开。
     var isFurnaceGuiOpen: bool
+    /// 工作台配方书是否展开。
     var isGuiOpen: bool
+    /// 烟熏炉配方界面是否只显示可合成配方。
     var isSmokerFilteringCraftable: bool
+    /// 烟熏炉配方书是否展开。
     var isSmokerGuiOpen: bool
+    /// 配方或交易记录列表。
     var recipes: list<string>
+    /// 等待显示提示的配方标识符。
     var toBeDisplayed: list<string>
 }

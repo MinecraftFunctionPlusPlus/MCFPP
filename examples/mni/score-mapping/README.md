@@ -21,48 +21,24 @@ examples/mni/score-mapping/
 ├── project/src/.mcfpp
 ├── project/src/main.mcfpp
 └── provider/
-    ├── java/example/mniscore/{JavaScoreAnnotation,JavaScoreMappingProcessor,JavaScoreMappingProvider}.java
     └── kotlin/example/mniscore/KotlinScoreMappingProvider.kt
 ```
 
 `provider` 通过 `.mcfpp` 的 `injectedBy` 调用现有静态 import 钩子，在编译器安装当前命名空间时
-注册处理器和字段注解。Java 与 Kotlin 使用同一套公共声明/代码 API 和同一映射语义。
+注册 Kotlin 处理器和字段注解，生成方法使用 Kotlin DSL 构造。
 
 ## 构建 provider
 
-在仓库根目录先构建编译器（JDK 21）：
+在仓库根目录先构建编译器（JDK 25）：
 
 ```bash
-./gradlew shadowJar
+./gradlew shadowJar mniExamplesJar
 ```
 
-Java：
+`mniExamplesJar` 生成 `build/libs/mni-example-providers.jar`，示例配置直接加载它。
+`project/src/.mcfpp` 注入 `example.mniscore.KotlinScoreMappingProvider`。
 
-```bash
-javac -cp build/libs/MCFPP-1.0.2-SNAPSHOT.jar \
-  -d examples/mni/score-mapping/build/classes \
-  examples/mni/score-mapping/provider/java/example/mniscore/*.java
-
-jar --create --file examples/mni/score-mapping/build/score-mapping-macro.jar \
-  -C examples/mni/score-mapping/build/classes .
-```
-
-Kotlin：
-
-```bash
-kotlinc examples/mni/score-mapping/provider/kotlin \
-  -cp build/libs/MCFPP-1.0.2-SNAPSHOT.jar \
-  -d examples/mni/score-mapping/build/classes
-
-jar --create --file examples/mni/score-mapping/build/score-mapping-macro.jar \
-  -C examples/mni/score-mapping/build/classes .
-```
-
-`project/src/.mcfpp` 默认注入 Kotlin provider。使用 Java provider 时，把第一行替换为：
-
-```text
-//> injectedBy example.mniscore.JavaScoreMappingProvider
-```
+示例配置使用 `noMcLib = true` 生成可执行数据包。生成成员方法的库导出仍受库格式支持范围约束。
 
 ## 运行
 
@@ -70,7 +46,7 @@ jar --create --file examples/mni/score-mapping/build/score-mapping-macro.jar \
 
 ```bash
 cd examples/mni/score-mapping
-java -jar ../../../build/libs/MCFPP-1.0.2-SNAPSHOT.jar build --project mcfpp.toml
+java -jar ../../../build/libs/MCFPP-0.1.0.jar build --project mcfpp.toml
 ```
 
 `main.mcfpp` 先 `save`（`health=7`、`alive=true` 即 1），再清零字段并 `load`，因此最终内存字段为

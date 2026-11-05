@@ -1,8 +1,15 @@
+/// 袭击生物的数据类型。
 data RaiderData {
+    /// 是否可以加入袭击。
     @Name("CanJoinRaid") var canJoinRaid: bool
+    /// 巡逻目标的坐标。
     @Name("patrol_target") var patrolTarget: IntArray
+    /// 是否为巡逻队长。
     @Name("PatrolLeader") var patrolLeader: bool
+    /// 是否处于巡逻状态。
     @Name("Patrolling") var patrolling: bool
+    /// 所属袭击的编号。
     @Name("RaidID") var raidID: int
+    /// 所属袭击波次。
     @Name("Wave") var wave: int
 }

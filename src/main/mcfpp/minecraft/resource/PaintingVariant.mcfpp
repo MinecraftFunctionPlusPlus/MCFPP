@@ -1,5 +1,7 @@
 @From("top.mcfpp.mni.resource.PaintingVariantData")
+/// 画的变种资源的标识符。通过 id 字段保存资源名称。
 data PaintingVariant: ResourceID
 
 @From("top.mcfpp.mni.resource.PaintingVariantObjectData")
+/// 画的变种资源类型的共享成员入口。
 object data PaintingVariant: ResourceID

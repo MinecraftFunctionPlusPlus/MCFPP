@@ -1,5 +1,7 @@
 @MCFPPEntity
+/// 末影螨的实体数据。继承的字段由各父数据类型提供。
 data EndermiteData: EntityData, CreatureData, AIMobData {
     @Name("Lifetime")
+    /// 存活时间记录。
     var lifetime: int
 }

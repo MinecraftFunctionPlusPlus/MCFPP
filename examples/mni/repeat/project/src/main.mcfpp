@@ -1,3 +1,6 @@
+func repeat(times: int, initial: int, body: (int,int)->int): int = example.mnirepeat.KotlinRepeatMacro.repeatFold
+func repeat(times: int, body: (int)->void): void = example.mnirepeat.KotlinRepeatMacro.repeat
+
 func main() {
     // Each callback explicitly returns the next accumulator, 0+1+2+3+4 = 10.
     external total: int = repeat(5, 0, { accumulator, i ->

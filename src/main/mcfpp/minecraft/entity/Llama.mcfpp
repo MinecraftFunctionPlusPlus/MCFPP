@@ -1,12 +1,18 @@
 @MCFPPEntity
+/// 羊驼的实体数据。继承的字段由各父数据类型提供。
 data LlamaData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, GeneralHorseData {
+    /// 是否携带箱子。
     @Name("ChestedHorse") var chestedHorse: bool
+    /// 关联物品列表。
     @Name("Items") var items: list<ItemData>
+    /// 羊驼的载物能力等级。
     @Name("Strength") var strength: int
+    /// 外观变种。
     @Name("Variant") var variant: LlamaVariant
 }
 
 
+/// 羊驼的外观变种。
 enum LlamaVariant {
     creamy = 0,
     white = 1,

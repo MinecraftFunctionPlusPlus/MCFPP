@@ -1,1 +1,2 @@
+/// 物品组件数据的基础类型。
 data ItemComponent{}

@@ -1,3 +1,1 @@
-//> injectedBy example.mniraycast.KotlinRaycastMacro
-// Java variant: replace the Kotlin directive above with the following line.
-// //> injectedBy example.mniraycast.JavaRaycastMacro
+// Macros are explicitly declared in main.mcfpp.

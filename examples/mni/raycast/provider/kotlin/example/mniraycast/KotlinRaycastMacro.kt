@@ -1,26 +1,22 @@
 package example.mniraycast
 
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.mni.api.Block
 import top.mcfpp.mni.api.Expr
 import top.mcfpp.mni.api.BlockPredicate
 import top.mcfpp.mni.api.BoolT
 import top.mcfpp.mni.api.Const
-import top.mcfpp.mni.api.InlineArgument
 import top.mcfpp.mni.api.InlineFn
 import top.mcfpp.mni.api.IntT
 import top.mcfpp.mni.api.MacroContext
-import top.mcfpp.mni.api.ParamMode
 import top.mcfpp.mni.api.Value
-import top.mcfpp.mni.api.kotlin
-import java.util.function.Consumer
+import top.mcfpp.mni.api.quote
 
 /**
  * Kotlin provider for the MNI fixed-step block ray macro. `@JvmStatic` is required because
  * registration discovers a public static JVM entry point.
  *
- * The algorithm matches [example.mniraycast.JavaRaycastMacro]:
+ * The macro constructs each sample through the Kotlin code DSL:
  *
  * - `samples` is CONST, so the host specializes the closed count and unrolls the samples.
  * - The fixed documented step is [SAMPLE_STEP] blocks along the ambient forward axis.
@@ -38,67 +34,59 @@ object KotlinRaycastMacro {
     const val SAMPLE_STEP: Double = 0.5
 
     @JvmStatic
-    @MNIMacro(identifier = "raycast", params = [
-        MacroParam(name = "samples", type = "int", mode = ParamMode.CONST),
-        MacroParam(name = "initial", type = "int", mode = ParamMode.VALUE),
-        MacroParam(name = "step", type = "(int,int)->int", mode = ParamMode.INLINE),
-        MacroParam(name = "keepGoing", type = "(int)->bool", mode = ParamMode.INLINE)
+    @MNIMacro(normalParams = [
+        "int",
+        "int",
+        "(int,int)->int",
+        "(int)->bool"
     ], returnType = "int")
     fun raycastFold(context: MacroContext, samples: Const<IntT>, initial: Value<IntT>,
                     step: InlineFn<IntT>, keepGoing: InlineFn<BoolT>): Expr<IntT> {
         val count = samples.intValue()
         require(count >= 0) { "Raycast sample count must not be negative" }
-        return context.quote().kotlin().expression(context.types().intType()) {
-            val running = local("running", context.types().boolType(), boolLiteral(true))
-            val accumulator = local("accumulator", context.types().intType(), initial.expr())
-            for (index in 0 until count) ifThen(running.load()) {
-                val mc = minecraft()
-                val point = mc.localOffset(mc.currentPosition(), mc.currentRotation(), 0.0, 0.0, index * SAMPLE_STEP)
-                mc.at(point, Consumer { sampled ->
-                    val sample = sampled.minecraft()
-                    sample.ifThen(sample.blockMatches(sample.blockAt(sample.currentPosition()), BlockPredicate.block("minecraft:stone")), Consumer { hit ->
-                        hit.assign(accumulator, hit.inline(step, listOf(InlineArgument.value(accumulator.load()), InlineArgument.value(hit.intLiteral(index)))))
-                        hit.assign(running, hit.inline(keepGoing, listOf(InlineArgument.value(hit.intLiteral(index)))))
-                    })
-                })
+        return context.quote.expression(context.types().intType()) {
+            val running = local("running", literal(true))
+            val accumulator = local("accumulator", initial.value)
+            for (index in 0 until count) ifThen(running.value) {
+                val point = localOffset(currentPosition(), currentRotation(), 0.0, 0.0, index * SAMPLE_STEP)
+                at(point) {
+                    ifThen(blockMatches(blockAt(currentPosition()), BlockPredicate.block("minecraft:stone"))) {
+                        accumulator.value = inline(step, accumulator.value, literal(index))
+                        running.value = inline(keepGoing, literal(index))
+                    }
+                }
             }
-            yield(accumulator.load())
+            yield(accumulator.value)
         }
     }
 
     @JvmStatic
     @MNIMacro(
-        identifier = "raycast",
-        params = [
-            MacroParam(name = "samples", type = "int", mode = ParamMode.CONST),
-            MacroParam(name = "body", type = "(int)->bool", mode = ParamMode.INLINE)
+        normalParams = [
+            "int",
+            "(int)->bool"
         ],
         returnType = "void"
     )
     fun raycast(context: MacroContext, samples: Const<IntT>, body: InlineFn<BoolT>): Block {
         val count = samples.intValue()
         require(count >= 0) { "Raycast sample count must not be negative" }
-        return context.quote().kotlin().block {
-            val running = local("running", context.types().boolType(), boolLiteral(true))
+        return context.quote.block {
+            val running = local("running", literal(true))
             for (index in 0 until count) {
-                ifThen(running.load()) {
-                    val active = this
-                    val mc = active.minecraft()
+                ifThen(running.value) {
                     // CONST specialization keeps every public localOffset argument literal.
-                    val point = mc.localOffset(mc.currentPosition(), mc.currentRotation(),
+                    val point = localOffset(currentPosition(), currentRotation(),
                         0.0, 0.0, index * SAMPLE_STEP)
-                    mc.at(point, Consumer { sampled ->
-                        val sample = sampled.minecraft()
-                        val hit = sample.blockMatches(
-                            sample.blockAt(sample.currentPosition()),
+                    at(point) {
+                        val hit = blockMatches(
+                            blockAt(currentPosition()),
                             BlockPredicate.block("minecraft:stone")
                         )
-                        sample.ifThen(hit, Consumer { hitScope ->
-                            hitScope.assign(running, hitScope.inline(body, listOf(
-                                InlineArgument.value(hitScope.intLiteral(index))
-                            )))
-                        })
-                    })
+                        ifThen(hit) {
+                            running.value = inline(body, literal(index))
+                        }
+                    }
                 }
             }
         }

@@ -9,7 +9,6 @@ import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
 import top.mcfpp.analysis.*
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.antlr.ReadonlyParamsDeclarationSyntax
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.core.lang.MCInt
@@ -53,7 +52,7 @@ class MniSourceEnvironmentTest {
     class Entries {
         companion object {
             @JvmStatic
-            @MNIMacro(identifier = "kotlinMacro", params = [MacroParam(name = "value", type = "int")], returnType = "int")
+            @MNIMacro(identifier = "kotlinMacro", normalParams = ["int"], returnType = "int")
             fun expression(context: MacroContext, value: Value<IntT>): Expr<IntT> {
                 hostCalls++
                 error("Kotlin macro executed during source preparation")
@@ -248,11 +247,20 @@ class MniSourceEnvironmentTest {
         assertFailsWith<SourceBindingFailure> {
             BindingEnvironment(original.types, emptyList(), variants, callCandidates = mapOf(result.call.source to variants))
         }
+        val ownDeclarations = original.functions.filter { it.function.name().startsWith("${file.namespace.identifier}:") }
+            .map { it.declarationIdentity }.toSet()
+        val environments = result.environment.declarationEnvironments
+        assertTrue(environments.filterKeys { it in ownDeclarations }.isNotEmpty())
         assertTrue(
-            result.environment.declarationEnvironments.values.all { declaration ->
+            environments.filterKeys { it in ownDeclarations }.values.all { declaration ->
                 declaration.functions("copy", targets[0].preparedCallSites.first()).single() === targets[0]
             }
         )
+        val standardEnvironments = environments.filterKeys { it !in ownDeclarations }.values
+        assertTrue(standardEnvironments.isNotEmpty(), "Implicit standard functions must be prepared")
+        assertTrue(standardEnvironments.all { declaration ->
+            declaration.functions.none { it.compilerDeclarationId == copy.declarationId.value }
+        }, "Standard declarations must not inherit the caller's functions")
         assertTrue(copy.compiledFunctions.isEmpty())
         assertFalse(copy.bodyCompiled)
         assertEquals(0, hostCalls)
@@ -304,7 +312,7 @@ class MniSourceEnvironmentTest {
                 import top.mcfpp.annotations.*;
                 import top.mcfpp.mni.api.*;
                 public class EnvironmentJavaMacro {
-                    @MNIMacro(identifier="javaMacro", params={@MacroParam(name="value",type="int")}, returnType="int")
+                    @MNIMacro(identifier="javaMacro", normalParams ={"int"}, returnType="int")
                     public static Expr<IntT> expression(MacroContext context, Value<IntT> value) {
                         throw new AssertionError("Java macro executed during source preparation");
                     }
@@ -323,8 +331,8 @@ class MniSourceEnvironmentTest {
             URLClassLoader(arrayOf(directory.toUri().toURL()), Project.classLoader).use { loader ->
                 Project.classLoader = loader
                 val file = file("source.refresh")
-                file.namespace.injectedBy(Entries::class.java)
-                file.namespace.injectedBy("EnvironmentJavaMacro", loader)
+                file.namespace.declareMniFixtures(Entries::class.java)
+                file.namespace.declareMniFixtures("EnvironmentJavaMacro", loader)
                 val ordinary = function(file, "ordinary", listOf(MCFPPBaseType.Int))
                 val native = NativeFunction(
                     "legacy",

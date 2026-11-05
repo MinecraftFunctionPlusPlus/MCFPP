@@ -48,8 +48,26 @@ class MacroFunctionInfo(
         val parameterTypes = jvmParameters.map { primitives[it] ?: Class.forName(it, false, loader) }.toTypedArray()
         val method = owner.getDeclaredMethod(methodName, *parameterTypes)
         require(method.returnType.name == returnClass) { "JVM return descriptor changed" }
-        require(from(method) == this) { "MNIMacro metadata changed since the library was built; recompile the library" }
+        val current = from(method)
+        require(current != null && current.parameters.map { it.type to it.mode } == parameters.map { it.type to it.mode } &&
+            current.sourceReturnType == sourceReturnType) { "MNIMacro metadata changed since the library was built; recompile the library" }
         return method
+    }
+
+    /** Preserve source declaration names while validating the implementation's JVM/annotation protocol. */
+    internal fun prepare(method: Method): PreparedMacroSignature {
+        val implementation = requireNotNull(MacroSignatureParser.prepare(method, sourceIdentifier = identifier.ifEmpty { methodName })) {
+            "Method has no MNIMacro declaration"
+        }
+        return PreparedMacroSignature(identifier.ifEmpty { methodName }, method,
+            implementation.parameters.zip(parameters).map { (prepared, declared) -> prepared.copy(name = declared.name) },
+            implementation.returnType, implementation.source)
+    }
+
+    internal fun declaredAs(name: String, parameterNames: List<String>): MacroFunctionInfo {
+        require(parameterNames.size == parameters.size)
+        return MacroFunctionInfo(providerClass, methodName, parameterClasses, returnClass, name,
+            parameters.zip(parameterNames).map { (parameter, identifier) -> parameter.copy(name = identifier) }, sourceReturnType)
     }
 
     override fun equals(other: Any?): Boolean = other is MacroFunctionInfo &&
@@ -81,7 +99,15 @@ class MacroFunctionInfo(
                 method.parameterTypes.map { it.name },
                 method.returnType.name,
                 annotation.identifier,
-                annotation.params.map { MacroParameterInfo(it.name, it.type, it.mode) },
+                annotation.normalParams.mapIndexed { index, type ->
+                    val mode = when (method.parameterTypes.getOrNull(index + 1)) {
+                        Ref::class.java -> ParamMode.REF
+                        Const::class.java -> ParamMode.CONST
+                        InlineFn::class.java -> ParamMode.INLINE
+                        else -> ParamMode.VALUE
+                    }
+                    MacroParameterInfo("p$index", type, mode)
+                },
                 annotation.returnType
             )
         }
@@ -205,7 +231,7 @@ internal class MacroLoadingSnapshot private constructor(
                         continue
                     }
                     try {
-                        val signature = MacroSignatureParser.prepare(method) ?: continue
+                        val signature = descriptor.prepare(method)
                         val entryCallbacks = arrayListOf<SourceCallbackSignature>()
                         fun project(type: PreparedMacroType): SourceCallbackType = when (type) {
                             is PreparedMacroType.Source -> SourceCallbackType.Declared(

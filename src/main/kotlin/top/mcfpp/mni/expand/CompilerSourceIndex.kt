@@ -88,6 +88,14 @@ internal sealed interface CompilerCallPreparationResult {
     }
 }
 
+/** Declaration-only locals, such as callback parameters, have types before runtime Vars exist. */
+internal class SourceInferenceBindings(
+    val values: Map<String, DeclarationBinding.Bound>,
+    val declarations: Map<top.mcfpp.library.syntax.DeclarationId, DeclarationBinding.Bound>
+) {
+    val identities = values.mapValues { Any() }
+}
+
 /** The caller supplies original syntax before visiting eager arguments. */
 internal object CompilerBindingEnvironment {
     fun prepareCall(syntax: P.FunctionCallContext, caller: Function = Function.currFunction,
@@ -105,7 +113,9 @@ internal class CompilerSourceIndex(
     private val declarationTarget: DataTemplate? = null,
     /** Original processor request whose closed arguments become an own view. */
     private val processorRequest: TemplateProcessorRequest? = null,
-    private val nativeDirectory: PreparedNativeDirectory? = PreparedNativeDirectory.current()
+    private val nativeDirectory: PreparedNativeDirectory? = PreparedNativeDirectory.current(),
+    /** Used only by declaredResultType; these symbols cannot be captured by the runtime bridge. */
+    private val inference: SourceInferenceBindings? = null
 ) {
     private fun preparationSpan(site: ParserRuleContext): SourceSpan = StructuredSourceFacts.span(site)
     init {
@@ -284,6 +294,10 @@ internal class CompilerSourceIndex(
         fun prepare(): RoundResult {
             DeclarationDomainStamp.captureRoots(roots, source)
             baseline.forEach(::collect)
+            inference?.values?.values?.forEach { value ->
+                collect(value.type)
+                value.descriptors.values.forEach(::collect)
+            }
             nativeDirectory?.let { directory -> directory.requireOpen(); directory.sourceTypes.forEach(::collect) }
             discover(caller, lexical)
             declarationTarget?.let { target ->
@@ -389,13 +403,29 @@ internal class CompilerSourceIndex(
                     }
                 }
             }
+            val preparedDiscovery = Collections.newSetFromMap(IdentityHashMap<Function, Boolean>())
+            fun prepareRequest(index: Int): Pair<Int, RoundResult?> {
+                val request = requestedBindings[index]
+                var next = index + 1
+                val candidates = request.functions.toMutableList()
+                if (request.source == null && request.facts.isEmpty() && request.authorAccess == null) {
+                    // Discovery of each signature can rediscover the same standard namespace.
+                    // Prepare one batch per lexical owner and each default signature only once.
+                    while (next < requestedBindings.size) {
+                        val following = requestedBindings[next]
+                        if (following.source != null || following.facts.isNotEmpty() || following.authorAccess != null || following.caller !== request.caller) break
+                        candidates.addAll(following.functions)
+                        next++
+                    }
+                }
+                val functions = if (request.source == null) candidates.filter { it !in called && preparedDiscovery.add(it) } else candidates
+                return next to prepareFunctions(functions, request.facts, request.source, request.caller, request.authorAccess)
+            }
             var requestIndex = 0
             while (requestIndex < requestedBindings.size) {
-                val (discoveredFunctions, facts, owner, callSite, authorAccess) = requestedBindings[requestIndex++]
-                // An actual call supplies this declaration's binding. A discovery-only default
-                // must not introduce an additional specialization beside those original calls.
-                val functions = if (callSite == null) discoveredFunctions.filter { it !in called } else discoveredFunctions
-                prepareFunctions(functions, facts, callSite, owner, authorAccess)?.let { return it }
+                val (next, result) = prepareRequest(requestIndex)
+                requestIndex = next
+                result?.let { return it }
             }
             // Parse provider type metadata through the same pure compiler type walker, before
             // MacroLoadingSnapshot freezes callback and ordinary types in one graph.
@@ -404,7 +434,7 @@ internal class CompilerSourceIndex(
                 roots.addAll(declaration.domainRoots)
                 val names = macroTypeNames.getOrPut(namespace.identifier) { linkedMapOf() }
                 namespace.macroDeclarations().forEach { descriptor ->
-                    val prepared = MacroSignatureParser.prepare(descriptor.method(Project.classLoader)) ?: return@forEach
+                    val prepared = descriptor.prepare(descriptor.method(Project.classLoader))
                     fun describe(type: PreparedMacroType, returnPosition: Boolean = false) {
                         when (type) {
                             is PreparedMacroType.Source -> if (type.expression !in names)
@@ -453,9 +483,9 @@ internal class CompilerSourceIndex(
             // before freezing default expressions and validation facts for every signature.
             var discoveryIndex = discoveryStart
             while (discoveryIndex < requestedBindings.size) {
-                val (discoveredFunctions, facts, owner, callSite, authorAccess) = requestedBindings[discoveryIndex++]
-                val functions = if (callSite == null) discoveredFunctions.filter { it !in called } else discoveredFunctions
-                prepareFunctions(functions, facts, callSite, owner, authorAccess)?.let { return it }
+                val (next, result) = prepareRequest(discoveryIndex)
+                discoveryIndex = next
+                result?.let { return it }
             }
             signatures.values.forEach { signature ->
                 val declarationValues = values(signature.function, signature.lexical, includeLocals = false)
@@ -1049,7 +1079,8 @@ internal class CompilerSourceIndex(
             calls: Map<SourceSpan, List<SourceFunction>>? = null,
             members: Map<Pair<TypeId, String>, List<SourceFunction>> = emptyMap()
         ): BindingEnvironment {
-            val symbols = values.map { (name, value) ->
+            val inferred = if (function === caller) inferenceSymbols(catalog) else emptyList()
+            val symbols = values.filterKeys { name -> inferred.none { it.name == name } }.map { (name, value) ->
                 val id = symbol(value.symbol ?: value)
                 compilerSymbols[id] = value
                 val raw = DeclarationLexicalSnapshot.rawValue(value)
@@ -1060,7 +1091,7 @@ internal class CompilerSourceIndex(
                 SourceSymbol(name, catalog.ref(valueTypes[value] ?: value.type), id,
                     !value.isConst && !value.isFinal && value.symbol?.readonly != true,
                     constant.takeUnless { value.isStatic }, global = value.isStatic)
-            } + lexicalTypeNames[function].orEmpty().filterKeys { it !in values }.map { (name, type) ->
+            } + inferred + lexicalTypeNames[function].orEmpty().filterKeys { name -> name !in values && inferred.none { it.name == name } }.map { (name, type) ->
                 SourceSymbol(
                     name,
                     catalog.ref(MCFPPConcreteType.Type),
@@ -1078,8 +1109,16 @@ internal class CompilerSourceIndex(
                 callCandidates = calls, memberDeclarations = members,
                 structuredSymbols = structuredUses[function].orEmpty().mapNotNull { (use, name) ->
                     symbols.firstOrNull { it.name == name }?.let { use to it }
-                }.toMap()
+                }.toMap() + if (function === caller) inference?.declarations.orEmpty().mapNotNull { (id, bound) ->
+                    val name = inference?.values?.entries?.firstOrNull { it.value === bound }?.key
+                    inferred.firstOrNull { it.name == name }?.let { top.mcfpp.library.syntax.NameUse.Local(id) to it }
+                }.toMap() else emptyMap()
             )
+        }
+
+        private fun inferenceSymbols(catalog: SourceTypeCatalog): List<SourceSymbol> = inference?.values.orEmpty().map { (name, value) ->
+            SourceSymbol(name, catalog.ref(value.type), symbol(inference!!.identities.getValue(name)),
+                constant = value.constant?.let { SourceDefaultBinder().typedLiteral(value, catalog, source).constant })
         }
 
         private fun referencePayload(value: Var<*>): Boolean {
@@ -1163,6 +1202,9 @@ internal class CompilerSourceIndex(
                 when (scope) {
                     is FunctionScope -> {
                         scope.vars.forEach { (name, value) -> values.putIfAbsent(name, value) }
+                        if (scope is top.mcfpp.analysis.lambda.LambdaCaptureScope) scope.allVars.forEach { value ->
+                            values.putIfAbsent(value.symbol?.lambdaCaptureName ?: value.identifier, value)
+                        }
                         scope.parent.firstOrNull()?.let(::visit)
                     }
                     is CompoundDataScope -> scope.allVars.forEach { value ->

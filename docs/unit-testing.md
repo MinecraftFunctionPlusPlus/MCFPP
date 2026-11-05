@@ -29,7 +29,7 @@ func addition() {
 
 ## 运行
 
-编译器使用 JDK 21；当前 DSB CLI 使用 Java 25。下载 [DSB CLI](https://dbs.afox.moe/workflows/installation.html)，指定其本地路径和 Java 可执行文件：
+编译器使用 JDK 25；当前 DSB CLI 使用 Java 25。下载 [DSB CLI](https://dbs.afox.moe/workflows/installation.html)，指定其本地路径和 Java 可执行文件：
 
 ```powershell
 $env:DSB_JAR = 'C:\tools\datapack-sandbox-cli.jar'
@@ -39,7 +39,7 @@ mcfpp test --tests 'example.tests:add*'
 mcfpp test --list
 ```
 
-也可传入 `--dsb-jar <路径>`、`--dsb-java <可执行文件>`；后者默认使用 PATH 中的 `java`。`--list` 只编译并发现测试，不启动 DSB。
+也可传入 `--dsb-jar <路径>`、`--dsb-java <可执行文件>`；后者默认复用当前 MCFPP 进程的 JDK。`--list` 只编译并发现测试，不启动 DSB。
 
 `mcfpp test` 在启用 MNI 时先执行现有 Java 测试，再执行 MCFPP 测试。`--tests` 使用 `命名空间:函数名` 和 `*` 筛选，只执行 MCFPP 测试；筛选无匹配或测试源码没有 `@Test` 时返回非零状态。`--offline`、`--locked` 沿用工程依赖规则。
 

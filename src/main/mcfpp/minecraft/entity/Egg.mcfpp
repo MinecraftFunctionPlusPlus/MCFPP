@@ -1,2 +1,3 @@
 @MCFPPEntity
+/// 鸡蛋的实体数据。继承的字段由各父数据类型提供。
 data EggData: EntityData, ProjectileData, MissileData

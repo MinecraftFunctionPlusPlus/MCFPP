@@ -36,7 +36,7 @@ data class ProjectDefinition(val file: Path, val values: Map<String, Any?>, val 
     }
 
     companion object {
-        const val TOOLCHAIN = "java21-v1"
+        const val TOOLCHAIN = "java25-v1"
 
         fun find(start: Path, explicit: Path? = null): Path {
             if (explicit != null) {

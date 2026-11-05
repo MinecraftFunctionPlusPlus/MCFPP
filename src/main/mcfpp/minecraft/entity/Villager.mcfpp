@@ -1,27 +1,43 @@
 @MCFPPEntity
+/// 村民的实体数据。继承的字段由各父数据类型提供。
 data VillagerData: EntityData, CreatureData, AIMobData, GrowableData {
+    /// 是否在生成时分配职业。
     @Name("AssignProfessionWhenSpawned") var assignProfessionWhenSpawned: bool
+    /// 饥饿值。
     @Name("FoodLevel") var foodLevel: byte
+    /// 物品栏数据。
     @Name("Inventory") var inventory: list<ItemData>
+    /// 村民流言记录。
     @Name("Gossips") var gossips: list<VillagerGossip>
+    /// 上次补货的游戏时间。
     @Name("LastRestock") var lastRestock: long
+    /// 上次流言衰减的游戏时间。
     @Name("LastGossipDecay") var lastGossipDecay: long
 
+    /// 可提供的交易。
     @Name("Offers") var offers: data {
+        /// 配方或交易记录列表。
         @Name("Recipes") var recipes: list<VillagerRecipe>
     }
 
+    /// 当天已经补货的次数。
     @Name("RestocksToday") var restocksToday: int
 
+    /// 村民的等级、职业和外观数据。
     @Name("VillagerData") var villagerData: data {
+        /// 等级。
         var level: int
+        /// 职业标识符。
         var profession: string
+        /// 种类标记。
         var type: string
     }
 
+    /// 经验值。
     @Name("Xp") var xp: int
 }
 
+/// 村民流言的类别。
 enum GossipType {
     major_negative,
     minor_negative,
@@ -30,27 +46,46 @@ enum GossipType {
     trading
 }
 
+/// 一条村民流言，包含目标、类别和数值。
 data VillagerGossip {
+    /// 目标实体的 UUID。
     var target: IntArray
+    /// 种类标记。
     var type: GossipType
+    /// 数值。
     var value: int
 }
 
+/// 一项村民交易的输入、输出和价格数据。
 data VillagerRecipe {
+    /// 第一项交易输入。
     var buy: data {
+        /// 资源标识符。
         var id: string
+        /// 物品组件数据。
         var components: nbt
     }
+    /// 第二项交易输入。
     var buyB: data {
+        /// 资源标识符。
         var id: string
+        /// 物品组件数据。
         var components: nbt
     }
+    /// 交易需求值。
     var demand: int
+    /// 交易的最大使用次数。
     var maxUses: int
+    /// 交易价格倍率。
     var priceMultiplier: float
+    /// 是否在交易后奖励经验。
     var rewardExp: bool
+    /// 交易输出的物品。
     var sell: ItemData
+    /// 特殊价格调整值。
     var specialPrice: int
+    /// 已经使用的交易次数。
     var uses: int
+    /// 经验值。
     var xp: int
 }

@@ -1886,6 +1886,10 @@ open class Function : Member, FieldContainer, WithDocument {
          */
         @JvmStatic
         fun addCommand(command: Command): Int {
+            if (Project.config.debugInfo && !command.debugPointCaptured) {
+                command.debugPoint = top.mcfpp.debug.DebugMetadata.capture()
+                command.debugPointCaptured = true
+            }
 //            if(CompileSettings.isDebug){
 //                //检查当前方法是否有InsertCommand注解
 //                val stackTrace = Thread.currentThread().stackTrace

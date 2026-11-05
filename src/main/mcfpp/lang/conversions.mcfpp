@@ -1,49 +1,98 @@
+/// 返回 value 的 int 值。
 func toInt(value: int): int = top.mcfpp.mni.ConversionData.toIntFromInt
+/// 将 float 类型的 value 转换为 int 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toInt(value: float): int = top.mcfpp.mni.ConversionData.toIntFromFloat
+/// 将 byte 类型的 value 转换为 int 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toInt(value: byte): int = top.mcfpp.mni.ConversionData.toIntFromByte
+/// 将 short 类型的 value 转换为 int 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toInt(value: short): int = top.mcfpp.mni.ConversionData.toIntFromShort
+/// 将 long 类型的 value 转换为 int 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toInt(value: long): int = top.mcfpp.mni.ConversionData.toIntFromLong
+/// 将 double 类型的 value 转换为 int 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toInt(value: double): int = top.mcfpp.mni.ConversionData.toIntFromDouble
+/// 将 int 类型的 value 转换为 float 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toFloat(value: int): float = top.mcfpp.mni.ConversionData.toFloatFromInt
+/// 返回 value 的 float 值。
 func toFloat(value: float): float = top.mcfpp.mni.ConversionData.toFloatFromFloat
+/// 将 byte 类型的 value 转换为 float 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toFloat(value: byte): float = top.mcfpp.mni.ConversionData.toFloatFromByte
+/// 将 short 类型的 value 转换为 float 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toFloat(value: short): float = top.mcfpp.mni.ConversionData.toFloatFromShort
+/// 将 long 类型的 value 转换为 float 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toFloat(value: long): float = top.mcfpp.mni.ConversionData.toFloatFromLong
+/// 将 double 类型的 value 转换为 float 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toFloat(value: double): float = top.mcfpp.mni.ConversionData.toFloatFromDouble
+/// 将 int 类型的 value 转换为 byte 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toByte(value: int): byte = top.mcfpp.mni.ConversionData.toByteFromInt
+/// 将 float 类型的 value 转换为 byte 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toByte(value: float): byte = top.mcfpp.mni.ConversionData.toByteFromFloat
+/// 返回 value 的 byte 值。
 func toByte(value: byte): byte = top.mcfpp.mni.ConversionData.toByteFromByte
+/// 将 short 类型的 value 转换为 byte 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toByte(value: short): byte = top.mcfpp.mni.ConversionData.toByteFromShort
+/// 将 long 类型的 value 转换为 byte 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toByte(value: long): byte = top.mcfpp.mni.ConversionData.toByteFromLong
+/// 将 double 类型的 value 转换为 byte 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toByte(value: double): byte = top.mcfpp.mni.ConversionData.toByteFromDouble
+/// 将 int 类型的 value 转换为 short 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toShort(value: int): short = top.mcfpp.mni.ConversionData.toShortFromInt
+/// 将 float 类型的 value 转换为 short 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toShort(value: float): short = top.mcfpp.mni.ConversionData.toShortFromFloat
+/// 将 byte 类型的 value 转换为 short 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toShort(value: byte): short = top.mcfpp.mni.ConversionData.toShortFromByte
+/// 返回 value 的 short 值。
 func toShort(value: short): short = top.mcfpp.mni.ConversionData.toShortFromShort
+/// 将 long 类型的 value 转换为 short 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toShort(value: long): short = top.mcfpp.mni.ConversionData.toShortFromLong
+/// 将 double 类型的 value 转换为 short 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toShort(value: double): short = top.mcfpp.mni.ConversionData.toShortFromDouble
+/// 将 int 类型的 value 转换为 long 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toLong(value: int): long = top.mcfpp.mni.ConversionData.toLongFromInt
+/// 将 float 类型的 value 转换为 long 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toLong(value: float): long = top.mcfpp.mni.ConversionData.toLongFromFloat
+/// 将 byte 类型的 value 转换为 long 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toLong(value: byte): long = top.mcfpp.mni.ConversionData.toLongFromByte
+/// 将 short 类型的 value 转换为 long 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toLong(value: short): long = top.mcfpp.mni.ConversionData.toLongFromShort
+/// 返回 value 的 long 值。
 func toLong(value: long): long = top.mcfpp.mni.ConversionData.toLongFromLong
+/// 将 double 类型的 value 转换为 long 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toLong(value: double): long = top.mcfpp.mni.ConversionData.toLongFromDouble
+/// 将 int 类型的 value 转换为 double 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toDouble(value: int): double = top.mcfpp.mni.ConversionData.toDoubleFromInt
+/// 将 float 类型的 value 转换为 double 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toDouble(value: float): double = top.mcfpp.mni.ConversionData.toDoubleFromFloat
+/// 将 byte 类型的 value 转换为 double 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toDouble(value: byte): double = top.mcfpp.mni.ConversionData.toDoubleFromByte
+/// 将 short 类型的 value 转换为 double 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toDouble(value: short): double = top.mcfpp.mni.ConversionData.toDoubleFromShort
+/// 将 long 类型的 value 转换为 double 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toDouble(value: long): double = top.mcfpp.mni.ConversionData.toDoubleFromLong
+/// 返回 value 的 double 值。
 func toDouble(value: double): double = top.mcfpp.mni.ConversionData.toDoubleFromDouble
+/// 将 int 类型的 value 转换为 nbt 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toNBT(value: int): nbt = top.mcfpp.mni.ConversionData.toNBTFromInt
+/// 将 float 类型的 value 转换为 nbt 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toNBT(value: float): nbt = top.mcfpp.mni.ConversionData.toNBTFromFloat
+/// 将 byte 类型的 value 转换为 nbt 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toNBT(value: byte): nbt = top.mcfpp.mni.ConversionData.toNBTFromByte
+/// 将 short 类型的 value 转换为 nbt 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toNBT(value: short): nbt = top.mcfpp.mni.ConversionData.toNBTFromShort
+/// 将 long 类型的 value 转换为 nbt 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toNBT(value: long): nbt = top.mcfpp.mni.ConversionData.toNBTFromLong
+/// 将 double 类型的 value 转换为 nbt 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toNBT(value: double): nbt = top.mcfpp.mni.ConversionData.toNBTFromDouble
+/// 将 bool 类型的 value 转换为 nbt 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toNBT(value: bool): nbt = top.mcfpp.mni.ConversionData.toNBTFromBool
+/// 将 string 类型的 value 转换为 nbt 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toNBT(value: string): nbt = top.mcfpp.mni.ConversionData.toNBTFromString
+/// 返回 value 的 NBT 值。
 func toNBT(value: nbt): nbt = top.mcfpp.mni.ConversionData.toNBTFromNBT
+/// 将 DataObject 类型的 value 转换为 nbt 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toNBT(value: DataObject): nbt = top.mcfpp.mni.ConversionData.toNBTFromDataObject
+/// 将 ByteArray 类型的 value 转换为 nbt 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toNBT(value: ByteArray): nbt = top.mcfpp.mni.ConversionData.toNBTFromByteArray
+/// 将 IntArray 类型的 value 转换为 nbt 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toNBT(value: IntArray): nbt = top.mcfpp.mni.ConversionData.toNBTFromIntArray
+/// 将 LongArray 类型的 value 转换为 nbt 并返回结果。转换使用 MCFPP 的类型转换规则。
 func toNBT(value: LongArray): nbt = top.mcfpp.mni.ConversionData.toNBTFromLongArray

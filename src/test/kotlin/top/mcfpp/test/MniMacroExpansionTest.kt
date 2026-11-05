@@ -3,7 +3,6 @@
 package top.mcfpp.test
 
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.mni.api.*
 import top.mcfpp.mni.expand.*
 import java.util.Collections
@@ -25,7 +24,7 @@ class MniMacroExpansionEntries {
         var recurExecutions = 0
 
         @JvmStatic
-        @MNIMacro(identifier = "innerInt", params = [MacroParam(name = "value", type = "int")], returnType = "int")
+        @MNIMacro(identifier = "innerInt", normalParams = ["int"], returnType = "int")
         fun innerInt(context: MacroContext, value: Value<IntT>): Expr<IntT> {
             innerExecutions++
             return context.quote().expression(
@@ -37,7 +36,7 @@ class MniMacroExpansionEntries {
         }
 
         @JvmStatic
-        @MNIMacro(identifier = "identityInt", params = [MacroParam(name = "value", type = "int")], returnType = "int")
+        @MNIMacro(identifier = "identityInt", normalParams = ["int"], returnType = "int")
         fun identityInt(context: MacroContext, value: Value<IntT>): Expr<IntT> = context.quote().expression(
             context.types().intType(),
             Consumer { builder ->
@@ -61,7 +60,7 @@ class MniMacroExpansionEntries {
         }
 
         @JvmStatic
-        @MNIMacro(identifier = "bump", params = [MacroParam(name = "value", type = "int", mode = ParamMode.REF)], returnType = "int")
+        @MNIMacro(identifier = "bump", normalParams = ["int"], returnType = "int")
         fun bump(context: MacroContext, value: Ref<IntT>): Expr<IntT> = context.quote().expression(
             context.types().intType(),
             Consumer { builder ->
@@ -71,7 +70,7 @@ class MniMacroExpansionEntries {
         )
 
         @JvmStatic
-        @MNIMacro(identifier = "show", params = [MacroParam(name = "value", type = "int", mode = ParamMode.REF)], returnType = "int")
+        @MNIMacro(identifier = "show", normalParams = ["int"], returnType = "int")
         fun show(context: MacroContext, value: Ref<IntT>): Expr<IntT> {
             showExecutions++
             val target = requireNotNull(bumpRef)
@@ -86,7 +85,7 @@ class MniMacroExpansionEntries {
         }
 
         @JvmStatic
-        @MNIMacro(identifier = "relay", params = [MacroParam(name = "value", type = "int", mode = ParamMode.REF)], returnType = "int")
+        @MNIMacro(identifier = "relay", normalParams = ["int"], returnType = "int")
         fun relay(context: MacroContext, value: Ref<IntT>): Expr<IntT> {
             val target = requireNotNull(relayRef)
             @Suppress("UNCHECKED_CAST")

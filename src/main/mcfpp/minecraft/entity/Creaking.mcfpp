@@ -1,5 +1,7 @@
 @MCFPPEntity
+/// 嘎枝的实体数据。继承的字段由各父数据类型提供。
 data CreakingData: EntityData, CreatureData, AIMobData {
     @Name("Home_Pos")
+    /// 归属位置的坐标。
     var homePos: IntArray
 }

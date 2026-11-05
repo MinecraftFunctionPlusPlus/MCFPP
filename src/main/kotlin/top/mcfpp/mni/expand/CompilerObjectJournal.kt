@@ -3,6 +3,7 @@ package top.mcfpp.mni.expand
 import top.mcfpp.analysis.EffectAnalysis
 import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.analysis.StorageCheckpoint
+import top.mcfpp.analysis.StorageCheckpointCollector
 import top.mcfpp.analysis.StoredData
 import top.mcfpp.command.Command
 import top.mcfpp.command.CommandList
@@ -56,8 +57,10 @@ internal class CompilerObjectJournal private constructor(
     /** Detached published caches, members, accessors and frames remain enrollment roots. */
     fun captureCurrent(): CompilerObjectJournal = capture(enrolled, scopes, functions, storage, effects, scores)
 
-    internal fun captureCurrent(values: Iterable<Var<*>>, functions: Iterable<Function>): CompilerObjectJournal =
-        capture(enrolled + rootList(values) + rootList(functions), scopes, this.functions, storage, effects, scores)
+    internal fun captureCurrent(
+        values: Iterable<Var<*>>, functions: Iterable<Function>, collector: StorageCheckpointCollector? = null,
+        scopeSnapshots: IdentityHashMap<CompoundDataScope, CompoundDataScope.JournalSnapshot>? = null
+    ): CompilerObjectJournal = capture(enrolled + rootList(values) + rootList(functions), scopes, this.functions, storage, effects, scores, collector, scopeSnapshots)
 
     /** Legacy preparation runs once. Applying its captured result does not invoke native code. */
     fun prepare(action: () -> Unit): PreparedCompilerCommit {
@@ -90,8 +93,10 @@ internal class CompilerObjectJournal private constructor(
     companion object {
         fun checkpoint(
             values: Iterable<Var<*>> = emptyList(),
-            functions: Iterable<Function> = emptyList()
-        ): CompilerObjectJournal = capture(rootList(values) + rootList(functions), emptyList(), null, null, null, emptyList())
+            functions: Iterable<Function> = emptyList(),
+            collector: StorageCheckpointCollector? = null,
+            scopeSnapshots: IdentityHashMap<CompoundDataScope, CompoundDataScope.JournalSnapshot>? = null
+        ): CompilerObjectJournal = capture(rootList(values) + rootList(functions), emptyList(), null, null, null, emptyList(), collector, scopeSnapshots)
 
         private fun <T> rootList(values: Iterable<T>): List<T> {
             check(
@@ -114,7 +119,9 @@ internal class CompilerObjectJournal private constructor(
             retainedFunctions: FunctionStateJournal?,
             retainedStorage: StorageCheckpoint?,
             retainedEffects: EffectAnalysis.JournalSnapshot?,
-            retainedScores: List<Pair<Var<*>, MCFPPEntityType.ScoresStateCheckpoint>>
+            retainedScores: List<Pair<Var<*>, MCFPPEntityType.ScoresStateCheckpoint>>,
+            collector: StorageCheckpointCollector? = null,
+            scopeSnapshots: IdentityHashMap<CompoundDataScope, CompoundDataScope.JournalSnapshot>? = null
         ): CompilerObjectJournal {
             val effects = retainedEffects?.captureCurrent() ?: EffectAnalysis.checkpointActualEffects()
             val pending = ArrayDeque<Any>().apply {
@@ -199,7 +206,10 @@ internal class CompilerObjectJournal private constructor(
                         // container members and PropertyVar.get() are computed accesses, not fields.
                     }
                     is CompoundDataScope -> {
-                        val snapshot = oldScopes[value]?.captureCurrent() ?: value.checkpointRelations()
+                        // Declaration preflight has already captured these exact raw relations
+                        // in this synchronous savepoint. Share that immutable checkpoint; an
+                        // object-only or detached scope still takes its own complete snapshot.
+                        val snapshot = scopeSnapshots?.get(value) ?: oldScopes[value]?.captureCurrent() ?: value.checkpointRelations()
                         scopes.add(value to snapshot)
                         snapshot.elements.variables.forEach(::enqueue)
                         snapshot.elements.properties.forEach(::enqueue)
@@ -313,9 +323,13 @@ internal class CompilerObjectJournal private constructor(
                 }
             }
             // Preflight the reachable adapter/accessor graph above before invoking deeper capabilities.
-            val functionStates = retainedFunctions?.captureCurrent(functions, values) ?: FunctionStateJournal.checkpoint(functions, values)
+            val storageCollector = collector ?: StorageCheckpointCollector()
+            val functionStates = retainedFunctions?.captureCurrent(functions, values, storageCollector)
+                ?: FunctionStateJournal.checkpoint(functions, values, storageCollector)
             val storageRoots = values + properties
-            val storageStates = retainedStorage?.captureCurrent(storageRoots) ?: StorageAccess.checkpointGraph(storageRoots)
+            val enrolledStorage = retainedStorage?.captureCurrent(storageRoots, storageCollector)
+                ?: StorageAccess.checkpointGraph(storageRoots, storageCollector)
+            val storageStates = if (collector == null) storageCollector.checkpoint() else enrolledStorage
             val published = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
             val elements = (enrolled + declarationRoots).filter { published.add(it) }
             return CompilerObjectJournal(enrolled, restores, scopes, functionStates, storageStates, effects, scores, elements)

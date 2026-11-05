@@ -10,7 +10,6 @@ import top.mcfpp.ProjectConfig
 import top.mcfpp.analysis.*
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppLexer
@@ -56,9 +55,9 @@ class MniSourceMacroCallTest {
             @JvmStatic
             @MNIMacro(
                 identifier = "ignorePair",
-                params = [
-                    MacroParam(name = "first", type = "int"),
-                    MacroParam(name = "second", type = "int")
+                normalParams = [
+                    "int",
+                    "int"
                 ],
                 returnType = "int"
             )
@@ -75,9 +74,9 @@ class MniSourceMacroCallTest {
             @JvmStatic
             @MNIMacro(
                 identifier = "bumpPair",
-                params = [
-                    MacroParam(name = "first", type = "int", mode = ParamMode.REF),
-                    MacroParam(name = "second", type = "int", mode = ParamMode.REF)
+                normalParams = [
+                    "int",
+                    "int"
                 ],
                 returnType = "int"
             )
@@ -98,8 +97,8 @@ class MniSourceMacroCallTest {
             @JvmStatic
             @MNIMacro(
                 identifier = "constantOnly",
-                params = [
-                    MacroParam(name = "value", type = "int", mode = ParamMode.CONST)
+                normalParams = [
+                    "int"
                 ],
                 returnType = "int"
             )
@@ -186,8 +185,8 @@ class MniSourceMacroCallTest {
             NativeEntries.warnOnEffect = false
             GlobalScope.localNamespaces[namespace.identifier] = namespace
             namespace.scope.journalFileFields.add(file.field)
-            namespace.injectedBy(Entries::class.java)
-            namespace.injectedBy(NativeEntries::class.java)
+            namespace.declareMniFixtures(Entries::class.java)
+            namespace.declareMniFixtures(NativeEntries::class.java)
             val bodySource = "{\n$source\n}"
             val parser = P(CommonTokenStream(mcfppLexer(CharStreams.fromString(bodySource, "source-macro.mcfpp"))))
             val body = parser.curlBlock()

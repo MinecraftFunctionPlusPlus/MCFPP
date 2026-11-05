@@ -252,8 +252,8 @@ internal class CompilerPlanEmitter(
         if (command.contains("\$(")) {
             val key = "mni/$token/macro_${macroSequence++}"
             Project.macroFunction[key] = "\$$command"
-            Function.addCommand("function mcfpp:dynamic/$key with ${slot("addresses")}")
-        } else Function.addCommand(command)
+            emitDebugCommand("function mcfpp:dynamic/$key with ${slot("addresses")}")
+        } else emitDebugCommand(command)
     }
     /**
      * Emit a command whose `$(` text is literal SNBT data, not a macro parameter. Only call this
@@ -261,6 +261,14 @@ internal class CompilerPlanEmitter(
      * runtime string helper templates must keep using [emit].
      */
     fun emitLiteral(command: String) {
+        emitDebugCommand(command)
+    }
+    private fun emitDebugCommand(text: String) {
+        val command = Command(text)
+        if (Project.config.debugInfo) {
+            command.debugPoint = top.mcfpp.debug.DebugMetadata.expanded(site)
+            command.debugPointCaptured = true
+        }
         Function.addCommand(command)
     }
     fun emit(command: Command) = emit(command.analyze())

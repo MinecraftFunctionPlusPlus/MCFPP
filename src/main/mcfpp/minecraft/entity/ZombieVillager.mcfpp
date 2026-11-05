@@ -1,19 +1,30 @@
 @MCFPPEntity
+/// 僵尸村民的实体数据。继承的字段由各父数据类型提供。
 data ZombieVillagerData: EntityData, CreatureData, AIMobData, GeneralZombieData {
+    /// 恢复为村民的计时值。
     @Name("ConversionTime") var conversionTime: int
+    /// 触发恢复过程的玩家 UUID。
     @Name("ConversionPlayer") var conversionPlayer: IntArray
 
+    /// 可提供的交易。
     @Name("Offers") var offers: data {
+        /// 配方或交易记录列表。
         @Name("Recipes") var recipes: list<VillagerRecipe>
     }
 
+    /// 村民流言记录。
     @Name("Gossips") var gossips: list<VillagerGossip>
 
+    /// 村民的等级、职业和外观数据。
     @Name("VillagerData") var villagerData: data {
+        /// 等级。
         var level: int
+        /// 职业标识符。
         var profession: string
+        /// 种类标记。
         var type: string
     }
 
+    /// 经验值。
     @Name("Xp") var xp: int
 }

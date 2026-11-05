@@ -1,5 +1,7 @@
 @From("top.mcfpp.mni.resource.RecipeSerializerData")
+/// 配方序列化器资源的标识符。通过 id 字段保存资源名称。
 data RecipeSerializer: ResourceID
 
 @From("top.mcfpp.mni.resource.RecipeSerializerObjectData")
+/// 配方序列化器资源类型的共享成员入口。
 object data RecipeSerializer: ResourceID

@@ -1,50 +1,66 @@
 import mcfpp.minecraft.item:ItemStackData
 
 @MCFPPEntity
+/// 盔甲架的实体数据。继承的字段由各父数据类型提供。
 data ArmorStandData: EntityData, CreatureData {
 
     @Name("ArmorItems")
+    /// 各护甲槽位的物品。
     var armorItems: list<ItemData>
 
     @Name("DisabledSlots")
+    /// 限制装备操作的槽位标记。
     var disabledslots: int
 
     @Name("HandItems")
+    /// 主手和副手物品。
     var handItems: list<ItemData>
 
     @Name("Invisible")
+    /// 是否隐藏实体外观。
     var invisible: bool
 
     @Name("Marker")
+    /// 是否使用标记盔甲架形态。
     var marker: bool
 
     @Name("NoBasePlate")
+    /// 是否隐藏底座。
     var noBasePlate: bool
 
     @Name("Pose")
+    /// 各部位的姿态角度。
     var pose: data {
         @Name("Body")
+        /// 身体的姿态角度。
         var body: list<float>
 
         @Name("Head")
+        /// 头部的姿态角度。
         var head: list<float>
 
         @Name("LeftArm")
+        /// 左臂的姿态角度。
         var leftArm: list<float>
 
         @Name("LeftLeg")
+        /// 左腿的姿态角度。
         var leftLeg: list<float>
 
         @Name("RightArm")
+        /// 右臂的姿态角度。
         var rightArm: list<float>
 
         @Name("RightLeg")
+        /// 右腿的姿态角度。
         var rightLeg: list<float>
     }
 
     @Name("ShowArms")
+    /// 是否显示手臂。
     var showArms: bool
 
     @Name("Small")
+    /// 是否使用小型外观。
     var small: bool
 }

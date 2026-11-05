@@ -259,8 +259,28 @@ internal class StorageCheckpoint internal constructor(
     fun restore() { restoreActions.forEach { it() } }
 
     /** Includes the original enrollment as well as any producers/bindings now reachable from it. */
-    fun captureCurrent(additionalRoots: Iterable<Any> = emptyList()): StorageCheckpoint =
-        StorageAccess.checkpointGraph(enrolled + additionalRoots)
+    fun captureCurrent(
+        additionalRoots: Iterable<Any> = emptyList(),
+        collector: StorageCheckpointCollector? = null
+    ): StorageCheckpoint = StorageAccess.checkpointGraph(enrolled + additionalRoots, collector)
+}
+
+/**
+ * One enclosing journal owns the storage snapshot for its nested function/object journals.
+ * Children retain their enrollment for captureCurrent(), while the owner captures the union
+ * once and restores it after declaration and scope relationships. This avoids repeatedly
+ * walking the same adapter graph without sharing snapshots between separate preparations.
+ */
+internal class StorageCheckpointCollector {
+    private val roots = arrayListOf<Any>()
+
+    fun enroll(values: Iterable<Any>): StorageCheckpoint {
+        val retained = values.toList()
+        roots.addAll(retained)
+        return StorageCheckpoint(retained, emptyList())
+    }
+
+    fun checkpoint(): StorageCheckpoint = StorageAccess.checkpointGraph(roots)
 }
 
 /** Central boundary between Place/TypedView and the remaining Var-based backends. */
@@ -269,7 +289,8 @@ object StorageAccess {
     internal fun checkpoint(values: Iterable<Var<*>>, stores: Iterable<StoredData> = emptyList()): StorageCheckpoint =
         checkpointGraph(values.toList() + stores.toList())
 
-    internal fun checkpointGraph(roots: Iterable<Any>): StorageCheckpoint {
+    internal fun checkpointGraph(roots: Iterable<Any>, collector: StorageCheckpointCollector? = null): StorageCheckpoint {
+        if (collector != null) return collector.enroll(roots)
         val pending = ArrayDeque<Any>()
         roots.forEach(pending::addLast)
         val seen = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())

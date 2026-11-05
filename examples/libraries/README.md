@@ -6,7 +6,7 @@
 
 ## 构建本地工具
 
-从 MCFPP 仓库根目录操作，假设相邻目录为 `../Mcfpm`。实际路径不同时自行调整。MCFPP 构建和运行使用 JDK 21；Mcfpm 当前构建 toolchain 为 JDK 25，发布字节码仍为 Java 17。先安装两个 JDK，并将 `JDK21_HOME`、`JDK25_HOME` 环境变量设为各自安装目录。
+从 MCFPP 仓库根目录操作，假设相邻目录为 `../Mcfpm`。实际路径不同时自行调整。MCFPP 与 Mcfpm 均使用 JDK 25 构建和运行，设置 `JDK25_HOME` 为该安装目录即可；Mcfpm 发布字节码仍为 Java 17。
 
 MCFPP 的 `runtimeOnly` 依赖需要 SDK 的三个本地产物：`model`、`core` 和 `mcfpp-adapter`。先在 SDK 仓库发布到本地 Maven，并生成 CLI：
 
@@ -16,7 +16,7 @@ Push-Location ../Mcfpm
 try {
     ./gradlew.bat :model:publishToMavenLocal :core:publishToMavenLocal :mcfpp-adapter:publishToMavenLocal :cli:installDist
 } finally { Pop-Location }
-$env:JAVA_HOME = $env:JDK21_HOME
+$env:JAVA_HOME = $env:JDK25_HOME
 ./gradlew.bat shadowJar
 ```
 
@@ -28,13 +28,13 @@ $env:JAVA_HOME = $env:JDK21_HOME
 
 ```powershell
 ./examples/libraries/run.ps1 `
-    -CompilerJar ./build/libs/MCFPP-1.0.2-SNAPSHOT.jar `
+    -CompilerJar ./build/libs/MCFPP-0.1.0.jar `
     -McfpmCommand ../Mcfpm/cli/build/install/mcfpm/bin/mcfpm.bat `
-    -JavaHome21 $env:JDK21_HOME `
+    -JavaHome25 $env:JDK25_HOME `
     -WorkDirectory ./build/library-example
 ```
 
-需要 PowerShell。`CompilerJar` 可指向其他发行 JAR，`McfpmCommand` 可指向已安装的 CLI。未指定 `JavaHome21` 时，编译器使用 `PATH` 中的 `java`，Mcfpm launcher 使用其正常的 Java 查找方式。`WorkDirectory` 应是新的目录；脚本保留输入模板和先前运行结果，不覆盖已有 producer/consumer。
+需要 PowerShell。`CompilerJar` 可指向其他发行 JAR，`McfpmCommand` 可指向已安装的 CLI。未指定 `JavaHome25` 时，编译器使用 `PATH` 中的 `java`，Mcfpm launcher 使用其正常的 Java 查找方式。`WorkDirectory` 应是新的目录；脚本保留输入模板和先前运行结果，不覆盖已有 producer/consumer。
 
 也可按顺序分别运行 `-Step producer`、`install`、`consumer`、`verify`，每次传入相同路径参数。`producer` 复制 TOML、依赖 JSON、源码和资源后导出；`install` 创建本地 Maven 载荷和描述符，通过 `mcfpp add` 安装消费者依赖，再移走作者源码；`consumer` 使用已安装库构建；`verify` 检查：
 

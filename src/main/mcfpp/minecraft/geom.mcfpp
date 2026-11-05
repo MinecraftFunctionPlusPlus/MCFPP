@@ -1,7 +1,11 @@
+/// 由起点和终点描述的空间区域。
 data Area{
+    /// 区域的起点坐标。
     var start: pos3
+    /// 区域的终点坐标。
     var end: pos3
 
+    /// 保存区域的起点和终点坐标。
     constructor(start: pos3, end: pos3){
         this.start = start
         this.end = end

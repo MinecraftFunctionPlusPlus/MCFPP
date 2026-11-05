@@ -75,7 +75,7 @@ object MCFPPStringTest {
         val parser = mcfppParser(tokens)
         parser.removeErrorListeners()
         parser.addErrorListener(MCFPPErrorListener())
-        val context = parser.compilationUnit()
+        val context = parser.parseCompilationUnit()
         if (MCFPPFile.currFile!!.syntaxError) return
         Project.trees[MCFPPFile.currFile!!] = context
         LogProcessor.debug("Generate Type Index...")

@@ -2,7 +2,9 @@
 // UUID text has five nonempty hexadecimal groups, with maximum widths 8-4-4-4-12.
 // Short groups such as 0-0-0-0-1 are accepted; signs and oversized groups are rejected.
 // Neither factory requires UUID version or variant bits. Targets resolve when consumed.
+/// 按玩家名称创建实体目标。名称使用 1–16 个 ASCII 字母、数字或下划线。使用目标时查找对应实体。
 func entityByName(name: string): entity = top.mcfpp.mni.EntityTargetData.entityByName
+/// 按 UUID 文本创建实体目标。文本由五组十六进制数字组成，最大宽度为 8-4-4-4-12。使用目标时查找对应实体。
 func entityByUUID(uuid: string): entity = top.mcfpp.mni.EntityTargetData.entityByUUID
 
 // Compiler intrinsics on every entity value:

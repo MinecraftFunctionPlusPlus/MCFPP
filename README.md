@@ -9,11 +9,15 @@ MCFPP is a new object-oriented language that compiles into Minecraft data packs.
 
 ## Quick Start
 
-See the [project and CLI guide](docs/cli.md). Use `mcfpp init hello` and `mcfpp build`, or `mcfpp init hello --mni` for Java MNI and tests. Projects use `mcfpp.toml` and `mcfpp-packages.json`.
+Install JDK 25 and extract the complete `mcfpp-0.1.0.zip` (Windows) or `mcfpp-0.1.0.tar.xz` (Linux/macOS). Set `JAVA_HOME` and add the extracted `bin` directory to PATH, then open a new terminal and run `mcfpp --version`. See [installation instructions](INSTALL.md) and [0.1.0 release notes](RELEASE-NOTES.md).
+
+See the [project and CLI guide](docs/cli.md). Use `mcfpp init hello` and `mcfpp build`, or `mcfpp init hello --mni` for a Kotlin MNI macro and Kotlin tests. Projects use `mcfpp.toml` and `mcfpp-packages.json`.
 
 [MCFPP API](https://www.mcfpp.top)
 
-Build with JDK 21 using `./gradlew build` (`./gradlew.bat build` on Windows).
+Build release artifacts with JDK 25 using `./gradlew release` (`./gradlew.bat release` on Windows); files are staged in `build/releases/0.1.0`. Source builds require the Mcfpm SDK described in the [CLI guide](docs/cli.md).
+
+The release build prioritizes size. Use `shadowJar` or `installShadowDist` for quick local packaging; these tasks skip release compression.
 
 [Type system specification](./docs/type-system/specification.md) · [Migration status and guide](./docs/type-system/migration.md)
 

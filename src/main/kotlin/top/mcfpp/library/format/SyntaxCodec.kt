@@ -412,6 +412,10 @@ object SyntaxCodec {
     private fun readRaw(
         reader: LibraryBinaryReader, strings: LibraryStrings, tag: Int, scope: ScopeId, offset: Long, index: Long,
     ): RawNode = checked(reader) {
+        // Decoder-owned child lists must remain immutable when a decoded builtin graph is
+        // shared by independent import sessions. BinaryReader.list already freezes wire lists.
+        fun <T, R> List<T>.mapFrozen(transform: (T) -> R): List<R> =
+            java.util.Collections.unmodifiableList(map(transform))
         fun ref() = NodeRef(u32())
         fun refs() = list { NodeRef(u32()) }
         fun maybe() = optional { NodeRef(u32()) }
@@ -420,7 +424,7 @@ object SyntaxCodec {
             2 -> null to NodeRef(u32())
             else -> fail("Unknown TextPart tag $part", LibraryFormatCode.UNSUPPORTED)
         } } }
-        fun parts(values: List<Pair<String?, NodeRef?>>, resolver: NodeResolver) = values.map { (text, expression) ->
+        fun parts(values: List<Pair<String?, NodeRef?>>, resolver: NodeResolver) = values.mapFrozen { (text, expression) ->
             if (text != null) TextPart.Text(text) else TextPart.Interpolation(resolver.expression(requireNotNull(expression)))
         }
         fun <T> wireEnum(value: Int, values: Array<T>, code: (T) -> Int): T = values.firstOrNull { code(it) == value }
@@ -441,13 +445,13 @@ object SyntaxCodec {
                 { r -> Expression.Member(scope, r.expression(receiver), name, kind, candidates) }
             }
             SyntaxTags.INDEX -> { val receiver = ref(); val value = maybe(); { r -> Expression.Index(scope, r.expression(receiver), value?.let(r::expression)) } }
-            SyntaxTags.PROPERTY_FILTER -> { val receiver = ref(); val entries = list { strings.value(u32()) to NodeRef(u32()) }; { r -> Expression.PropertyFilter(scope, r.expression(receiver), entries.map { PropertyEntry(it.first, r.expression(it.second)) }) } }
+            SyntaxTags.PROPERTY_FILTER -> { val receiver = ref(); val entries = list { strings.value(u32()) to NodeRef(u32()) }; { r -> Expression.PropertyFilter(scope, r.expression(receiver), entries.mapFrozen { PropertyEntry(it.first, r.expression(it.second)) }) } }
             SyntaxTags.CALL -> {
                 val callee = ref(); val readonly = refs(); val normal = list {
                     if (u8() != 1) fail("Legacy/unknown call argument kind", LibraryFormatCode.UNSUPPORTED)
                     NodeRef(u32())
                 }; val trailing = maybe();
-                { r -> Expression.Call(scope, r.expression(callee), readonly.map(r::expression), normal.map { Argument(r.expression(it)) }, trailing?.let(r::expression)) }
+                { r -> Expression.Call(scope, r.expression(callee), readonly.mapFrozen(r::expression), normal.mapFrozen { Argument(r.expression(it)) }, trailing?.let(r::expression)) }
             }
             SyntaxTags.LAMBDA -> {
                 val declaration = DeclarationId(u32()); val parameters = list { DeclarationId(u32()) }
@@ -459,26 +463,26 @@ object SyntaxCodec {
                 Dimension(wireEnum(u8(), DimensionMode.values()) { it.wireValue }, optional { ConstantRef(u32()) })
             }.let { values -> { Expression.Coordinate(scope, values) } }
             SyntaxTags.SELECTOR -> wireEnum(u8(), SelectorKind.values()) { it.wireValue }.let { value -> { Expression.Selector(scope, value) } }
-            SyntaxTags.LIST -> refs().let { values -> { r -> Expression.ListValue(scope, values.map(r::expression)) } }
-            SyntaxTags.COMPOUND -> list { strings.value(u32()) to NodeRef(u32()) }.let { values -> { r -> Expression.Compound(scope, values.map { CompoundEntry(it.first, r.expression(it.second)) }) } }
+            SyntaxTags.LIST -> refs().let { values -> { r -> Expression.ListValue(scope, values.mapFrozen(r::expression)) } }
+            SyntaxTags.COMPOUND -> list { strings.value(u32()) to NodeRef(u32()) }.let { values -> { r -> Expression.Compound(scope, values.mapFrozen { CompoundEntry(it.first, r.expression(it.second)) }) } }
             SyntaxTags.NBT_ARRAY -> { val kind = wireEnum(u8(), NbtArrayElement.values()) { it.wireValue }; val values = list { ConstantRef(u32()) }; { Expression.NbtArray(scope, kind, values) } }
             SyntaxTags.INTERPOLATED_STRING -> text().let { values -> { r -> Expression.InterpolatedString(scope, parts(values, r)) } }
             SyntaxTags.TYPE_NAME -> { val use = readName(this, strings); val resolved = optional { TypeRef(u32()) }; { TypeSyntax.Name(scope, use, resolved) } }
-            SyntaxTags.TYPE_APPLY -> { val base = ref(); val args = refs(); val resolved = optional { TypeRef(u32()) }; { r -> TypeSyntax.Apply(scope, r.type(base), args.map(r::expression), resolved) } }
+            SyntaxTags.TYPE_APPLY -> { val base = ref(); val args = refs(); val resolved = optional { TypeRef(u32()) }; { r -> TypeSyntax.Apply(scope, r.type(base), args.mapFrozen(r::expression), resolved) } }
             SyntaxTags.CONTAINER_TYPE -> { val kind = wireEnum(u8(), ContainerKind.values()) { it.wireValue }; val argument = ref(); { r -> TypeSyntax.Container(scope, kind, r.type(argument)) } }
             SyntaxTags.VECTOR_TYPE -> u32().let { value -> { TypeSyntax.Vector(scope, value) } }
             SyntaxTags.ENTITY_TYPE -> { val limit = optional { ConstantRef(u32()) }; val names = list { strings.value(u32()) }; { TypeSyntax.Entity(scope, limit, names) } }
-            SyntaxTags.UNION_TYPE -> refs().let { values -> { r -> TypeSyntax.Union(scope, values.map(r::type)) } }
-            SyntaxTags.INTERSECTION_TYPE -> refs().let { values -> { r -> TypeSyntax.Intersection(scope, values.map(r::type)) } }
+            SyntaxTags.UNION_TYPE -> refs().let { values -> { r -> TypeSyntax.Union(scope, values.mapFrozen(r::type)) } }
+            SyntaxTags.INTERSECTION_TYPE -> refs().let { values -> { r -> TypeSyntax.Intersection(scope, values.mapFrozen(r::type)) } }
             SyntaxTags.ANONYMOUS_DATA_TYPE -> DeclarationId(u32()).let { value -> { TypeSyntax.AnonymousData(scope, value) } }
-            SyntaxTags.FUNCTION_TYPE -> { val parameters = refs(); val result = ref(); val execution = wireEnum(u8(), FunctionExecution.values()) { it.wireValue }; { r -> TypeSyntax.Function(scope, parameters.map(r::type), r.type(result), execution) } }
+            SyntaxTags.FUNCTION_TYPE -> { val parameters = refs(); val result = ref(); val execution = wireEnum(u8(), FunctionExecution.values()) { it.wireValue }; { r -> TypeSyntax.Function(scope, parameters.mapFrozen(r::type), r.type(result), execution) } }
             SyntaxTags.VOID_TYPE -> { { TypeSyntax.Void(scope) } }
             SyntaxTags.INFERRED_TYPE -> ref().let { value -> { r -> TypeSyntax.Inferred(scope, r.expression(value)) } }
-            SyntaxTags.BLOCK -> refs().let { values -> { r -> Statement.Block(scope, values.map(r::statement)) } }
+            SyntaxTags.BLOCK -> refs().let { values -> { r -> Statement.Block(scope, values.mapFrozen(r::statement)) } }
             SyntaxTags.LOCAL -> { val declaration = DeclarationId(u32()); val initial = maybe(); { r -> Statement.Local(scope, declaration, initial?.let(r::expression)) } }
             SyntaxTags.EVALUATE -> ref().let { value -> { r -> Statement.Evaluate(scope, r.expression(value)) } }
             SyntaxTags.ASSIGN -> { val target = ref(); val op = strings.value(u32()); val value = ref(); { r -> Statement.Assign(scope, r.expression(target), op, r.expression(value)) } }
-            SyntaxTags.IF -> { val branches = list { NodeRef(u32()) to NodeRef(u32()) }; val otherwise = maybe(); { r -> Statement.If(scope, branches.map { ConditionalBranch(r.expression(it.first), r.statement(it.second)) }, otherwise?.let(r::statement)) } }
+            SyntaxTags.IF -> { val branches = list { NodeRef(u32()) to NodeRef(u32()) }; val otherwise = maybe(); { r -> Statement.If(scope, branches.mapFrozen { ConditionalBranch(r.expression(it.first), r.statement(it.second)) }, otherwise?.let(r::statement)) } }
             SyntaxTags.WHILE -> { val condition = ref(); val body = ref(); { r -> Statement.While(scope, r.expression(condition), r.statement(body)) } }
             SyntaxTags.DO_WHILE -> { val body = ref(); val condition = ref(); { r -> Statement.DoWhile(scope, r.statement(body), r.expression(condition)) } }
             SyntaxTags.FOREACH -> { val variable = DeclarationId(u32()); val iterable = ref(); val body = ref(); { r -> Statement.Foreach(scope, variable, r.expression(iterable), r.statement(body)) } }
@@ -492,20 +496,20 @@ object SyntaxCodec {
                     } }
                     path to NodeRef(u32())
                 }; val body = ref();
-                { r -> Statement.Execute(scope, contexts.map { (path, value) -> ExecuteContext(
-                    if (path == null) ExecutePath.As else ExecutePath.Members(path.map(r::expression)), r.expression(value)) }, r.statement(body)) }
+                { r -> Statement.Execute(scope, contexts.mapFrozen { (path, value) -> ExecuteContext(
+                    if (path == null) ExecutePath.As else ExecutePath.Members(path.mapFrozen(r::expression)), r.expression(value)) }, r.statement(body)) }
             }
             SyntaxTags.COMMAND -> text().let { values -> { r -> Statement.Command(scope, parts(values, r)) } }
             SyntaxTags.BREAK -> { { Statement.Break(scope) } }
             SyntaxTags.CONTINUE -> { { Statement.Continue(scope) } }
             SyntaxTags.RETURN -> maybe().let { value -> { r -> Statement.Return(scope, value?.let(r::expression)) } }
             SyntaxTags.EMPTY -> { { Statement.Empty(scope) } }
-            SyntaxTags.TEMPLATE_BODY -> refs().let { values -> { r -> TemplateBody(scope, values.map(r::member)) } }
+            SyntaxTags.TEMPLATE_BODY -> refs().let { values -> { r -> TemplateBody(scope, values.mapFrozen(r::member)) } }
             SyntaxTags.MEMBER_DECLARATION -> DeclarationId(u32()).let { value -> { TemplateMember.Declaration(scope, value) } }
             SyntaxTags.ANNOTATION_APPLICATION -> { val annotation = AnnotationId(u32()); val targets = list { DeclarationId(u32()) }; { TemplateMember.AnnotationApplication(scope, annotation, targets) } }
             SyntaxTags.ANNOTATION_CONSTRUCTION -> {
                 val provider = TypeTableCodec.readDeclarationReference(this); val arguments = refs(); val targets = list { DeclarationId(u32()) };
-                { r -> TemplateMember.AnnotationConstruction(scope, provider, arguments.map(r::expression), targets) }
+                { r -> TemplateMember.AnnotationConstruction(scope, provider, arguments.mapFrozen(r::expression), targets) }
             }
             else -> fail("Unknown N tag $tag", LibraryFormatCode.UNSUPPORTED)
         }

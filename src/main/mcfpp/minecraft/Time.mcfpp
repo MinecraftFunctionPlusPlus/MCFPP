@@ -1,5 +1,7 @@
 @From("top.mcfpp.mni.minecraft.TimeData")
+/// 以游戏刻保存的时间数值。
 data Time as int
 
 @From("top.mcfpp.mni.minecraft.TimeObjectData")
+/// 以游戏刻保存的时间数值的共享成员入口。
 object data Time

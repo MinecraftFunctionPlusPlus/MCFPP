@@ -3,7 +3,6 @@ package top.mcfpp.test.library
 import top.mcfpp.*
 import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.backend.ReferenceAccessHelpers
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.Var
@@ -70,8 +69,8 @@ class LibraryFullImportTest {
         @JvmStatic @NoExternalWrites fun twice(context: NativeCallContext) {
             context.withArguments { context.publishResult(MCInt(requireNotNull((it.last() as MCInt).value) * 2)) }
         }
-        @JvmStatic @MNIMacro(identifier = "sumInto", params = [MacroParam(name = "input", type = "int"),
-            MacroParam(name = "destination", type = "int", mode = ParamMode.REF)], returnType = "int")
+        @JvmStatic @MNIMacro(identifier = "sumInto", normalParams = ["int",
+            "int"], returnType = "int")
         fun sumInto(context: MacroContext, input: Value<IntT>, destination: Ref<IntT>): Expr<IntT> =
             context.quote().expression(context.types().intType(), Consumer { builder ->
                 builder.assign(destination, builder.add(destination.load(), input.expr()))

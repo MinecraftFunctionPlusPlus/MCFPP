@@ -1,0 +1,13 @@
+import mcfpp.test:*
+@BeforeEach
+func prepare() {
+    /scoreboard players set #phase mcfpp_test 1
+}
+@Test
+func sample() {
+    assertEquals(2, increment(1))
+}
+@AfterEach
+func cleanup() {
+    /scoreboard players set #phase mcfpp_test 2
+}

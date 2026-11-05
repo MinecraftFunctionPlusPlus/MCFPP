@@ -12,7 +12,12 @@ import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 
-/** Explicit native call boundary; Var and global StorageAccess remain internal compatibility bridges. */
+/**
+ * Arguments and compiler state for one native MCFPP function call.
+ * Built-in native implementations use this context while the compiler handles the call.
+ * @property function MCFPP function receiving the generated commands.
+ * @property declaredReturnType MCFPP result type declared by the native signature.
+ */
 class NativeCallContext internal constructor(
     val function: Function,
     receiver: Var<*>?,
@@ -24,20 +29,26 @@ class NativeCallContext internal constructor(
     private val binding = receiverAdapter?.let(StorageAccess::ensure)
     private var publishedResult: Var<*>? = null
 
+    /** Bound argument values in JVM call order. */
     val arguments: List<ValueRef> = argumentAdapters.map(::reference)
 
+    /** The result published by the native implementation, or null before publication. */
     var result: ValueRef? = null
         private set
 
+    /** Instance receiving the call, or null for a global or static call. */
     val receiver: ValueRef?
         get() = receiverAdapter?.let(::reference)
 
+    /** Storage location of the instance receiving the call, when an instance exists. */
     val receiverPlace: Place?
         get() = binding?.place
 
+    /** Instance value known during compilation, or null when its value requires runtime evaluation. */
     val receiverSnapshot: CompilerValue?
         get() = receiverAdapter?.let(StorageAccess::snapshot)
 
+    /** Returns the compile-time value at zero-based [index], or null when the argument value requires runtime evaluation. */
     fun argumentSnapshot(index: Int): CompilerValue? = StorageAccess.snapshot(argumentAdapters[index])
 
     private fun reference(value: Var<*>): ValueRef = StorageAccess.ensure(value).let {
@@ -87,6 +98,7 @@ class NativeCallContext internal constructor(
 
     internal fun resultAdapter(): Var<*>? = publishedResult
 
+    /** Restores [payload] as the receiver's MCFPP type and writes it through the receiver's storage location. */
     fun writeReceiver(payload: CompilerValue) {
         function.runInFunction {
             val receiver = receiverAdapter

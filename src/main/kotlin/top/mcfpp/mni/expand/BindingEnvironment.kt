@@ -17,7 +17,8 @@ internal class BindingEnvironment(
     functionNames: Map<String, List<SourceFunction>>? = null,
     callCandidates: Map<SourceSpan, List<SourceFunction>>? = null,
     memberDeclarations: Map<Pair<TypeId, String>, List<SourceFunction>> = emptyMap(),
-    structuredSymbols: Map<top.mcfpp.library.syntax.NameUse, SourceSymbol> = emptyMap()
+    structuredSymbols: Map<top.mcfpp.library.syntax.NameUse, SourceSymbol> = emptyMap(),
+    val sourceTextOffset: Int = 0
 ) {
     val symbols: Map<String, SourceSymbol> = immutableMap(symbols.associateBy { it.name })
     val structuredSymbols: Map<top.mcfpp.library.syntax.NameUse, SourceSymbol> = immutableMap(structuredSymbols)
@@ -116,7 +117,14 @@ internal class BindingEnvironment(
         } }
         return BindingEnvironment(types, symbols.values, merged, fields.values, sourceText, scopeId,
             executionContextId, sourceFile, functionNames, callCandidates + selected, memberCandidates,
-            structuredSymbols)
+            structuredSymbols, sourceTextOffset)
+    }
+
+    /** Source spans stay absolute while a callback stores only its own source slice. */
+    fun sourceSlice(start: Int, end: Int): String? {
+        val text = sourceText ?: return null
+        if (start < sourceTextOffset || end < start || end.toLong() > sourceTextOffset.toLong() + text.length) return null
+        return text.substring(start - sourceTextOffset, end - sourceTextOffset)
     }
 
     fun symbol(name: String): SourceSymbol? = symbols[name]

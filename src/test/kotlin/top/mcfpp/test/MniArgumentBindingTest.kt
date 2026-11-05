@@ -3,7 +3,6 @@
 package top.mcfpp.test
 
 import top.mcfpp.annotations.MNIMacro
-import top.mcfpp.annotations.MacroParam
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.mni.api.*
 import top.mcfpp.mni.expand.*
@@ -19,8 +18,8 @@ class MniBinderConstEntries {
         @JvmStatic
         @MNIMacro(
             identifier = "consume",
-            params = [
-                MacroParam(name = "proof", type = "int", mode = ParamMode.CONST)
+            normalParams = [
+                "int"
             ],
             returnType = "int"
         )
@@ -35,11 +34,11 @@ class MniBinderConstEntries {
 class MniBinderOverloadEntries {
     companion object {
         @JvmStatic
-        @MNIMacro(identifier = "pick", params = [MacroParam(name = "number", type = "int")], returnType = "int")
+        @MNIMacro(identifier = "pick", normalParams = ["int"], returnType = "int")
         fun pickInt(context: MacroContext, number: Value<IntT>): Expr<IntT> = error("Macro host executed during argument binding")
 
         @JvmStatic
-        @MNIMacro(identifier = "pick", params = [MacroParam(name = "flag", type = "bool")], returnType = "int")
+        @MNIMacro(identifier = "pick", normalParams = ["bool"], returnType = "int")
         fun pickBool(context: MacroContext, flag: Value<BoolT>): Expr<IntT> = error("Macro host executed during argument binding")
     }
 }
@@ -47,7 +46,7 @@ class MniBinderOverloadEntries {
 class MniArgumentBinderTest {
     @Test fun orderedPreludeEvaluatesEachValueOnceAndKeepsInterleavedCapturedRefAliases() = SourceProjectionFixture.isolated {
         val file = file("binding.references")
-        file.namespace.injectedBy(MniSourceProjectionTest.Entries::class.java)
+        file.namespace.declareMniFixtures(MniSourceProjectionTest.Entries::class.java)
         val effects = listOf("effectA", "first", "second", "effectB").map { function(file, it) }
         val caller = caller(file)
         val nested = MCFPPListType(MCFPPListType(MCFPPBaseType.Int))
@@ -147,7 +146,7 @@ class MniArgumentBinderTest {
     @Test fun constArgumentsKeepOnlyExistingProofsAndRejectExecutableEffectsBeforeAllocation() = SourceProjectionFixture.isolated {
         MniBinderConstEntries.executions = 0
         val file = file("binding.constants")
-        file.namespace.injectedBy(MniBinderConstEntries::class.java)
+        file.namespace.declareMniFixtures(MniBinderConstEntries::class.java)
         function(file, "effect")
         val caller = caller(file)
         // Source selection rejects an effectful expression before a CONST wrapper can exist.
@@ -193,7 +192,7 @@ class MniArgumentBinderTest {
 
     @Test fun canonicalMacroSelectionUsesThePreparedFunctionKeyRatherThanTheSharedName() = SourceProjectionFixture.isolated {
         val file = file("binding.overloads")
-        file.namespace.injectedBy(MniBinderOverloadEntries::class.java)
+        file.namespace.declareMniFixtures(MniBinderOverloadEntries::class.java)
         val caller = caller(file)
         val result = ready("pick(1)", caller)
         session(result).use { session ->

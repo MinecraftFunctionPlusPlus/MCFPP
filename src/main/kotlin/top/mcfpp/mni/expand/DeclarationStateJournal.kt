@@ -6,6 +6,7 @@ import top.mcfpp.analysis.SpecializationArgument
 import top.mcfpp.analysis.SpecializationKey
 import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.analysis.StorageCheckpoint
+import top.mcfpp.analysis.StorageCheckpointCollector
 import top.mcfpp.analysis.StoredData
 import top.mcfpp.command.Command
 import top.mcfpp.command.CommandList
@@ -130,15 +131,18 @@ internal class DeclarationStateJournal private constructor(
             EffectAnalysis.checkpointActualEffects().functions.forEach(capture::enqueue)
             capture.walk()
             // The complete metadata graph is preflighted before lower-level journals read/hash it.
-            val objectStates = oldObjects?.captureCurrent(capture.variables, capture.functions)
-                ?: CompilerObjectJournal.checkpoint(capture.variables, capture.functions)
+            val storageCollector = StorageCheckpointCollector()
+            val objectStates = oldObjects?.captureCurrent(capture.variables, capture.functions, storageCollector, capture.scopes)
+                ?: CompilerObjectJournal.checkpoint(capture.variables, capture.functions, storageCollector, capture.scopes)
+            oldStorage?.captureCurrent(capture.storageRoots, storageCollector)
+                ?: StorageAccess.checkpointGraph(capture.storageRoots, storageCollector)
             return DeclarationStateJournal(
                 capture.roots.toList(),
                 capture.restores.toList(),
                 capture.templates,
                 capture.scopes,
                 objectStates,
-                oldStorage?.captureCurrent(capture.storageRoots) ?: StorageAccess.checkpointGraph(capture.storageRoots),
+                storageCollector.checkpoint(),
                 Collections.unmodifiableList(capture.elements.toList())
             )
         }
@@ -610,6 +614,9 @@ internal class DeclarationStateJournal private constructor(
             }
             enqueue(compoundOwner)
             enqueue(scoresOwner)
+            val defaultDeclaration = value.rawDefaultObjectData()
+            restores.add { value.restoreDefaultObjectData(defaultDeclaration) }
+            enqueue(defaultDeclaration)
             val parents = value.parentType
             restores.add { value.parentType = parents }
             list(parents, Role.TYPES)

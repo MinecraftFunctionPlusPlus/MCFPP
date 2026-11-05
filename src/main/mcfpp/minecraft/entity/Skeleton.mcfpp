@@ -1,5 +1,7 @@
 @MCFPPEntity
+/// 骷髅的实体数据。继承的字段由各父数据类型提供。
 data SkeletonData: EntityData, CreatureData, AIMobData {
     @Name("StrayConversionTime")
+    /// 转化为流浪者的剩余时间。
     var strayConversionTime: int
 }

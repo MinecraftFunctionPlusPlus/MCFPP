@@ -67,6 +67,7 @@ object DatapackCreator {
             }
             PackAssembly.validate(stage.resolve(Project.config.name).resolve("data"), assets)
             PackAssembly.publish(output, stage, listOf(Project.config.name, Project.config.name + "-resources"))
+            top.mcfpp.debug.DebugMetadata.write(output)
         } finally { PackAssembly.delete(stage) }
     }
 
@@ -144,6 +145,10 @@ object DatapackCreator {
 
         fun exportCompound(compound: CompoundData) {
             if (!compounds.add(compound)) return
+            if (compound is DataTemplate && compound.hasDeferredLibraryMembers) {
+                compound.companionObject?.let(::exportCompound)
+                return
+            }
             compound.scope.forEachFunction { exportFunction(it) }
             if (compound is DataTemplate) {
                 compound.constructors.forEach { exportFunction(it) }
@@ -201,6 +206,10 @@ object DatapackCreator {
         val visited = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<CompoundData, Boolean>())
         fun exportCompound(compound: CompoundData) {
             if (!visited.add(compound)) return
+            if (compound is DataTemplate && compound.hasDeferredLibraryMembers) {
+                compound.companionObject?.let(::exportCompound)
+                return
+            }
             when (compound) {
                 is ObjectCompoundData -> genObject(currPath, compound, emitted)
                 is DataTemplate -> genTemplate(currPath, compound, emitted)

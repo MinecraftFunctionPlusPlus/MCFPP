@@ -4,21 +4,41 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Pattern;
 
-/** Shared by the compiler and editors. Resource kinds are part of identity. Offsets are UTF-16. */
+/** Finds Minecraft resource definitions and references for the compiler and editors. Text offsets count UTF-16 code units. */
 public final class PackResources {
     private PackResources() {}
+    /**
+     * Identifies a resource by kind and namespaced identifier.
+     * @param kind resource kind, such as {@code function}, {@code texture}, or {@code tag/block}
+     * @param id identifier including its namespace, such as {@code minecraft:stone}
+     */
     public record Key(String kind, String id) {}
+    /**
+     * A resource reference and its range in source text.
+     * @param key referenced resource
+     * @param start inclusive zero-based text offset
+     * @param end exclusive text offset
+     * @param optional true when a tag entry has {@code required: false}
+     * @param suffix file suffix removed from the identifier, such as {@code .png}, or an empty string
+     */
     public record Reference(Key key, int start, int end, boolean optional, String suffix) {}
     private static final Pattern ID = Pattern.compile("[a-z0-9_.-]+:[a-z0-9_./-]+");
+    /** Tests a namespaced identifier for valid characters and nonempty path segments. Each segment must identify a regular path component. */
     public static boolean validId(String id) {
         return ID.matcher(id).matches() && Arrays.stream(id.substring(id.indexOf(':') + 1).split("/", -1))
                 .noneMatch(p -> p.isEmpty() || p.equals(".") || p.equals(".."));
     }
+    /**
+     * Creates a resource key, using {@code minecraft} for an omitted namespace.
+     * A leading {@code #} selects the corresponding tag kind.
+     * @return the normalized key, or null when the identifier is invalid
+     */
     public static Key key(String kind, String value) {
         if (value.startsWith("#")) { kind = "tag/" + kind; value = value.substring(1); }
         if (!value.contains(":")) value = "minecraft:" + value;
         return validId(value) ? new Key(kind, value) : null;
     }
+    /** Converts a known plural data folder to its resource kind. Other folder names retain their spelling. */
     public static String singular(String folder) {
         return switch (folder) {
             case "functions" -> "function"; case "advancements" -> "advancement";
@@ -27,6 +47,13 @@ public final class PackResources {
             default -> folder;
         };
     }
+    /**
+     * Identifies a resource file beneath a pack's data or assets directory.
+     * @param root the directory containing namespace folders
+     * @param file a path beneath root, using the same absolute or relative path form
+     * @param assets true for an assets directory, false for a data directory
+     * @return the resource key, or null when the path or file extension has another form
+     */
     public static Key definition(Path root, Path file, boolean assets) {
         if (root == null || !file.startsWith(root)) return null;
         String[] parts = root.relativize(file).toString().replace('\\', '/').split("/", 3);
@@ -48,7 +75,13 @@ public final class PackResources {
         return key(kind, parts[0] + ":" + name.substring(0, name.length() - extension.length()));
     }
 
-    /** Scan known semantic fields, never arbitrary strings such as descriptions or /say arguments. */
+    /**
+     * Finds references in recognized command arguments or JSON resource fields.
+     * @param text source text to scan
+     * @param owner containing resource, or null to scan commands
+     * @param mcfpp true to scan slash-prefixed commands inside MCFPP source
+     * @return references with offsets into text. Incomplete JSON produces an empty list.
+     */
     public static List<Reference> references(String text, Key owner, boolean mcfpp) {
         var result = new ArrayList<Reference>();
         if (owner == null || owner.kind().equals("function")) {
@@ -170,7 +203,12 @@ public final class PackResources {
         }
         if (node.items != null) node.items.forEach(item -> jsonRefs(item, owner, refs));
     }
-    /** Custom sounds have multiple declarations in one sounds.json. */
+    /**
+     * Reads sound event declarations from sounds.json.
+     * @param namespace namespace containing the file
+     * @param text JSON source
+     * @return sound event keys and their name offsets. Incomplete JSON produces an empty map.
+     */
     public static Map<Key, Integer> sounds(String namespace, String text) {
         var result = new LinkedHashMap<Key, Integer>();
         try {
@@ -181,6 +219,11 @@ public final class PackResources {
         } catch (IllegalArgumentException ignored) {}
         return result;
     }
+    /**
+     * Finds sound files and sound event references in sounds.json.
+     * @param text JSON source
+     * @return references with source offsets. Incomplete JSON produces an empty list.
+     */
     public static List<Reference> soundReferences(String text) {
         var refs = new ArrayList<Reference>();
         try {

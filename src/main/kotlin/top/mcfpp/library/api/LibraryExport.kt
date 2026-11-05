@@ -10,10 +10,20 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
+/**
+ * A completed library export.
+ * @property path Absolute normalized destination path.
+ * @property bytesWritten Size of the encoded library file in bytes.
+ * @property model Declarations and resources captured for this export.
+ */
 data class LibraryExportResult(val path: Path, val bytesWritten: Long, val model: LibraryModel)
 
-/** Concrete v1 file export. Successful encoding precedes creation/replacement of the destination. */
+/** Writes version 1 library files from declarations selected by the compiler. */
 object LibraryExport {
+    /**
+     * Captures [selection], encodes it, and atomically replaces [path] with the completed file.
+     * Creates parent directories as needed. Returns the destination, encoded size, and captured model.
+     */
     fun write(selection: OwnedLibrarySelection, path: Path): LibraryExportResult {
         val model = LibraryExporter.capture(selection)
         val bytes = LibraryModelCodec(listOf(CompoundCodec, NativeCodec)).encode(model)

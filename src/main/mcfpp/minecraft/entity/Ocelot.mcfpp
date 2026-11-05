@@ -1,5 +1,7 @@
 @MCFPPEntity
+/// 豹猫的实体数据。继承的字段由各父数据类型提供。
 data OcelotData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name("Trusting")
+    /// 信任状态，对应 NBT 字段 Trusting。
     var rusting: bool
 }

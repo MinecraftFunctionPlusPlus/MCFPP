@@ -75,11 +75,11 @@ class ProjectWorkflowTest {
         assertFails { ProjectDefinition(root.resolve("mcfpp.toml"), values + ("targetPath" to ".."), PackageDeclarations()) }
     }
 
-    @Test fun javaTemplateContainsProviderAndTests() = project { root ->
+    @Test fun kotlinTemplateContainsProviderAndTests() = project { root ->
         val definition = ProjectTemplates.create(root, true)
         assertTrue(definition.mniEnabled)
-        assertTrue(Files.isRegularFile(root.resolve("src/main/java/example/mni/Example.java")))
-        assertTrue(Files.isRegularFile(root.resolve("src/test/java/example/mni/ExampleTest.java")))
+        assertTrue(Files.isRegularFile(root.resolve("src/main/kotlin/example/mni/Example.kt")))
+        assertTrue(Files.isRegularFile(root.resolve("src/test/kotlin/example/mni/ExampleTest.kt")))
         assertEquals(setOf("testImplementation", "testRuntimeOnly"), definition.packages.mni.map { it.configuration }.toSet())
     }
 }

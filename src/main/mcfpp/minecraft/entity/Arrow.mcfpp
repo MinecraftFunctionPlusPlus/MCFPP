@@ -2,30 +2,43 @@ import mcfpp.minecraft.item:ItemStackData
 import mcfpp.minecraft.other:BlockState
 
 @MCFPPEntity
+/// 箭类投射物共用的命中和物品数据。
 data GeneralArrowData{
+    /// 是否为暴击箭。
     var crit: bool
 
+    /// 伤害值。
     var damage: double
 
+    /// 嵌入方块的状态。
     var inBlockState: BlockState
 
+    /// 是否嵌入方块。
     var inGround: bool
 
+    /// 关联物品的数据。
     var item: ItemData
 
+    /// 已经存在的时间。
     var life: short
 
+    /// 拾取规则的数值标记。
     var pickup: byte
 
     @Name("PierceLevel")
+    /// 穿透等级。
     var pierceLevel: byte
 
+    /// 命中后的抖动计时值。
     var shake: byte
 
     @Name("SoundEvent")
+    /// 关联声音事件的标识符。
     var soundEvent: string
 
+    /// 武器数据。
     var weapon: ItemData
 }
 
+/// 箭的实体数据。继承的字段由各父数据类型提供。
 data ArrowData: EntityData, ProjectileData, GeneralArrowData

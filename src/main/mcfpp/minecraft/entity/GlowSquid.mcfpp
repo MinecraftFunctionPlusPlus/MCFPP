@@ -1,5 +1,7 @@
 @MCFPPEntity
+/// 发光鱿鱼的实体数据。继承的字段由各父数据类型提供。
 data GlowSquidData: EntityData, CreatureData, AIMobData, GrowableData {
     @Name("DarkTicksRemaining")
+    /// 恢复发光前的等待时间。
     var darkTicksRemaining: int
 }

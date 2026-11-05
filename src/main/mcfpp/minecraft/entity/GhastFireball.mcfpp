@@ -1,8 +1,11 @@
 @MCFPPEntity
+/// 恶魂火球的实体数据。继承的字段由各父数据类型提供。
 data GhastFireballData : EntityData, ProjectileData, FireballData {
     @Name("ExplosionPower")
+    /// 爆炸强度。
     var explosionPower: byte
 
     @Name("Item")
+    /// 关联物品的数据。
     var item: ItemData
 }

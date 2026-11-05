@@ -4,7 +4,7 @@ This example builds a small Kotlin provider JAR, loads it through the project's 
 
 ## Build and run
 
-Use JDK 21. The core repository pins Kotlin Gradle plugin 1.9.20 and Gradle 8.14. The Kotlin compatibility table currently lists 1.9.20–1.9.25 as fully supported through Gradle 8.1.1, while the local Gradle wrapper is 8.14. This standalone sample therefore pins the cached Kotlin Gradle plugin 2.3.10, which the same table lists as fully supported with Gradle 7.6.3–9.0.0. Kotlin 1.9.20 introduced Java 21 bytecode output; the example keeps JVM toolchain and bytecode target at 21 to match MCFPP's configured runtime. [Kotlin Gradle compatibility and toolchains](https://kotlinlang.org/docs/gradle-configure-project.html#gradle-java-toolchains-support), [Kotlin 1.9.20 JVM 21 support](https://kotlinlang.org/docs/whatsnew1920.html).
+Use JDK 25. The compiler, standalone provider and generated MNI projects use Kotlin/JVM 2.4.10, matching the Kotlin runtime supplied by the Mcfpm SDK. Both the JVM toolchain and bytecode target are 25. MNI API and DSL design prioritizes Kotlin; Java can call the generated JVM methods.
 
 From the repository root, build the MCFPP runtime JAR first, then the provider JAR:
 
@@ -15,13 +15,13 @@ From the repository root, build the MCFPP runtime JAR first, then the provider J
 
 If the runtime JAR is elsewhere, pass its path as `-PmcfppApiJar=...` to the second command. The provider build uses that JAR as `compileOnly`; it deliberately does not bundle MCFPP classes or Kotlin runtime classes, which must come from the host compiler's class loader.
 
-Run the sample from its own directory so the relative paths in `mcfpp.json` and its `jars` entry resolve consistently:
+Run the sample from its own directory so the relative paths in `mcfpp.toml` and its `jars` entry resolve consistently:
 
 ```powershell
 Set-Location examples/kotlin-mni
-$env:JAVA_HOME = 'C:\path\to\jdk-21'
+$env:JAVA_HOME = 'C:\path\to\jdk-25'
 $env:Path = "$env:JAVA_HOME\bin;$env:Path"
-java -jar ../../build/libs/mcfpp-1.0.2-SNAPSHOT.jar mcfpp.json
+java -jar ../../build/libs/MCFPP-0.1.0.jar build --project mcfpp.toml
 ```
 
 The project source calls `topLevelDouble(21)`, `objectSum<5>(8)`, `objectPing()`, and `objectContextProbe(13)`. MCFPP readonly arguments go in angle brackets before the ordinary argument list, so `objectSum<5>(8)` binds `5` as the readonly `constant` and `8` as the normal `value`. `companionCallerProbe` is registered to show caller ABI metadata; a caller-bearing native is only callable where MCFPP supplies a matching receiver. Output is written under `project/build`.
@@ -46,6 +46,6 @@ This runnable example uses the legacy native API only. Macro descriptors have a 
 
 ## Validation
 
-From the repository root, build the runtime and example provider JAR using the commands above. Then run the compiler from the example directory with `java -jar ../../build/libs/mcfpp-1.0.2-SNAPSHOT.jar mcfpp.json`. The compiler reads the configured provider JAR and the `.mcfpp` directives, then compiles the sample project. The legacy configured-JAR integration check is `MniConfiguredJarInjectionTest.sourceDirectiveLoadsOnlyConfiguredJarProvidersDiscoversMacrosAndInvokesLegacyMni`.
+From the repository root, build the runtime and example provider JAR using the commands above. Then run the compiler from the example directory with `java -jar ../../build/libs/MCFPP-0.1.0.jar build --project mcfpp.toml`. The compiler reads the configured provider JAR and the `.mcfpp` directives, then compiles the sample project. The legacy configured-JAR integration check is `MniConfiguredJarInjectionTest.sourceDirectiveLoadsOnlyConfiguredJarProvidersDiscoversMacrosAndInvokesLegacyMni`.
 
 With Java 21 selected through `JAVA_HOME`, the runtime JAR and provider JAR built successfully and the CLI exited with code 0. The CLI used OpenJDK 21.0.12.1, loaded all three provider classes, and compiled the sample with zero MCFPP errors and warnings. It generated `project/build/mcfpp/data/example.kotlin/function/main.mcfunction`. This confirms provider registration and compilation of the sample calls; it does not claim that the datapack was run in Minecraft. The exact CLI command, Java version, JAR hashes, exit code, compiler log, and generated-file listing are archived under `build/inheritance-mni/kotlin-example-results/attempt3/`.

@@ -9,7 +9,7 @@ assetsPath = "src/main/resources/assets"
 targetPath = "build"
 
 [toolchain]
-version = "java21-v1"
+version = "java25-v1"
 
 [mni]
 enabled = false

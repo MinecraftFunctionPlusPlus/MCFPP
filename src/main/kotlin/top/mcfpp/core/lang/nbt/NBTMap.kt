@@ -22,8 +22,7 @@ import top.mcfpp.util.TempPool
 
 /** One ordered entry list owns both keys and values; no second membership cache exists. */
 open class NBTMap : NBTBasedData {
-    @Suppress("MUST_BE_INITIALIZED_OR_BE_FINAL_WARNING")
-    override var type: MCFPPType
+    override lateinit var type: MCFPPType
     val genericType get() = (type as MCFPPMapType).generic.single()
 
     constructor(identifier: String = TempPool.getVarIdentify(), genericType: MCFPPType) : super(identifier) {

@@ -34,6 +34,12 @@ object ReturnTypeAnalysis {
     fun summarize(call: Instruction.Call, functions: Map<SymbolId, TypedIR>, arguments: List<FlowAnalysis.Snapshot>): Summary =
         Solver(functions).summarize(call, arguments)
 
+    /** Owned by one immutable module view, never shared across compilation sessions. */
+    fun summarizer(functions: Map<SymbolId, TypedIR>): (Instruction.Call, List<FlowAnalysis.Snapshot>) -> Summary {
+        val solver = Solver(functions)
+        return solver::summarize
+    }
+
     private data class Outcome(val returned: FlowAnalysis.Snapshot?, val canReturn: Boolean) {
         fun join(other: Outcome): Outcome {
             if (!canReturn) return other
@@ -50,6 +56,16 @@ object ReturnTypeAnalysis {
             var outcome = Outcome(null, false)
         }
         private val active = mutableMapOf<SymbolId, Frame>()
+        private data class Input(val declaration: SymbolId, val facts: FlowFacts)
+        private val completed = hashMapOf<Input, Outcome>()
+        private val cacheable = buildSet {
+            val calls = functions.mapValues { (_, ir) -> ir.blocks.flatMap { it.instructions }
+                .filterIsInstance<Instruction.Call>().map { it.declaration } }
+            for (component in graphComponents(functions.keys) { calls[it].orEmpty() }) {
+                val id = component.singleOrNull() ?: continue
+                if (id !in calls[id].orEmpty() && calls[id].orEmpty().all { it !in functions || it in this }) add(id)
+            }
+        }
 
         fun analyze(declaration: SymbolId, arguments: List<FlowAnalysis.Snapshot>): Outcome? {
             val ir = functions[declaration] ?: return null
@@ -57,6 +73,8 @@ object ReturnTypeAnalysis {
             ir.parameters.forEachIndexed { index, parameter ->
                 arguments.getOrNull(index)?.let { initial.copyFrom(shape(it.facts), it.place, Place(parameter)) }
             }
+            val key = if (declaration in cacheable) Input(declaration, initial) else null
+            key?.let { completed[it]?.let { result -> return result } }
             active[declaration]?.let { frame ->
                 // Different recursive input shapes need a separate context analysis. Do not reuse a proof
                 // for another payload, and never specialize recursion on ordinary argument values.
@@ -73,7 +91,10 @@ object ReturnTypeAnalysis {
                     val exits = ir.blocks.filter { it.terminator is Terminator.Return }
                         .mapNotNull { analysis.exits[it.id]?.takeIf(FlowFacts::reachable) }
                     val next = frame.outcome.join(Outcome(returned(analysis), exits.isNotEmpty()))
-                    if (!frame.recursive || next == frame.outcome) return next
+                    if (!frame.recursive || next == frame.outcome) {
+                        if (key != null) completed[key] = next
+                        return next
+                    }
                     frame.outcome = next
                 }
             } finally { active.remove(declaration) }

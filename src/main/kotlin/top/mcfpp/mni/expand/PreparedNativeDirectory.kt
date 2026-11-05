@@ -28,7 +28,9 @@ data class NativeLibraryUnit(
     val declarations: LibraryDeclarations,
     val types: CompilerTypeTableRestore,
     val managed: ManagedNativeBindings,
-)
+) {
+    internal var importPlan: BuiltinImportPlan? = null
+}
 
 class PreparedNativeDirectory private constructor(
     private val units: List<NativeLibraryUnit>,
@@ -37,8 +39,14 @@ class PreparedNativeDirectory private constructor(
     private var closed = false
     private var activated = false
     private val methods = java.util.IdentityHashMap<NativeLibraryUnit, MutableMap<NativeBinding, Method>>()
-    private val macros = units.flatMap { unit -> unit.declarations.declarations.filterIsInstance<MacroDeclaration>().map { unit to it } }
-    private val providers = units.flatMap { unit -> unit.declarations.declarations.filterIsInstance<AnnotationProviderDeclaration>().map { unit to it.binding } }
+    private val macros = units.flatMap { unit ->
+        (unit.importPlan?.macroDeclarations?.map { unit.declarations.declarations[it - 1] as MacroDeclaration }
+            ?: unit.declarations.declarations.filterIsInstance<MacroDeclaration>()).map { unit to it }
+    }
+    private val providers = units.flatMap { unit ->
+        (unit.importPlan?.annotationProviders?.map { unit.declarations.declarations[it - 1] as AnnotationProviderDeclaration }
+            ?: unit.declarations.declarations.filterIsInstance<AnnotationProviderDeclaration>()).map { unit to it.binding }
+    }
     private val providerClasses: List<Class<out Annotation>>
     private val helpers: List<ReferenceHelperRecipe> by lazy {
         requireOpen()
@@ -54,7 +62,11 @@ class PreparedNativeDirectory private constructor(
         val registered = codecs.bindings().toSet()
         require(providers.all { it.second in registered }) { "Every D13 provider requires an explicitly registered portable codec" }
         providerClasses = providers.map { (unit, provider) -> NativeDeclarations.restoreAnnotationProvider(provider, unit.managed) }.distinct()
-        units.forEach { unit -> unit.declarations.declarations.filterIsInstance<FunctionDeclaration>().mapNotNull { it.native }.forEach { link(unit, it) } }
+        units.forEach { unit ->
+            val bindings = unit.importPlan?.nativeBindings
+                ?: unit.declarations.declarations.filterIsInstance<FunctionDeclaration>().mapNotNull { it.native }
+            bindings.forEach { link(unit, it) }
+        }
         macros.forEach { (unit, macro) -> link(unit, macro.binding.native) }
     }
     private fun describeTypes(): Metadata {
@@ -113,7 +125,16 @@ class PreparedNativeDirectory private constructor(
 
     fun restoreAnnotations(records: List<AnnotationRecord>, cells: List<StateCell>, bindings: AnnotationRestoreBindings): RestoredAnnotations {
         requireOpen()
-        return codecs.restore(records, cells, object : AnnotationRestoreBindings by bindings {
+        return codecs.restore(records, cells, admittedAnnotations(bindings))
+    }
+
+    internal fun restoreAnnotationsLazily(records: List<AnnotationRecord>, cells: List<StateCell>,
+                                          bindings: AnnotationRestoreBindings, hints: Map<Int, AnnotationCellHint>): RestoredAnnotations {
+        requireOpen()
+        return codecs.restoreLazily(records, cells, admittedAnnotations(bindings), hints)
+    }
+
+    private fun admittedAnnotations(bindings: AnnotationRestoreBindings) = object : AnnotationRestoreBindings by bindings {
             override fun provider(reference: top.mcfpp.library.syntax.DeclarationReference): AnnotationProviderBinding {
                 val binding = bindings.provider(reference)
                 val matches = providers.filter { it.second == binding }
@@ -121,8 +142,7 @@ class PreparedNativeDirectory private constructor(
                 require(matches.map { NativeDeclarations.restoreAnnotationProvider(binding, it.first.managed) }.distinct().size == 1)
                 return binding
             }
-        })
-    }
+        }
 
     fun installReferenceHelpers() { requireOpen(); ReferenceAccessHelpers.restoreRecipes(helpers) }
     fun installReferenceHelpersOwned(): AutoCloseable { requireOpen(); return ReferenceAccessHelpers.installOwned(helpers) }
@@ -196,10 +216,12 @@ internal class PreparedMacroCatalog(snapshot: MacroLoadingSnapshot, private val 
         val imported = directory?.bindMacros(types).orEmpty()
         namespaces = immutableMap((snapshot.namespaces.keys + imported.keys).associateWith { namespace ->
             val functions = snapshot.namespaces[namespace]?.functions.orEmpty() + imported[namespace].orEmpty()
-            functions.forEachIndexed { index, function ->
-                require(functions.take(index).none { other -> other.identifier == function.identifier &&
+            val previous = hashMapOf<String, MutableList<MacroFunction>>()
+            functions.forEach { function ->
+                require(previous[function.identifier].orEmpty().none { other ->
                     other.parameters.size == function.parameters.size && other.parameters.zip(function.parameters).all { (a, b) -> a.type().sameType(b.type()) }
                 }) { "Duplicate prepared macro signature: ${function.qualifiedName}" }
+                previous.getOrPut(function.identifier) { arrayListOf() }.add(function)
             }
             NamespaceMacroSnapshot(namespace, types, functions)
         })

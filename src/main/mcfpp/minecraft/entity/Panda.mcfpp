@@ -1,13 +1,17 @@
 @MCFPPEntity
+/// 熊猫的实体数据。继承的字段由各父数据类型提供。
 data PandaData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name("HiddenGene")
+    /// 隐性基因。
     var hiddenGene: PandaGene
 
     @Name("MainGene")
+    /// 显性基因。
     var mainGene: PandaGene
 }
 
 
+/// 熊猫的基因种类。
 enum PandaGene{
     normal, aggressive, lazy, worried, playful, weak, brown
 }

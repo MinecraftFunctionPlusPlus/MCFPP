@@ -1,18 +1,22 @@
+/// 克隆区域时的方块筛选方式。`masked` 跳过空气，`replace` 包含空气。
 enum CloneMaskMode{
     masked,
     replace
 }
 
+/// 区域克隆方式。`force` 允许区域重叠，`move` 移动源方块，`normal` 使用常规克隆。
 enum CloneOperation{
     force,
     move,
     normal
 }
 
+/// 游戏难度：和平、简单、普通或困难。
 enum Difficulty {
     peaceful,easy,normal,hard
 }
 
+/// 区域填充方式，对应填充命令的模式参数。
 enum FillMode{
     destroy,
     hollow,
@@ -20,6 +24,7 @@ enum FillMode{
     strict
 }
 
+/// 玩家游戏模式。
 enum Gamemode{
     creative,
     spectator,
@@ -27,22 +32,27 @@ enum Gamemode{
     adventure
 }
 
+/// 结构放置时的水平旋转角度。
 enum PlaceRotation {
     none, clockwise_90, _180, counterclockwise_90
 }
 
+/// 结构放置时的镜像方向。
 enum PlaceMirror {
     none, left_right, front_back
 }
 
+/// 播放或停止声音时使用的声音分类。
 enum SoundType {
     master, music, record, weather, block, hostile, neutral, player, ambient, voice
 }
 
+/// 放置单个方块时的替换方式。
 enum SetBlockMode {
     destroy, keep, replace, strict
 }
 
+/// Minecraft 的十六种标准文字颜色。
 enum NormalColor {
     black,          dark_blue,      dark_green,     dark_aqua,
     dark_red,       dark_purple,    gold,           gray,
@@ -50,14 +60,17 @@ enum NormalColor {
     red,            light_purple,   yellow,         white
 }
 
+/// 局部坐标的锚点：眼睛或脚部。
 enum Anchor {
     eyes, feet
 }
 
+/// 标题显示位置：主标题、副标题或动作栏。
 enum TitlePos {
     title, subtitle, actionbar
 }
 
+/// 天气类型：晴天、降雨或雷暴。
 enum Weather {
     clear, rain, thunder
 }

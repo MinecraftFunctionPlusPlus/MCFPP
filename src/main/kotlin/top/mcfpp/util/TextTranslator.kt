@@ -1,7 +1,6 @@
 package top.mcfpp.util
 
 import com.alibaba.fastjson2.JSONObject
-import com.ibm.icu.impl.data.ResourceReader
 import java.nio.charset.StandardCharsets
 import java.util.*
 
@@ -16,7 +15,7 @@ object TextTranslator {
     init {
         //获取资源文件夹下的所有语言文件
         for (lang in supportedLanguage){
-            val inputStream = ResourceReader::class.java.classLoader.getResourceAsStream("lang/$lang.json")
+            val inputStream = TextTranslator::class.java.classLoader.getResourceAsStream("lang/$lang.json")
             if (inputStream == null) {
                 LogProcessor.error("Cannot find language file at: lang/$lang.json")
                 break

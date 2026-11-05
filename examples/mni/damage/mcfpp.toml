@@ -5,4 +5,4 @@ targetPath = "project/build"
 namespace = "example.damage"
 version = "26.3"
 description = "MNI damage macro example"
-jars = ["build/damage-macro.jar"]
+jars = ["../../../build/libs/mni-example-providers.jar"]

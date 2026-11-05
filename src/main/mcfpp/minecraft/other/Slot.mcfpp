@@ -1,51 +1,81 @@
+/// 物品槽位的种类和可选序号。
 data Slot{
+    /// 槽位序号。
     var index: int?
+    /// 种类标记。
     var type: SlotType
 
+    /// 按槽位种类和序号创建单个槽位。
     constructor(index: int, type: SlotType){
         this.index = index
         this.type = type
     }
 
+    /// 按种类创建槽位，序号保持省略。
     constructor(type: SlotType){
         this.type = type
     }
 }
 
 // 使用了通配符的槽位
+/// 带通配符的物品槽位集合。
 data SlotWithWildcard{
+    /// 种类标记。
     var type: SlotType
     private constructor(type: SlotType){
         this.type = type
     }
 }
 
+/// 物品槽位的种类和可选序号的共享成员入口。
 object data Slot {
+    /// 当前内容槽位。
     var contents = Slot(SlotType.contents)
+    /// 武器数据。
     var weapon = Slot(SlotType.weapon)
+    /// 主手槽位。
     var weapon_mainhand = Slot(SlotType.weapon_mainhand)
+    /// 副手槽位。
     var weapon_offhand = Slot(SlotType.weapon_offhand)
+    /// 护甲槽位。
     var armor = Slot(SlotType.armor)
+    /// 头部装备槽位。
     var armor_head = Slot(SlotType.armor_head)
+    /// 胸部装备槽位。
     var armor_chest = Slot(SlotType.armor_chest)
+    /// 腿部装备槽位。
     var armor_legs = Slot(SlotType.armor_legs)
+    /// 足部装备槽位。
     var armor_feet = Slot(SlotType.armor_feet)
+    /// 身体护甲槽位。
     var armor_body = Slot(SlotType.armor_body)
+    /// 是否装备鞍。
     var saddle = Slot(SlotType.saddle)
+    /// 马匹携带的箱子槽位。
     var horse_chest = Slot(SlotType.horse_chest)
+    /// 玩家光标携带的物品槽位。
     var player_cursor = Slot(SlotType.player_cursor)
 }
 
+/// 常用的物品槽位集合的共享成员入口。
 object data SlotWildcard {
+    /// 容器中的槽位集合。
     var container = SlotWithWildcard(SlotType.container)
+    /// 快捷栏中的槽位集合。
     var hotbar = SlotWithWildcard(SlotType.hotbar)
+    /// 物品栏数据。
     var inventory = SlotWithWildcard(SlotType.inventory)
+    /// 末影箱中的槽位集合。
     var enderchest = SlotWithWildcard(SlotType.enderchest)
+    /// 村民物品栏中的槽位集合。
     var villager = SlotWithWildcard(SlotType.villager)
+    /// 马匹物品栏中的槽位集合。
     var horse = SlotWithWildcard(SlotType.horse)
+    /// 玩家合成区域中的槽位集合。
     var crafting = SlotWithWildcard(SlotType.player_crafting)
 }
 
+/// 物品槽位类别，用于构造 Slot 和带通配符的槽位集合。
 enum SlotType{
     contents = 0,
     container = 1,

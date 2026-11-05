@@ -1,5 +1,9 @@
 // Explicit Minecraft addresses. Parameters are captured when the reference is created.
+/// 创建记分板地址。holder 是固定持有者名称，objective 是目标名称。创建时保存这两个参数。
 func scoreRef(holder: string, objective: string): ScoreRef = top.mcfpp.mni.ReferenceData.scoreRef
+/// 创建命令存储中的 NBT 地址。storage 指定存储标识符，path 指定 NBT 路径，T 指定读写值的类型。
 func nbtStorageRef<T>(storage: string, path: string): NBTRef<T> = top.mcfpp.mni.ReferenceData.nbtStorageRef
+/// 创建实体的 NBT 地址。target 指定实体，path 指定 NBT 路径，T 指定读写值的类型。
 func nbtEntityRef<T>(target: entity, path: string): NBTRef<T> = top.mcfpp.mni.ReferenceData.nbtEntityRef
+/// 创建方块实体的 NBT 地址。dimension 和 x、y、z 指定位置，path 指定 NBT 路径，T 指定值类型。
 func nbtBlockRef<T>(dimension: string, x: int, y: int, z: int, path: string): NBTRef<T> = top.mcfpp.mni.ReferenceData.nbtBlockRef

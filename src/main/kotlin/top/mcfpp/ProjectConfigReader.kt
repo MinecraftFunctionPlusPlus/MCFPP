@@ -149,6 +149,11 @@ internal fun readProjectConfig(options: CompilerOptions): ProjectConfig {
         val path = Path.of(directory)
         (if (path.isAbsolute) path else config.targetPath!!.resolve(path)).normalize()
     }
+    config.debugInfo = options.debugInfo ?: fileFlags.debugInfo ?: false
+    if (config.debugInfo) {
+        config.optimization = config.optimization.copy(level = 0)
+        config.targetPath = config.targetPath!!.resolve("debug")
+    }
     return config
 }
 

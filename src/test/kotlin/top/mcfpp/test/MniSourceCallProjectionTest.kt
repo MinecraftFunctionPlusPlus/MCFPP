@@ -232,7 +232,7 @@ class MniSourceCallProjectionTest {
 
     @Test fun macroNodesRemainExplicitAndInvalidEvaluationOrderAbortsBeforeAllocation() = SourceProjectionFixture.isolated {
         val file = file("projection.unexpanded")
-        file.namespace.injectedBy(MniSourceProjectionTest.Entries::class.java)
+        file.namespace.declareMniFixtures(MniSourceProjectionTest.Entries::class.java)
         function(file, "effectA")
         function(file, "effectB")
         val caller = caller(file)

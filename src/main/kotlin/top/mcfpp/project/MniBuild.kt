@@ -22,7 +22,7 @@ class MniBuild(private val log: PrintWriter) {
             require(it is String) { "mni.extensions must contain paths" }
             project.root.resolve(it).normalize().also { path -> require(Files.isRegularFile(path)) { "Missing Gradle extension: $path" } }
         }.orEmpty()
-        val fingerprint = sha(("java21-v1:1\n" + JSON.toJSONString(project.packages.mni.map { it.json() }) +
+        val fingerprint = sha(("kotlin25-v1:$GRADLE:$KOTLIN\n" + JSON.toJSONString(project.packages.mni.map { it.json() }) +
             JSON.toJSONString(project.mni) + scripts.joinToString { Files.readString(it) }).toByteArray())
         val marker = "# mcfpp-input-sha256=$fingerprint"
         val valid = Files.isRegularFile(lock) && Files.readAllLines(lock).contains(marker)
@@ -36,7 +36,7 @@ class MniBuild(private val log: PrintWriter) {
             "repositories" to (project.mni["repositories"] ?: listOf("https://repo.maven.apache.org/maven2/")),
             "extensions" to scripts.map { it.toString() }, "result" to result.toString(),
             "ideModel" to generated.resolve("ide-model.json").toString())
-        val plugins = table(project.mni["plugins"], "mni.plugins")
+        val plugins = mapOf("org.jetbrains.kotlin.jvm" to KOTLIN) + table(project.mni["plugins"], "mni.plugins")
         require(plugins.values.all { it is String && it.isNotBlank() }) { "mni.plugins must map plugin IDs to versions" }
         val pluginText = plugins.entries.joinToString("\n") { "    id(${quote(it.key)}) version ${quote(it.value as String)}" }
         atomicWrite(generated.resolve("settings.gradle.kts"), "rootProject.name = \"mcfpp-mni\"\n".toByteArray())
@@ -50,13 +50,13 @@ class MniBuild(private val log: PrintWriter) {
         if (update && !offline) command += "--refresh-dependencies"
         if (writeLock) command += "--write-locks"
         command += when (mode) { "build" -> "mcfppCompileMni"; "test" -> "mcfppTestMni"; else -> "mcfppResolveMni" }
-        log.println("Preparing Java MNI ($mode)...")
+        log.println("Preparing Kotlin MNI ($mode)...")
         log.flush()
         val process = ProcessBuilder(command).directory(project.root.toFile()).redirectErrorStream(true).apply {
             environment()["JAVA_HOME"] = jdk.toString()
         }.start()
         process.inputStream.bufferedReader().useLines { lines -> lines.forEach { log.println(it); log.flush() } }
-        check(process.waitFor() == 0) { "Java MNI $mode failed; see Gradle diagnostics above" }
+        check(process.waitFor() == 0) { "MNI $mode failed; see Gradle diagnostics above" }
         if (writeLock) {
             val native = if (Files.exists(lock)) Files.readAllLines(lock).filterNot { it.startsWith("# mcfpp-input-sha256=") } else emptyList()
             atomicWrite(lock, (native.joinToString("\n") + "\n$marker\n").toByteArray())
@@ -66,16 +66,18 @@ class MniBuild(private val log: PrintWriter) {
     }
 
     companion object {
-        const val GRADLE = "8.14"
-        private const val GRADLE_SHA = "61ad310d3c7d3e5da131b76bbf22b5a4c0786e9d892dae8c1658d4b484de3caa"
+        const val GRADLE = "9.2.1"
+        // Match the Kotlin runtime brought in by the Mcfpm SDK on the host classpath.
+        const val KOTLIN = "2.4.10"
+        private const val GRADLE_SHA = "72f44c9f8ebcb1af43838f45ee5c4aa9c5444898b3468ab3f4af7b6076c5bc3f"
         private fun executable(name: String) = if (System.getProperty("os.name").startsWith("Windows")) "$name.exe" else name
 
         private fun jdkHome(): Path {
-            val candidates = listOfNotNull(System.getenv("MCFPP_JAVA_HOME"), System.getenv("JDK21_HOME"), System.getenv("JAVA_HOME"), System.getProperty("java.home"))
+            val candidates = listOfNotNull(System.getenv("MCFPP_JAVA_HOME"), System.getenv("JDK25_HOME"), System.getenv("JAVA_HOME"), System.getProperty("java.home"))
             return candidates.map(Path::of).firstOrNull { home ->
                 Files.isRegularFile(home.resolve("bin/${executable("javac")}")) &&
-                    Files.isRegularFile(home.resolve("release")) && Regex("JAVA_VERSION=\"21[.\"]").containsMatchIn(Files.readString(home.resolve("release")))
-            } ?: error("Java MNI requires JDK 21. Set MCFPP_JAVA_HOME or JAVA_HOME to a JDK 21 installation.")
+                    Files.isRegularFile(home.resolve("release")) && Regex("JAVA_VERSION=\"25[.\"]").containsMatchIn(Files.readString(home.resolve("release")))
+            } ?: error("MNI requires JDK 25. Set MCFPP_JAVA_HOME or JAVA_HOME to a JDK 25 installation.")
         }
 
         private fun gradleHome(offline: Boolean, log: PrintWriter): Path {
@@ -136,7 +138,14 @@ class MniBuild(private val log: PrintWriter) {
             val request = JsonSlurper().parse(file("request.json")) as Map<*, *>
             val sourceRoot = file(request["root"] as String)
             layout.buildDirectory.set(file(request["build"] as String))
-            java { toolchain.languageVersion.set(JavaLanguageVersion.of(21)) }
+            java { toolchain.languageVersion.set(JavaLanguageVersion.of(25)) }
+            kotlin {
+                jvmToolchain(25)
+                sourceSets {
+                    named("main") { kotlin.setSrcDirs(listOf(sourceRoot.resolve("src/main/kotlin"))) }
+                    named("test") { kotlin.setSrcDirs(listOf(sourceRoot.resolve("src/test/kotlin"))) }
+                }
+            }
             sourceSets {
                 main { java.setSrcDirs(listOf(sourceRoot.resolve("src/main/java"))); resources.setSrcDirs(listOf(sourceRoot.resolve("src/main/resources"))) }
                 test { java.setSrcDirs(listOf(sourceRoot.resolve("src/test/java"))); resources.setSrcDirs(listOf(sourceRoot.resolve("src/test/resources"))) }
@@ -167,7 +176,7 @@ class MniBuild(private val log: PrintWriter) {
                     val model = mapOf(
                         "sourceSets" to sourceSets.map { source -> mapOf(
                             "name" to source.name,
-                            "sources" to source.allJava.srcDirs.map { it.absolutePath },
+                            "sources" to (source.allSource.srcDirs - source.resources.srcDirs).map { it.absolutePath },
                             "resources" to source.resources.srcDirs.map { it.absolutePath },
                             "compileClasspath" to source.compileClasspath.files.map { it.absolutePath },
                             "runtimeClasspath" to source.runtimeClasspath.files.map { it.absolutePath },

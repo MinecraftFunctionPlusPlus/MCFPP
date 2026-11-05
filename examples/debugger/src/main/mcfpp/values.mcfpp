@@ -1,0 +1,19 @@
+data Payload { var values: list<int>; }
+func recurse(depth: int): int {
+    var saved = depth
+    if (depth > 0) {
+        return recurse(depth - 1) + saved
+    }
+    return saved
+}
+func inspectValues() {
+    var depth = 99
+    const limit = 42
+    var payload = {values:[2,9]} as Payload
+    if (depth == 99) {
+        var depth = 7
+        /say inner
+    }
+    var result = recurse(2)
+    /say values
+}

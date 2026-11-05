@@ -1,5 +1,7 @@
 @From("top.mcfpp.mni.resource.MemoryData")
+/// 生物记忆资源的标识符。通过 id 字段保存资源名称。
 data Memory: ResourceID
 
 @From("top.mcfpp.mni.resource.MemoryObjectData")
+/// 生物记忆资源类型的共享成员入口。
 object data Memory: ResourceID

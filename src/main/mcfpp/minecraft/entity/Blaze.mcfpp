@@ -1,2 +1,3 @@
 @MCFPPEntity
+/// 烈焰人的实体数据。继承的字段由各父数据类型提供。
 data BlazeData: EntityData, CreatureData, AIMobData

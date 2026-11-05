@@ -53,6 +53,28 @@ class LibraryModelCodecTest {
         assertContentEquals(encoded, codec.encode(decoded))
     }
 
+    @Test fun cachedBuiltinGraphIsImmutableAndValidationStatusIsSessionOwned() {
+        val codec = LibraryModelCodec()
+        val bytes = codec.encode(ordinary())
+        val snapshot = top.mcfpp.io.LibBinReader.BuiltinSnapshot(bytes)
+        val first = snapshot.decode(bytes, codec, LibraryCompatibility(minecraftVersion = "26.3"))
+        val second = snapshot.decode(bytes, codec, LibraryCompatibility(minecraftVersion = "26.3"))
+        assertNotSame(first, second)
+        assertNotSame(first.syntax, second.syntax)
+        assertSame(first.syntax.nodes, second.syntax.nodes)
+        first.localReferencesValidated = false
+        first.syntax.externalReferencesValidated = false
+        assertTrue(second.localReferencesValidated)
+        assertTrue(second.syntax.externalReferencesValidated)
+        val block = first.syntax.nodes.filterIsInstance<Statement.Block>().single()
+        assertFailsWith<UnsupportedOperationException> { (block.statements as MutableList).clear() }
+        assertFailsWith<LibraryFormatException> {
+            snapshot.decode(bytes, codec, LibraryCompatibility(minecraftVersion = "other"))
+        }
+        bytes[0] = (bytes[0].toInt() xor 1).toByte()
+        assertFailsWith<LibraryFormatException> { snapshot.decode(bytes, codec, LibraryCompatibility()) }
+    }
+
     @Test fun localCrossTableDamageAndMissingPayloadHandlersAreRejected() {
         val codec = LibraryModelCodec()
         val original = ordinary()

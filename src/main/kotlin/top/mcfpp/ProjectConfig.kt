@@ -154,6 +154,7 @@ open class ProjectConfig(
     /** Optional debug artifacts, kept outside the installable datapack. */
     var irOutputPath: Path? = null,
     var optimization: top.mcfpp.optimization.OptimizationConfig = top.mcfpp.optimization.OptimizationConfig(),
+    var debugInfo: Boolean = false,
 )
 
 /** Create a fresh budget for one compilation unit; counts are never shared between compilations. */

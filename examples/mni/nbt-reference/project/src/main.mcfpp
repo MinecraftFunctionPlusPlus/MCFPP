@@ -1,5 +1,8 @@
 namespace example.nbtreference
 
+func damageNbt(health: NBTRef<int>, amount: int): void = example.mnidamage.KotlinDamageMacro.damageNbt
+
+
 func applyNbtDamage(health: NBTRef<int>, amount: int) {
     health.tryRead { current ->
         if (current < amount) { health.set(0); }

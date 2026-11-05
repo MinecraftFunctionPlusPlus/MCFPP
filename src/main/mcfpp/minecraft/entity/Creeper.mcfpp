@@ -1,12 +1,17 @@
 @MCFPPEntity
+/// 苦力怕的实体数据。继承的字段由各父数据类型提供。
 data CreeperData: EntityData, CreatureData, AIMobData {
     @Name("ExplosionRadius")
+    /// 爆炸半径。
     var explosionRadius: byte
 
     @Name("Fuse")
+    /// 引信计时值。
     var fuse: short
 
+    /// 是否已经点燃引信。
     var ignited: bool
 
+    /// 是否处于充能状态。
     var powered: bool
 }

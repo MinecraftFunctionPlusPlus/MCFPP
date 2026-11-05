@@ -140,7 +140,8 @@ internal class SnapshotSourceBodyBinder : SourceBodyBinder {
         val captures = linkedMapOf<SymbolId, SourceSymbol>()
         val nested = arrayListOf<SourceCallbackBodyRequest>()
         val returnRegion = RegionId(session, next())
-        private val sourceText = " ".repeat(site.startOffset) + text
+        private val sourceText = text
+        private var cachedEnvironment: BindingEnvironment? = null
         private val scopes = arrayListOf<LinkedHashMap<String, SourceSymbol>>()
         private val semanticSymbols = LinkedHashMap(original.structuredSymbols)
         private val scopeIds = arrayListOf<ScopeId>()
@@ -155,6 +156,7 @@ internal class SnapshotSourceBodyBinder : SourceBodyBinder {
         }
 
         private fun environment(): BindingEnvironment {
+            cachedEnvironment?.let { return it }
             val visible = LinkedHashMap(original.symbols.mapValues { (_, symbol) ->
                 if (symbol.symbol !in owned && !symbol.global) symbol.copy(writable = false) else symbol
             })
@@ -170,8 +172,8 @@ internal class SnapshotSourceBodyBinder : SourceBodyBinder {
                 site.file,
                 structuredSymbols = semanticSymbols.mapValues { (_, symbol) ->
                     if (symbol.symbol !in owned && !symbol.global) symbol.copy(writable = false) else symbol
-                }
-            )
+                }, sourceTextOffset = site.startOffset
+            ).also { cachedEnvironment = it }
         }
 
         fun body(tree: CallbackBody, parameters: List<SourceSymbol>): BoundSourceBlock = scoped(span(tree.syntax), parameters) {
@@ -190,6 +192,7 @@ internal class SnapshotSourceBodyBinder : SourceBodyBinder {
             lambda?.parameters?.zip(parameters)?.forEach { (declaration, symbol) ->
                 semanticSymbols[top.mcfpp.library.syntax.NameUse.Local(declaration)] = symbol
             }
+            cachedEnvironment = null
             val statements = tree.statements.flatMap(::statement)
             val tail = tree.tailExpression ?: return@scoped statements
             val value = expression(tail)
@@ -214,11 +217,13 @@ internal class SnapshotSourceBodyBinder : SourceBodyBinder {
             }
             scopes.add(symbols)
             scopeIds.add(scope)
+            cachedEnvironment = null
             try {
                 return BoundSourceBlock(scope, parent, action(), source)
             } finally {
                 scopes.removeAt(scopes.lastIndex)
                 scopeIds.removeAt(scopeIds.lastIndex)
+                cachedEnvironment = null
             }
         }
 
@@ -288,6 +293,7 @@ internal class SnapshotSourceBodyBinder : SourceBodyBinder {
                     semanticSymbols[top.mcfpp.library.syntax.NameUse.Local(it)] = symbol
                 }
                 owned.add(symbol.symbol)
+                cachedEnvironment = null
                 return listOf(BoundSourceStatement.Local(symbol, checked, constant, source))
             }
             tree.statementExpression()?.let { statement ->
@@ -390,7 +396,8 @@ internal class SnapshotSourceBodyBinder : SourceBodyBinder {
             )
         }
 
-        private fun fragment(tree: ParserRuleContext): String = sourceText.substring(tree.start.startIndex, tree.stop.stopIndex + 1)
+        private fun fragment(tree: ParserRuleContext): String = sourceText.substring(
+            tree.start.startIndex - site.startOffset, tree.stop.stopIndex + 1 - site.startOffset)
         fun span(tree: ParserRuleContext): SourceSpan = sourceSpan(tree, site.file)
     }
 

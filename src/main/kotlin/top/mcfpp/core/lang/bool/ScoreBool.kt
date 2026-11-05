@@ -10,7 +10,7 @@ import top.mcfpp.util.TempPool
 
 open class ScoreBool : BaseBool, OnScoreboard {
     override var isDataOnly = false
-    override var name: String
+    override lateinit var name: String
     var boolObject: SbObject = SbObject.MCFPP_boolean
     constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier) { name = identifier }
     constructor(container: FieldContainer, identifier: String = TempPool.getVarIdentify()) : this(identifier) { name = container.prefix + identifier }

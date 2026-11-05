@@ -1,3 +1,5 @@
+func damage(health: ScoreRef, amount: int): void = example.mnidamage.KotlinDamageMacro.damage
+
 func applyDamage(health: ScoreRef, amount: int) {
     health.tryRead { current ->
         if (current < amount) { health.set(0); }

@@ -1,14 +1,19 @@
 @MCFPPEntity
+/// 经验球的实体数据。继承的字段由各父数据类型提供。
 data ExperienceOrbData: EntityData {
     @Name("Age")
+    /// 年龄值。
     var age: short
 
     @Name("Count")
+    /// 数量。
     var count: int
 
     @Name("Health")
+    /// 生命值。
     var health: short
 
     @Name("Value")
+    /// 数值。
     var value: short
 }

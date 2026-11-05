@@ -1,7 +1,10 @@
+/// 中立生物的愤怒目标和计时数据。
 data NeutralData {
     @Name("AngryAt")
+    /// 愤怒目标的 UUID。
     var angryAt: IntArray
 
     @Name("AngerTime")
+    /// 愤怒状态的剩余时间。
     var angerTime: int
 }

@@ -129,7 +129,7 @@ class Module(var id: String) {
                 val module = Module(id)
                 val base = mjson.getJSONObject("base")
                 for (i in base) {
-                    module.base.add(Package(i.key).apply { provides.addFirst(i.value as String) })
+                    module.base.add(Package(i.key).apply { provides = listOf(i.value as String) })
                 }
                 val packages = mjson.getJSONObject("packages") ?: JSONObject()
                 for ((key, value) in packages) {

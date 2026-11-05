@@ -1,5 +1,7 @@
 @MCFPPEntity
+/// 马的实体数据。继承的字段由各父数据类型提供。
 data HorseData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, GeneralHorseData {
     @Name("Variant")
+    /// 外观变种。
     var variant: int
 }

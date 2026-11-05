@@ -97,7 +97,7 @@ class MCFPPFile : File {
         val parser = mcfppParser(token())
         parser.removeErrorListeners()
         parser.addErrorListener(MCFPPErrorListener())
-        parser.compilationUnit()
+        parser.parseCompilationUnit()
     }
 
     /**

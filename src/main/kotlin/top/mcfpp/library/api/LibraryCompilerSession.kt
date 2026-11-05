@@ -20,7 +20,18 @@ import java.security.MessageDigest
 import java.util.Collections
 import java.util.zip.ZipFile
 
-/** Exclusive owner of the singleton compiler for one real ABI compilation. */
+/**
+ * Holds the compiler for one project compilation requested through [LibraryCompilerApi].
+ * Create a session with [openSession], then execute it with [compileSession].
+ *
+ * The request contains `apiVersion = 1` and a `configuration` Path.
+ * Supply lists named `lockedPackages`, `libraries`, `plugins`, `resourcePacks`, and `datapacks`, using empty lists where appropriate.
+ *
+ * Locked packages contain `coordinate`, `version`, and a list of `dependencies` with those same identity fields.
+ * Libraries contain identity fields, `classifier`, `sha256`, `binary`, `moduleJson`, and a map of `resources` to byte arrays.
+ * Other artifacts contain identity fields, `classifier`, `sha256`, and a file `path`.
+ * Digests use 32-byte SHA-256 arrays. An optional `hostClassLoader` supplies the parent loader for plugins.
+ */
 class LibraryCompilerSession private constructor(
     private var request: CompilerRequest?,
     private var options: CompilerOptions?,
@@ -211,6 +222,7 @@ class LibraryCompilerSession private constructor(
     }
 
     @Synchronized
+    /** Releases compilation state and plugin files. Repeated calls keep the session closed. */
     override fun close() {
         if (closed) return
         closed = true
@@ -267,18 +279,20 @@ class LibraryCompilerSession private constructor(
     }
 
     companion object {
-        private var active: LibraryCompilerSession? = null
+        private var active: AutoCloseable? = null
 
+        /** Copies and validates [request], then reserves the compiler for one compilation. */
         @JvmStatic
         fun openSession(request: Map<String, Any>): AutoCloseable = openWithOptions(request, null)
 
-        /** Compiler-owned CLI entry keeps parsed overrides out of the JDK wire schema. */
+        /** Opens a session with CLI [options] applied to the configuration in [request]. */
         @Synchronized
         fun openWithOptions(request: Map<String, Any>, options: CompilerOptions?): AutoCloseable {
             check(active == null) { "The MCFPP compiler is busy with another session" }
-            return LibraryCompilerSession(parse(snapshotMap(request, "request")), options).also { active = it }
+            return LibraryCompilerSession(parse(snapshotMap(request, "request")), options).also(::reserve)
         }
 
+        /** Compiles an unused session from [openSession] and closes it. Returns the result map described by [LibraryCompilerApi.compile]. */
         @JvmStatic
         fun compileSession(session: AutoCloseable): Map<String, Any> {
             require(session is LibraryCompilerSession) { "Session was not created by LibraryCompilerApi.openSession" }
@@ -286,7 +300,14 @@ class LibraryCompilerSession private constructor(
         }
 
         @Synchronized
-        private fun release(session: LibraryCompilerSession) { if (active === session) active = null }
+        internal fun release(session: AutoCloseable) { if (active === session) active = null }
+
+        /** Project is process-global. A prepared kernel owns the same lease as a one-shot host. */
+        @Synchronized
+        internal fun reserve(session: AutoCloseable) {
+            check(active == null) { "The MCFPP compiler is busy with another session" }
+            active = session
+        }
 
         private fun parse(input: Map<String, Any>): CompilerRequest {
             require(input["apiVersion"] == 1) { "Unsupported compiler request ABI: ${input["apiVersion"]}" }

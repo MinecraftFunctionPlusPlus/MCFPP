@@ -1,5 +1,8 @@
 @MCFPPEntity
+/// 狼的实体数据。继承的字段由各父数据类型提供。
 data WolfData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, TameableData, NeutralData {
+    /// 项圈颜色的数值标记。
     @Name("CollarColor") var collarColor: byte
+    /// 外观变种。
     @Name("Variant") var variant: string
 }

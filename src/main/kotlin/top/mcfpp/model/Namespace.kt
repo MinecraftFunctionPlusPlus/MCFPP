@@ -56,7 +56,7 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
 
     internal fun restoreMacroDeclarations(declarations: Collection<MacroFunctionInfo>) {
         for (declaration in declarations) {
-            val previous = macros.firstOrNull { it.methodDescriptor == declaration.methodDescriptor }
+            val previous = macros.firstOrNull { it.methodDescriptor == declaration.methodDescriptor && it.identifier == declaration.identifier }
             if (previous == null) macros.add(declaration)
             else if (previous != declaration) LogProcessor.error("Conflicting macro library descriptors: ${declaration.methodDescriptor}")
         }
@@ -163,7 +163,6 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
 
     private fun injectMethods(cls: Class<*>) {
         val methods = NativeSignatureValidator.methods(cls)
-        restoreMacroDeclarations(methods.mapNotNull { MacroFunctionInfo.from(it) })
         val registration = NativeSignatureValidator.Registration()
         //获取import方法
         val simpleFieldWithType = SimpleScopeWithType.getTypeScope()

@@ -1,11 +1,15 @@
 @MCFPPEntity
+/// 山羊的实体数据。继承的字段由各父数据类型提供。
 data GoatData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name("HasLeftHorn")
+    /// 是否保有左角。
     var hasLeftHorn: bool
 
     @Name("HasRightHorn")
+    /// 是否保有右角。
     var hasRightHorn: bool
 
     @Name("IsScreamingGoat")
+    /// 是否为尖叫山羊。
     var isScreamingGoat: bool
 }

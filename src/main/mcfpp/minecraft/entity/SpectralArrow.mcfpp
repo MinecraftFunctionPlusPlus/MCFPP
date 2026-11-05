@@ -1,4 +1,6 @@
 @MCFPPEntity
+/// 光灵箭的实体数据。继承的字段由各父数据类型提供。
 data SpectralArrowData: EntityData, ProjectileData, GeneralArrowData {
+    /// 持续时间。
     @Name("Duration") var duration: int
 }

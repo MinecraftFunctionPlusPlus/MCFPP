@@ -1,5 +1,8 @@
 @MCFPPEntity
+/// 骷髅马的实体数据。继承的字段由各父数据类型提供。
 data SkeletonHorseData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, GeneralHorseData {
+    /// 是否为骷髅陷阱马。
     @Name("SkeletonTrap") var skeletonTrap: bool
+    /// 骷髅陷阱的计时值。
     @Name("SkeletonTrapTime") var skeletonTrapTime: int
 }

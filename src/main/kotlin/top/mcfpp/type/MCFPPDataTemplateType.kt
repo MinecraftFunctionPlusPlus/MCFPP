@@ -24,6 +24,9 @@ open class MCFPPDataTemplateType(
 
     private var templateSlot: DataTemplate = template
 
+    /** Session indexes inspect the existing shell without triggering generic materialization. */
+    internal fun rawTemplateDeclaration(): DataTemplate = templateSlot
+
     var template: DataTemplate
         get() {
             if (this is MCFPPGenericDataTemplateType &&
@@ -78,7 +81,32 @@ open class MCFPPDataTemplateType(
     override val typeId: TypeId get() = template.nominalIdentity
 
     override val hasRuntimeRepresentation: Boolean
-        get() = runtimeFields(hashSetOf())
+        get() {
+            // This is an all-reachable-leaves query. A shared node or cycle contributes no
+            // additional constraint after its first visit; a false leaf rejects the whole graph.
+            // Keep the set query-local because template fields can change after resolution.
+            val templates = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<DataTemplate, Boolean>())
+            val seen = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<MCFPPType, Boolean>())
+            val pending = ArrayDeque<MCFPPType>()
+            pending.add(this)
+            while (pending.isNotEmpty()) {
+                val type = pending.removeLast()
+                if (!seen.add(type)) continue
+                when (type) {
+                    is MCFPPTypeDataTemplateType -> pending.add(type.typeAs)
+                    is MCFPPDataTemplateType -> if (templates.add(type.template)) {
+                        type.instanceFields.forEach { pending.add(it.type) }
+                    }
+                    is MCFPPListType -> if (type.generic[0] !== MCFPPPrivateType.Wildcard) pending.addAll(type.generic)
+                    is MCFPPImmutableListType -> pending.addAll(type.generic)
+                    is MCFPPDictType -> pending.addAll(type.generic)
+                    is MCFPPMapType -> pending.addAll(type.generic)
+                    is MCFPPUnionType -> pending.addAll(type.types)
+                    else -> if (!type.hasRuntimeRepresentation) return false
+                }
+            }
+            return true
+        }
 
     internal val instanceFields: List<Var<*>>
         get() {
@@ -86,29 +114,6 @@ open class MCFPPDataTemplateType(
                 ?.originTemplate?.readOnlyParams?.map { it.identifier }.orEmpty()
             return template.scope.allVars.filterNot { it.isStatic || it.identifier in readonly }
         }
-
-    private fun runtimeFields(visiting: MutableSet<TypeId>): Boolean {
-        if (!visiting.add(typeId)) return true
-        return try {
-            instanceFields.all { field ->
-                val fieldType = field.type
-                runtimeFieldType(fieldType, visiting)
-            }
-        } finally {
-            visiting.remove(typeId)
-        }
-    }
-
-    private fun runtimeFieldType(type: MCFPPType, visiting: MutableSet<TypeId>): Boolean = when (type) {
-        is MCFPPTypeDataTemplateType -> runtimeFieldType(type.typeAs, visiting)
-        is MCFPPDataTemplateType -> type.runtimeFields(visiting)
-        is MCFPPListType -> type.generic[0] === MCFPPPrivateType.Wildcard || type.generic.all { runtimeFieldType(it, visiting) }
-        is MCFPPImmutableListType -> type.generic.all { runtimeFieldType(it, visiting) }
-        is MCFPPDictType -> type.generic.all { runtimeFieldType(it, visiting) }
-        is MCFPPMapType -> type.generic.all { runtimeFieldType(it, visiting) }
-        is MCFPPUnionType -> type.types.all { runtimeFieldType(it, visiting) }
-        else -> type.hasRuntimeRepresentation
-    }
 
     override val instanceData: DataTemplate
         get() {

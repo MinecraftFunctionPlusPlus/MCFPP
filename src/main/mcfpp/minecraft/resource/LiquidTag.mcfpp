@@ -1,5 +1,7 @@
 @From("top.mcfpp.mni.resource.LiquidTagData")
+/// 流体标签资源的标识符。通过 id 字段保存资源名称。
 data LiquidTag: ResourceID
 
 @From("top.mcfpp.mni.resource.LiquidTagObjectData")
+/// 流体标签资源类型的共享成员入口。
 object data LiquidTag: ResourceID

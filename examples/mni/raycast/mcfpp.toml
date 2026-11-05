@@ -5,4 +5,4 @@ targetPath = "project/build"
 namespace = "example.raycast"
 version = "26.3"
 description = "MNI fixed-step block ray example"
-jars = ["build/raycast-macro.jar"]
+jars = ["../../../build/libs/mni-example-providers.jar"]

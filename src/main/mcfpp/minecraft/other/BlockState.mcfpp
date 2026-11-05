@@ -1,7 +1,10 @@
+/// 方块标识符及其状态属性。
 data BlockState {
     @Name("Name")
+    /// 显示名称。
     var name: string
 
     @Name("Properties")
+    /// 方块状态属性表。
     var properties: nbt
 }

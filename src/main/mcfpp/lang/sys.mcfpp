@@ -1,14 +1,25 @@
+/// 向所有玩家的聊天栏输出 value 的运行期值。
 func print(value: int) = top.mcfpp.mni.System.printInt
+/// 向所有玩家的聊天栏输出布尔值。true 显示为 1，false 显示为 0。
 func print(value: bool) = top.mcfpp.mni.System.printBool
+/// 向所有玩家的聊天栏输出 value 的运行期值。
 func print(value: string) = top.mcfpp.mni.System.printString
+/// 向所有玩家的聊天栏输出 value 的运行期值。
 func print(value: nbt) = top.mcfpp.mni.System.printNbt
+/// 向所有玩家的聊天栏输出 value 的运行期值。
 func print(value: any) = top.mcfpp.mni.System.printAny
+/// 向所有玩家的聊天栏输出 value 的运行期值。
 func print(value: DataObject) = top.mcfpp.mni.System.printObject
+/// 向所有玩家的聊天栏输出格式化文本，保留文本组件的样式。
 func print(value: text) = top.mcfpp.mni.System.printText
 
 // func insert(value: string) = top.mcfpp.mni.System.insert;
+/// 提供编译器调试断点位置。调试编译器时可在对应 JVM 实现中设置断点。
 func debug() = top.mcfpp.mni.System.debug
 
+/// 在编译期间记录信息。已知字符串显示其内容，运行期字符串显示编译器中的值描述。
 func info(value: string) = top.mcfpp.mni.System.info
+/// 在编译期间记录警告。已知字符串显示其内容，运行期字符串显示编译器中的值描述。
 func warn(value: string) = top.mcfpp.mni.System.warn
+/// 在编译期间记录错误。已知字符串显示其内容，运行期字符串显示编译器中的值描述。
 func error(value: string) = top.mcfpp.mni.System.error

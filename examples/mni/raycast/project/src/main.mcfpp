@@ -1,3 +1,6 @@
+func raycast(samples: int, initial: int, step: (int,int)->int, keepGoing: (int)->bool): int = example.mniraycast.KotlinRaycastMacro.raycastFold
+func raycast(samples: int, body: (int)->bool): void = example.mniraycast.KotlinRaycastMacro.raycast
+
 func main() {
     // Each actual stone hit returns the next accumulator. keepGoing then decides later samples.
     external continueHits: int = raycast(5, 0, { hits, i -> hits + 1 }, { true });

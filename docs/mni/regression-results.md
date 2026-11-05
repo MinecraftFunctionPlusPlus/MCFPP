@@ -111,5 +111,5 @@ src/test/kotlin/top/mcfpp/test/util/ScoreCommandExecutor.kt
 
 - 本文的合并结论是“136 项新执行 + 1873 项复用”的证据合成，**不是**一次新的 2009 项全量运行；旧全量 2007 项中的 6 个失败记录保留为历史，不再列为当前失败。
 - 性能指标和真实 Minecraft 实机/服务端验收已由用户明确取消，不是剩余门槛；DSB 是确定性功能执行器，不是 Minecraft 服务端。
-- 公共 API 仍为 `0.1.0-experimental`，见 [`api-versioning.md`](api-versioning.md)。独立最终验收记录由 [`acceptance.md`](../implementation-review/acceptance.md) 发布。
+- 公共 API 仍为 `0.2.0-experimental`，见 [`api-versioning.md`](api-versioning.md)。独立最终验收记录由 [`acceptance.md`](../implementation-review/acceptance.md) 发布。
 - 示例仍以本仓库已交付的生成产物和既有命令为证据；本文没有新增功能、测试或评分卡。

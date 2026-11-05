@@ -245,7 +245,10 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             val clsName = refer.substring(0,refer.lastIndexOf('.'))
             val methodName = refer.substringAfterLast('.')
             val clazz = Project.classLoader.loadClass(clsName)
-            val methods = clazz.methods
+            val methods = (clazz.methods.asList() + clazz.declaredMethods.asList()).distinct()
+                .filter { it.name == methodName && !it.isBridge && !it.isSynthetic }
+            val namespace = GlobalScope.localNamespaces.getValue(nf.namespace)
+            if (top.mcfpp.mni.expand.SourceMacroDeclaration.bind(ctx, nf, methods, namespace)) return null
             var hasFind = false
             for(method in methods){
                 if (method.name != methodName) continue
