@@ -25,6 +25,16 @@ import kotlin.test.Test
 
 /** Count graph visits/identities rather than depending on machine-specific timing limits. */
 class PerformanceAlgorithmsTest {
+    companion object {
+        init {
+            // This fixture creates an empty import session, without the browser host bootstrap.
+            // Only its built-in annotation codecs need linkage; no external provider is admitted.
+            top.mcfpp.library.compiler.BuiltinNativeClasses.install(
+                (top.mcfpp.library.compiler.PortableAnnotationCodecs.builtinClasses() + String::class.java).toTypedArray()
+            )
+        }
+    }
+
     @Test fun delayedParentUpdateReachesExistingNestedViewsWithoutRefreshingUnrelatedOwners() {
         var unrelatedReads = 0
         val unrelated = object : DataTemplate("unrelated", "audit") {

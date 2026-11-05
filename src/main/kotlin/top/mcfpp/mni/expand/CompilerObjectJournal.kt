@@ -340,14 +340,8 @@ internal class CompilerObjectJournal private constructor(
             InternalFunctionScope::class.java,
             NoStackFunctionScope::class.java
         )
-        private val fixedLists = setOf(
-            "kotlin.collections.EmptyList",
-            "java.util.Collections\$EmptyList",
-            "java.util.Collections\$SingletonList",
-            "java.util.Arrays\$ArrayList",
-            "java.util.ImmutableCollections\$List12",
-            "java.util.ImmutableCollections\$ListN"
-        )
+        private val fixedLists = top.mcfpp.util.CollectionImplementations.immutableListNames +
+            top.mcfpp.util.CollectionImplementations.fixedList.name
         private val supportedChat = setOf<Class<*>>(
             ListChatComponent::class.java,
             PlainChatComponent::class.java,

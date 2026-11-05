@@ -17,18 +17,7 @@ internal object DatapackLinker {
         if (!Project.config.copyImport || Project.modules.isEmpty()) return emptyMap()
         val resources = linkedMapOf<String, ByteArray>()
         for (module in Project.modules) {
-            val snapshot = module.resources()
-            if (snapshot != null) {
-                resources.putAll(snapshot)
-            } else {
-                val staging = Files.createTempDirectory("mcfpp-link-")
-                try {
-                    module.extract(staging)
-                    resources.putAll(read(staging))
-                } finally {
-                    Files.walk(staging).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::delete) }
-                }
-            }
+            resources.putAll(module.resources())
         }
         return resources
     }

@@ -231,73 +231,10 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
      * @return 如果是全局，返回null，否则返回这个函数对象
      */
     override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? = withCompilationContext(ctx) {
-        val nf = NativeFunction(ctx.functionDeclarationPart().Identifier().text, Project.currNamespace)
-        nf.sourceDeclarationContext = ctx.functionDeclarationPart()
-        nf.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
-        nf.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
-            nf.parseDeclaredReturnType(ctx.functionDeclarationPart().functionReturnType().type())
-        }else{
-            MCFPPPrivateType.Void
-        }
-        try {
-            //根据JavaRefer找到类
-            val refer = ctx.javaRefer().text
-            val clsName = refer.substring(0,refer.lastIndexOf('.'))
-            val methodName = refer.substringAfterLast('.')
-            val clazz = Project.classLoader.loadClass(clsName)
-            val methods = (clazz.methods.asList() + clazz.declaredMethods.asList()).distinct()
-                .filter { it.name == methodName && !it.isBridge && !it.isSynthetic }
-            val namespace = GlobalScope.localNamespaces.getValue(nf.namespace)
-            if (top.mcfpp.mni.expand.SourceMacroDeclaration.bind(ctx, nf, methods, namespace)) return null
-            var hasFind = false
-            for(method in methods){
-                if (method.name != methodName) continue
-                val mniRegister = method.getAnnotation(MNIFunction::class.java) ?: continue
-                //解析MNIMethod注解成员
-                val readOnlyType = mniRegister.readOnlyParams.map {
-                    MCFPPType.parseFromString(it.split(" ").last(), Namespace.currNamespaceField)
-                }
-                val normalType = mniRegister.normalParams.map {
-                    MCFPPType.parseFromString(it.split(" ").last(), Namespace.currNamespaceField)
-                }
-                //比对
-                fun matchesNativeType(declared: MCFPPType, registered: MCFPPType?): Boolean =
-                    declared == registered || registered is MCFPPNotCompiledGenericType &&
-                        registered.type.isInstance(declared) && declared is MCFPPTypeWithGeneric &&
-                        declared.generic.singleOrNull() === MCFPPPrivateType.Wildcard
-                if(nf.readOnlyParams.map { it.type } == readOnlyType && nf.normalParams.size == normalType.size &&
-                    nf.normalParams.zip(normalType).all { (param, registered) -> matchesNativeType(param.type, registered) }){
-                    nf.javaMethod = method
-                    if (!NativeSignatureValidator.validate(nf)) return null
-                    hasFind = true
-                    nf.normalParams.zip(normalType).forEach { (param, registered) ->
-                        if (registered is MCFPPNotCompiledGenericType && param.type != registered) {
-                            param.type = registered
-                            nf.scope.removeVar(param.identifier)
-                        }
-                    }
-                    break
-                }
-            }
-            if(!hasFind){
-                throw NoSuchMethodException("Cannot find method ${ctx.functionDeclarationPart().Identifier().text} with correct parameters in class $clsName")
-            }
-        } catch (e: ClassNotFoundException) {
-            LogProcessor.error("Cannot find java class: " + e.message)
-            LogProcessor.captureStackTrace(e)
-            return null
-        }
-        //写入域
-        val namespace = GlobalScope.localNamespaces[nf.namespace]!!
-        //是普通的函数
-        nf.ownerType = Function.Companion.OwnerType.NONE
-        if (!namespace.scope.hasFunction(nf, true)) {
-            namespace.scope.addFunction(nf,false)
-        } else {
-            LogProcessor.error("Already defined function:" + ctx.functionDeclarationPart().Identifier().text)
-            Function.currFunction = Function.nullFunction
-        }
-        return nf
+        // Bundled native declarations are restored from the generated import plan. A user
+        // source file cannot add JVM bindings or trigger host class discovery in the browser.
+        LogProcessor.error("Custom MNI declarations are unavailable in the Playground")
+        null
     }
 //endregion
 

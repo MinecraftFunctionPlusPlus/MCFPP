@@ -438,15 +438,13 @@ object StorageAccess {
                 val restore: () -> Unit = { mutable.clear(); mutable.addAll(saved) }
                 restore
             }
-            "java.util.Arrays\$ArrayList" -> {
+            top.mcfpp.util.CollectionImplementations.fixedList.name -> {
                 val saved = arguments.toList()
                 val mutable = arguments as MutableList<ChatComponent>
                 val restore: () -> Unit = { saved.forEachIndexed { index, component -> mutable[index] = component } }
                 restore
             }
-            "kotlin.collections.EmptyList", "java.util.Collections\$EmptyList",
-            "java.util.Collections\$SingletonList", "java.util.ImmutableCollections\$List12",
-            "java.util.ImmutableCollections\$ListN" -> ({ })
+            in top.mcfpp.util.CollectionImplementations.immutableListNames -> ({ })
             else -> error("Storage journal cannot capture chat argument list " + arguments.javaClass.name)
         }
     }

@@ -108,14 +108,9 @@ object EffectAnalysis {
     }
 
     private val mutableEffectSets = setOf<Class<*>>(java.util.HashSet::class.java, java.util.LinkedHashSet::class.java)
-    private val effectRootLists = setOf(
-        "kotlin.collections.EmptyList", "java.util.Collections\$EmptyList", "java.util.Collections\$SingletonList",
-        "java.util.Arrays\$ArrayList", "java.util.ImmutableCollections\$List12", "java.util.ImmutableCollections\$ListN"
-    )
-    private val immutableSets = setOf(
-        "kotlin.collections.EmptySet", "java.util.Collections\$EmptySet", "java.util.Collections\$SingletonSet",
-        "java.util.ImmutableCollections\$Set12", "java.util.ImmutableCollections\$SetN"
-    )
+    private val effectRootLists = top.mcfpp.util.CollectionImplementations.immutableListNames +
+        top.mcfpp.util.CollectionImplementations.fixedList.name
+    private val immutableSets = top.mcfpp.util.CollectionImplementations.immutableSetNames
 
     /** Collect only the body actually being emitted; recursive prototypes remain unproved. */
     fun <T> withActualEffects(function: top.mcfpp.model.function.Function, freshReceiver: Boolean = false, block: () -> T): T {

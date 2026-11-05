@@ -71,13 +71,7 @@ internal class ProjectStateJournal private constructor(
         }
 
         private val fixedSizeListClass: Class<*> = java.util.Arrays.asList("").javaClass
-        private val immutableLists = setOf(
-            "kotlin.collections.EmptyList",
-            "java.util.Collections\$EmptyList",
-            "java.util.Collections\$SingletonList",
-            "java.util.ImmutableCollections\$List12",
-            "java.util.ImmutableCollections\$ListN"
-        )
+        private val immutableLists = top.mcfpp.util.CollectionImplementations.immutableListNames
     }
 
     private class Capture {
@@ -355,15 +349,11 @@ internal class ProjectStateJournal private constructor(
                 val id = target.id
                 val base = target.base
                 val packages = target.packages
-                val type = target.type
-                val path = target.resourcePath
                 val resources = target.resourceSnapshot
                 restores.add {
                     target.id = id
                     target.base = base
                     target.packages = packages
-                    target.type = type
-                    target.resourcePath = path
                     target.resourceSnapshot = resources
                 }
                 list(base, Items.PACKAGE)

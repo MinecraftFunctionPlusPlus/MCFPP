@@ -76,13 +76,7 @@ internal class NamespaceStateJournal private constructor(
 
         private val mapClasses = setOf<Class<*>>(HashMap::class.java, LinkedHashMap::class.java)
         private val fixedList = java.util.Arrays.asList("").javaClass
-        private val immutableLists = setOf<Class<*>>(
-            emptyList<Any>().javaClass,
-            Collections.emptyList<Any>().javaClass,
-            Collections.singletonList("").javaClass,
-            java.util.List.of("").javaClass,
-            java.util.List.of("", "", "").javaClass
-        )
+        private val immutableLists = top.mcfpp.util.CollectionImplementations.immutableLists
         private val scopeClasses = setOf<Class<*>>(SimpleLibScope::class.java, NamespaceScope::class.java, FileScope::class.java)
         private val ownedList = Collections.unmodifiableList(ArrayList<Any>()).javaClass
         private val processorTargets = setOf<Class<*>>(

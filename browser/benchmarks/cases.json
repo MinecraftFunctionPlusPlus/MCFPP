@@ -1,0 +1,11 @@
+[
+  {"name":"cold","source":"func greet() { print(\"Hello, MCFPP!\") }\nfunc main() { greet(); var values: list<int> = [10, 20]; values.add(30); print(values.size()); }"},
+  {"name":"warm","source":"func greet() { print(\"Hello, MCFPP!\") }\nfunc main() { greet(); var values: list<int> = [10, 20]; values.add(30); print(values.size()); }"},
+  {"name":"modified","source":"func greet() { print(\"Hello, MCFPP!\") }\nfunc main() { greet(); var values: list<int> = [10, 20]; values.add(30); values.add(40); print(values.size()); }"},
+  {"name":"error","source":"func main( {"},
+  {"name":"recovered","source":"func greet() { print(\"Hello, MCFPP!\") }\nfunc main() { greet(); var values: list<int> = [10, 20]; values.add(30); print(values.size()); }"},
+  {"name":"inherited","source":"import mcfpp.minecraft.std:*\ndata Result: CommandResult { constructor() {} }\nfunc main() { var result = Result(); print(result.result); print(result.success); }"},
+  {"name":"inherited-again","source":"import mcfpp.minecraft.std:*\ndata Result: CommandResult { constructor() {} }\nfunc main() { var result = Result(); print(result.result); print(result.success); }"},
+  {"name":"custom-mni","expectedSuccess":false,"source":"func custom() = example.Provider.custom\nfunc main() { print(1) }"},
+  {"name":"final-default","source":"func greet() { print(\"Hello, MCFPP!\") }\nfunc main() { greet(); var values: list<int> = [10, 20]; values.add(30); print(values.size()); }"}
+]

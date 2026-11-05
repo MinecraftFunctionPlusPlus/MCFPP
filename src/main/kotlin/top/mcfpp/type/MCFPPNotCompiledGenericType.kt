@@ -22,7 +22,17 @@ class MCFPPNotCompiledGenericType(val type: KClass<out MCFPPType>): MCFPPType() 
         get() = type.simpleName!!
 
     fun compile(vararg args: MCFPPType): MCFPPType {
-        return type.constructors.first().call(*args)
+        require(args.size == 1) { "$typeName requires one type argument" }
+        // These are the language's closed built-in constructors. Direct calls work in AOT
+        // builds and avoid loading kotlin-reflect for a five-entry dispatch table.
+        return when (type) {
+            MCFPPListType::class -> MCFPPListType(args[0])
+            MCFPPDictType::class -> MCFPPDictType(args[0])
+            MCFPPMapType::class -> MCFPPMapType(args[0])
+            MCFPPImmutableListType::class -> MCFPPImmutableListType(args[0])
+            MCFPPNBTRefType::class -> MCFPPNBTRefType(args[0])
+            else -> error("Unregistered type constructor: $type")
+        }
     }
 
     override fun build(identifier: String, value: Any?): Var<*> {

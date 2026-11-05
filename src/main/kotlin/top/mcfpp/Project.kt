@@ -16,12 +16,10 @@ import top.mcfpp.command.TargetCapabilities
 import top.mcfpp.core.lang.MCFloat
 import top.mcfpp.core.lang.Var
 import top.mcfpp.io.LibBinReader
-import top.mcfpp.io.LibBinWriter
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.io.info.LibraryMetadata
 import top.mcfpp.library.api.LibraryImportSession
 import top.mcfpp.library.compiler.ManagedNativeBindings
-import top.mcfpp.library.compiler.PortableAnnotationCodec
 import top.mcfpp.library.compiler.PortableAnnotationCodecs
 import top.mcfpp.library.model.LibraryCompatibility
 import top.mcfpp.library.syntax.PackageKey
@@ -42,11 +40,8 @@ import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.splitNamespaceID
 import top.mcfpp.util.Module
 import java.io.IOException
-import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
-import java.util.ServiceLoader
 import kotlin.io.path.*
 
 
@@ -202,23 +197,16 @@ object Project {
 
     var classLoader: ClassLoader = Thread.currentThread().contextClassLoader
 
-    /** One batch owns every standard, local and installed library in this compilation. */
+    /** The prepared, bundled library is owned by the active kernel. */
     var libraryImportSession: LibraryImportSession? = null
-    var libraryNativeBindings: ManagedNativeBindings? = null
-    var librarySourceProviders: Map<String, PackageKey?> = emptyMap()
     var loadedLibraryCount = 0
         private set
-    private val libraryClassLoaders = arrayListOf<URLClassLoader>()
 
-    /** Close compiler-owned inputs; the host class loader and Mcfpm cache remain caller-owned. */
+    /** Close compiler-owned library state. */
     fun closeLibraryImports() {
         val failures = arrayListOf<Throwable>()
         libraryImportSession?.let { runCatching { it.close() }.exceptionOrNull()?.let(failures::add) }
         libraryImportSession = null
-        libraryNativeBindings = null
-        librarySourceProviders = emptyMap()
-        libraryClassLoaders.asReversed().forEach { loader -> runCatching { loader.close() }.exceptionOrNull()?.let(failures::add) }
-        libraryClassLoaders.clear()
         modules.clear()
         loadedLibraryCount = 0
         classLoader = Thread.currentThread().contextClassLoader
@@ -329,38 +317,38 @@ object Project {
         stageProcessor[compileStage.ordinal].forEach { it() }
     }
 
-    internal fun readConfig(options: CompilerOptions): ProjectConfig = readProjectConfig(options)
-
-    fun checkConfig(): Boolean{
-        if (TargetCapabilities.forVersion(config.version) == null){
-            LogProcessor.error("Unsupported version: ${config.version}")
-            return false
-        }
-        if(config.targetPath == null){
-            LogProcessor.warn("Set target path default to \"${config.root.pathString}/build/\"")
-            config.targetPath = Path(config.root.pathString,"build/")
-        }
-        if(config.sourcePath == null){
-//            LogProcessor.warn("Set source path default to \"${config.root.pathString}\"")
-            config.sourcePath = Path(config.root.pathString)
-        }
-        if(config.sourcePath!!.notExists()){
-            LogProcessor.error("Invalid source path: ${config.sourcePath}")
-            return false
-        }
-        return true
-    }
+    /** The browser and native benchmark bind the same closed, classpath-only library. */
+    internal fun prepareLibraryKernel() = prepareEmbeddedLibraryKernel(LibBinReader.builtin(classLoader, config.version))
 
     /**
-     * 读取库文件，并将库写入缓存
+     * Closed embedded hosts supply the exact bundled library bytes themselves. Keep the binding
+     * barrier identical to a normal compilation, without reaching desktop plugin/JAR discovery.
      */
-    fun readProject(installedLibraries: List<LibBinReader.Payload> = emptyList()) =
-        readProjectInputs(installedLibraries, readSources = true)
+    fun prepareEmbeddedLibraryKernel(source: LibBinReader.Payload) {
+        beginLibraryInputs()
+        val managed = object : ManagedNativeBindings {
+            override fun loader(provider: PackageKey?): ClassLoader {
+                require(provider == null) { "Embedded kernels only support bundled native providers" }
+                return classLoader
+            }
+            override fun provider(owner: java.lang.Class<*>): PackageKey? = null
+        }
+        val session = LibraryImportSession(LibraryCompatibility(minecraftVersion = config.version))
+        libraryImportSession = session
+        try {
+            session.configureNative(managed, PortableAnnotationCodecs.builtins(), emptyMap())
+            session.enablePreparedBuiltin()
+            bindLibraryInputs(listOf(source))
+            restoreDeclarationEnvironments()
+            GlobalScope.importedLibNamespaces.clear()
+            stageProcessor[compileStage.ordinal].forEach { it() }
+        } catch (failure: Throwable) {
+            runCatching { closeLibraryImports() }.exceptionOrNull()?.let(failure::addSuppressed)
+            throw failure
+        }
+    }
 
-    /** A prepared kernel loads the library without manufacturing a placeholder source file. */
-    internal fun prepareLibraryKernel() = readProjectInputs(emptyList(), readSources = false)
-
-    private fun readProjectInputs(installedLibraries: List<LibBinReader.Payload>, readSources: Boolean) {
+    private fun beginLibraryInputs() {
         check(libraryImportSession == null) {
             "Library inputs are already open; call Project.init() or Project.closeCompilation() before reading another project"
         }
@@ -378,83 +366,26 @@ object Project {
         FunctionTag.TICK.functions.add(projectTick)
         FunctionTag.LOAD.functions.add(projectLoad)
         FunctionTag.LOAD.functions.add(projectInit)
+    }
 
-        try {
-            for (jar in config.jars) {
-                val path = Paths.get(jar)
-                require(Files.isRegularFile(path)) { "Cannot find jar at: $jar" }
-                URLClassLoader(arrayOf(path.toUri().toURL()), classLoader).also {
-                    libraryClassLoaders += it
-                    classLoader = it
-                }
-            }
-            val managed = libraryNativeBindings ?: object : ManagedNativeBindings {
-                override fun loader(provider: PackageKey?): ClassLoader {
-                    require(provider == null) { "No trusted plugin registered for $provider" }
-                    return classLoader
-                }
-                override fun provider(owner: java.lang.Class<*>): PackageKey? = null
-            }
-            val codecs = PortableAnnotationCodecs.builtins()
+    private fun bindLibraryInputs(sources: List<LibBinReader.Payload>) {
+        val pendingModules = arrayListOf<Module>()
+        val session = requireNotNull(libraryImportSession)
+        sources.forEach { source ->
             try {
-                ServiceLoader.load(PortableAnnotationCodec::class.java, classLoader).forEach { provider ->
-                    codecs.register(provider, managed.provider(provider.annotationClass), managed)
-                }
-                val session = LibraryImportSession(LibraryCompatibility(minecraftVersion = config.version))
-                libraryImportSession = session
-                session.configureNative(managed, codecs, librarySourceProviders)
-                if (!readSources) session.enablePreparedBuiltin()
-            } catch (failure: Throwable) {
-                codecs.close()
-                throw failure
-            }
-            val sources = arrayListOf<LibBinReader.Payload>()
-            if (!CompileSettings.ignoreStdLib) config.stdLib.forEach { library ->
-                sources += if (library == "%std") LibBinReader.builtin(Project::class.java.classLoader, config.version)
-                else LibBinReader.payload(config.root.resolve(library).normalize())
-            }
-            config.jars.filter { it !in config.includes }.forEach { jar ->
-                LibBinReader.embedded(Paths.get(jar))?.let(sources::add)
-            }
-            config.includes.forEach { include ->
-                LogProcessor.info("Reading lib at: $include")
-                sources += LibBinReader.payload(Paths.get(include))
-            }
-            sources += installedLibraries
-            val pendingModules = arrayListOf<Module>()
-            val session = requireNotNull(libraryImportSession)
-            sources.forEach { source ->
-                try {
-                    session.stage(source)
-                    val metadata = JSONObject.parse(source.moduleJson.toString(Charsets.UTF_8))
-                    require(metadata is JSONObject) { "module.json must be a JSON object" }
-                    pendingModules += Module.fromJson(metadata)
-                } catch (failure: Exception) {
-                    throw LibBinReader.SourceException(source, failure)
-                }
-            }
-            session.bindAll()
-            session.commit()
-            modules.addAll(pendingModules)
-            loadedLibraryCount = sources.size
-            refreshLibraryResources()
-        } catch (failure: Throwable) {
-            runCatching { closeLibraryImports() }.exceptionOrNull()?.let(failure::addSuppressed)
-            throw failure
-        }
-        restoreDeclarationEnvironments()
-        //函数参数解析
-        GlobalScope.importedLibNamespaces.clear()
-        //读取所有文件
-        if (readSources && config.sourcePath != null) {
-            MCFPPFile.findFiles(config.sourcePath!!.absolutePathString()).forEach {
-                files.add(MCFPPFile(it.toFile()))
+                session.stage(source)
+                val metadata = JSONObject.parse(source.moduleJson.toString(Charsets.UTF_8))
+                require(metadata is JSONObject) { "module.json must be a JSON object" }
+                pendingModules += Module.fromJson(metadata)
+            } catch (failure: Exception) {
+                throw LibBinReader.SourceException(source, failure)
             }
         }
-        if(readSources && files.isEmpty() && config.sourcePath != null){
-            LogProcessor.error("Cannot find any mcfpp file in path: ${config.sourcePath}")
-        }
-        stageProcessor[compileStage.ordinal].forEach { it() }
+        session.bindAll()
+        session.commit()
+        modules.addAll(pendingModules)
+        loadedLibraryCount = sources.size
+        refreshLibraryResources()
     }
 
     /** Install only the request's inputs after the kernel has restored its library baseline. */
@@ -1135,7 +1066,7 @@ object Project {
 
         //向load函数中添加记分板初始化命令
         projectLoad.runInFunction {
-            for (scoreboard in GlobalScope.scoreboards.values.filter {
+            for (scoreboard in GlobalScope.scoreboards.values.sortedBy { it.name }.filter {
                 Regex("(?<![a-zA-Z0-9_.-])" + Regex.escape(it.name) + "(?![a-zA-Z0-9_.-])").containsMatchIn(runtimeCommands)
             }){
                 Function.addCommand("scoreboard objectives add ${scoreboard.name} ${scoreboard.criterion}")
@@ -1211,15 +1142,4 @@ object Project {
         top.mcfpp.io.IrTextDump.snapshot("02-optimized.ir", "optimized")
     }
 
-    /**
-     * 生成库索引
-     * 在和工程信息json文件的同一个目录下生成一个.mclib文件
-     */
-    fun genIndex() {
-        LogProcessor.debug("Writing lib file to ${config.targetPath!!.absolutePathString()}")
-        compileStage = CompileStage.GEN_INDEX
-        libraryImportSession?.prepareInitializers()
-        LibBinWriter.write(config.targetPath!!.absolutePathString())
-        stageProcessor[compileStage.ordinal].forEach { it() }
-    }
 }

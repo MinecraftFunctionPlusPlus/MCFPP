@@ -3,13 +3,8 @@ package top.mcfpp.mni.expand
 import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.mni.api.ConstantValue
 import top.mcfpp.type.TypeId
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
 import java.io.Serializable
 import java.util.ArrayList
-import java.util.Base64
 import java.util.Collections
 import java.util.LinkedHashMap
 
@@ -71,23 +66,6 @@ internal object CompilerAnnotationFacts {
         companion object {
             fun capture(arguments: List<CompilerValue>): Snapshot = Snapshot(ArrayList(arguments.map(::fact)))
         }
-    }
-
-    fun encode(arguments: List<CompilerValue>): String {
-        if (arguments.isEmpty()) return ""
-        val bytes = ByteArrayOutputStream().use { output ->
-            ObjectOutputStream(output).use { stream -> stream.writeObject(ArrayList(arguments.map(::fact))) }
-            output.toByteArray()
-        }
-        return Base64.getEncoder().encodeToString(bytes)
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    fun decode(payload: String): List<CompilerValue> {
-        if (payload.isEmpty()) return emptyList()
-        val bytes = Base64.getDecoder().decode(payload)
-        val stored = ObjectInputStream(ByteArrayInputStream(bytes)).use { it.readObject() as ArrayList<*> }
-        return stored.map { value(it as ValueFact) }
     }
 
     /** Processor-facing positional argument map; the canonical catalog re-anchors type values. */

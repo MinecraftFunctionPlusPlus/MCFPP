@@ -1469,21 +1469,9 @@ internal class TemplatePrivateCapture(previous: List<Any>) {
     companion object {
         private val listClasses: Set<Class<*>> = setOf(java.util.ArrayList::class.java, java.util.LinkedList::class.java)
         private val fixedListClass = java.util.Arrays.asList(1, 2).javaClass
-        private val immutableListClasses: Set<Class<*>> = setOf(
-            emptyList<Any>().javaClass,
-            listOf(1).javaClass,
-            java.util.Collections.emptyList<Any>().javaClass,
-            java.util.List.of(1).javaClass,
-            java.util.List.of(1, 2, 3).javaClass
-        )
+        private val immutableListClasses = top.mcfpp.util.CollectionImplementations.immutableLists
         private val mapClasses: Set<Class<*>> = setOf(java.util.HashMap::class.java, java.util.LinkedHashMap::class.java)
-        private val immutableMapClasses: Set<Class<*>> = setOf(
-            emptyMap<Any, Any>().javaClass,
-            mapOf(1 to 2).javaClass,
-            java.util.Collections.emptyMap<Any, Any>().javaClass,
-            java.util.Map.of(1, 2).javaClass,
-            java.util.Map.of(1, 2, 3, 4).javaClass
-        )
+        private val immutableMapClasses = top.mcfpp.util.CollectionImplementations.immutableMaps
         private val setClasses: Set<Class<*>> = setOf(
             java.util.HashSet::class.java,
             java.util.LinkedHashSet::class.java,

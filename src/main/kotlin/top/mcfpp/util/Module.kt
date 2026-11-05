@@ -1,37 +1,17 @@
 package top.mcfpp.util
 
 import com.alibaba.fastjson2.JSONObject
-import org.apache.tools.zip.ZipFile
-import top.mcfpp.io.FileUtils.copyAllFiles
-import top.mcfpp.io.FileUtils.extractFolderFromInner
-import top.mcfpp.io.FileUtils.extractTo
-import java.nio.file.Files
-import java.nio.file.Path
-import kotlin.io.path.Path
-import kotlin.io.path.absolutePathString
 
-enum class ModuleType {
-    ZIP,
-    JAR,
-    DIR,
-    INNER
-}
-
+/** Bundled module metadata and its session-owned, in-memory resource bytes. */
 class Module(var id: String) {
-
     var base: ArrayList<Package> = ArrayList()
-
     var packages: HashMap<Package, Boolean> = HashMap()
 
-    var type: ModuleType = ModuleType.DIR
-
-    var resourcePath: Path = Path(".")
-
-    /** Session-owned bytes, replaced as recompiled bodies suppress saved resources. */
+    /** Recompiled bodies replace saved resources without changing the shared protocol document. */
     internal var resourceSnapshot: Map<String, ByteArray>? = null
 
-    internal fun resources(): Map<String, ByteArray>? {
-        val snapshot = resourceSnapshot ?: return null
+    internal fun resources(): Map<String, ByteArray> {
+        val snapshot = checkNotNull(resourceSnapshot) { "The bundled module has not been bound" }
         val result = linkedMapOf<String, ByteArray>()
         for (pack in base + packages.filterValues { it }.keys) {
             for (provide in pack.provides) {
@@ -44,119 +24,33 @@ class Module(var id: String) {
         return result
     }
 
-    fun extract(targetRoot: Path){
-        resources()?.let { resources ->
-            for ((relative, bytes) in resources) {
-                val output = targetRoot.resolve(relative)
-                Files.createDirectories(output.parent)
-                Files.write(output, bytes)
-            }
-            return
-        }
-        when(type){
-            ModuleType.DIR -> extractFromDir(targetRoot)
-            ModuleType.JAR, ModuleType.ZIP -> extractFromJarOrZip(targetRoot)
-            ModuleType.INNER -> extractFromInner(targetRoot)
-        }
-    }
-
-    private fun extractFromDir(targetRoot: Path){
-        val sourceRoot = resourcePath.resolve(id).resolve("data")
-        for (b in base){
-            val target = targetRoot.resolve(b.id)
-            for (provide in b.provides){
-                val source = sourceRoot.resolve(provide)
-                if(!source.toFile().exists() ||!source.toFile().isDirectory){
-                    continue
-                }
-                copyAllFiles(source.absolutePathString(), target.absolutePathString())
-            }
-        }
-        for (p in packages.filter { it.value }.keys){
-            val target = targetRoot.resolve(p.id)
-            for (provide in p.provides){
-                val source = sourceRoot.resolve(provide)
-                if(!source.toFile().exists() ||!source.toFile().isDirectory){
-                    continue
-                }
-                copyAllFiles(source.absolutePathString(), target.absolutePathString())
-            }
-        }
-    }
-
-    private fun extractFromJarOrZip(targetRoot: Path){
-        ZipFile(resourcePath.toFile()).use {
-            for (b in base){
-                val target = targetRoot.resolve(b.id)
-                for (provide in b.provides){
-                    val source = "datapack/$id/data/$provide"
-                    it.extractTo(source, target.absolutePathString())
-                }
-            }
-            for (p in packages.filter { entry -> entry.value }.keys){
-                val target = targetRoot.resolve(p.id)
-                for (provide in p.provides){
-                    val source = "datapack/$id/data/$provide"
-                    it.extractTo(source, target.absolutePathString())
-                }
-            }
-        }
-    }
-
-    private fun extractFromInner(targetRoot: Path){
-        for (b in base){
-            val target = targetRoot.resolve(b.id)
-            for (provide in b.provides){
-                val source = "datapack/$id/data/$provide"
-                extractFolderFromInner(source, target.absolutePathString())
-            }
-        }
-        for (p in packages.filter { entry -> entry.value }.keys){
-            val target = targetRoot.resolve(p.id)
-            for (provide in p.provides){
-                val source = "datapack/$id/data/$provide"
-                extractFolderFromInner(source, target.absolutePathString())
-            }
-        }
-    }
-
     companion object {
-
-        fun fromJson(json: JSONObject): ArrayList<Module>{
+        fun fromJson(json: JSONObject): ArrayList<Module> {
             val modules = ArrayList<Module>()
-            for ((id, mjson) in json) {
-                mjson as JSONObject
+            for ((id, value) in json) {
+                val metadata = value as JSONObject
                 val module = Module(id)
-                val base = mjson.getJSONObject("base")
-                for (i in base) {
-                    module.base.add(Package(i.key).apply { provides = listOf(i.value as String) })
+                for ((name, provide) in metadata.getJSONObject("base")) {
+                    module.base.add(Package(name).apply { provides = listOf(provide as String) })
                 }
-                val packages = mjson.getJSONObject("packages") ?: JSONObject()
-                for ((key, value) in packages) {
-                    if(value is String){
-                        val qwq = Package(key)
-                        qwq.provides = listOf(value)
-                        module.packages[qwq] = false
-                    }else if(value is JSONObject){
-                        val `package` = Package(key)
-                        module.packages[`package`] = false
-                        `package`.depends = value.getJSONArray("depends").map { it as String }
-                        `package`.conflict = value.getJSONArray("conflict").map { it as String }
-                        `package`.provides = value.getJSONArray("provides").map { it as String }
+                for ((name, specification) in metadata.getJSONObject("packages") ?: JSONObject()) {
+                    val pack = Package(name)
+                    if (specification is String) pack.provides = listOf(specification)
+                    else if (specification is JSONObject) {
+                        pack.depends = specification.getJSONArray("depends").map { it as String }
+                        pack.conflict = specification.getJSONArray("conflict").map { it as String }
+                        pack.provides = specification.getJSONArray("provides").map { it as String }
                     }
+                    module.packages[pack] = false
                 }
                 modules.add(module)
             }
-
             return modules
         }
 
         class Package(var id: String) {
-
             var depends: List<String> = ArrayList()
-
             var conflict: List<String> = ArrayList()
-
             var provides: List<String> = ArrayList()
         }
     }

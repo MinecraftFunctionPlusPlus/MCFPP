@@ -51,24 +51,11 @@ object DatapackCreator {
     fun createDatapack(path: String) {
         val output = Path.of(path).toAbsolutePath().normalize()
         Files.createDirectories(output)
-        val stage = Files.createTempDirectory(output, ".mcfpp-packs-")
-        try {
-            generateDatapack(stage.toString())
-            val assets = Project.config.assetsPath
-            val resources = PackAssembly.read(assets)
-            val resourcePack = stage.resolve(Project.config.name + "-resources")
-            if (resources.isNotEmpty()) {
-                Files.createDirectories(resourcePack)
-                Files.writeString(resourcePack.resolve("pack.mcmeta"), PackAssembly.resourceMetadata(Project.config.version, Project.config.description))
-                resources.forEach { (relative, bytes) ->
-                    val file = resourcePack.resolve("assets").resolve(relative)
-                    Files.createDirectories(file.parent); Files.write(file, bytes)
-                }
-            }
-            PackAssembly.validate(stage.resolve(Project.config.name).resolve("data"), assets)
-            PackAssembly.publish(output, stage, listOf(Project.config.name, Project.config.name + "-resources"))
-            top.mcfpp.debug.DebugMetadata.write(output)
-        } finally { PackAssembly.delete(stage) }
+        // A kernel request already owns an unpublished directory. Generate there directly;
+        // only a successful result is read, and the kernel deletes this directory in finally.
+        // Desktop pack installation, backup and resource-pack publication are unnecessary here.
+        check(!Files.exists(output.resolve(Project.config.name))) { "Output must belong to a fresh Playground request" }
+        generateDatapack(output.toString())
     }
 
     private fun generateDatapack(path: String) {

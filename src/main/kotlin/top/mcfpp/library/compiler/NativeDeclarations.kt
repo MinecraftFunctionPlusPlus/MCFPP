@@ -95,10 +95,9 @@ object NativeDeclarations {
     fun resolveMethod(binding: NativeBinding, bindings: ManagedNativeBindings): Method {
         require(binding.invocation == NativeInvocation.STATIC)
         val loader = bindings.loader(binding.providerPackage)
-        val owner = Class.forName(binding.ownerClass, false, loader)
+        require(binding.providerPackage == null) { "External native providers are not supported by the Playground" }
+        val owner = BuiltinNativeClasses.resolve(binding.ownerClass)
         require(bindings.provider(owner) == binding.providerPackage) { "Native provider package does not match the registered owner" }
-        requireSharedApi(loader)
-        owner.classLoader?.let(::requireSharedApi)
         require(generateSequence(owner) { it.enclosingClass }.all { Modifier.isPublic(it.modifiers) }) { "Native provider must be public" }
         val parameters = binding.jvmParameters.map { jvmClass(it, loader, false) }.toTypedArray()
         val method = owner.getDeclaredMethod(binding.method, *parameters)
@@ -184,11 +183,10 @@ object NativeDeclarations {
     /** Resolves linkage only. It neither constructs an annotation nor replays its actions. */
     fun restoreAnnotationProvider(value: AnnotationProviderBinding, bindings: ManagedNativeBindings): Class<out Annotation> {
         val loader = bindings.loader(value.providerPackage)
-        requireSharedApi(loader)
-        val owner = Class.forName(value.ownerClass, false, loader)
+        require(value.providerPackage == null) { "External annotation providers are not supported by the Playground" }
+        val owner = BuiltinNativeClasses.resolve(value.ownerClass)
         require(bindings.provider(owner) == value.providerPackage)
         require(Annotation::class.java.isAssignableFrom(owner)) { "Annotation provider does not share the compiler API" }
-        owner.classLoader?.let(::requireSharedApi)
         owner.getDeclaredConstructor(*value.constructorParameters.map { jvmClass(it, loader, false) }.toTypedArray())
         return owner.asSubclass(Annotation::class.java)
     }
@@ -207,7 +205,7 @@ object NativeDeclarations {
             else -> null
         }
         require(result || name != "void") { "void is not a JVM parameter type" }
-        return (primitive ?: Class.forName(name, false, loader)).also { require(it.name == name) { "JVM class name is not canonical" } }
+        return (primitive ?: BuiltinNativeClasses.resolve(name)).also { require(it.name == name) { "JVM class name is not canonical" } }
     }
     private fun mode(value: ParamMode): MacroParameterMode = when (value) {
         ParamMode.VALUE -> MacroParameterMode.VALUE; ParamMode.REF -> MacroParameterMode.REF; ParamMode.CONST -> MacroParameterMode.CONST; ParamMode.INLINE -> MacroParameterMode.INLINE

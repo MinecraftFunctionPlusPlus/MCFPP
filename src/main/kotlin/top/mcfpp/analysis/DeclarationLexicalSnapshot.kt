@@ -1213,35 +1213,17 @@ internal class DeclarationDomainStamp private constructor(
                 override fun computeValue(type: Class<*>): BackingShape = BackingShape(type)
             }
 
-            private val lists = setOf(
-                "java.util.ArrayList",
-                "java.util.LinkedList",
-                "java.util.Arrays\$ArrayList",
-                "kotlin.collections.EmptyList",
-                "java.util.Collections\$EmptyList",
-                "java.util.Collections\$SingletonList",
-                "java.util.ImmutableCollections\$List12",
-                "java.util.ImmutableCollections\$ListN"
-            )
+            private val lists = top.mcfpp.util.CollectionImplementations.immutableListNames +
+                setOf("java.util.ArrayList", "java.util.LinkedList", top.mcfpp.util.CollectionImplementations.fixedList.name)
             private val maps = setOf(
                 "java.util.HashMap",
                 "java.util.LinkedHashMap",
                 "java.util.IdentityHashMap",
-                "kotlin.collections.EmptyMap",
-                "java.util.Collections\$EmptyMap",
-                "java.util.Collections\$SingletonMap",
-                "java.util.ImmutableCollections\$Map1",
-                "java.util.ImmutableCollections\$MapN"
-            )
+            ) + top.mcfpp.util.CollectionImplementations.immutableMapNames
             private val sets = setOf(
                 "java.util.HashSet",
                 "java.util.LinkedHashSet",
-                "kotlin.collections.EmptySet",
-                "java.util.Collections\$EmptySet",
-                "java.util.Collections\$SingletonSet",
-                "java.util.ImmutableCollections\$Set12",
-                "java.util.ImmutableCollections\$SetN"
-            )
+            ) + top.mcfpp.util.CollectionImplementations.immutableSetNames
             private val functionShapes = setOf(
                 "Function", "NativeFunction", "GenericFunction", "ExtensionFunction", "GenericExtensionFunction",
                 "InlineFunction", "InternalFunction", "NoStackFunction", "MCFunction", "DataTemplateConstructor", "TypeDataTemplateConstructor",

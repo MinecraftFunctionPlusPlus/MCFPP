@@ -16,7 +16,7 @@ import java.util.Collections
  * A browser/JVM single-file workspace. The immutable protocol and prepared library declarations
  * survive requests. A deep compiler baseline and an import-directory baseline jointly restore
  * every retained mutable library object; source files and output paths are always request-owned.
- * External libraries/plugins remain the responsibility of the ordinary one-shot compiler API.
+ * Only the bundled Minecraft 1.21.8 library is accepted by this host.
  */
 class PlaygroundCompilerKernel private constructor(
     private val directory: Path,
@@ -93,8 +93,7 @@ class PlaygroundCompilerKernel private constructor(
                     prepare()
                     preparationNanos = System.nanoTime() - mark
                 }
-                // Each invocation owns its physical paths. This also avoids stale descendant
-                // caches when a published directory is replaced in CheerpJ's filesystem.
+                // Each invocation owns its paths. A failure cannot publish stale output.
                 Files.createDirectory(root)
                 Project.beginKernelCompilation(configuration(root), source)
                 val mark = System.nanoTime()
@@ -182,19 +181,24 @@ class PlaygroundCompilerKernel private constructor(
         finally {
             baseline = null; restoreImports = null
             settings?.restore(); settings = null
-            LibraryCompilerSession.release(this)
+            if (active === this) active = null
         }
     }
 
     companion object {
+        // Project is process-global, even in the native benchmark. One kernel owns it at a time.
+        private var active: PlaygroundCompilerKernel? = null
+
         @JvmStatic
+        @Synchronized
         fun open(directory: Path, minecraftVersion: String, namespace: String): AutoCloseable {
-            require(TargetCapabilities.forVersion(minecraftVersion) != null) { "Unsupported Minecraft target: $minecraftVersion" }
+            require(minecraftVersion == "1.21.8") { "The Playground supports Minecraft 1.21.8" }
             require(namespace.matches(Regex("[a-z0-9_.-]+"))) { "Invalid namespace: $namespace" }
             val root = directory.toAbsolutePath().normalize()
             require(!Files.exists(root)) { "A compiler kernel requires a new workspace directory: $root" }
             val kernel = PlaygroundCompilerKernel(root, minecraftVersion, namespace)
-            LibraryCompilerSession.reserve(kernel)
+            check(active == null) { "The MCFPP compiler is busy with another kernel" }
+            active = kernel
             try { Files.createDirectories(root) } catch (failure: Throwable) { kernel.close(); throw failure }
             return kernel
         }

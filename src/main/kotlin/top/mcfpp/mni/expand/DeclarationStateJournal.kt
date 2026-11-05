@@ -149,13 +149,7 @@ internal class DeclarationStateJournal private constructor(
 
         private val lists = setOf<Class<*>>(ArrayList::class.java, java.util.LinkedList::class.java, CommandList::class.java)
         private val fixedList = java.util.Arrays.asList(1, 2).javaClass
-        private val immutableLists = setOf<Class<*>>(
-            emptyList<Any>().javaClass,
-            listOf(1).javaClass,
-            Collections.emptyList<Any>().javaClass,
-            java.util.List.of(1).javaClass,
-            java.util.List.of(1, 2, 3).javaClass
-        )
+        private val immutableLists = top.mcfpp.util.CollectionImplementations.immutableLists
         // Published savepoint root lists own defensive copies. Borrowed unmodifiable views of
         // mutable declaration fields are not restorable, so only the root argument accepts them.
         private val publishedLists = setOf<Class<*>>(
@@ -164,18 +158,8 @@ internal class DeclarationStateJournal private constructor(
         )
         private val maps = setOf<Class<*>>(HashMap::class.java, LinkedHashMap::class.java)
         private val sets = setOf<Class<*>>(HashSet::class.java, LinkedHashSet::class.java)
-        private val immutableSets = setOf<Class<*>>(
-            emptySet<Any>().javaClass,
-            setOf(1).javaClass,
-            Collections.emptySet<Any>().javaClass,
-            java.util.Set.of(1).javaClass,
-            java.util.Set.of(1, 2, 3).javaClass
-        )
-        private val immutableMaps = setOf<Class<*>>(
-            emptyMap<Any, Any>().javaClass,
-            mapOf(1 to 2).javaClass,
-            Collections.emptyMap<Any, Any>().javaClass
-        )
+        private val immutableSets = top.mcfpp.util.CollectionImplementations.immutableSets
+        private val immutableMaps = top.mcfpp.util.CollectionImplementations.basicImmutableMaps
         private val declarations = setOf<Class<*>>(
             CompoundData::class.java, DataTemplate::class.java,
             ObjectDataTemplate::class.java, GenericDataTemplate::class.java, GenericObjectDataTemplate::class.java,

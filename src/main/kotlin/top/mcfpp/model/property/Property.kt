@@ -86,34 +86,21 @@ data class Property(val identifier: String, val accessor: AbstractAccessor?, val
     }
 
     companion object {
-        /** Annotations are Serializable declaration objects, including their mutable parent graph. */
+        /** Clone only the bundled annotation schemas, retaining their portable parent graph. */
         internal fun copyAnnotations(annotations: List<top.mcfpp.model.annotation.Annotation>): ArrayList<top.mcfpp.model.annotation.Annotation> {
             if (annotations.isEmpty()) return arrayListOf()
             return try {
-                copySerializableAnnotations(annotations)
+                top.mcfpp.library.compiler.PortableAnnotationCodecs.builtins().use { codecs ->
+                    top.mcfpp.model.function.SessionAnnotationCloner(codecs) {
+                        top.mcfpp.library.model.AnnotationPhase.COMPLETED
+                    }.use { cloner -> ArrayList(cloner.clone(annotations).annotations) }
+                }
             } catch (failure: java.io.IOException) {
                 LogProcessor.error("Cannot copy field annotation metadata: ${failure.message}")
                 arrayListOf()
             } catch (failure: ClassNotFoundException) {
                 LogProcessor.error("Cannot load copied field annotation metadata: ${failure.message}")
                 arrayListOf()
-            }
-        }
-
-        private fun copySerializableAnnotations(annotations: List<top.mcfpp.model.annotation.Annotation>): ArrayList<top.mcfpp.model.annotation.Annotation> {
-            val bytes = java.io.ByteArrayOutputStream().use { output ->
-                java.io.ObjectOutputStream(output).use { it.writeObject(ArrayList(annotations)) }
-                output.toByteArray()
-            }
-            return object : java.io.ObjectInputStream(java.io.ByteArrayInputStream(bytes)) {
-                override fun resolveClass(desc: java.io.ObjectStreamClass): Class<*> = try {
-                    Class.forName(desc.name, false, top.mcfpp.Project.classLoader)
-                } catch (_: ClassNotFoundException) {
-                    super.resolveClass(desc)
-                }
-            }.use {
-                @Suppress("UNCHECKED_CAST")
-                (it.readObject() as ArrayList<top.mcfpp.model.annotation.Annotation>)
             }
         }
 

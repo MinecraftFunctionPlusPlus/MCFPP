@@ -73,8 +73,6 @@ abstract class Annotation : Serializable {
     @Transient
     private var boundArguments: ArrayList<CompilerValue>? = null
 
-    /** Read fallback for annotations copied by the earlier Base64 representation. */
-    private var argumentPayload: String? = null
     private var argumentFacts: CompilerAnnotationFacts.Snapshot? = null
 
     @Suppress("ConvertSecondaryConstructorToPrimary")
@@ -88,7 +86,6 @@ abstract class Annotation : Serializable {
     internal fun recordCompilerArguments(arguments: List<CompilerValue>) {
         boundArguments = ArrayList(arguments)
         argumentFacts = if (arguments.isEmpty()) null else CompilerAnnotationFacts.Snapshot.capture(arguments)
-        argumentPayload = null
     }
 
     /** Immutable view; copied annotations decode their own serialized closed facts on demand. */
@@ -96,9 +93,7 @@ abstract class Annotation : Serializable {
         val live = boundArguments
         if (live != null) return Collections.unmodifiableList(ArrayList(live))
         argumentFacts?.let { return Collections.unmodifiableList(it.arguments()) }
-        val payload = argumentPayload
-        if (payload.isNullOrEmpty()) return emptyList()
-        return Collections.unmodifiableList(CompilerAnnotationFacts.decode(payload))
+        return emptyList()
     }
 
     internal fun on(function: Function){

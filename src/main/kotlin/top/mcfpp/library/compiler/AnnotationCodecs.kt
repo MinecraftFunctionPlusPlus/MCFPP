@@ -173,6 +173,14 @@ class PortableAnnotationCodecs : AutoCloseable {
     override fun close() { if (!closed) { closed = true; entries.clear(); writers.clear() } }
 
     companion object {
+        /** Class literals are also consumed by the AOT catalog generator, without registering codecs. */
+        @JvmStatic
+        fun builtinClasses(): List<Class<out Annotation>> = listOf(
+            ConcreteOnly::class.java, DataOnly::class.java, Dynamic::class.java, Load::class.java,
+            Tick::class.java, MCFPPEntity::class.java, NoInstance::class.java, From::class.java,
+            To::class.java, Name::class.java,
+        )
+
         /** Method annotations WritesReceiver/NoExternalWrites are deliberately absent from the instance registry. */
         fun builtins(): PortableAnnotationCodecs {
             val managed = object : ManagedNativeBindings {

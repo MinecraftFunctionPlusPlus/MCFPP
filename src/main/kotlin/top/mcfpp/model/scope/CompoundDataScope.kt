@@ -372,15 +372,9 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
 
     private companion object {
         val journalMapClasses = setOf<Class<*>>(java.util.HashMap::class.java, java.util.LinkedHashMap::class.java)
-        val journalImmutableLists = setOf(
-            "kotlin.collections.EmptyList", "java.util.Collections\$EmptyList", "java.util.Collections\$SingletonList"
-        )
+        val journalImmutableLists = top.mcfpp.util.CollectionImplementations.basicImmutableLists.mapTo(hashSetOf()) { it.name }
         val journalFixedList = java.util.Arrays.asList("").javaClass
-        val journalHashImmutableLists = setOf<Class<*>>(
-            emptyList<Any>().javaClass, java.util.Collections.emptyList<Any>().javaClass,
-            java.util.Collections.singletonList("").javaClass,
-            java.util.List.of("").javaClass, java.util.List.of("", "", "").javaClass
-        )
+        val journalHashImmutableLists = top.mcfpp.util.CollectionImplementations.immutableLists
         val journalHashTypes = setOf<Class<*>>(
             MCFPPType::class.java, MCFPPConcreteType::class.java, MCFPPGenericParamType::class.java,
             UnresolvedType::class.java, MCFPPTypeAliasType::class.java, MCFPPNotCompiledGenericType::class.java,
