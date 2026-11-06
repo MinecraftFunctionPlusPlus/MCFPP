@@ -98,6 +98,7 @@ internal object IrTextDump {
                         is Instruction.Construct -> "%${instruction.result} = construct ${type(instruction.type)} at ${place(instruction.place)} ${instruction.parts.entries.joinToString { "${it.key}=${value(it.value)}" }}"
                         is Instruction.Call -> result(instruction.result) + "call ${functions[instruction.declaration] ?: symbol(instruction.declaration)}(${instruction.arguments.joinToString(transform = ::value)}) effect=${instruction.effect.javaClass.simpleName}"
                         is Instruction.RawCommand -> "command ${instruction.command}"
+                        is Instruction.Print -> "print ${value(instruction.value)}"
                         is Instruction.MapMember -> result(instruction.result) + "map.${instruction.operation} ${place(instruction.receiver.place)} key=${instruction.key?.let(::value)} argument=${instruction.argument?.let(::value)}"
                         is Instruction.MapProjection -> "%${instruction.result} = map-projection ${place(instruction.receiver.place)} -> ${place(instruction.place)}"
                         is Instruction.ListMember -> result(instruction.result) + "list.${instruction.operation} ${place(instruction.receiver.place)} index=${instruction.index?.let(::value) ?: instruction.knownIndex} argument=${instruction.argument?.let(::value)}"

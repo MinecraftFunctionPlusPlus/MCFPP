@@ -5,10 +5,10 @@ import top.mcfpp.type.TypeId
 
 enum class ListOperation(val bulk: Boolean = false) {
     CLEAR, APPEND, PREPEND, APPEND_ALL(true), PREPEND_ALL(true), INSERT, REMOVE_AT,
-    INDEX_OF, LAST_INDEX_OF, CONTAINS, REMOVE;
+    INDEX_OF, LAST_INDEX_OF, CONTAINS, REMOVE, SIZE, IS_EMPTY;
 
-    val query: Boolean get() = this == INDEX_OF || this == LAST_INDEX_OF || this == CONTAINS
-    val search: Boolean get() = query || this == REMOVE
+    val query: Boolean get() = search && this != REMOVE || this == SIZE || this == IS_EMPTY
+    val search: Boolean get() = this == INDEX_OF || this == LAST_INDEX_OF || this == CONTAINS || this == REMOVE
 }
 
 sealed interface ListMatchScope {

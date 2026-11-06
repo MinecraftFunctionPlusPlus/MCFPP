@@ -31,6 +31,15 @@ public final class NativeBenchmark {
                 if (!expectedSuccess && !((java.util.List<?>) result.get("files")).isEmpty()) {
                     throw new AssertionError(name + ": failed compilation retained files");
                 }
+                if (java.util.Set.of("cold", "warm", "modified", "recovered", "final-default").contains(name)) {
+                    var main = ((java.util.List<?>) result.get("files")).stream().map(file -> (Map<?, ?>) file)
+                            .filter(file -> "data/playground/function/main.mcfunction".equals(file.get("path")))
+                            .findFirst().orElseThrow();
+                    var lines = ((String) main.get("content")).lines().toList();
+                    if (lines.size() != 2 || lines.stream().anyMatch(line -> !line.startsWith("tellraw @a "))) {
+                        throw new AssertionError(name + ": default example must reduce to two output commands: " + lines);
+                    }
+                }
                 results.add(Map.of("name", name, "source", source, "wallMs", elapsed, "result", result));
                 System.out.printf("%s: %.2f ms; success=%s%n", name, elapsed, result.get("success"));
             }

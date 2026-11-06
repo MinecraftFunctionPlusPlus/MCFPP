@@ -91,6 +91,11 @@ object PrimitiveCompiler {
     private fun conversion(function: Function) = function is NativeFunction &&
         function.javaMethod.declaringClass == top.mcfpp.mni.ConversionData::class.java
 
+    /** Match resolved provider identity, so a user function named print keeps ordinary semantics. */
+    private fun printing(function: Function) = function is NativeFunction &&
+        function.javaMethod.declaringClass == top.mcfpp.mni.System::class.java &&
+        function.javaMethod.name in setOf("printString", "printInt", "printBool")
+
     private fun lower(context: Parser.CurlBlockContext, lowering: Lowering): List<String> {
         context.statement().forEach(lowering::statement)
         return lowering.diagnostics.toList()
@@ -292,6 +297,7 @@ object PrimitiveCompiler {
         }
         val optimized = if (valid) top.mcfpp.optimization.OptimizationPipeline.optimize(function, ir, graph,
             lowering.initialFacts, lowering.exportedSymbols.map { it.id }.toSet(), module) else ir
+        if (valid) top.mcfpp.optimization.OptimizationPipeline.removeUnusedFrame(function, optimized)
         val foldGeneration = top.mcfpp.CompileSettings.foldIRConstants && Project.config.optimization.enabled(top.mcfpp.optimization.PassIds.CONSTANTS)
         val generationFacts = if (optimized == ir && foldGeneration) facts else FlowAnalysis.analyze(optimized, initial = lowering.initialFacts,
             evaluator = if (foldGeneration) PrimitiveEvaluation::binary else { _: String, _: CompilerValue, _: CompilerValue -> null },
@@ -1076,16 +1082,22 @@ object PrimitiveCompiler {
                     if (!exploratory) invalid("Actual type of any is unknown; use 'as' before binding '${name.second}'")
                     // A draft records possibilities; only the fixed-point binding may select a concrete overload.
                     val candidates = (boundCandidates ?: GlobalScope.getFunctionCandidates(name.first, name.second, file)).filter {
-                        (supportedSignature(it) || conversion(it)) && args.size <= it.normalParams.size && it.normalParams.drop(args.size).all { parameter -> parameter.hasDefault }
+                        (supportedSignature(it) || conversion(it) || printing(it)) && args.size <= it.normalParams.size && it.normalParams.drop(args.size).all { parameter -> parameter.hasDefault }
                     }.distinctBy { it.declarationId }
                     if (candidates.isEmpty()) unsupported()
-                    candidates.filterNot(::conversion).forEach { calls[it.declarationId] = it }
+                    candidates.filter { supportedSignature(it) }.forEach { calls[it.declarationId] = it }
                     provisional = true
                     provisionalType = candidates.map { it.returnType.typeId }.distinct().singleOrNull() ?: any
                     candidates.first()
                 }
             }
             if (initializerFields != null && target is NativeFunction) unsupported()
+            if (printing(target)) {
+                val value = args.single()
+                if (value.type !in setOf(int, bool, MCFPPBaseType.String.typeId)) unsupported()
+                instructions += Instruction.Print(value)
+                return ValueRef.Result(MCFPPPrivateType.Void.typeId, -1)
+            }
             if (conversion(target)) {
                 val value = args.single()
                 val type = register(target.returnType).typeId
@@ -1223,14 +1235,19 @@ object PrimitiveCompiler {
                     "lastIndexOf" -> ListOperation.LAST_INDEX_OF
                     "contains" -> ListOperation.CONTAINS
                     "remove" -> ListOperation.REMOVE
+                    "size" -> ListOperation.SIZE
+                    "isEmpty" -> ListOperation.IS_EMPTY
                     else -> unsupported()
                 }
                 val index = arguments.firstOrNull()?.takeIf { operation == ListOperation.INSERT || operation == ListOperation.REMOVE_AT }
                 val constant = if (index is ValueRef.Constant) index.value else (index as? ValueRef.Result)?.let { provenConstants[it.instruction] }
                 val argument = arguments.lastOrNull()?.takeUnless { operation == ListOperation.REMOVE_AT }
                 val result = if (operation.query) nextResult++ else null
-                val type = if (operation == ListOperation.CONTAINS) bool else int
-                val resultPlace = result?.let { memberResult(context, it, type, runtime(receiver) || arguments.any(::runtime)) }
+                val type = if (operation == ListOperation.CONTAINS || operation == ListOperation.IS_EMPTY) bool else int
+                // Known shape can be folded even when the elements are runtime values. An
+                // unknown length remains unknown in FlowAnalysis and is emitted at runtime.
+                val shapeQuery = operation == ListOperation.SIZE || operation == ListOperation.IS_EMPTY
+                val resultPlace = result?.let { memberResult(context, it, type, !shapeQuery && (runtime(receiver) || arguments.any(::runtime))) }
                 instructions += Instruction.ListMember(operation, location, container.typeId, argument,
                     (argument as? ValueRef.Result)?.let { origins[it.instruction] }, index,
                     (constant as? CompilerValue.Integral)?.value?.toInt(), result, resultPlace,
@@ -1476,6 +1493,7 @@ object PrimitiveCompiler {
                     listOfNotNull(instruction.key, instruction.argument).flatMap { references(it) }
                 is Instruction.MapProjection -> locationReferences(instruction.receiver)
                 is Instruction.RawCommand -> emptySet()
+                is Instruction.Print -> references(instruction.value)
             }
             fun result(instruction: Instruction): Int? = when (instruction) {
                 is Instruction.Read -> instruction.result
@@ -1862,6 +1880,28 @@ object PrimitiveCompiler {
             }
         }
 
+        private fun print(value: ValueRef) {
+            fun text(constant: CompilerValue): String = when (constant) {
+                is CompilerValue.Typed -> text(constant.payload)
+                is CompilerValue.Text -> constant.value
+                is CompilerValue.Integral -> constant.value.toString()
+                is CompilerValue.Bool -> if (constant.value) "1" else "0"
+                else -> error("Unexpected primitive print value: $constant")
+            }
+            val known = constant(value)?.takeUnless { runtime(value) }
+            val component = if (known != null) top.mcfpp.lib.PlainChatComponent(text(known)).toCommandPart()
+            else if (value.type == int || value.type == bool) {
+                val score = score(value)
+                Command(com.alibaba.fastjson2.JSON.toJSONString(linkedMapOf("type" to "score", "score" to
+                    linkedMapOf("name" to score.name, "objective" to score.objective))))
+            } else {
+                val source = (value as? ValueRef.Result)?.let { nbtResults[it.instruction] }
+                    ?: error("String output requires a captured NBT value")
+                Command("{\"type\":\"nbt\",").build(source.toChatComponentPart(), false).build(",\"interpret\":false}", false)
+            }
+            emit(Command.buildAll("tellraw @a", component))
+        }
+
         private fun search(instruction: Instruction.ListMember, position: Int) {
             val type = if (instruction.operation == ListOperation.CONTAINS) bool else int
             if (instruction.operation.query && !runtime(ValueRef.Result(type, instruction.result!!))) return
@@ -2057,11 +2097,13 @@ object PrimitiveCompiler {
                         floatFromInt(instruction.result, source)
                     }
                     is Instruction.Convert -> convert(instruction)
+                    is Instruction.Print -> print(instruction.value)
                     is Instruction.RawCommand -> {
                         // Raw observers see the current assigned values, including score-backed locals.
                         for (location in initialized.filter { it.path.isEmpty() && it in scorePlaces &&
                             (!Project.config.optimization.enabled(top.mcfpp.optimization.PassIds.FRAMES) ||
-                                EffectAnalysis.rawCommandEffect(instruction.command) == Effect.Unknown) }) {
+                                EffectAnalysis.rawCommandEffect(instruction.command) == Effect.Unknown) }
+                            .sortedBy { storageNames.getValue(it.root) }) {
                             val type = symbols.getValue(location.root).declaredType
                             if (type == int || type == bool) emit(Command("execute store result")
                                 .build(address(location).toCommandPart())
@@ -2080,6 +2122,20 @@ object PrimitiveCompiler {
                     is Instruction.MapMember -> map(instruction)
                     is Instruction.MapProjection -> projection(instruction, position)
                     is Instruction.ListMember -> {
+                        if (instruction.operation == ListOperation.SIZE || instruction.operation == ListOperation.IS_EMPTY) {
+                            val type = if (instruction.operation == ListOperation.SIZE) int else bool
+                            if (!runtime(ValueRef.Result(type, instruction.result!!))) continue
+                            val result = temporary(type)
+                            if (instruction.operation == ListOperation.SIZE) emit(Command("execute store result score $result run data get")
+                                .build(address(instruction.receiver).toCommandPart()))
+                            else {
+                                commands += "scoreboard players set $result 0"
+                                emit(Command("execute unless data").build(address(instruction.receiver).intIndex(0).toCommandPart())
+                                    .build("run scoreboard players set $result 1"))
+                            }
+                            results[instruction.result] = result
+                            continue
+                        }
                         if (instruction.operation.search) { search(instruction, position); continue }
                         val destination = address(instruction.receiver)
                         val id = callNumber++

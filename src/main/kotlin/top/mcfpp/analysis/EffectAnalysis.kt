@@ -214,6 +214,7 @@ object EffectAnalysis {
                 for (block in bound.blocks.filter { it.id in reachable }) for (instruction in block.instructions) {
                     val observed = when (instruction) {
                         is Instruction.RawCommand -> rawCommandEffect(instruction.command)
+                        is Instruction.Print -> Effect.ReadsRuntime
                         is Instruction.Write -> Effect.Writes(setOf(instruction.place))
                         is Instruction.DictionaryMember -> instruction.effect
                         is Instruction.ListMember -> if (instruction.operation.query) Effect.Pure else Effect.Writes(setOf(instruction.receiver.place), setOf(instruction.receiver.place))

@@ -40,6 +40,7 @@ internal open class IRTransform {
         is Instruction.DictionaryMember -> i.copy(receiver = location(i.receiver), argument = i.argument?.let(::ref),
             result = i.result?.let(::result), resultPlace = i.resultPlace?.let(::place), declaration = i.declaration?.let(::declaration))
         is Instruction.RawCommand -> i
+        is Instruction.Print -> i.copy(value = ref(i.value))
     }
     fun terminator(t: Terminator): Terminator = when (t) {
         is Terminator.Jump -> t.copy(block = block(t.block))

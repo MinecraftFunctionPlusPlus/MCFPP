@@ -21,6 +21,11 @@ semantic passes, optimizer and datapack generator. The first compile includes li
 decoding, native binding and baseline capture. Later requests reuse that baseline,
 with separate source/output directories and restoration of mutable state.
 
+The default sample uses typed IR for primitive `print`, `list.size()` and `list.isEmpty()`.
+At O2, `greet` is inlined and the unobserved list allocation/updates disappear: `main`
+contains only two `tellraw` commands. Calls and opaque commands preserve potentially observed
+list storage; unknown lengths and dynamic output retain their runtime implementations.
+
 The entire bundled standard library for the website's fixed Minecraft 1.21.8 target is
 embedded, including its runtime files and generated import plan. Other Minecraft
 targets, external JAR plugins and the desktop package manager are not browser inputs.

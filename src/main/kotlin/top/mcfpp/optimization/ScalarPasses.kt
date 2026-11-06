@@ -243,7 +243,8 @@ internal class DeadValues(private val observable: Set<SymbolId>) : FunctionPass 
             }
             references.forEach { uses[it] = uses.getOrDefault(it, 0) + 1 }
         }
-        fun removable(i: Instruction) = i is Instruction.Binary && i.operation !in setOf("/", "%") || i is Instruction.Read || i is Instruction.Promote
+        fun removable(i: Instruction) = i is Instruction.Binary && i.operation !in setOf("/", "%") ||
+            i is Instruction.Read || i is Instruction.Promote || i is Instruction.ListMember && i.operation.query
         val pending = ArrayDeque(definitions.keys.filter { uses.getOrDefault(it, 0) == 0 && removable(definitions.getValue(it)) })
         val removed = hashSetOf<Int>()
         while (pending.isNotEmpty()) {
@@ -284,7 +285,7 @@ internal class DeadValues(private val observable: Set<SymbolId>) : FunctionPass 
                 if (incoming[block.id] != live) { incoming[block.id] = live; changed = true }
             }
         } while (changed)
-        return current.copy(blocks = current.blocks.map { it.copy(instructions = kept.getValue(it.id)) })
+        return DeadLocalLists.run(current.copy(blocks = current.blocks.map { it.copy(instructions = kept.getValue(it.id)) }))
     }
 }
 

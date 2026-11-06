@@ -22,7 +22,8 @@ internal object OptimizationPipeline {
         val scalar = graph.filter { (id, ir) -> id !in analysis.recursive && analysis.effects[id]?.unknown == false &&
             ir.declarations.values.all { it.declaredType in scalars } && ir.blocks.all { block -> block.instructions.all {
                 it is Instruction.Declare || it is Instruction.Read || it is Instruction.Write || it is Instruction.Binary ||
-                    it is Instruction.Call || it is Instruction.RawCommand && EffectAnalysis.rawCommandEffect(it.command) != Effect.Unknown
+                it is Instruction.Call || it is Instruction.Print ||
+                    it is Instruction.RawCommand && EffectAnalysis.rawCommandEffect(it.command) != Effect.Unknown
             } } }.keys.toMutableSet()
         do {
             val changed = scalar.removeAll { id -> analysis.calls[id].orEmpty().any { it !in scalar } }
@@ -38,6 +39,21 @@ internal object OptimizationPipeline {
 
     fun staticFrame(function: Function): NBTPath? = function.optimizedStaticFrame?.let {
         NBTPath(StorageSource("mcfpp:frames")).memberIndex(StorageAccess.quotedKey(it))
+    }
+
+    /** Folding and inlining can leave only literal output, even when the original body owned
+     * collections. Such a parameterless void body has no frame or register ABI left to preserve.
+     * This proof runs before constructing its backend, so all addresses use the final convention.
+     */
+    fun removeUnusedFrame(function: Function, ir: TypedIR) {
+        if (!Project.config.optimization.enabled(PassIds.FRAMES) || Project.config.debugInfo ||
+            function.normalParams.isNotEmpty() || function.returnType != MCFPPPrivateType.Void) return
+        val block = ir.blocks.singleOrNull() ?: return
+        if (block.terminator != Terminator.Return(null) || block.instructions.any {
+            it !is Instruction.Declare && !(it is Instruction.Print && it.value is ValueRef.Constant)
+        }) return
+        function.optimizedScalar = true
+        function.optimizedStaticFrame = null
     }
 
     /** Compact score-holder tokens isolate overloads and hygienically cloned declarations. */
@@ -89,7 +105,9 @@ internal object OptimizationPipeline {
     fun finish(cleanup: Boolean = true) {
         while (true) {
             val functions = FunctionInventory.all()
-            val pending = functions.filter { it.pendingBackend != null }
+            // IdentityHashMap inventory order differs between JVM and Wasm. Backend emission
+            // allocates temporary names, so use stable declaration order at this boundary.
+            val pending = functions.filter { it.pendingBackend != null }.sortedBy { it.declarationId.value }
             if (pending.isEmpty()) break
             // Validation completes for the module before deferred bodies are emitted. Inlining
             // may have cloned a forward target before its diagnostic was published; inspect the
@@ -165,6 +183,7 @@ internal class TypedMinecraftCost(private val functions: Map<SymbolId, TypedIR>)
                 ordinary() + transfers + body
             }
             is Instruction.RawCommand -> command(i.command)
+            is Instruction.Print -> ordinary()
             else -> ordinary(model.storage)
         }
             val blocks = body.blocks.associateBy { it.id }

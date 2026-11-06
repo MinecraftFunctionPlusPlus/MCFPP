@@ -45,6 +45,8 @@ sealed interface Instruction {
     data class Call(val result: Int?, val declaration: SymbolId, val arguments: List<ValueRef>, val effect: Effect,
                     val returnType: TypeId? = null, val provisional: Boolean = false,
                     val resultPlace: Place? = null) : Instruction
+    /** Observable chat output. It reads its argument without invalidating local storage facts. */
+    data class Print(val value: ValueRef) : Instruction
     data class RawCommand(val command: String) : Instruction
 }
 sealed interface Terminator {
@@ -166,6 +168,7 @@ object FlowAnalysis {
                 }
                 is Instruction.CaptureIndex -> values[instruction.result] = value(instruction.value)
                 is Instruction.CaptureKey -> values[instruction.result] = value(instruction.value)
+                is Instruction.Print -> Unit
                 is Instruction.MapProjection -> {
                     beforeWrites[id to position] = state.fork()
                     values[instruction.result] = MapFacts.project(state, instruction)
@@ -201,7 +204,17 @@ object FlowAnalysis {
                     if (!instruction.operation.query && !writable(MapFacts.resolve(state, instruction.receiver), instruction.declaration, true)) continue
                     val source = instruction.argument?.let(::snapshot)
                     val argument = instruction.argument?.let(::value)
-                    if (instruction.operation.search) {
+                    if (instruction.operation == ListOperation.SIZE || instruction.operation == ListOperation.IS_EMPTY) {
+                        val size = state.length(MapFacts.resolve(state, instruction.receiver))
+                        val type = if (instruction.operation == ListOperation.SIZE) top.mcfpp.type.MCFPPBaseType.Int.typeId
+                            else top.mcfpp.type.MCFPPBaseType.Bool.typeId
+                        val known = size?.takeIf { foldIntrinsics }?.let {
+                            if (instruction.operation == ListOperation.SIZE) CompilerValue.Integral(it.toLong()) else CompilerValue.Bool(it == 0)
+                        }
+                        val fact = ValueFacts(TypeKnowledge.Exact(type), known?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown)
+                        values[instruction.result!!] = fact
+                        instruction.resultPlace?.let { state.write(it, fact); origins[instruction.result] = it }
+                    } else if (instruction.operation.search) {
                         val found = ListFacts.find(state, instruction, argument!!)
                         if (instruction.operation == ListOperation.REMOVE) {
                             if (found != -1) ListFacts.edit(state, instruction.copy(operation = ListOperation.REMOVE_AT,

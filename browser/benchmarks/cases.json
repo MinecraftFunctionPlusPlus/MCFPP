@@ -7,5 +7,7 @@
   {"name":"inherited","source":"import mcfpp.minecraft.std:*\ndata Result: CommandResult { constructor() {} }\nfunc main() { var result = Result(); print(result.result); print(result.success); }"},
   {"name":"inherited-again","source":"import mcfpp.minecraft.std:*\ndata Result: CommandResult { constructor() {} }\nfunc main() { var result = Result(); print(result.result); print(result.success); }"},
   {"name":"custom-mni","expectedSuccess":false,"source":"func custom() = example.Provider.custom\nfunc main() { print(1) }"},
+  {"name":"runtime-output","source":"func main() {\n external values: list<int> = [10, 20]\n external message: string = \"old\"\n external n: int = 1\n external flag: bool = true\n /data modify storage mcfpp:system stack_frame[0].values append value 30\n /data modify storage mcfpp:system stack_frame[0].message set value \"changed\"\n print(values.size())\n print(values.isEmpty())\n print(message)\n print(n + 1)\n print(flag)\n}"},
+  {"name":"shadowed-print","source":"func print(value: int) { mcfpp.lang:print(value + 10) }\nfunc main() { print(2) }"},
   {"name":"final-default","source":"func greet() { print(\"Hello, MCFPP!\") }\nfunc main() { greet(); var values: list<int> = [10, 20]; values.add(30); print(values.size()); }"}
 ]

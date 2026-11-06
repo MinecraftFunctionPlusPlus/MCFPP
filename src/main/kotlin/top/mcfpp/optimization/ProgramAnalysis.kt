@@ -26,7 +26,8 @@ class ProgramAnalysis(val functions: Map<SymbolId, TypedIR>) {
             val raw = instructions.filterIsInstance<Instruction.RawCommand>()
             FunctionEffects(instructions.filterIsInstance<Instruction.Read>().map { it.place }.toSet(),
                 instructions.filterIsInstance<Instruction.Write>().map { it.place }.toSet(),
-                raw.isNotEmpty(), raw.any { EffectAnalysis.rawCommandEffect(it.command) == Effect.Unknown } || calls[id].orEmpty().any { it !in functions },
+                raw.isNotEmpty() || instructions.any { it is Instruction.Print },
+                raw.any { EffectAnalysis.rawCommandEffect(it.command) == Effect.Unknown } || calls[id].orEmpty().any { it !in functions },
                 id in cycles)
         }.toMutableMap()
         val callers = functions.keys.associateWith { linkedSetOf<SymbolId>() }
