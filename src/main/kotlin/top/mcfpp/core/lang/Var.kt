@@ -303,7 +303,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             isError = true
             return this as Self
         }
-        if (b !== Null && !b.isError && !top.mcfpp.model.function.ParameterMatcher.accepts(b, type)) {
+        if (b !== Null && !b.isError && !top.mcfpp.analysis.StorageAccess.satisfiesContract(b, type)) {
             LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
             return this as Self
         }
@@ -354,6 +354,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         if(type == this.type){
             return this
         }
+        if (TypeRelations.isSubtype(this.type, type))
+            return top.mcfpp.analysis.StorageAccess.view(this, type, diagnose = false)
         return when(type){
             MCFPPNBTType.NBT -> if (this.type is MCFPPDictType)
                 top.mcfpp.analysis.StorageAccess.view(this, type, diagnose = false) else buildCastErrorVar(type)
@@ -573,7 +575,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         //获取函数
-        val member = type.instanceData.getFunction(key, readOnlyArgs, normalArgs)
+        val member = type.instanceData.getFunction(key, readOnlyArgs, normalArgs, receiver = type)
         return if(member is UnknownFunction){
             Pair(UnknownFunction(key), true)
         }else{

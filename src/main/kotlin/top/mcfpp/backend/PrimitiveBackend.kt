@@ -392,8 +392,7 @@ internal class PrimitiveBackend(
         val target = bindings.calls[instruction.declaration] ?: resolveFunction(instruction.declaration)
         if (target.typedIR == null && target.hasBody && !target.bodyCompiled && !target.bodyBeingCompiled)
             target.compileBody()
-        if (target !in function.child) function.child.add(target)
-        if (function !in target.parent) target.parent.add(function)
+        function.recordCall(target)
         if (target.optimizedScalar) {
             val arguments = instruction.arguments.map(::score)
             target.normalParams.forEachIndexed { index, parameter ->

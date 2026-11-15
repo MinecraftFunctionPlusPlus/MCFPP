@@ -86,7 +86,7 @@ class ExpressionBridge(private val bindings: ExpressionCaptureBindings) {
         is Parser.CastExpressionContext -> capture(site.unaryExpression()).let { value ->
             site.type()?.let { Expression.Cast(scope(site), value, type(it)) } ?: value
         }
-        is Parser.UnaryExpressionContext -> site.unaryExpression()?.let {
+        is Parser.UnaryExpressionContext -> signedIntegral(site) ?: signedFloating(site) ?: site.unaryExpression()?.let {
             Expression.Unary(scope(site), if (site.EXCL() != null) "!" else "-", capture(it))
         } ?: capture(site.rightVarExpression())
         is Parser.RightVarExpressionContext -> capture(site.varWithSelector())
@@ -185,7 +185,8 @@ class ExpressionBridge(private val bindings: ExpressionCaptureBindings) {
         }
         site.memberKeyword()?.let { keyword ->
             val member = Expression.Member(scope(site), receiver, keyword.text,
-                if (keyword.MAP() != null) MemberKeyword.MAP else if (keyword.SET() != null) MemberKeyword.SET else MemberKeyword.IDENTIFIER,
+                if (keyword.MAP() != null) MemberKeyword.MAP else if (keyword.SET() != null) MemberKeyword.SET
+                else if (keyword.NEW() != null) MemberKeyword.NEW else MemberKeyword.IDENTIFIER,
                 bindings.memberCandidates(receiver, keyword.text, site)?.toList())
             return site.arguments()?.let { arguments(member, it) } ?: member
         }
@@ -237,7 +238,8 @@ class ExpressionBridge(private val bindings: ExpressionCaptureBindings) {
         site.LineString() != null -> literal(site, ConstantValue.Text(decodeString(site.LineString().text)))
         site.nbtList() != null -> Expression.ListValue(scope(site), site.nbtList().expression().map(::capture))
         site.nbtCompound() != null -> Expression.Compound(scope(site), site.nbtCompound().nbtKeyValuePair().map {
-            CompoundEntry(it.key.text, capture(it.expression()))
+            CompoundEntry(it.key.text, it.expression()?.let(::capture)
+                ?: Expression.Name(scope(it), bindings.name(it.key.text, null, NameRole.VALUE, it)))
         })
         site.nbtByteArray() != null -> Expression.NbtArray(scope(site), NbtArrayElement.BYTE,
             site.nbtByteArray().nbtByte().map { scalar(it, "byte") })
@@ -260,8 +262,7 @@ class ExpressionBridge(private val bindings: ExpressionCaptureBindings) {
         }
     }
 
-    private fun scalar(site: ParserRuleContext, key: String): ConstantRef {
-        val text = site.text
+    private fun scalar(site: ParserRuleContext, key: String, text: String = site.text): ConstantRef {
         val payload = try {
             when (key) {
                 "float" -> ConstantValue.FloatBits(text.removeSuffix("f").removeSuffix("F").toFloat().toRawBits())
@@ -284,6 +285,37 @@ class ExpressionBridge(private val bindings: ExpressionCaptureBindings) {
         }
         val value = bindings.internConstant(payload, site)
         return bindings.internConstant(ConstantValue.Typed(bindings.builtinType(key, site), value), site)
+    }
+
+    private fun signedIntegral(site: Parser.UnaryExpressionContext): Expression.Literal? {
+        if (site.SUB() == null) return null
+        return when (val parsed = top.mcfpp.analysis.IntegralLiteralSyntax.parse(site)) {
+            is top.mcfpp.analysis.IntegralLiteralSyntax.Result.Value -> {
+                val key = when (parsed.type) {
+                    top.mcfpp.type.MCFPPNBTType.Byte -> "byte"
+                    top.mcfpp.type.MCFPPNBTType.Short -> "short"
+                    top.mcfpp.type.MCFPPBaseType.Int -> "int"
+                    top.mcfpp.type.MCFPPNBTType.Long -> "long"
+                    else -> error("Unexpected integral literal type")
+                }
+                val payload = bindings.internConstant(ConstantValue.Integral(parsed.value.value), site)
+                Expression.Literal(scope(site), bindings.internConstant(ConstantValue.Typed(bindings.builtinType(key, site), payload), site))
+            }
+            is top.mcfpp.analysis.IntegralLiteralSyntax.Result.Invalid -> unsupported(parsed.diagnostic)
+            null -> null
+        }
+    }
+
+    private fun signedFloating(site: Parser.UnaryExpressionContext): Expression.Literal? {
+        if (site.SUB() == null) return null
+        var operand: ParseTree = site.unaryExpression() ?: return null
+        while (operand !is Parser.NbtFloatContext && operand !is Parser.NbtDoubleContext) {
+            if (operand.childCount != 1) return null
+            operand = operand.getChild(0)
+        }
+        if (operand.text.startsWith('-')) return null
+        val key = if (operand is Parser.NbtFloatContext) "float" else "double"
+        return Expression.Literal(scope(site), scalar(site, key, "-${operand.text}"))
     }
 
     private fun integral(text: String): Long {
@@ -346,6 +378,9 @@ class ExpressionBridge(private val bindings: ExpressionCaptureBindings) {
             site.LineString().map { decodeString(it.text) })
         site.unionType()?.let { return TypeSyntax.Union(scope(site), it.type().map(::type)) }
         site.unionTemplateType()?.let { return TypeSyntax.Intersection(scope(site), it.type().map(::type)) }
+        site.literalObjectType()?.let { literal ->
+            return TypeSyntax.Object(scope(site), literal.literalObjectTypeField().map { ObjectFieldSyntax(it.Identifier().text, type(it.type())) })
+        }
         site.anonymousTemplateType()?.let {
             return TypeSyntax.AnonymousData(scope(site), bindings.anonymousType(it, this))
         }

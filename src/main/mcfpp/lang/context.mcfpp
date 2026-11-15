@@ -9,10 +9,10 @@ enum Heightmap { world_surface, motion_blocking, motion_blocking_no_leaves, ocea
 
 /// 执行旋转。relativeYaw、relativePitch 分别控制两个轴是否相对当前旋转。
 data Rotation {
-    const yaw: float = 0f
-    const pitch: float = 0f
-    const relativeYaw: bool = false
-    const relativePitch: bool = false
+    var yaw: float = 0f { get }
+    var pitch: float = 0f { get }
+    var relativeYaw: bool = false { get }
+    var relativePitch: bool = false { get }
 }
 
 func rotation(yaw: float, pitch: float, relativeYaw: bool = false, relativePitch: bool = false): Rotation = top.mcfpp.mni.ContextData.rotation

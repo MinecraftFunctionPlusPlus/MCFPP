@@ -89,7 +89,7 @@ class EntityContextRelationTest {
         assertEquals(List(2) { carrierRotation }, machine.blockTests.map { it.rotation })
         assertEquals(listOf("passenger", "passenger", "after"), machine.messages)
         assertEquals(initial.single { it.name == "unrelated" }.position, machine.entities.single { it.name == "unrelated" }.position)
-        assertTrue(machine.executedFunctionLines.any { it.startsWith("execute on passengers run function ") })
+        assertTrue(machine.executedFunctionLines.any { it.startsWith("execute at @s on passengers run function ") })
         machine.assertCleanFrame()
     }
 

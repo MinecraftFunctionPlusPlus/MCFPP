@@ -30,7 +30,7 @@ class ValueModelTest {
     private fun layoutType(): MCFPPDataTemplateType {
         top.mcfpp.test.util.MCFPPStringTest.readFromString("""
             namespace fixture.value_model_layout
-            data Node { var value: int; var next: Node?; constructor(value: int){this.value=value;} }
+            data Node { var value: int; var next: Node?; new(value: int){ return {value: value}; } }
             func main(){}
         """.trimIndent(), version = "26.3")
         assertEquals(0, top.mcfpp.Project.errorCount)

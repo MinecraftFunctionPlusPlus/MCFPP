@@ -133,9 +133,12 @@ object DatapackCreator {
                 val id = function.namespaceID
                 val output = path.resolve(Project.config.name).resolve("data")
                     .resolve(id.namespace).resolve("function").resolve("${id.identifier}.mcfunction")
-                LogProcessor.debug("Writing File: $output")
-                Files.createDirectories(output.parent)
-                Files.write(output, function.cmdStr.toByteArray())
+                // A local declaration at this target already owns the generated resource.
+                if (!Files.exists(output)) {
+                    LogProcessor.debug("Writing File: $output")
+                    Files.createDirectories(output.parent)
+                    Files.write(output, function.cmdStr.toByteArray())
+                }
             }
             function.compiledFunctions.values.forEach { exportFunction(it) }
             function.innerFunction.forEach { exportFunction(it, generated = true) }

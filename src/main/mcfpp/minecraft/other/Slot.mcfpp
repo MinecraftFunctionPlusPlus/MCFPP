@@ -6,14 +6,13 @@ data Slot{
     var type: SlotType
 
     /// 按槽位种类和序号创建单个槽位。
-    constructor(index: int, type: SlotType){
-        this.index = index
-        this.type = type
+    new(index: int, type: SlotType){
+        return { index, type }
     }
 
     /// 按种类创建槽位，序号保持省略。
-    constructor(type: SlotType){
-        this.type = type
+    new(type: SlotType){
+        return { type }
     }
 }
 
@@ -22,8 +21,8 @@ data Slot{
 data SlotWithWildcard{
     /// 种类标记。
     var type: SlotType
-    private constructor(type: SlotType){
-        this.type = type
+    private new(type: SlotType){
+        return { type }
     }
 }
 
@@ -60,19 +59,19 @@ object data Slot {
 /// 常用的物品槽位集合的共享成员入口。
 object data SlotWildcard {
     /// 容器中的槽位集合。
-    var container = SlotWithWildcard(SlotType.container)
+    var container: SlotWithWildcard = { type: SlotType.container }
     /// 快捷栏中的槽位集合。
-    var hotbar = SlotWithWildcard(SlotType.hotbar)
+    var hotbar: SlotWithWildcard = { type: SlotType.hotbar }
     /// 物品栏数据。
-    var inventory = SlotWithWildcard(SlotType.inventory)
+    var inventory: SlotWithWildcard = { type: SlotType.inventory }
     /// 末影箱中的槽位集合。
-    var enderchest = SlotWithWildcard(SlotType.enderchest)
+    var enderchest: SlotWithWildcard = { type: SlotType.enderchest }
     /// 村民物品栏中的槽位集合。
-    var villager = SlotWithWildcard(SlotType.villager)
+    var villager: SlotWithWildcard = { type: SlotType.villager }
     /// 马匹物品栏中的槽位集合。
-    var horse = SlotWithWildcard(SlotType.horse)
+    var horse: SlotWithWildcard = { type: SlotType.horse }
     /// 玩家合成区域中的槽位集合。
-    var crafting = SlotWithWildcard(SlotType.player_crafting)
+    var crafting: SlotWithWildcard = { type: SlotType.player_crafting }
 }
 
 /// 物品槽位类别，用于构造 Slot 和带通配符的槽位集合。

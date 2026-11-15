@@ -47,7 +47,7 @@ class DataInheritanceTypeConstructorTest {
                 val parent = DataTemplate("Parent", "fixture.typeconstructor")
                 parent.scope.addFunction(Function("f", parent, null), false)
                 invalidOverride.extends(parent)
-                invalidOverride.scope.addFunction(Function("f", invalidOverride, null), false)
+                invalidOverride.scope.addFunction(Function("f", invalidOverride, null).apply { isOverride = true }, false)
             }
         )
 
@@ -66,7 +66,7 @@ class DataInheritanceTypeConstructorTest {
                 }
             }.joinToString("\n")
 
-            assertTrue(messages.contains("Cannot instantiate") || messages.contains("requires override"), messages)
+            assertTrue(messages.contains("Cannot instantiate") || messages.contains("cannot override"), messages)
             assertTrue(Project.errorCount > 0)
             assertTrue(receiver.isError)
             assertNull(receiver.storageBinding, "Rejected construction must not bind receiver storage")

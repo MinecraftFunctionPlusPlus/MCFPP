@@ -15,6 +15,9 @@ sealed interface CompilerValue {
     data class Nbt(val snbt: String) : CompilerValue
     class Sequence(elements: List<CompilerValue>) : CompilerValue {
         val elements: List<CompilerValue> = Collections.unmodifiableList(ArrayList(elements))
+        init {
+            require((this.elements as List<*>).all(::knownCompilerValue)) { "Sequence elements must be compiler values" }
+        }
         private val structuralHash = this.elements.hashCode()
         override fun equals(other: Any?) = other is Sequence && structuralHash == other.structuralHash &&
             StructuralEquality.compare(this, other) { elements == other.elements }
@@ -22,7 +25,11 @@ sealed interface CompilerValue {
         override fun toString() = StructuralDisplay.render(this)
     }
     class Record(fields: Map<String, CompilerValue>) : CompilerValue {
-        val fields: Map<String, CompilerValue> = Collections.unmodifiableMap(fields.toSortedMap())
+        val fields: Map<String, CompilerValue> = Collections.unmodifiableMap(fields.also { source ->
+            require((source as Map<*, *>).all { (key, value) -> key is String && knownCompilerValue(value) }) {
+                "Record fields require string keys and compiler values"
+            }
+        }.toSortedMap())
         private val structuralHash = this.fields.hashCode()
         override fun equals(other: Any?) = other is Record && structuralHash == other.structuralHash &&
             StructuralEquality.compare(this, other) { fields == other.fields }
@@ -48,4 +55,12 @@ sealed interface CompilerValue {
             PathSegment.UnknownIndex -> null
         }
     }
+}
+
+/** Check erased payloads before collection hashing can call an unknown host object. */
+private fun knownCompilerValue(value: Any?): Boolean = when (value) {
+    is CompilerValue.Integral, is CompilerValue.FloatBits, is CompilerValue.DoubleBits,
+    is CompilerValue.Bool, is CompilerValue.Text, is CompilerValue.TypeValue,
+    is CompilerValue.Nbt, is CompilerValue.Sequence, is CompilerValue.Record, is CompilerValue.Typed -> true
+    else -> value === CompilerValue.NullValue
 }

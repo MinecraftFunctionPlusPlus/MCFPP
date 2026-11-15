@@ -29,7 +29,14 @@ sealed interface LibraryType {
     data class UnresolvedNominal(val kind: String, val namespace: String, val name: String) : LibraryType {
         init { require(kind.isNotEmpty() && name.isNotEmpty()) { "Unresolved nominal kind/name must be non-empty" } }
     }
+    data class Object(val fields: List<LibraryObjectField>) : LibraryType
+    data class Literal(val primitive: TypeRef, val value: ConstantRef) : LibraryType
 }
+
+data class LibraryObjectField(
+    val name: String, val type: TypeRef, val optional: Boolean = false,
+    val readable: Boolean = true, val writable: Boolean = true
+)
 
 internal fun <T> frozen(values: List<T>): List<T> = Collections.unmodifiableList(ArrayList(values))
 
@@ -41,6 +48,7 @@ class LibraryTables(types: List<LibraryType>, constants: List<ConstantValue>) {
         is LibraryType.Union -> type.copy(alternatives = frozen(type.alternatives))
         is LibraryType.Intersection -> type.copy(components = frozen(type.components))
         is LibraryType.Function -> type.copy(parameters = frozen(type.parameters), contexts = frozen(type.contexts))
+        is LibraryType.Object -> type.copy(fields = frozen(type.fields))
         else -> type
     } })
     val constants: List<ConstantValue> = frozen(constants.map { constant -> when (constant) {

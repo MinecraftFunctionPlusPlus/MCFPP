@@ -68,7 +68,7 @@ class DataInheritanceLibraryMetadataTest {
             data Middle:Root {}
             data Grand:Middle {}
             data Sibling:Root {}
-            data Local:Root {const key:int=8;}
+            data Local:Root {const key:int=1;}
             func main(){}
         """
         )
@@ -101,7 +101,7 @@ class DataInheritanceLibraryMetadataTest {
         val local = imported("Local")
         assertSame(local, local.scope.getVar("key")!!.declaredParentTemplate)
         assertTrue(local.scope.getVar("key")!!.isConst)
-        assertEquals("8", local.preInit.getValue("key").text)
+        assertEquals("1", local.preInit.getValue("key").text)
         assertTrue(imported("Middle").annotations.single().params.isEmpty())
         assertTrue(imported("Middle").pendingDeclarationAnnotations.isEmpty())
     }
@@ -116,7 +116,7 @@ class DataInheritanceLibraryMetadataTest {
                 @DataOnly var enabled:bool=true;
                 func ordinary():int{return 7;}
                 func generic<T:type>(value:T):int{return 3;}
-                constructor(){}
+                new(){return {value:1,enabled:true}}
             }
             object data StaticBox {func peek():int{return 7;}}
             abstract data AbstractRoot {abstract func needed():int;}
@@ -124,7 +124,7 @@ class DataInheritanceLibraryMetadataTest {
         """
         )
         val root = local("Root")
-        root.constructors.single().accessModifier = AccessModifier.PROTECTED
+        root.factories.single().accessModifier = AccessModifier.PROTECTED
         root.scope.getVar("value")!!.apply {
             isFinal = true
             accessModifier = AccessModifier.PROTECTED
@@ -144,7 +144,8 @@ class DataInheritanceLibraryMetadataTest {
         fresh(output)
         val restored = imported("Root")
         assertNotSame(root, restored)
-        assertEquals(AccessModifier.PROTECTED, restored.constructors.single().accessModifier)
+        assertEquals(AccessModifier.PROTECTED, restored.factories.single().accessModifier)
+        assertTrue(restored.factories.single().isStatic)
         assertTrue(restored.scope.getVar("value")!!.isFinal)
         assertEquals(AccessModifier.PROTECTED, restored.scope.getVar("value")!!.accessModifier)
         assertTrue(restored.scope.getProperty("value")!!.isFinal)
@@ -169,7 +170,7 @@ class DataInheritanceLibraryMetadataTest {
         val abstractOwner = imported("AbstractRoot")
         assertTrue(abstractOwner.isAbstract)
         assertTrue(abstractOwner.scope.functions.getValue("needed").single().isAbstract)
-        assertNull(AbstractFunctionInfo.currFunction, "Constructor metadata restoration must restore its construction context")
+        assertNull(AbstractFunctionInfo.currFunction, "Factory metadata restoration must restore its construction context")
     }
 
     @Test fun freshGenericHeadersKeepPendingAnnotationAliasesWithoutSharingWriterState() = withLibrary { output ->
@@ -356,7 +357,7 @@ class DataInheritanceLibraryMetadataTest {
                 }
             }
             data Middle:Root {}
-            data Grand:Middle {}
+            data Grand:Middle {new(){return {value:1,nativeValue:1}}}
             data Sibling:Middle {}
             func main(){}
         """
@@ -473,7 +474,7 @@ class DataInheritanceLibraryMetadataTest {
                 }
                 ${if (nativeMethods) "" else methods.trimIndent()}
             }
-            data Child:Root {}
+            data Child:Root {new(){return {nativeValue:1}}}
             func main(){}
         """
         )

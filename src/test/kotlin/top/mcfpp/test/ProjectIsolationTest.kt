@@ -15,6 +15,10 @@ import top.mcfpp.model.function.FunctionTag
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericDataTemplate
 import top.mcfpp.model.scope.GlobalScope
+import top.mcfpp.mni.expand.FunctionStateJournal
+import top.mcfpp.mni.expand.NamespaceStateJournal
+import top.mcfpp.test.util.MCFPPStringTest
+import top.mcfpp.type.MCFPPBaseType
 import java.nio.file.Path
 import kotlin.io.path.writeText
 import kotlin.test.Test
@@ -68,6 +72,61 @@ class ProjectIsolationTest {
         assertEquals(listOf(Project.mcfppSystemTick), FunctionTag.TICK.functions)
         assertSame(FunctionTag.LOAD, GlobalScope.functionTags["minecraft:load"])
         assertSame(FunctionTag.TICK, GlobalScope.functionTags["minecraft:tick"])
+    }
+
+    @Test fun initializingTheNextProjectDetachesSharedBuiltinCallersAndJournalRollbackRestoresThem() {
+        try {
+            MCFPPStringTest.readFromString("""
+                namespace isolation.first
+                func main() { var rendered = ("first").toText() }
+            """.trimIndent(), version = "26.3")
+            assertEquals(0, Project.errorCount)
+            val builtin = MCFPPBaseType.String.instanceData.scope.functions.getValue("toText").single()
+            val firstCallers = builtin.parent.toList()
+            assertTrue(firstCallers.isNotEmpty())
+            assertTrue(firstCallers.all { caller -> caller.child.any { it === builtin } })
+            val namespaces = NamespaceStateJournal.checkpoint()
+            val functions = FunctionStateJournal.checkpoint(firstCallers + builtin)
+
+            Project.init()
+
+            assertTrue(builtin.parent.isEmpty())
+            namespaces.restore()
+            functions.restore()
+            assertEquals(firstCallers.size, builtin.parent.size)
+            firstCallers.forEachIndexed { index, caller ->
+                assertSame(caller, builtin.parent[index])
+                assertTrue(caller.child.any { it === builtin })
+            }
+
+            MCFPPStringTest.readFromString("""
+                namespace isolation.second
+                func main() { var rendered = ("second").toText() }
+            """.trimIndent(), version = "26.3")
+
+            assertEquals(0, Project.errorCount)
+            assertSame(builtin, MCFPPBaseType.String.instanceData.scope.functions.getValue("toText").single())
+            assertTrue(builtin.parent.isNotEmpty())
+            assertTrue(builtin.parent.none { caller -> firstCallers.any { it === caller } })
+            assertTrue(builtin.parent.all { caller -> caller.child.any { it === builtin } })
+        } finally {
+            Project.init()
+        }
+    }
+
+    @Test fun callGraphEdgesUseFunctionIdentityWithoutRepeatingAnExistingEdge() {
+        val caller = Function("caller", "isolation", null)
+        val first = Function("same", "isolation", null)
+        val second = Function("same", "isolation", null)
+        caller.recordCall(first)
+        caller.recordCall(first)
+        caller.recordCall(second)
+
+        assertEquals(2, caller.child.size)
+        assertSame(first, caller.child[0])
+        assertSame(second, caller.child[1])
+        assertSame(caller, first.parent.single())
+        assertSame(caller, second.parent.single())
     }
 
     @Test fun initializingTheNextProjectDropsThePreviousCompilationContext() {

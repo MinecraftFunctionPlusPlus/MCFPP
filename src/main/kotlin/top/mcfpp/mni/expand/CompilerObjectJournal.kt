@@ -366,6 +366,7 @@ internal class CompilerObjectJournal private constructor(
             ExtensionFunction::class.java, GenericExtensionFunction::class.java, InlineFunction::class.java,
             InternalFunction::class.java, NoStackFunction::class.java, MCFunction::class.java,
             DataTemplateConstructor::class.java, TypeDataTemplateConstructor::class.java,
+            top.mcfpp.model.function.TemplateFactory::class.java,
             UnknownFunction::class.java, UnresolvedFunction::class.java, UnresolvedNativeFunction::class.java
         )
         private val supportedValues = setOf<Class<*>>(

@@ -100,7 +100,7 @@ sealed interface TextPart {
     data class Text(val value: String) : TextPart
     data class Interpolation(val expression: Expression) : TextPart
 }
-enum class MemberKeyword(val wireValue: Int) { IDENTIFIER(0), MAP(1), SET(2) }
+enum class MemberKeyword(val wireValue: Int) { IDENTIFIER(0), MAP(1), SET(2), NEW(3) }
 enum class SelectorKind(val wireValue: Int) { ALL_PLAYERS(1), RANDOM_PLAYER(2), NEAREST_PLAYER(3), SELF(4), ALL_ENTITIES(5) }
 enum class DimensionMode(val wireValue: Int) { ABSOLUTE(1), RELATIVE(2), LOCAL(3) }
 enum class NbtArrayElement(val wireValue: Int) { BYTE(1), INT(2), LONG(3) }

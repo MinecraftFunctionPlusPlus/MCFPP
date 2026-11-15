@@ -136,6 +136,11 @@ class FileScope: SimpleLibScope(){
         return accessibleScopes().firstOrNull { it.containType(key) }?.getType(key)
     }
 
+    /** Namespace declaration lookup must not follow this file back into that namespace. */
+    internal fun containsLocalType(key: String): Boolean = super.containType(key)
+
+    internal fun getLocalType(key: String): MCFPPType? = super.getType(key)
+
     override fun containType(id: String): Boolean = super.containType(id)
         || namespaceField.containType(id)
         || importField.values.any { it.containType(id) }

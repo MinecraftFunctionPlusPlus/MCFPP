@@ -115,7 +115,7 @@ class MniGenericHeaderPreparationTest {
                 private var value:T;
                 var items:list<T>?;
                 func identity(value:T):T{return value}
-                constructor(value:T){}
+                new(value:T){return {base:value,value:value};}
             }
             """.trimIndent()
         )
@@ -140,19 +140,25 @@ class MniGenericHeaderPreparationTest {
                 .functionDeclarationPart().functionParams().normalParams().parameterList().parameter().single(),
             method.normal.single().declaration
         )
-        assertEquals(PreparedHeaderMemberKind.CONSTRUCTOR, header.members.last().kind)
+        val factory = header.members.last()
+        assertEquals(PreparedHeaderMemberKind.FACTORY, factory.kind)
+        assertEquals("new", factory.name)
+        assertTrue(factory.isStatic)
+        assertSame(MCFPPBaseType.Int, factory.normal.single().type.type)
+        assertSame(work.root.type, factory.result.type)
         assertEquals(source.file, header.fields.first().source.file)
         assertTrue(header.hasCompleteInheritedView)
-        assertEquals(listOf("base", "value", "items"), header.visibleFields.map { it.name })
+        assertEquals(listOf("base", "items", "value"), header.visibleFields.map { it.name })
+        val visible = header.visibleFields.associateBy { it.name }
         assertEquals(
-            listOf(local(result, base).owner.identity, work.root.identity, work.root.identity),
-            header.visibleFields.map { it.origin }
+            mapOf("base" to local(result, base).owner.identity, "items" to work.root.identity, "value" to work.root.identity),
+            visible.mapValues { it.value.origin }
         )
-        assertSame(MCFPPBaseType.Int, header.visibleFields[0].bound.type)
-        assertSame(MCFPPBaseType.Int, header.visibleFields[1].bound.type)
-        val visibleItems = assertIs<MCFPPListType>(header.visibleFields[2].bound.type)
+        assertSame(MCFPPBaseType.Int, visible.getValue("base").bound.type)
+        assertSame(MCFPPBaseType.Int, visible.getValue("value").bound.type)
+        val visibleItems = assertIs<MCFPPListType>(visible.getValue("items").bound.type)
         assertSame(MCFPPBaseType.Int, visibleItems.generic.single())
-        assertTrue(header.visibleFields[2].contract.nullable)
+        assertTrue(visible.getValue("items").contract.nullable)
         assertEquals(HeaderPhase.HEADER_READY, work.root.phase)
         assertFalse(work.root.model.hasCompletedDeclaration)
         assertTrue(work.root.model.scope.allVars.isEmpty())

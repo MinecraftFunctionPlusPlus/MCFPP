@@ -262,7 +262,7 @@ internal class PreparedHeaderParameter(
 }
 
 internal enum class PreparedHeaderProperty { DEFAULT, GET, SET, GET_SET }
-internal enum class PreparedHeaderMemberKind { FUNCTION, CONSTRUCTOR, OPERATOR, NATIVE_OPERATOR }
+internal enum class PreparedHeaderMemberKind { FUNCTION, FACTORY, CONSTRUCTOR, OPERATOR, NATIVE_OPERATOR }
 
 internal class PreparedFieldHeader(
     val declaration: P.TemplateFieldDeclarationContext,
@@ -310,7 +310,8 @@ internal class PreparedVisibleField(
     val contract: CompoundDataScope.FieldContract,
     val property: PreparedHeaderProperty?,
     val declaration: P.TemplateFieldDeclarationContext?,
-    val source: SourceSpan
+    val source: SourceSpan,
+    val origins: List<Pair<TypeId, CompoundDataScope.FieldContract>> = listOf(origin to contract)
 )
 
 /** Complete field facts remain preparation records, never a production Ready or layout proof. */
@@ -363,7 +364,7 @@ internal class PreparedTemplateHeader(
             this@PreparedTemplateHeader.visibleFields.map {
                 listOf(
                     it.name, it.origin, it.bound.type.typeId,
-                    it.bound.constant, descriptors(it.bound.descriptors), it.contract, it.property, it.declaration, it.source
+                    it.bound.constant, descriptors(it.bound.descriptors), it.contract, it.property, it.declaration, it.source, it.origins
                 )
             }
         )
@@ -478,6 +479,15 @@ internal class PreparedTemplateHeaderReader(
 
     /** Finish the whole graph before installing records: reference cycles are not inheritance cycles. */
     private fun inheritedHeaders(): List<PreparedTemplateHeader> {
+        fun fieldBound(bound: DeclarationBinding.Bound, constant: Boolean): DeclarationBinding.Bound {
+            if (!constant || bound.type is MCFPPLiteralType || bound.constant == null) return bound
+            val literal = TypeCompositions.literalOrNull(bound.type, bound.constant) ?: return bound
+            val descriptors = LinkedHashMap(bound.descriptors)
+            descriptors[bound.type.typeId] = bound.type
+            descriptors[literal.typeId] = literal
+            return bound.copy(type = literal, constant = CompilerValue.Typed(literal.typeId, literal.value),
+                descriptors = Collections.unmodifiableMap(descriptors))
+        }
         val records = completed.associateBy { it.owner.identity }
         val graph = linkedMapOf<TypeId, InheritanceNode>()
         val models = linkedMapOf<TypeId, CompoundData>()
@@ -522,12 +532,13 @@ internal class PreparedTemplateHeaderReader(
                 record.owner.identity,
                 record.parents.map { parent(it.type, it.source) },
                 record.fields.map { field ->
+                    val bound = fieldBound(field.bound, field.isConst)
                     PreparedVisibleField(
                         field.name,
                         record.owner.identity,
-                        field.bound,
+                        bound,
                         CompoundDataScope.FieldContract(
-                            field.type.typeId,
+                            bound.type.typeId,
                             field.nullable,
                             field.isStatic,
                             field.isConst,
@@ -613,8 +624,9 @@ internal class PreparedTemplateHeaderReader(
                     descriptors.putAll(proof.descriptors)
                     bound = proof.copy(descriptors = Collections.unmodifiableMap(LinkedHashMap(descriptors)))
                 }
+                bound = fieldBound(bound, field.isConst)
                 val contract = CompoundDataScope.FieldContract(
-                    type.typeId,
+                    bound.type.typeId,
                     field.nullable,
                     field.isStatic,
                     field.isConst,
@@ -636,7 +648,9 @@ internal class PreparedTemplateHeaderReader(
                     contract,
                     kind,
                     null,
-                    source
+                    source,
+                    model.scope.fieldOrigins[field.identifier]?.map { it.owner.inheritanceIdentity to it.contract }
+                        ?: listOf(declaration.inheritanceIdentity to contract)
                 )
             }
             graph[id] = InheritanceNode(id, parents, fields, source, true)
@@ -676,14 +690,15 @@ internal class PreparedTemplateHeaderReader(
                 visible[node.identity] = node.fields
                 continue
             }
-            val inherited = node.parents.flatMap { visible.getValue(it) }.groupBy { it.name }
+            val inherited = node.parents.flatMap { visible.getValue(it) }.groupBy { it.name }.toSortedMap()
             val locals = node.fields.associateBy { it.name }
             val result = linkedMapOf<String, PreparedVisibleField>()
             for ((name, paths) in inherited) {
                 val merge = CompoundDataScope.InheritedFields.merge(
-                    paths.map { field ->
-                        CompoundDataScope.FieldCandidate(field.origin, ancestors[field.origin].orEmpty(), field.contract, field)
-                    }
+                    paths.flatMap { field -> field.origins.map { (origin, contract) ->
+                        CompoundDataScope.FieldCandidate(origin, ancestors[origin].orEmpty(), contract, field)
+                    } },
+                    { it.bound.type }
                 )
                 val labels = merge.origins.joinToString { it.owner.toString() }
                 if (merge.conflicts.isNotEmpty()) fail(
@@ -693,23 +708,38 @@ internal class PreparedTemplateHeaderReader(
                 val local = locals[name]
                 if (local != null) {
                     for (origin in merge.origins) {
-                        val differences = origin.contract.replacementDifferences(local.contract)
+                        val differences = buildList {
+                            if (origin.contract.isStatic != local.contract.isStatic) add("static")
+                            if (origin.contract.isConst != local.contract.isConst) add("var/const")
+                            if (local.contract.access > origin.contract.access) add("access")
+                            if (origin.contract.isFinal) add("final")
+                        }
                         if (differences.isNotEmpty()) fail(
                             local.source,
                             "Incompatible inherited field '$name': ${origin.owner} -> ${node.identity} (${differences.joinToString()})"
                         )
                     }
-                    result[name] = local
-                } else {
-                    if (merge.effective.size != 1) fail(
-                        node.source,
-                        "Ambiguous inherited field '$name' in ${node.identity} from $labels; declare a compatible local field"
+                    val type = TypeCompositions.intersection(merge.type, local.bound.type)
+                    val nullable = merge.nullable && local.contract.nullable
+                    if (type.typeId == MCFPPNeverType.typeId && !nullable) fail(
+                        local.source, "Incompatible inherited field '$name': required field type is never"
                     )
-                    result[name] = merge.effective.single().value
+                    result[name] = PreparedVisibleField(name, local.origin, local.bound.copy(type = type),
+                        local.contract.copy(typeId = type.typeId, nullable = nullable), local.property,
+                        local.declaration, local.source)
+                } else {
+                    val selected = merge.effective.firstOrNull { it.value.bound.type.typeId == merge.type.typeId }
+                        ?: merge.effective.first()
+                    val field = selected.value
+                    result[name] = PreparedVisibleField(name, selected.owner, field.bound.copy(type = merge.type),
+                        field.contract.copy(typeId = merge.type.typeId, nullable = merge.nullable,
+                            access = merge.origins.minOf { it.contract.access },
+                            isFinal = merge.origins.any { it.contract.isFinal }),
+                        field.property, field.declaration, field.source, merge.origins.map { it.owner to it.contract })
                 }
             }
-            node.fields.forEach { result[it.name] = it }
-            visible[node.identity] = headerList(result.values)
+            node.fields.forEach { result.putIfAbsent(it.name, it) }
+            visible[node.identity] = headerList(result.toSortedMap().values)
         }
         return completed.map { record ->
             PreparedTemplateHeader(
@@ -893,12 +923,14 @@ internal class PreparedTemplateHeaderReader(
         val member = declaration.templateMember()
         val function = member.templateFunctionDeclaration()
         val constructor = member.templateConstructorDeclaration()
+        val factory = member.templateFactoryDeclaration()
         val operation = member.operationOverrideDeclaration()
         val nativeOperation = member.nativeOperationOverrideDeclaration()
         val part = function?.functionDeclarationPart()
         val params = part?.functionParams() ?: operation?.functionParams() ?: nativeOperation?.functionParams()
         val readonly = params?.readOnlyParams()?.readOnlyParameterList()?.readOnlyParameter().orEmpty()
-        val normal = (params?.normalParams() ?: constructor?.normalParams())?.parameterList()?.parameter().orEmpty()
+        val normal = (params?.normalParams() ?: factory?.normalParams() ?: constructor?.normalParams())
+            ?.parameterList()?.parameter().orEmpty()
         val names = (
             readonly.map { parameter -> parameter.Identifier().text } +
                 normal.map { parameter -> parameter.Identifier().text }
@@ -912,6 +944,8 @@ internal class PreparedTemplateHeaderReader(
         fun dependencies(root: ParserRuleContext): Set<String> {
             val references = linkedSetOf<String>()
             for (node in syntax(root)) {
+                if (factory != null && node is P.PrimaryContext && (node.THIS() != null || node.SUPER() != null))
+                    fail(preparationSpan(node), "Factory signatures have no implicit this or super", PreparationFactCode.FORMAL_DEPENDENCY)
                 when (node) {
                     is P.TypeBodyContext -> {
                         val name = node.className()?.takeIf { it.namespacePath() == null }?.classWithoutNamespace()?.text
@@ -957,18 +991,21 @@ internal class PreparedTemplateHeaderReader(
             )
         }
         val returnSyntax = part?.functionReturnType() ?: operation?.functionReturnType() ?: nativeOperation?.functionReturnType()
-        val result = returnSyntax?.type()?.let(::type) ?: PreparedHeaderType(null, MCFPPPrivateType.Void)
+        val result = if (factory != null) PreparedHeaderType(null, entry.owner.type)
+            else returnSyntax?.type()?.let(::type) ?: PreparedHeaderType(null, MCFPPPrivateType.Void)
         val kind = when {
             function != null -> PreparedHeaderMemberKind.FUNCTION
+            factory != null -> PreparedHeaderMemberKind.FACTORY
             constructor != null -> PreparedHeaderMemberKind.CONSTRUCTOR
             nativeOperation != null -> PreparedHeaderMemberKind.NATIVE_OPERATOR
             operation != null -> PreparedHeaderMemberKind.OPERATOR
             else -> fail(preparationSpan(declaration), "Unsupported header member", PreparationFactCode.UNSUPPORTED_EXPRESSION)
         }
-        val name = part?.Identifier()?.text ?: operation?.supportOperator()?.text ?: nativeOperation?.supportOperator()?.text ?: "<constructor>"
+        val name = part?.Identifier()?.text ?: operation?.supportOperator()?.text ?: nativeOperation?.supportOperator()?.text
+            ?: if (factory != null) "new" else "<constructor>"
         return PreparedCallableHeader(
             declaration, name, kind, access(declaration), function?.ABSTRACT() != null,
-            function?.OVERRIDE() != null, entry.owner.prototype is GenericObjectDataTemplate,
+            function?.OVERRIDE() != null, factory != null || entry.owner.prototype is GenericObjectDataTemplate,
             readonly.map { formal(it, it.Identifier().text, it.type(), it.value(), true) },
             normal.map { formal(it, it.Identifier().text, it.type(), it.value(), false) }, result,
             annotations, preparationSpan(declaration)

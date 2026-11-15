@@ -1,5 +1,6 @@
 package top.mcfpp.test.library
 
+import com.alibaba.fastjson2.JSON
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import top.mcfpp.api.library.LibraryCompilerApi
@@ -39,7 +40,9 @@ class PlaygroundCompilerKernelTest {
             assertEquals(first, files(successful(kernel)))
             assertEquals(retained, kernel.retainedStateCounts())
             val modified = files(successful(kernel, example.replace("values.add(30)", "values.add(30)\nvalues.add(40)")))
-            assertContains(modified.getValue("data/playground/function/main.mcfunction"), "\"text\": \"4\"")
+            val message = modified.getValue("data/playground/function/main.mcfunction").lineSequence()
+                .single { it.startsWith("tellraw @a ") }.removePrefix("tellraw @a ")
+            assertEquals("4", JSON.parseObject(message).getString("text"))
             assertEquals(retained, kernel.retainedStateCounts())
             val broken = PlaygroundCompilerApi.compile(kernel, "func main( {")
             assertEquals(false, broken["success"])
@@ -118,7 +121,9 @@ class PlaygroundCompilerKernelTest {
             assertTrue(checkedEmission)
             val source = """
                 import mcfpp.minecraft.std:*
-                data Result: CommandResult { constructor() {} }
+                data Result: CommandResult {
+                    new(){return {result: 0, success: false};}
+                }
                 func main() { var result = Result(); print(result.result); print(result.success); }
             """.trimIndent()
             val first = files(successful(kernel, source))

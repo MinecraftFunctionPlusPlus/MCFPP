@@ -99,8 +99,11 @@ internal object DisplayProperties {
             if (key == "transform") return access
             return PropertyVar(Property(key, SimpleAccessor(), AnonymousNativeMutator { _, input ->
                 val expected = template("mcfpp.minecraft.entity", if (key == "scale") "DisplayVector3" else "DisplayQuaternion")
-                if (input.type != expected) return@AnonymousNativeMutator fail("Expected $expected for transform.$key")
-                val source = StorageAccess.capture(input)
+                if (TypeRelations.resolveImplicitConversion(input.type, expected) == null)
+                    return@AnonymousNativeMutator fail("Expected $expected for transform.$key")
+                val converted = input.implicitCast(expected)
+                if (converted.isError) return@AnonymousNativeMutator converted
+                val source = StorageAccess.capture(converted)
                 val components = if (key == "scale") listOf("x", "y", "z") else listOf("x", "y", "z", "w")
                 val encoded = top.mcfpp.core.lang.nbt.NBTBasedData()
                 val path = StorageAccess.ensure(encoded).path

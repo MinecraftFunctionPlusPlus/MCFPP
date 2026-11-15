@@ -52,19 +52,32 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
     internal class FieldCandidate<T>(val owner: TypeId, val ancestors: Set<TypeId>,
                                      val contract: FieldContract, val value: T)
     internal class FieldMerge<T>(val origins: List<FieldCandidate<T>>, val effective: List<FieldCandidate<T>>,
-                                 val conflicts: List<String>)
+                                 val conflicts: List<String>, val type: MCFPPType, val nullable: Boolean)
 
-    /** Input order is retained for diagnostics, never used to resolve an unrelated tie. */
+    /** Data constraints compose; provenance is retained solely for declaration diagnostics. */
     internal object InheritedFields {
-        fun <T> merge(paths: List<FieldCandidate<T>>): FieldMerge<T> {
-            val origins = paths.distinctBy { it.owner }
+        fun <T> merge(paths: List<FieldCandidate<T>>, typeOf: (T) -> MCFPPType): FieldMerge<T> {
+            val origins = paths.sortedBy { it.owner.toString() }.distinctBy { it.owner }
             val conflicts = origins.flatMapIndexed { index, origin ->
-                origins.drop(index + 1).flatMap { origin.contract.differences(it.contract) }
+                origins.drop(index + 1).flatMap { other -> buildList {
+                    if (origin.contract.isStatic != other.contract.isStatic) add("static")
+                    if (origin.contract.isConst != other.contract.isConst) add("var/const")
+                } }
             }.distinct()
             val effective = origins.filter { base -> origins.none { derived ->
                 derived.owner != base.owner && base.owner in derived.ancestors && derived.owner !in base.ancestors
             } }
-            return FieldMerge(origins, effective, conflicts)
+            val fieldTypes = origins.map { typeOf(it.value) }
+            val type = if (fieldTypes.any(TypeCompositions::hasDeferredComposition) ||
+                top.mcfpp.Project.shouldDeferTypeCompositions && fieldTypes.any(TypeCompositions::hasUncompletedNominal))
+                TypeCompositions.deferIntersection(fieldTypes)
+            else TypeCompositions.intersection(fieldTypes)
+            val nullable = origins.all { it.contract.nullable }
+            return FieldMerge(origins, effective, conflicts +
+                if (type.typeId == MCFPPNeverType.typeId && !nullable)
+                    listOf("required field type is never: ${origins.map { typeOf(it.value).typeName }.distinct().sorted().joinToString(" & ")}")
+                else emptyList(),
+                type, nullable)
         }
 
         fun ancestors(owner: CompoundData): Set<TypeId> {
@@ -85,7 +98,9 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
 
     /** Declaration provenance survives flattening; a copied field is still the same bound slot. */
     internal data class FieldOrigin(val owner: CompoundData, val field: Var<*>, val property: Property?) {
-        val typeId = field.type.typeId
+        val type = if (field.isConst && field.type !is MCFPPLiteralType && field.declarationConstant != null)
+            TypeCompositions.literalOrNull(field.type, field.declarationConstant!!) ?: field.type else field.type
+        val typeId = type.typeId
         val nullable = field.nullable
         val isStatic = field.isStatic
         val isConst = field.isConst
@@ -387,7 +402,9 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
             MCFPPDataTemplateType::class.java, MCFPPTypeDataTemplateType::class.java,
             MCFPPObjectDataTemplateType::class.java, MCFPPEnumType::class.java,
             MCFPPGenericDataTemplateType::class.java, MCFPPGenericObjectDataTemplateType::class.java,
-            MCFPPUnionType::class.java, MCFPPVectorType::class.java,
+            MCFPPUnionType::class.java, MCFPPVectorType::class.java, MCFPPUUIDType::class.java,
+            MCFPPObjectType::class.java, MCFPPLiteralType::class.java,
+            MCFPPIntersectionType::class.java, MCFPPNeverType::class.java,
             MCFPPEntityType::class.java, MCFPPEntityType.Player::class.java, top.mcfpp.type.MCFPPEntityRefType::class.java,
             MCFPPListType::class.java, MCFPPImmutableListType::class.java, MCFPPCompoundType::class.java,
             MCFPPDictType::class.java, MCFPPMapType::class.java,
@@ -432,7 +449,7 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
      */
     override fun forEachVar(action: (Var<*>) -> Unit){
         ensureMembers()
-        for (`var` in vars.values){
+        for (`var` in vars.values.sortedBy { it.identifier }){
             action(`var`)
         }
     }
@@ -464,7 +481,7 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
         get() {
             ensureMembers()
             val vs = ArrayList<Var<*>>()
-            for (lv in vars.values){
+            for (lv in vars.values.sortedBy { it.identifier }){
                 vs.add(lv)
             }
             return vs
@@ -533,15 +550,24 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
     //region Function
     @Nullable
     override fun getFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Function {
-        return top.mcfpp.model.function.ParameterMatcher.select(getFunctionCandidates(key, Function.currFunction), key, readOnlyArgs, normalArgs)
+        return getFunction(key, readOnlyArgs, normalArgs, null)
+    }
+
+    internal fun getFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, receiver: MCFPPType?): Function {
+        return top.mcfpp.model.function.ParameterMatcher.select(getFunctionCandidates(key, Function.currFunction), key,
+            readOnlyArgs, normalArgs, receiver)
             ?: UnknownFunction(key)
     }
 
-    /** Resolve all overloads together; only a declaration in a subtype hides a signature. */
+    /** Receiver functions stay at their declaration owner and participate in ordinary lookup. */
     override fun getFunctionCandidates(key: String): List<Function> = getFunctionCandidates(key, null)
 
     /** A caller can see its lexical private methods on a derived receiver; they are never virtual overrides. */
     internal fun getFunctionCandidates(key: String, caller: Function?): List<Function> {
+        if (key == "new") {
+            ensureMembers()
+            return functions[key].orEmpty().filterNot { it.actualCallBody }
+        }
         val scopes = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<CompoundDataScope, Boolean>())
         val declarations = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Function, Boolean>())
         val pending = java.util.ArrayDeque<CompoundDataScope>()
@@ -580,16 +606,7 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
                     top.mcfpp.model.function.ParameterMatcher.sameSignature(lexical, candidate)
             }
         }
-        return visible.filter { candidate ->
-            visible.none { other ->
-                val base = candidate.owner as? top.mcfpp.model.compound.CompoundData
-                val derived = other.owner as? top.mcfpp.model.compound.CompoundData
-                other !== candidate && base != null && derived != null &&
-                    derived.inheritanceIdentity != base.inheritanceIdentity &&
-                    derived.isSubOf(base) && !base.isSubOf(derived) &&
-                    top.mcfpp.model.function.ParameterMatcher.sameSignature(other, candidate)
-            }
-        }
+        return visible
     }
 
     override fun getFunctionByTypes(key: String, normalArgs: List<MCFPPType>) =

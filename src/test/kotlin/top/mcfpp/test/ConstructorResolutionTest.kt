@@ -20,20 +20,22 @@ class ConstructorResolutionTest {
             function.compiledFunctions.values.forEach(::collect)
         }
         GlobalScope.localNamespaces.values.flatMap { it.scope.functions.values.flatten() }.forEach(::collect)
-        box().constructors.forEach(::collect)
+        box().scope.forEachFunction(::collect)
         functions.putAll(Project.macroFunction.mapKeys { "mcfpp:dynamic/${it.key}" }.mapValues { listOf(it.value) })
         return ScoreCommandExecutor(main().commands.analyzeAll(), functions).also { assertEquals(0, it.stackDepth) }
     }
 
     @Test fun exactConstructorWinsInEitherDeclarationOrder() {
         val integer = """
-            constructor(value: int){
+            new(value: int){
                 /say integer
+                return {}
             }
         """.trimIndent()
         val floating = """
-            constructor(value: float){
+            new(value: float){
                 /say floating
+                return {}
             }
         """.trimIndent()
         for (constructors in listOf("$floating\n$integer", "$integer\n$floating")) {
@@ -51,26 +53,28 @@ class ConstructorResolutionTest {
     @Test fun ordinaryConstructorAcceptsRuntimeParametersAndLiteralsWithoutSpecializing() {
         compile("""
             data Box {
-                constructor(value: int){
+                new(value: int){
                     /say ordinary
+                    return {}
                 }
             }
             func accepted(value: int){ Box(value); }
             func main(){ accepted(2); }
         """)
         assertEquals(0, Project.errorCount)
-        assertTrue(box().constructors.all { it.compiledFunctions.isEmpty() })
+        assertTrue(box().factories.all { it.compiledFunctions.isEmpty() })
         assertEquals(listOf("ordinary"), execute().messages)
         compile("""
             data Box {
-                constructor(value: int){
+                new(value: int){
                     /say ordinary
+                    return {}
                 }
             }
             func main(){ Box(1); }
         """)
         assertEquals(0, Project.errorCount)
-        assertTrue(box().constructors.all { it.compiledFunctions.isEmpty() })
+        assertTrue(box().factories.all { it.compiledFunctions.isEmpty() })
         assertEquals(listOf("ordinary"), execute().messages)
     }
 
@@ -90,8 +94,10 @@ class ConstructorResolutionTest {
         for (body in listOf(direct, chained)) {
             compile("""
                 data Box {
-                    constructor(value: int = 3){
+                    var stored: int
+                    new(value: int = 3){
                         $body
+                        return { stored: value }
                     }
                 }
                 func main(){ Box(); }
@@ -104,17 +110,19 @@ class ConstructorResolutionTest {
     @Test fun incomparableCandidatesReportAmbiguityBeforeInitializingAnObject() {
         compile("""
             data Box {
-                constructor(left: int, right: float){
+                new(left: int, right: float){
                     /say first
+                    return {}
                 }
-                constructor(left: float, right: int){
+                new(left: float, right: int){
                     /say second
+                    return {}
                 }
             }
             func main(){ Box(1,1); }
         """)
         assertEquals(1, Project.errorCount)
-        assertTrue(box().constructors.all { it.compiledFunctions.isEmpty() })
+        assertTrue(box().factories.all { it.compiledFunctions.isEmpty() })
         assertTrue(main().scope.allVars.none { it is top.mcfpp.core.lang.obj.DataTemplateObject })
         assertTrue(main().commands.analyzeAll().none {
             it.startsWith("function ") || it.startsWith("data modify ") && it != "data modify storage mcfpp:system stack_frame prepend value {}"

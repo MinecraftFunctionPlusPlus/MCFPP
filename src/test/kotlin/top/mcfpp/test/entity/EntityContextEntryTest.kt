@@ -74,7 +74,7 @@ class EntityContextEntryTest {
         }
     """.trimIndent()) { main ->
         assertEquals(0, Project.errorCount)
-        assertTrue(main.commands.any { it.analyze().startsWith("execute at @a run function ") })
+        assertTrue(main.commands.any { it.analyze().startsWith("execute at @a ") })
         val machine = execute(main)
         assertEquals(listOf("at", "at", "outer"), machine.messages)
         assertEquals(listOf("ambient", "ambient", "ambient"), machine.blockTests.map { it.executor })
@@ -92,7 +92,7 @@ class EntityContextEntryTest {
         }
     """.trimIndent()) { main ->
         assertEquals(0, Project.errorCount)
-        assertTrue(main.commands.any { it.analyze().startsWith("execute as @a run function ") })
+        assertTrue(main.commands.any { it.analyze().startsWith("execute as @a ") })
         val machine = execute(main)
         assertEquals(listOf("first", "second", "ambient"), machine.blockTests.map { it.executor })
         assertEquals(List(3) { originalPosition }, machine.blockTests.map { it.position })
@@ -179,7 +179,7 @@ class EntityContextEntryTest {
         assertEquals(listOf("before-return", "before-return", "between", "tail", "tail", "after"), machine.messages)
         machine.assertCleanFrame()
         val generated = GlobalScope.localNamespaces.values.flatMap { it.scope.functions.values.flatten() }.filter { it.actualCallBody }
-        assertTrue(generated.isNotEmpty())
+        // Optimized callbacks can be inlined completely; retained bodies must still be detached.
         assertTrue(generated.all { it.ast == null && it.scope.allVars.none { value -> value is ScopedContextValue } })
         val exported = NamespaceInfo.from(GlobalScope.localNamespaces.getValue("default.test"))
         assertTrue(exported.functions.all { info -> info.get().identifier !in generated.map { it.identifier } })

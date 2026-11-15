@@ -17,6 +17,7 @@ import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPLiteralType
 import top.mcfpp.type.MCFPPPrivateType
 import java.net.URLClassLoader
 import java.nio.file.Files
@@ -212,7 +213,7 @@ class MniTemplateProcessorLoadingTest {
             }
         )
         assertEquals(
-            CompilerValue.Typed(MCFPPBaseType.Int.typeId, CompilerValue.Integral(3)),
+            CompilerValue.Typed(MCFPPLiteralType(MCFPPBaseType.Int, CompilerValue.Integral(3)).typeId, CompilerValue.Integral(3)),
             assertIs<CompilerValue.Record>(arguments[5].payload).fields.getValue("entry")
         )
         assertEquals(MCFPPPrivateType.Null.typeId, arguments[6].type)

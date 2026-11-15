@@ -338,6 +338,7 @@ class MniScoreMappingTest {
             ).forEach { namespace ->
             namespace.scope.functions.values.flatten().forEach(::collect)
             namespace.scope.template.values.forEach { template ->
+                template.factories.forEach(::collect)
                 template.constructors.forEach(::collect)
                 template.scope.forEachFunction(::collect)
             }

@@ -357,6 +357,8 @@ object StorageAccess {
     fun binary(left: Var<*>, right: Var<*>, operation: String): Var<*> {
         if (left.isError) return left
         if (right.isError) return right
+        if (left.type is MCFPPLiteralType || right.type is MCFPPLiteralType)
+            return binary(primitiveView(left), primitiveView(right), operation)
         if (operation in setOf("==", "!=") && (left.type == MCFPPPrivateType.Null || right.type == MCFPPPrivateType.Null)) {
             val other = if (left.type == MCFPPPrivateType.Null) right else left
             fun nullPayload(value: CompilerValue): Boolean = value == CompilerValue.NullValue ||
@@ -400,6 +402,19 @@ object StorageAccess {
     fun unary(value: Var<*>, operation: String): Var<*> {
         if (value is top.mcfpp.core.lang.bool.PresenceBool && operation == "!") return value.negation()
         if (value.isError) return value
+        if (value.type is MCFPPLiteralType) return unary(primitiveView(value), operation)
+        if (operation == "-" && value.symbol?.isLiteral == true) {
+            val payload = (snapshot(value) as? CompilerValue.Typed)?.payload
+            val negated = when {
+                value.type == MCFPPBaseType.Float && payload is CompilerValue.FloatBits ->
+                    CompilerValue.FloatBits(payload.bits xor Int.MIN_VALUE)
+                value.type == MCFPPNBTType.Long && payload is CompilerValue.Integral -> CompilerValue.Integral(-payload.value)
+                value.type == MCFPPNBTType.Double && payload is CompilerValue.DoubleBits ->
+                    CompilerValue.DoubleBits((-Double.fromBits(payload.bits)).toRawBits())
+                else -> null
+            }
+            if (negated != null) return literal(value.type, negated)
+        }
         if (value.type in setOf(MCFPPNBTType.Byte, MCFPPNBTType.Short) && operation in setOf("+", "-")) {
             val widened = top.mcfpp.backend.NumericConversions.convert(value, MCFPPBaseType.Int)
             if (widened.isError) return widened
@@ -413,6 +428,13 @@ object StorageAccess {
         if (value is MCInt && operation == "-") return binary(MCInt(0), value, "-")
         return value.unaryComputation(operation)
     }
+
+    /** Primitive operations consume the parent layout while declarations retain literal types. */
+    fun primitiveView(value: Var<*>): Var<*> = (value.type as? MCFPPLiteralType)?.let {
+        view(value, it.primitive, diagnose = false)
+    } ?: value
+
+    fun satisfiesContract(value: Var<*>, target: MCFPPType): Boolean = StorageWriteContracts.accepts(value, target)
     /** Literals own immutable facts before any runtime representation is allocated. */
     fun literal(type: MCFPPType, value: CompilerValue, name: String = TempPool.getVarIdentify(), types: Map<TypeId, MCFPPType> = emptyMap()): Var<*> {
         val payload = (value as? CompilerValue.Typed)?.payload ?: value
@@ -427,7 +449,12 @@ object StorageAccess {
     fun <T : Var<*>> initializeLiteral(adapter: T, value: CompilerValue, types: Map<TypeId, MCFPPType> = emptyMap()): T {
         val type = adapter.type
         val name = adapter.identifier
-        val closed = if (value is CompilerValue.Typed) {
+        if (type is MCFPPLiteralType) {
+            var payload = value
+            while (payload is CompilerValue.Typed) payload = payload.payload
+            require(payload == type.value) { "Literal value does not match its literal type" }
+        }
+        val closed = if (type is MCFPPLiteralType) CompilerValue.Typed(type.typeId, type.value) else if (value is CompilerValue.Typed) {
             require(value.type == type.typeId || type in erasedTypes || type is MCFPPUnionType &&
                 type.types.any { it.typeId == value.type }) { "Literal type does not match its payload" }
             if (value.type == type.typeId) value else CompilerValue.Typed(type.typeId, value)
@@ -437,6 +464,7 @@ object StorageAccess {
         val data = StoredData(place, adapter.nbtPath.clone(), layout = StorageLayout.Constant)
         data.types.putAll(types)
         data.types[type.typeId] = type
+        if (type is MCFPPLiteralType) data.types[type.primitive.typeId] = type.primitive
         data.declarations[place] = symbol
         MCFPPType.registerSnapshotTypes(closed, data.types)
         EffectAnalysis.declared(place)
@@ -625,7 +653,8 @@ object StorageAccess {
             StorageBinding(data, place, data.path).also { value.storageBinding = it }
         }
         binding.data.types[value.type.typeId] = value.type
-        binding.data.write(binding.place, ValueFacts(TypeKnowledge.Exact(value.type.typeId), ValueKnowledge.Unknown))
+        binding.data.write(binding.place, ValueFacts(TypeKnowledge.Exact(value.type.typeId), ValueKnowledge.Unknown,
+            readableLayout = RuntimeObjectLayouts.identity(value.type)))
         return value
     }
 
@@ -778,8 +807,7 @@ object StorageAccess {
         val binding = value.storageBinding ?: bindStoredValue(value)
         if (value.symbol?.readonly == true) return binding
         binding.data.types[value.type.typeId] = value.type
-        fun readableLayout(type: MCFPPType): TypeId? = (binding.data.types[type.typeId] ?: type)
-            .takeIf { it is MCFPPDataTemplateType && it.hasRuntimeRepresentation }?.typeId
+        fun readableLayout(type: MCFPPType): TypeId? = RuntimeObjectLayouts.identity(binding.data.types[type.typeId] ?: type)
         binding.data.facts.forgetDescendants(binding.place)
         binding.data.facts.refine(binding.place, ValueFacts(if (value.type in erasedTypes) TypeKnowledge.Unknown
             else TypeKnowledge.Exact(value.type.typeId), ValueKnowledge.Unknown, ValueState.INITIALIZED,
@@ -848,10 +876,19 @@ object StorageAccess {
         }
     }
 
-    internal fun registerMember(declaration: Var<*>, binding: StorageBinding) {
+    internal fun registerMember(declaration: Var<*>, binding: StorageBinding, actualDeclaration: Boolean = false) {
         binding.data.types.putIfAbsent(declaration.type.typeId, declaration.type)
-        binding.data.declarations.putIfAbsent(binding.place, Symbol(binding.place.root, declaration.identifier,
-            declaration.type.typeId, mutable = !declaration.isConst, readonly = declaration.symbol?.readonly == true))
+        val viewRoot = binding.view?.takeIf { it.place != binding.place }?.place
+        val rootKnowledge = viewRoot?.let { binding.data.facts.read(it)?.type }
+        val unprovenView = rootKnowledge == TypeKnowledge.Unknown || rootKnowledge is TypeKnowledge.Candidates ||
+            rootKnowledge is TypeKnowledge.Exact && rootKnowledge.type in erasedTypes.map { it.typeId }
+        if (actualDeclaration || !unprovenView) {
+            binding.data.declarations.putIfAbsent(binding.place, Symbol(binding.place.root, declaration.identifier,
+                declaration.type.typeId, mutable = !declaration.isConst, readonly = declaration.symbol?.readonly == true))
+            if (declaration.isConst) binding.data.declarations[binding.place]?.let {
+                binding.data.declarations[binding.place] = it.copy(mutable = false)
+            }
+        }
         val actual = (binding.data.facts.read(binding.place)?.type as? TypeKnowledge.Exact)?.type
             ?.let(binding.data.types::get)
         if (binding.data.layout == StorageLayout.CompilerOnly && declaration.type.hasRuntimeRepresentation &&
@@ -986,7 +1023,7 @@ object StorageAccess {
                     .map { it.type }.reduceOrNull(TypeKnowledge::join) ?: TypeKnowledge.Unknown else TypeKnowledge.Unknown
                 else TypeKnowledge.Exact(type.typeId)
             root.data.facts.initialize(place, ValueFacts(actual, ValueKnowledge.Unknown,
-                readableLayout = type.typeId.takeIf { type is MCFPPDataTemplateType && actual == TypeKnowledge.Exact(it) }))
+                readableLayout = RuntimeObjectLayouts.identity(type)?.takeIf { actual == TypeKnowledge.Exact(it) }))
         }
         return adapter(type, TempPool.getVarIdentify(), root.copy(place = place, path = path)).apply { parent = container }
     }
@@ -1059,6 +1096,34 @@ object StorageAccess {
         return value
     }
 
+    /** The public union contract determines lookup, even when one producer is known exactly. */
+    fun unionMember(owner: Var<*>, key: String, accessModifier: top.mcfpp.model.Member.AccessModifier): Pair<Var<*>?, Boolean> {
+        val union = owner.type as? MCFPPUnionType ?: return null to true
+        val fields = union.types.map { TypeCompositions.objectShape(it)?.fieldsByName?.get(key) ?: return null to true }
+        val accessible = union.types.all { alternative ->
+            val template = (alternative as? MCFPPDataTemplateType)?.template
+            val access = template?.scope?.getProperty(key)?.accessModifier
+                ?: template?.scope?.getVar(key)?.accessModifier ?: top.mcfpp.model.Member.AccessModifier.PUBLIC
+            accessModifier >= access
+        }
+        val type = TypeCompositions.union(fields.map { it.type })
+        val binding = ensure(owner).field(key)
+        val field = adapter(type, key, binding).apply {
+            parent = owner
+            nullable = fields.any { it.optional }
+            isConst = fields.any { it.kind == ObjectMemberKind.CONST }
+        }
+        registerMember(field, binding)
+        val property = top.mcfpp.model.property.Property(key,
+            if (fields.all { it.readable }) top.mcfpp.model.property.SimpleAccessor() else null,
+            if (fields.all { it.writable } && !field.isConst) top.mcfpp.model.property.SimpleMutator() else null)
+        return PropertyVar(property, field, owner).apply {
+            parent = owner
+            nullable = field.nullable
+            isConst = field.isConst
+        } to accessible
+    }
+
     fun snapshot(value: Var<*>): CompilerValue? {
         val binding = value.storageBinding ?: return null
         if (runtimeOnly(binding)) return null
@@ -1097,16 +1162,35 @@ object StorageAccess {
         if (!binding.trustConstants) return null
         val fact = binding.data.facts.read(binding.place) ?: return null
         if (fact.state != ValueState.INITIALIZED) return null
+        if (type is MCFPPLiteralType && fact.type == TypeKnowledge.Exact(type.primitive.typeId)) {
+            var payload = (fact.value as? ValueKnowledge.Constant)?.value
+            while (payload is CompilerValue.Typed) payload = payload.payload
+            if (payload == type.value) return CompilerValue.Typed(type.typeId, type.value)
+            if (fact.value == ValueKnowledge.Unknown) {
+                val field = binding.place.path.lastOrNull() as? PathSegment.Field
+                val parent = Place(binding.place.root, binding.place.path.dropLast(1))
+                val producer = binding.data.facts.read(parent)?.takeIf { it.state == ValueState.INITIALIZED }
+                    ?.let { (it.type as? TypeKnowledge.Exact)?.type }?.let(binding.data.types::get) as? MCFPPObjectType
+                val singleton = field?.let { producer?.fieldsByName?.get(it.name)?.type } as? MCFPPLiteralType
+                if (singleton != null && singleton.primitive.typeId == type.primitive.typeId && singleton.value == type.value)
+                    return CompilerValue.Typed(type.typeId, type.value)
+            }
+        }
         val delegated = binding.view != null && (fact.type as? TypeKnowledge.Exact)?.type
             ?.let(binding.data.types::get)?.let { it is MCFPPTypeDataTemplateType && it.typeAs == type } == true
+        val exactLiteral = (fact.type as? TypeKnowledge.Exact)?.type?.let(binding.data.types::get) as? MCFPPLiteralType
+        val primitiveLiteral = exactLiteral?.primitive == type
         if (type !in erasedTypes && type !is MCFPPUnionType && fact.type != TypeKnowledge.Exact(type.typeId) && !template &&
+            !primitiveLiteral &&
             !delegated && !closedMapEncoding(binding, type) &&
             !(binding.data.layoutAt(binding.place) == StorageLayout.CompilerOnly && (fact.type as? TypeKnowledge.Exact)?.type
                 ?.let(binding.data.types::get)?.let { staticLayoutAccessible(it, type) } == true)) return null
         val constant = when (val value = fact.value) {
             is ValueKnowledge.Constant -> value.value
             is ValueKnowledge.Program -> value.expression.snapshot((fact.type as? TypeKnowledge.Exact)?.type ?: type.typeId)
-            else -> null
+            // A trusted initialized singleton contract already determines its complete value,
+            // including a fixed field whose surrounding runtime object has no known payload.
+            else -> exactLiteral?.let { CompilerValue.Typed(it.typeId, it.value) }
         } ?: run {
             if (binding.data.layoutAt(binding.place) != StorageLayout.CompilerOnly || type !is MCFPPDataTemplateType ||
                 type is MCFPPTypeDataTemplateType) return null
@@ -1154,16 +1238,54 @@ object StorageAccess {
     }
 
     private fun staticLayoutAccessible(actual: MCFPPType, target: MCFPPType) = target in erasedTypes || actual == target ||
+        actual is MCFPPLiteralType && actual.primitive == target ||
         actual is MCFPPEntityType && target is MCFPPEntityType ||
         target is MCFPPUnionType && target.types.any { actual.isSubOf(it) } ||
         actual is MCFPPDataTemplateType && target is MCFPPDataTemplateType && actual.isSubOf(target) ||
         (actual is MCFPPListType || actual is MCFPPImmutableListType) && (target is MCFPPListType || target is MCFPPImmutableListType) ||
         (actual is MCFPPDictType || actual is MCFPPMapType) && (target is MCFPPDictType || target is MCFPPMapType)
 
+    /** An unchecked runtime view grants access, without claiming a producer type or constant. */
+    private fun accessFacts(value: Var<*>, seen: MutableSet<Var<*>> = Collections.newSetFromMap(IdentityHashMap())): ValueFacts? {
+        if (!seen.add(value)) return null
+        val binding = value.storageBinding ?: return null
+        binding.data.facts.readAccess(binding.place, binding.data.declarations, binding.data.types)?.let { return it }
+        if (binding.view == null || binding.data.layoutAt(binding.place) == StorageLayout.CompilerOnly || !value.type.hasRuntimeRepresentation) return null
+        val owner = value.parent as? Var<*> ?: return null
+        val parent = owner.storageBinding ?: return null
+        if (parent.data !== binding.data || parent.place.root != binding.place.root ||
+            binding.place.path.take(parent.place.path.size) != parent.place.path) return null
+        val evidence = accessFacts(owner, seen) ?: return null
+        if (evidence.state != ValueState.INITIALIZED) return null
+        val unknown = evidence.type == TypeKnowledge.Unknown || evidence.type is TypeKnowledge.Candidates ||
+            (evidence.type as? TypeKnowledge.Exact)?.type in erasedTypes.map { it.typeId }
+        if (!unknown) return null
+        var type = owner.type
+        for (segment in binding.place.path.drop(parent.place.path.size)) {
+            type = when (segment) {
+                is PathSegment.Field -> {
+                    val field = RuntimeObjectLayouts.field(type, segment.name) ?: return null
+                    if (field.optional) return null
+                    field.type
+                }
+                is PathSegment.Index, PathSegment.UnknownIndex -> when (type) {
+                    is MCFPPListType -> type.generic.single()
+                    is MCFPPImmutableListType -> type.generic.single()
+                    else -> return null
+                }
+            }
+        }
+        return ValueFacts(TypeKnowledge.Unknown, ValueKnowledge.Unknown)
+    }
+
     /** Loading a register is materialization, not a logical write. */
     fun read(value: Var<*>): Var<*> {
         if (value is top.mcfpp.core.lang.bool.PresenceBool) return value
         if (value.isError) return value
+        if (value.storageBinding != null) StorageWriteContracts.accessRejection(value, write = false)?.let {
+            LogProcessor.error(it)
+            return UnknownVar(value.identifier).apply { type = value.type; isError = true }
+        }
         top.mcfpp.core.lang.entity.EntityDataAddress.selected(value)?.let { return it.bareRead() }
         ContextBorrowing.payload(value)?.let { payload ->
             ContextBorrowing.diagnostic(value)?.let { return error(value.type, it) }
@@ -1178,7 +1300,7 @@ object StorageAccess {
         }
         val binding = value.storageBinding ?: return value
         val data = binding.data
-        val state = data.facts.readAccess(binding.place, data.declarations, data.types)?.state
+        val state = accessFacts(value)?.state
         if (state != ValueState.INITIALIZED) {
             LogProcessor.error("Cannot read uninitialized variable '${value.identifier}'")
             return UnknownVar(value.identifier).apply { type = value.type; isError = true }
@@ -1353,6 +1475,10 @@ object StorageAccess {
             return
         }
         if (!canWrite(target)) return
+        if (!StorageWriteContracts.canRemove(target)) {
+            LogProcessor.error("Cannot remove '${target.identifier}': its shared storage contract requires the field")
+            return
+        }
         val binding = ensure(target)
         if (binding.data.facts.read(binding.place)?.presence != Presence.Absent &&
             binding.data.layoutAt(binding.place) != StorageLayout.CompilerOnly)
@@ -1366,7 +1492,7 @@ object StorageAccess {
     /** Constructor-only fixed-field installation: no accessor or provider runs in this scope. */
     internal fun initializeFixedField(target: Var<*>, source: Var<*>): Var<*> {
         val expected = target.declarationConstant
-        if (expected == null || snapshot(source) != expected)
+        if (expected == null || if (target.type is MCFPPLiteralType) !satisfiesContract(source, target.type) else snapshot(source) != expected)
             return error(target.type, "Constant '${target.identifier}' has no matching declaration snapshot")
         return writePayload(target, source)
     }
@@ -1395,9 +1521,24 @@ object StorageAccess {
         if ((target.isConst || target.symbol?.mutable == false) && target.symbol?.isLiteral != true &&
             !ConstantBinding.requireValue(target.identifier, snapshot(source)))
             return UnknownVar(target.identifier).apply { type = target.type; isError = true }
+        if (source.type == MCFPPPrivateType.Null && !StorageWriteContracts.canRemove(target)) {
+            LogProcessor.error("Cannot remove '${target.identifier}': its shared storage contract requires the field")
+            return UnknownVar(target.identifier).apply { type = target.type; isError = true }
+        }
+        if (source.type != MCFPPPrivateType.Null) StorageWriteContracts.rejection(target, source)?.let {
+            LogProcessor.error("Write through '${target.identifier}' violates shared storage contract '$it' with '${source.type}'")
+            return UnknownVar(target.identifier).apply { type = target.type; isError = true }
+        }
         val errors = Project.errorCount
         val result = ContextBorrowing.payload(source)?.let { writeBorrow(target, source, it) } ?: writePayload(target, source)
-        if (!result.isError && Project.errorCount == errors) EffectAnalysis.recordWrite(ensure(target).place)
+        if (!result.isError && Project.errorCount == errors) {
+            if (target.isConst && target.symbol?.isLiteral != true) snapshot(target)?.let {
+                ConstantBinding.bindDeclaration(target, it, boundTypes(target))
+                result.type = target.type
+                result.symbol = target.symbol
+            }
+            EffectAnalysis.recordWrite(ensure(target).place)
+        }
         return result
     }
 
@@ -1467,9 +1608,10 @@ object StorageAccess {
     }
 
     private fun writePayload(target: Var<*>, source: Var<*>): Var<*> {
+        if (source is top.mcfpp.core.lang.bool.PresenceBool) return writePayload(target, source.materializePredicate())
         if (source.isError) return UnknownVar(target.identifier).apply { type = target.type; isError = true }
         val sourcePlace = ensure(source)
-        val sourceAccess = sourcePlace.data.facts.readAccess(sourcePlace.place, sourcePlace.data.declarations, sourcePlace.data.types)
+        val sourceAccess = accessFacts(source)
         if (sourceAccess?.state != ValueState.INITIALIZED) {
             LogProcessor.error("Cannot assign uninitialized value '${source.identifier}'")
             return UnknownVar(target.identifier).apply { type = target.type }
@@ -1512,6 +1654,16 @@ object StorageAccess {
             return adapter(target.type, target.identifier, binding).apply { setAs(target) }
         }
         val snapshot = top.mcfpp.analysis.StorageAccess.snapshot(source)
+        // Keep physical producer evidence without interpreting an unchecked view as its
+        // target type. Maps use it to validate their layout; raw NBT preserves its tag.
+        val producerSnapshot = if (snapshot == null && !runtimeOnly(sourcePlace)) {
+            when {
+                target.type is MCFPPMapType && source.type is MCFPPMapType && !sourcePlace.trustConstants ->
+                    (sourceAccess?.value as? ValueKnowledge.Constant)?.value
+                target.type == MCFPPNBTType.NBT && source.type == MCFPPNBTType.NBT -> knownRawNbtProducer(source)
+                else -> null
+            }
+        } else null
         if (binding.data.layoutAt(binding.place) != StorageLayout.CompilerOnly && !hasRuntimeRepresentation(source) && hasActualPayload(source)) {
             val receiver = Function.currFunction.constructedReceiver
             val actualConstructorField = binding.view == null && Function.currFunction.actualCallBody &&
@@ -1588,16 +1740,35 @@ object StorageAccess {
             if (!writePhysicalLayout(binding, source))
                 return target.clone().apply { isError = true }
         }
-        val writtenDescriptor = (sourceAccess?.type as? TypeKnowledge.Exact)?.type
-            ?.let(sourcePlace.data.types::get) ?: actualType(source)
+        val sourceDescriptor = if (target.type is MCFPPLiteralType) target.type else
+            (sourceAccess?.type as? TypeKnowledge.Exact)?.type?.let(sourcePlace.data.types::get) ?: actualType(source)
+        val writtenDescriptor = StorageWriteContracts.copiedType(target, sourceDescriptor)
         binding.data.types[writtenDescriptor.typeId] = writtenDescriptor
-        val represented = (binding.data.facts.read(binding.place)?.type as? TypeKnowledge.Exact)?.type
+        val represented = (binding.data.declarations[binding.place]?.declaredType
+            ?: (binding.data.facts.read(binding.place)?.type as? TypeKnowledge.Exact)?.type)
             ?.let(binding.data.types::get)?.let { it as? MCFPPTypeDataTemplateType }
             ?.takeIf { binding.view != null && it.typeAs == target.type }
-        val writtenSnapshot = if (represented != null && snapshot != null) CompilerValue.Typed(represented.typeId,
-            if (snapshot is CompilerValue.Typed) snapshot.payload else snapshot) else snapshot
+        fun copiedSnapshot(value: CompilerValue): CompilerValue = if (value is CompilerValue.Typed) {
+            if (value.type == sourceDescriptor.typeId) CompilerValue.Typed(writtenDescriptor.typeId, value.payload)
+            else value.copy(payload = copiedSnapshot(value.payload))
+        } else value
+        val writtenSnapshot = if (producerSnapshot != null) producerSnapshot else if (target.type is MCFPPLiteralType) {
+            val literal = target.type as MCFPPLiteralType
+            CompilerValue.Typed(literal.typeId, literal.value)
+        } else if (represented != null && snapshot != null) CompilerValue.Typed(represented.typeId,
+            if (snapshot is CompilerValue.Typed) snapshot.payload else snapshot)
+        else if (sourceDescriptor.typeId != writtenDescriptor.typeId) snapshot?.let(::copiedSnapshot) else snapshot
         val writtenType = if (represented != null) TypeKnowledge.Exact(represented.typeId)
-            else if (source is MCAny) source.typeKnowledge else TypeKnowledge.Exact(writtenDescriptor.typeId)
+            else if (source is MCAny && source.typeKnowledge is TypeKnowledge.Candidates) {
+                val candidates = (source.typeKnowledge as TypeKnowledge.Candidates).types.map { identity ->
+                    val descriptor = sourcePlace.data.types[identity] ?: return@map identity
+                    val copied = StorageWriteContracts.copiedType(target, descriptor)
+                    binding.data.types[copied.typeId] = copied
+                    copied.typeId
+                }.toSet()
+                if (candidates.size == 1) TypeKnowledge.Exact(candidates.single()) else TypeKnowledge.Candidates(candidates)
+            } else if (source is MCAny && source.typeKnowledge == TypeKnowledge.Unknown) TypeKnowledge.Unknown
+            else TypeKnowledge.Exact(writtenDescriptor.typeId)
         binding.data.write(binding.place, ValueFacts(writtenType,
             writtenSnapshot?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown,
             readableLayout = sourceAccess?.readableLayout?.takeIf { !static &&
@@ -1626,6 +1797,12 @@ object StorageAccess {
                 binding.data.facts.copyFrom(it.facts, binding.place, binding.place, includeRoot = false)
             }
         }
+        if (!sourcePlace.trustConstants && binding.view == null && binding.place == binding.data.root &&
+            binding.data !== sourcePlace.data) {
+            target.storageBinding = binding.copy(trustConstants = false,
+                view = ValueRef.TypedView(target.type.typeId,
+                    ValueRef.Read(writtenDescriptor.typeId, binding.place), binding.place))
+        }
         return adapter(target.type, target.identifier, binding).apply {
             setAs(target)
             parent = target.parent
@@ -1652,6 +1829,14 @@ object StorageAccess {
                     return false
                 }
             }
+            StorageWriteContracts.effectRejection(value, effect)?.let {
+                LogProcessor.error("Call '$name' may violate shared storage contract '$it' through '${value.identifier}'")
+                return false
+            }
+            StorageWriteContracts.effectAccessRejection(value, effect)?.let {
+                LogProcessor.error("Call '$name' may violate shared storage access: $it")
+                return false
+            }
         }
         return true
     }
@@ -1661,11 +1846,32 @@ object StorageAccess {
             if (type !is MCFPPDataTemplateType || type.typeId in seen) return
             for (field in type.instanceFields) {
                 val child = binding.field(field.identifier)
-                registerMember(field, child)
+                registerMember(field, child, actualDeclaration = true)
                 register(field.type, child, seen + type.typeId)
             }
         }
-        register(actualType(value), ensure(value), emptySet())
+        val binding = ensure(value)
+        val exact = (binding.data.facts.read(binding.place)?.type as? TypeKnowledge.Exact)?.type
+            ?.let(binding.data.types::get)
+        if (exact != null && exact !in erasedTypes) register(exact, binding, emptySet())
+        else if (binding.view == null) register(value.type, binding, emptySet())
+        for ((place, fact) in binding.data.facts.entries()) {
+            if (place.root != binding.place.root || binding.place.path.take(place.path.size) != place.path) continue
+            val identities = when (val type = fact.type) {
+                is TypeKnowledge.Exact -> listOf(type.type)
+                is TypeKnowledge.Candidates -> type.types.toList()
+                TypeKnowledge.Unknown -> emptyList()
+            }
+            for (identity in identities) {
+                val type = binding.data.types[identity] ?: continue
+                val depth = place.path.size
+                val location = binding.location
+                register(type, binding.copy(place = place, location = Location(place,
+                    location.indices.filterKeys { it < depth }, location.keys.filterKeys { it < depth }, location.frameOffset,
+                    location.captured.filterKeys { it < depth }, location.predicates.filter { it < depth }.toSet(),
+                    location.capturedLocations.filterKeys { it < depth })), emptySet())
+            }
+        }
     }
 
     fun canWrite(target: Var<*>): Boolean {
@@ -1673,6 +1879,10 @@ object StorageAccess {
         if (target is top.mcfpp.core.lang.entity.EntityDataAddress) return !target.isConst
         val binding = ensure(target)
         registerProtectedMembers(target)
+        StorageWriteContracts.accessRejection(target, write = true)?.let {
+            LogProcessor.error(it)
+            return false
+        }
         binding.data.declarations.entries.firstOrNull { (place, declaration) ->
             declaration.lambdaCaptureName != null && place.root == binding.place.root &&
                 binding.place.path.take(place.path.size) == place.path
@@ -1717,7 +1927,7 @@ object StorageAccess {
                 ?: error(value.type, "Cannot borrow scoped context value")
         }
         val sourceBinding = ensure(value)
-        val fact = sourceBinding.data.facts.readAccess(sourceBinding.place, sourceBinding.data.declarations, sourceBinding.data.types)
+        val fact = accessFacts(value)
         if (fact?.state != ValueState.INITIALIZED) {
             LogProcessor.error("Cannot capture uninitialized variable '${value.identifier}'")
             return UnknownVar(value.identifier).apply { type = value.type; isError = true }
@@ -1749,9 +1959,10 @@ object StorageAccess {
      * and finite code targets transfer; the destination never inherits a constant claim.
      * Addresses are rebased by Place identity, so none refer back to the producer's frame.
      */
-    internal fun copyRuntimeEvidence(source: StorageBinding, target: StorageBinding, includeRoot: Boolean = true) {
+    internal fun copyRuntimeEvidence(source: StorageBinding, target: StorageBinding, includeRoot: Boolean = true,
+                                     preserveShape: Boolean = true) {
         target.data.types.putAll(source.data.types)
-        target.data.facts.copyFrom(source.data.facts.withoutValues(initializedOnly = true),
+        target.data.facts.copyFrom(source.data.facts.withoutValues(initializedOnly = true, preserveShape = preserveShape),
             source.place, target.place, includeRoot = includeRoot)
         // Finite target provenance is independent of whether the root's value facts transfer.
         copyCallableEvidence(source, target)
@@ -1792,16 +2003,28 @@ object StorageAccess {
 
     private fun captureClosed(source: Var<*>, closed: CompilerValue, name: String): Var<*>? {
         val actual = actualType(source)
-        var payload = if (actual is MCFPPTypeDataTemplateType && source.type == actual.typeAs)
-            constantFor(actual, ensure(source)) ?: return null else closed
+        val literal = source.type as? MCFPPLiteralType
+        var payload = when {
+            source.type == actual -> closed
+            literal != null && literal.primitive.typeId == actual.typeId &&
+                closed == CompilerValue.Typed(literal.typeId, literal.value) -> CompilerValue.Typed(actual.typeId, literal.value)
+            else -> constantFor(actual, ensure(source)) ?: return null
+        }
         while (payload is CompilerValue.Typed && payload.type != actual.typeId && payload.payload is CompilerValue.Typed)
             payload = payload.payload
         val captured = restore(actual, payload, name, boundTypes(source)) ?: return null
         val binding = ensure(captured)
-        source.storageBinding?.let { copyCallableEvidence(it, binding) }
-        val reference = source.storageBinding?.let { it.data.facts.read(it.place)?.reference }
-        if (reference != null) binding.data.facts.read(binding.place)?.let {
-            binding.data.facts.refine(binding.place, it.copy(reference = reference))
+        source.storageBinding?.let { sourceBinding ->
+            copyCallableEvidence(sourceBinding, binding)
+            sourceBinding.data.facts.entries().forEach { (place, fact) ->
+                if (fact.reference == null || place.root != sourceBinding.place.root ||
+                    place.path.take(sourceBinding.place.path.size) != sourceBinding.place.path) return@forEach
+                val destination = Place(binding.place.root,
+                    binding.place.path + place.path.drop(sourceBinding.place.path.size))
+                binding.data.facts.read(destination)?.let { restored ->
+                    binding.data.facts.refine(destination, restored.copy(reference = fact.reference))
+                }
+            }
         }
         if (source.symbol?.forceRuntime == true || source.storageBinding?.let { it.data.declarations[it.place]?.forceRuntime } == true) {
             val declaration = captured.symbol!!.copy(forceRuntime = true)
@@ -1917,6 +2140,26 @@ object StorageAccess {
         }
     }
 
+    /** Successful straight-line setters prove initialization, without proving their runtime values. */
+    internal fun applyDefiniteGlobalInitializations(values: Collection<Var<*>>, places: Set<Place>) {
+        if (places.isEmpty()) return
+        for (value in values) {
+            if (!value.isStatic || value.isConst || !hasRuntimeRepresentation(value)) continue
+            val binding = value.storageBinding ?: continue
+            if (binding.place !in places || binding.data.layoutAt(binding.place) == StorageLayout.CompilerOnly) continue
+            val declaration = binding.data.declarations[binding.place] ?: continue
+            if (!declaration.mutable || declaration.readonly || binding.data.declarations.any { (place, symbol) ->
+                    place.root == binding.place.root && binding.place.path.take(place.path.size) == place.path &&
+                        ConstantBinding.protected(symbol, place, binding.data.facts)
+                }) continue
+            val fact = binding.data.facts.read(binding.place)?.takeIf { it.state != ValueState.ERROR } ?: continue
+            val type = if (fact.type == TypeKnowledge.Unknown && declaration.declaredType !in erasedTypes.map { it.typeId })
+                TypeKnowledge.Exact(declaration.declaredType) else fact.type
+            binding.data.facts.refine(binding.place,
+                fact.copy(type = type, value = ValueKnowledge.Unknown, state = ValueState.INITIALIZED))
+        }
+    }
+
     fun flush(values: Collection<Var<*>>) {
         values.filter { value -> value.storageBinding?.let { binding ->
             binding.data.facts.read(binding.place)?.state == ValueState.INITIALIZED &&
@@ -1970,7 +2213,7 @@ object StorageAccess {
         constantEncoding(source)?.let { emit(Command.buildAll("data modify", path, "set value", NbtEncoding.snbt(it))); return }
         source.storageBinding?.let {
             val binding = ensure(source)
-            if (binding.data.facts.readAccess(binding.place, binding.data.declarations, binding.data.types)?.state != ValueState.INITIALIZED) {
+            if (accessFacts(source)?.state != ValueState.INITIALIZED) {
                 LogProcessor.error("Cannot encode uninitialized value '${source.identifier}'")
                 return
             }
@@ -1984,7 +2227,17 @@ object StorageAccess {
 
     fun constantEncoding(value: Var<*>): Tag<*>? {
         if (!hasRuntimeRepresentation(value) || !collectionEncodingSupported(value)) return null
-        return snapshot(value)?.let(::snapshotTag)
+        return (snapshot(value) ?: knownRawNbtProducer(value))?.let(::snapshotTag)
+    }
+
+    /** A raw NBT view may expose the original physical tag without claiming target-type facts. */
+    private fun knownRawNbtProducer(value: Var<*>): CompilerValue? {
+        if (value.type != MCFPPNBTType.NBT) return null
+        val binding = value.storageBinding ?: return null
+        if (runtimeOnly(binding)) return null
+        val fact = binding.data.facts.read(binding.place)?.takeIf { it.state == ValueState.INITIALIZED } ?: return null
+        val closed = (fact.value as? ValueKnowledge.Constant)?.value ?: return null
+        return closed.takeIf { runtimeSnapshot(it, binding.data.types) && snapshotTag(it) != null }
     }
 
     /** Representation follows the actual producer and immutable child evidence. */
@@ -2058,7 +2311,7 @@ object StorageAccess {
         return encoding(actualType(value))
     }
 
-    internal fun encoding(type: MCFPPType): Class<out Tag<*>>? = when (type.typeId) {
+    internal fun encoding(type: MCFPPType): Class<out Tag<*>>? = if (type is MCFPPLiteralType) encoding(type.primitive) else when (type.typeId) {
         MCFPPBaseType.Range.typeId -> CompoundTag::class.java
         MCFPPBaseType.Any.typeId, MCFPPBaseType.Object.typeId, MCFPPNBTType.NBT.typeId -> null
         MCFPPBaseType.Float.typeId -> if (FloatProviders.enabled) top.mcfpp.nbt.tags.primitive.FloatTag::class.java else CompoundTag::class.java
@@ -2082,7 +2335,11 @@ object StorageAccess {
         LogProcessor.error("Target '${top.mcfpp.Project.config.version}' cannot materialize or modify a list with mixed or unproven NBT element encodings; convert elements to a common encoding or select a target with heterogeneous lists")
     }
 
-    internal fun scoreTag(type: TypeId?): String = when (type) {
+    private fun primitiveIdentity(type: TypeId?): TypeId? = if (type is TypeId.Specialized &&
+        type.constructor == TypeId.Builtin(TypeCompositions.LITERAL))
+        (type.arguments.firstOrNull() as? CompilerValue.TypeValue)?.id ?: type else type
+
+    internal fun scoreTag(type: TypeId?): String = when (primitiveIdentity(type)) {
         MCFPPBaseType.Bool.typeId, MCFPPNBTType.Byte.typeId -> "byte"
         MCFPPNBTType.Short.typeId -> "short"
         else -> "int"
@@ -2095,7 +2352,7 @@ object StorageAccess {
     internal fun snapshotTag(value: CompilerValue, type: TypeId? = null): Tag<*>? = when (value) {
         is CompilerValue.Typed -> if (value.type is TypeId.Declaration && value.type.kind == "enum")
             (value.payload as? CompilerValue.Record)?.fields?.get("data")?.let { snapshotTag(it) }
-        else snapshotTag(value.payload, value.type)
+        else snapshotTag(value.payload, primitiveIdentity(value.type))
         is CompilerValue.Integral -> when (type) {
             MCFPPNBTType.Byte.typeId -> top.mcfpp.nbt.tags.primitive.ByteTag(value.value.toByte())
             MCFPPNBTType.Short.typeId -> top.mcfpp.nbt.tags.primitive.ShortTag(value.value.toShort())
@@ -2146,6 +2403,12 @@ object StorageAccess {
 
     internal fun restore(type: MCFPPType, snapshot: CompilerValue, name: String,
                         types: Map<TypeId, MCFPPType> = emptyMap()): Var<*>? {
+        if (type is MCFPPLiteralType) {
+            var payload = snapshot
+            while (payload is CompilerValue.Typed) payload = payload.payload
+            if (payload != type.value) return null
+            return initializeLiteral(type.buildUnConcrete(name), CompilerValue.Typed(type.typeId, type.value), types)
+        }
         if (type is MCFPPDataTemplateType && snapshot is CompilerValue.Typed && snapshot.type == type.typeId) {
             val producer = types[snapshot.type] as? MCFPPDataTemplateType
             if (producer != null && producer !== type) {

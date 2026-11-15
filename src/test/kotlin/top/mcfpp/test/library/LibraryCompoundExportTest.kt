@@ -26,13 +26,12 @@ class LibraryCompoundExportTest {
         namespace compound.fixture
         typealias int as Count
         enum Mode {first=3,second=7}
-        data Payload {var token:int=17;constructor(){}}
+        data Payload {var token:int=17}
         data LocalOnly {var marker:int=6}
         func makePayload():Payload {var local:Payload=Payload();return local}
         func seedValue():int {var unused:LocalOnly;var local=makePayload();return local.token}
         data Parent {
             var base:int=1
-            constructor(){}
             func baseValue():int{return this.base}
         }
         data Child:Parent {
@@ -40,7 +39,7 @@ class LibraryCompoundExportTest {
                 get {return field+1}
                 set {field=value}
             }
-            constructor(seed:int){this.value=seed}
+            new(seed:int){ return {base: 1, value: seed}; }
             func read():int{return this.value+this.base}
             operator +(other:int):int{return this.value+other}
             operator +(other:float):int{return 7}
@@ -80,7 +79,9 @@ class LibraryCompoundExportTest {
             assertEquals(2, operators.size)
             assertTrue(operators.all { it.operator == "+" })
             assertEquals(setOf("int", "float"), operators.map { (model.tables.type(assertNotNull(it.operand)) as LibraryType.Builtin).key }.toSet())
-            assertTrue(declarations.filterIsInstance<ConstructorDeclaration>().any { it.normal.isNotEmpty() && it.body != null })
+            assertTrue(declarations.filterIsInstance<FunctionDeclaration>().any {
+                it.common.flags and DeclarationFlags.FACTORY != 0L && it.normal.isNotEmpty() && it.body != null
+            })
             assertTrue(declarations.filterIsInstance<FunctionDeclaration>().all { it.body != null })
             val enumeration = declarations.filterIsInstance<EnumDeclaration>().single()
             assertEquals(listOf("first", "second"), enumeration.members.map { model.declarations.declaration(it).common.name })
@@ -100,7 +101,7 @@ class LibraryCompoundExportTest {
 
     @Test fun actualSameNameCompanionKeepsItsLogicalOwnerKeyAndExplicitRelationship() = source("""
         namespace compound.fixture
-        data Box {var value:int=1;constructor(){}}
+        data Box {var value:int=1}
         object data Box {var shared:int=9}
         func main(){}
     """.trimIndent()) { file ->
@@ -130,7 +131,7 @@ class LibraryCompoundExportTest {
         source("""
             namespace compound.fixture
             import dependency:*
-            data Child:dependency:Parent {var own:int=2;constructor(){}}
+            data Child:dependency:Parent {var own:int=2}
             func main(){}
         """.trimIndent(), install = {
             val namespace = Namespace("dependency")

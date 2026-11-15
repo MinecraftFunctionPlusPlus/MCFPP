@@ -689,6 +689,8 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
             is LibraryType.Intersection -> type.components.any(::unresolved)
             is LibraryType.Function -> type.contexts.any(::unresolved) || type.parameters.any(::unresolved) || unresolved(type.result)
             is LibraryType.NbtRef -> unresolved(type.value)
+            is LibraryType.Object -> type.fields.any { unresolved(it.type) }
+            is LibraryType.Literal -> unresolved(type.primitive) || unresolved(type.value)
             else -> false
         } }
         private fun unresolved(reference: ConstantRef): Boolean = unresolvedConstantClosure.getOrPut(reference) { when (val value = model.tables.constant(reference)) {
@@ -1235,6 +1237,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 is TypeSyntax.Container -> syntax(node.argument, 0)
                 is TypeSyntax.Union -> node.alternatives.forEach { syntax(it, position) }
                 is TypeSyntax.Intersection -> node.components.forEach { syntax(it, position) }
+                is TypeSyntax.Object -> node.fields.forEach { syntax(it.type, 0) }
                 is TypeSyntax.Function -> { node.contexts.forEach { syntax(it, 0) }; node.parameters.forEach { syntax(it, -position) }; syntax(node.result, position) }
                 else -> Unit
             }; Unit }
@@ -1248,6 +1251,8 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 is LibraryType.NbtRef -> table(type.value, 0, visiting)
                 is LibraryType.Union -> type.alternatives.forEach { table(it, position, visiting) }
                 is LibraryType.Intersection -> type.components.forEach { table(it, position, visiting) }
+                is LibraryType.Object -> type.fields.forEach { table(it.type, 0, visiting) }
+                is LibraryType.Literal -> table(type.primitive, position, visiting)
                 is LibraryType.Function -> { type.contexts.forEach { table(it, 0, visiting) }; type.parameters.forEach { table(it, -position, visiting) }; table(type.result, position, visiting) }
                 else -> Unit
             }; visiting.remove(ref) }; Unit }
@@ -1332,7 +1337,17 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 "EntityRef" -> MCFPPEntityRefType(resolveType(type.arguments.single(), frame, facts))
                 else -> (resolveType(type.constructor, frame, facts) as MCFPPNotCompiledGenericType).compile(*type.arguments.map { resolveType(it, frame, facts) }.toTypedArray())
             }
-            is LibraryType.Union -> MCFPPUnionType(*type.alternatives.map { resolveType(it, frame, facts) }.toTypedArray())
+            is LibraryType.Union -> type.alternatives.map { resolveType(it, frame, facts) }.let { alternatives ->
+                if (top.mcfpp.Project.shouldDeferTypeCompositions) TypeCompositions.deferUnion(alternatives)
+                else TypeCompositions.union(alternatives)
+            }
+            is LibraryType.Object -> MCFPPObjectType(type.fields.map { ObjectFieldContract(it.name, resolveType(it.type, frame, facts), it.optional,
+                readable = it.readable, writable = it.writable) })
+            is LibraryType.Literal -> MCFPPLiteralType(resolveType(type.primitive, frame, facts), types.constant(type.value))
+            is LibraryType.Intersection -> if (type.declaration == null) type.components.map { resolveType(it, frame, facts) }.let { components ->
+                if (top.mcfpp.Project.shouldDeferTypeCompositions) TypeCompositions.deferIntersection(components)
+                else TypeCompositions.intersection(components)
+            } else types.type(reference)
             is LibraryType.Function -> MCFPPFunctionType(type.parameters.map { resolveType(it, frame, facts) }, resolveType(type.result, frame, facts), when (type.execution) {
                 FunctionExecution.NORMAL -> MCFPPFunctionType.ExecutionCategory.NORMAL
                 FunctionExecution.PAUSED -> MCFPPFunctionType.ExecutionCategory.PAUSED
@@ -1382,10 +1397,15 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 ContainerKind.MAP -> MCFPPMapType(resolveTypeNode(node.argument, frame, facts))
                 ContainerKind.DICT -> MCFPPDictType(resolveTypeNode(node.argument, frame, facts))
             }
-            is TypeSyntax.Union -> MCFPPUnionType(*node.alternatives.map { resolveTypeNode(it, frame, facts) }.toTypedArray())
+            is TypeSyntax.Union -> node.alternatives.map { resolveTypeNode(it, frame, facts) }.let { alternatives ->
+                if (top.mcfpp.Project.shouldDeferTypeCompositions) TypeCompositions.deferUnion(alternatives)
+                else TypeCompositions.union(alternatives)
+            }
+            is TypeSyntax.Object -> MCFPPObjectType(node.fields.map { ObjectFieldContract(it.name, resolveTypeNode(it.type, frame, facts)) })
             is TypeSyntax.Intersection -> node.components.map { resolveTypeNode(it, frame, facts) }.let { components ->
                 if (components.any { it is MCFPPGenericParamType || it is UnresolvedType }) openType(node)
-                else UnionDataTemplate(components.map { (it as MCFPPDataTemplateType).template }).getType()
+                else if (top.mcfpp.Project.shouldDeferTypeCompositions) TypeCompositions.deferIntersection(components)
+                else TypeCompositions.intersection(components)
             }
             is TypeSyntax.Vector -> MCFPPVectorType(node.dimensions.toInt())
             is TypeSyntax.Entity -> MCFPPEntityType(node.limit?.let { reference ->
@@ -1749,7 +1769,8 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 function.ast = null
                 val body = when (declaration) { is FunctionDeclaration -> declaration.body; is ConstructorDeclaration -> declaration.body; else -> null }
                 function.bodyHandle = body?.let { repository.handle(projection.handle.library, it) }
-                if (declaration is FunctionDeclaration) function.returnType = declaration.result?.let { resolveType(it, function, facts()) } ?: MCFPPPrivateType.Void
+                if (declaration is FunctionDeclaration) function.returnType = if (function is TemplateFactory) function.template.getType()
+                    else declaration.result?.let { resolveType(it, function, facts()) } ?: MCFPPPrivateType.Void
                 attach(id, function)
             }
 
@@ -1785,6 +1806,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                         }
                         is FunctionDeclaration -> {
                             val body = site.templateMember().templateFunctionDeclaration()?.curlBlock()
+                                ?: site.templateMember().templateFactoryDeclaration()?.curlBlock()
                             val placeholders = target.scope.functions.values.flatten().filter { it.ast === body }
                             if (declaration.native != null) {
                                 placeholders.forEach { placeholder -> target.scope.functions.values.forEach { it.removeAll { candidate -> candidate === placeholder } } }
@@ -1936,7 +1958,45 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
             val record = model.declarations.declaration(id) as ValueDeclaration
             return (record.defaultBody ?: frozenBodies[id])?.let { repository.handle(library, it) }
         }
-        private fun restoredConstant(reference: ConstantRef) = RestoredDefault(types.constant(reference), descriptors())
+        private fun restoredConstant(reference: ConstantRef): RestoredDefault {
+            val value = types.constant(reference)
+            val retained = linkedMapOf<TypeId, MCFPPType>()
+            val visitedTypes = hashSetOf<TypeRef>()
+            val visitedConstants = hashSetOf<ConstantRef>()
+            lateinit var constant: (ConstantRef) -> Unit
+            fun type(reference: TypeRef) {
+                if (!visitedTypes.add(reference)) return
+                val descriptor = types.type(reference)
+                retained[descriptor.typeId] = descriptor
+                when (val record = model.tables.type(reference)) {
+                    is LibraryType.Applied -> record.arguments.forEach(::type)
+                    is LibraryType.Specialized -> record.arguments.forEach(constant)
+                    is LibraryType.Union -> record.alternatives.forEach(::type)
+                    is LibraryType.Intersection -> record.components.forEach(::type)
+                    is LibraryType.Object -> record.fields.forEach { type(it.type) }
+                    is LibraryType.Literal -> { type(record.primitive); constant(record.value) }
+                    is LibraryType.Function -> {
+                        record.contexts.forEach(::type)
+                        record.parameters.forEach(::type)
+                        type(record.result)
+                    }
+                    is LibraryType.NbtRef -> type(record.value)
+                    else -> Unit
+                }
+            }
+            constant = { reference ->
+                if (visitedConstants.add(reference)) when (val record = model.tables.constant(reference)) {
+                    is ConstantValue.TypeValue -> type(record.value)
+                    is ConstantValue.Typed -> { type(record.type); constant(record.value) }
+                    is ConstantValue.Sequence -> record.elements.forEach(constant)
+                    is ConstantValue.Record -> record.fields.forEach { constant(it.value) }
+                    is ConstantValue.FunctionValue -> { type(record.type); record.captures.forEach { constant(it.value) } }
+                    else -> Unit
+                }
+            }
+            constant(reference)
+            return RestoredDefault(value, retained)
+        }
         private fun projectDefault(body: BodyId): top.mcfpp.antlr.mcfppParser.ValueContext {
             val projection = CurrentSyntaxProjection(this, this)
             val context = projection.defaultValue(body)
@@ -2348,6 +2408,8 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 }
             }
             is LibraryType.Dependent -> model.syntax.node(type.syntax) as TypeSyntax
+            is LibraryType.Object, is LibraryType.Literal -> TypeSyntax.Name(scope,
+                NameUse.Lookup("__structural_type__", null, environment, emptyList()), reference)
             is LibraryType.Specialized -> TypeSyntax.Apply(scope, typeSyntax(type.constructor, environment, scope), type.arguments.map { Expression.Literal(scope, it) }, reference)
             is LibraryType.Union -> TypeSyntax.Union(scope, type.alternatives.map { typeSyntax(it, environment, scope) })
             is LibraryType.Intersection -> TypeSyntax.Intersection(scope, type.components.map { typeSyntax(it, environment, scope) })
@@ -2388,6 +2450,8 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                         }
                     }
                     is LibraryType.Dependent -> model.syntax.node(type.syntax) as TypeSyntax
+                    is LibraryType.Object, is LibraryType.Literal -> TypeSyntax.Name(scope,
+                        NameUse.Lookup("__structural_type__", null, record.common.environment, emptyList()), reference)
                     is LibraryType.Specialized -> TypeSyntax.Apply(scope, boundType(type.constructor), type.arguments.map { Expression.Literal(scope, it) }, reference)
                     is LibraryType.Union -> TypeSyntax.Union(scope, type.alternatives.map(::boundType))
                     is LibraryType.Intersection -> TypeSyntax.Intersection(scope, type.components.map(::boundType))
@@ -2440,7 +2504,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 is FunctionDeclaration -> ProjectionTemplateDeclaration.Function(record.common.name, record.readonly.map(::parameter), record.normal.map(::parameter),
                     declaredType(null, record.result), record.body, record.common.flags and DeclarationFlags.OVERRIDE != 0L,
                     record.common.flags and DeclarationFlags.ABSTRACT != 0L, access, record.contexts.map(::parameter),
-                    record.common.flags and DeclarationFlags.ENTITY != 0L)
+                    record.common.flags and DeclarationFlags.ENTITY != 0L, record.common.flags and DeclarationFlags.FACTORY != 0L)
                 is ConstructorDeclaration -> ProjectionTemplateDeclaration.Constructor(record.normal.map(::parameter), requireNotNull(record.body), access)
                 is OperatorDeclaration -> {
                     val (unit, id) = resolve(this, record.implementation)

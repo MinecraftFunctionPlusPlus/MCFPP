@@ -166,6 +166,7 @@ object LibraryBuiltinTypes {
             "coordinate.dimension" to MCFPPPrivateType.MCFPPCoordinateDimension,
             "entity" to MCFPPEntityType.NormalSelector, "ScoreRef" to MCFPPScoreRefType,
             "UUID" to MCFPPUUIDType,
+            "never" to MCFPPNeverType,
             "DataObject" to DataTemplate.baseDataTemplate.getType(),
             "context.execution" to ContextTypes.ExecutionContext, "context.pos" to ContextTypes.PosContext,
             "context.entity" to ContextTypes.EntityContext, "context.relation" to ContextTypes.RelationContext,
@@ -227,13 +228,20 @@ class CompilerTypeTableCapture(private val bindings: CompilerTypeBindings) : Com
     private val constantReferences = HashMap<CompilerValue, ConstantRef>()
     private val active = HashSet<TypeId>()
 
-    override fun type(value: MCFPPType): TypeRef = if (value is MCFPPTypeAliasType)
-        type(requireNotNull(value.cachedTarget) { "Resolve aliases before library capture" }) else identity(value.typeId)
+    override fun type(value: MCFPPType): TypeRef {
+        if (value is MCFPPTypeAliasType) return type(requireNotNull(value.cachedTarget) { "Resolve aliases before library capture" })
+        val record = captureStructuralDescriptor(value, ::type, ::identity, ::constant) ?: return identity(value.typeId)
+        val existing = types.indexOf(record)
+        val reference = if (existing >= 0) TypeRef(existing + 1L) else TypeRef(types.size + 1L).also { types.add(record) }
+        typeReferences.putIfAbsent(value.typeId, reference)
+        return reference
+    }
 
     override fun identity(id: TypeId): TypeRef {
         typeReferences[id]?.let { return it }
         check(active.add(id)) { "Recursive structural identity requires a declaration shell" }
-        val value: LibraryType = LibraryBuiltinTypes.protocolKey(id)?.let { LibraryType.Builtin(it) } ?: when (id) {
+        val value: LibraryType = captureCompositionIdentity(id, ::identity, ::constant)
+            ?: LibraryBuiltinTypes.protocolKey(id)?.let { LibraryType.Builtin(it) } ?: when (id) {
             is TypeId.Builtin -> LibraryType.Builtin(requireNotNull(LibraryBuiltinTypes.protocolKey(id)) {
                 "LIB_TYPE_UNSUPPORTED: No protocol mapping for builtin ${id.key}"
             })
@@ -343,8 +351,18 @@ class CompilerTypeTableRestore(private val tables: LibraryTables, private val bi
                 }
             }
             is LibraryType.Specialized -> bindings.specialize(type(value.constructor), value.arguments.map(::constant))
-            is LibraryType.Union -> MCFPPUnionType(*value.alternatives.map(::type).toTypedArray())
-            is LibraryType.Intersection -> bindings.intersection(value.components.map(::type), value.declaration)
+            is LibraryType.Union -> value.alternatives.map(::type).let { alternatives ->
+                if (top.mcfpp.Project.shouldDeferTypeCompositions) TypeCompositions.deferUnion(alternatives)
+                else TypeCompositions.union(alternatives)
+            }
+            is LibraryType.Intersection -> if (value.declaration != null) bindings.intersection(value.components.map(::type), value.declaration)
+                else value.components.map(::type).let { components ->
+                    if (top.mcfpp.Project.shouldDeferTypeCompositions) TypeCompositions.deferIntersection(components)
+                    else TypeCompositions.intersection(components)
+                }
+            is LibraryType.Object -> MCFPPObjectType(value.fields.map { ObjectFieldContract(it.name, type(it.type), it.optional,
+                readable = it.readable, writable = it.writable) })
+            is LibraryType.Literal -> MCFPPLiteralType(type(value.primitive), constant(value.value))
             is LibraryType.Function -> MCFPPFunctionType(value.parameters.map(::type), type(value.result), when (value.execution) {
                 FunctionExecution.NORMAL -> MCFPPFunctionType.ExecutionCategory.NORMAL
                 FunctionExecution.PAUSED -> MCFPPFunctionType.ExecutionCategory.PAUSED
@@ -390,10 +408,61 @@ class CompilerTypeTableRestore(private val tables: LibraryTables, private val bi
         is LibraryType.Specialized -> TypeId.Specialized(identity(value.constructor), value.arguments.map(::constant))
         is LibraryType.Union -> TypeId.Union(value.alternatives.map(::identity).toSet())
         is LibraryType.Intersection -> value.declaration?.let { bindings.restoreDeclaration(DeclarationReference.Local(it)).typeId }
-            ?: UnionDataTemplate.identityFor(value.components.map(::identity))
+            ?: TypeId.Applied(TypeId.Builtin(TypeCompositions.INTERSECTION), value.components.map(::identity).distinct().sortedBy { it.toString() })
+        is LibraryType.Object -> objectTypeIdentity(value.fields, ::identity)
+        is LibraryType.Literal -> TypeId.Specialized(TypeId.Builtin(TypeCompositions.LITERAL), listOf(CompilerValue.TypeValue(identity(value.primitive)), constant(value.value)))
         is LibraryType.Function -> TypeId.function(value.parameters.map(::identity), identity(value.result), when (value.execution) {
             FunctionExecution.NORMAL -> "normal"; FunctionExecution.PAUSED -> "paused"; FunctionExecution.GENERATOR -> "generator"
         }, value.contexts.map(::identity))
         is LibraryType.NbtRef -> TypeId.Applied(TypeId.Builtin("NBTRef"), listOf(identity(value.value)))
     } }
+}
+
+/** The library has explicit field names rather than treating compiler identity markers as builtins. */
+internal fun captureCompositionIdentity(id: TypeId, type: (TypeId) -> TypeRef, constant: (CompilerValue) -> ConstantRef): LibraryType? {
+    if (id is TypeId.Applied && id.constructor == TypeId.Builtin(TypeCompositions.OBJECT)) {
+        return LibraryType.Object(id.arguments.map { field ->
+            require(field is TypeId.Applied && field.constructor == TypeId.Builtin(TypeCompositions.FIELD) && field.arguments.size == 3)
+            val name = (field.arguments[0] as TypeId.Builtin).key
+            val optional = (field.arguments[2] as TypeId.Builtin).key
+            require(optional == TypeCompositions.OPTIONAL || optional == TypeCompositions.REQUIRED)
+            LibraryObjectField(name, type(field.arguments[1]), optional == TypeCompositions.OPTIONAL)
+        }.sortedWith { a, b -> compareUtf8(a.name, b.name) })
+    }
+    if (id is TypeId.Applied && id.constructor == TypeId.Builtin(TypeCompositions.INTERSECTION))
+        return LibraryType.Intersection(id.arguments.map(type))
+    if (id is TypeId.Specialized && id.constructor == TypeId.Builtin(TypeCompositions.LITERAL)) {
+        require(id.arguments.size == 2)
+        return LibraryType.Literal(type((id.arguments[0] as CompilerValue.TypeValue).id), constant(id.arguments[1]))
+    }
+    return null
+}
+
+internal fun objectTypeIdentity(fields: List<LibraryObjectField>, identity: (TypeRef) -> TypeId): TypeId =
+    TypeId.Applied(TypeId.Builtin(TypeCompositions.OBJECT), fields.sortedBy { it.name }.map { field ->
+        TypeId.Applied(TypeId.Builtin(TypeCompositions.FIELD), listOf(TypeId.Builtin(field.name), identity(field.type),
+            TypeId.Builtin(if (field.optional) TypeCompositions.OPTIONAL else TypeCompositions.REQUIRED)))
+    })
+
+/** Accessor capabilities are descriptor metadata, so equal data identities can occupy distinct T rows. */
+internal fun captureStructuralDescriptor(
+    value: MCFPPType, type: (MCFPPType) -> TypeRef, identity: (TypeId) -> TypeRef,
+    constant: (CompilerValue) -> ConstantRef
+): LibraryType? = when (value) {
+    is MCFPPObjectType -> LibraryType.Object(value.fields.map {
+        LibraryObjectField(it.name, type(it.type), it.optional, it.readable, it.writable)
+    }.sortedWith { a, b -> compareUtf8(a.name, b.name) })
+    is MCFPPUnionType -> if (value.types.isEmpty()) LibraryType.Builtin("never") else LibraryType.Union(value.types.map(type))
+    is MCFPPIntersectionType -> LibraryType.Intersection(value.components.map(type))
+    is MCFPPLiteralType -> LibraryType.Literal(type(value.primitive), constant(value.value))
+    is MCFPPFunctionType -> LibraryType.Function(when (value.executionCategory) {
+        MCFPPFunctionType.ExecutionCategory.NORMAL -> FunctionExecution.NORMAL
+        MCFPPFunctionType.ExecutionCategory.PAUSED -> FunctionExecution.PAUSED
+        MCFPPFunctionType.ExecutionCategory.GENERATOR -> FunctionExecution.GENERATOR
+    }, value.parameters.map(type), type(value.result), value.contexts.map(type))
+    is MCFPPNBTRefType -> LibraryType.NbtRef(type(value.valueType))
+    is MCFPPTypeWithGeneric -> (value.typeId as? TypeId.Applied)?.let {
+        LibraryType.Applied(identity(it.constructor), value.generic.map(type))
+    }
+    else -> null
 }

@@ -166,17 +166,22 @@ internal object LambdaLowering {
                     else signatures.filter { (_, types) -> args.indices.all {
                         TypeRelations.resolveImplicitConversion(args[it].type, types[it]) != null
                     } }.mapNotNull { it.second.getOrNull(index) }.distinctBy { it.typeId }
-                val expected = if (node is P.ExpressionContext) {
+                val ambiguous = node is P.InlineLambdaContext && node !== trailing &&
+                    top.mcfpp.analysis.TemplateLiteralSupport.ambiguousObjectEntries(node) != null
+                val expected = if (node is P.ExpressionContext || ambiguous) {
                     top.mcfpp.analysis.TemplateLiteralSupport.selectExpectedLiteralType(node, targets) { candidate ->
-                        val nbt = top.mcfpp.analysis.TemplateLiteralSupport.unwrapNbtLiteral(node) ?: return@selectExpectedLiteralType false
-                        try { DeclarationBinding(Function.currFunction, emptyMap()).nbtLiteral(nbt, candidate); true }
+                        val literalSite = node as? ParserRuleContext ?: return@selectExpectedLiteralType false
+                        try { DeclarationBinding(Function.currFunction, emptyMap()).compoundLiteral(literalSite, candidate); true }
                         catch (_: DeclarationBinding.Failure) { false }
                     }
                 } else targets.singleOrNull()
                 val value = when (node) {
                     is P.InlineLambdaContext -> {
-                        if (targets.size > 1) return fail("Lambda target is ambiguous: ${targets.joinToString { it.typeName }}")
-                        literal(node, expected as? MCFPPFunctionType)
+                        if (ambiguous && expected !is MCFPPFunctionType) visitor.visitAmbiguousObject(node, expected)
+                        else {
+                            if (targets.size > 1) return fail("Lambda target is ambiguous: ${targets.joinToString { it.typeName }}")
+                            literal(node, expected as? MCFPPFunctionType)
+                        }
                     }
                     is P.ExpressionContext -> visitor.visitExpression(node, expected)
                     else -> return fail("Unsupported function-value argument")
@@ -195,8 +200,7 @@ internal object LambdaLowering {
                 is ParameterMatcher.TypeSelection.Ambiguous -> return fail(ParameterMatcher.ambiguity(name, selected.functions))
                 else -> return fail("Cannot resolve function '$name' for supplied argument types")
             }
-            Function.currFunction.child.add(target)
-            target.parent.add(Function.currFunction)
+            Function.currFunction.recordCall(target)
             return top.mcfpp.core.lang.context.ContextParameters.withExplicit(explicit) { when (target) {
                 is Generic<*> -> target.invoke(readonly, args, null)
                 is NativeFunction -> target.invoke(readonly, args, null)
@@ -248,8 +252,7 @@ internal object LambdaLowering {
 
     internal fun invokeKnown(value: FunctionValue, arguments: List<Var<*>>, target: Function): Var<*> {
         val signature = value.type as MCFPPFunctionType
-        Function.currFunction.child.add(target)
-        target.parent.add(Function.currFunction)
+        Function.currFunction.recordCall(target)
         val actualArguments = if (target.normalParams.size == signature.parameters.size + 1)
             arguments + value.environment() else arguments
         val returned = target.invoke(actualArguments, null)

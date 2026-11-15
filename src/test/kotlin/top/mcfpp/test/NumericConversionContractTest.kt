@@ -221,7 +221,7 @@ class NumericConversionContractTest {
         """.trimIndent()
         val source = """
             namespace fixture.payloads
-            data Payload { var value: int; constructor(value: int){this.value=value;} }
+            data Payload { var value: int; new(value: int){ return {value: value}; } }
             data Box {
                 func observe(flag: bool,label: string,payload: nbt,objectValue: Payload,bytes: ByteArray,ints: IntArray,longs: LongArray):int {
                     /data modify storage fixture:payloads runtime set value {}
@@ -371,7 +371,7 @@ class NumericConversionContractTest {
         val main="func main(){var hidden=Hidden();}"
         val source="""
             namespace fixture.compileronly
-            data Hidden {var point: pos3;constructor(){this.point=1 2 3;} }
+            data Hidden {var point: pos3;new(){ return {point: 1 2 3}; } }
             $main
         """.trimIndent()
         for(fresh in listOf(false,true)) {

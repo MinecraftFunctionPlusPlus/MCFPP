@@ -29,6 +29,12 @@ object ParameterMatcher {
             val names = readonly.mapIndexed { index, param -> param.identifier to "#readonly$index" }.toMap()
             fun identity(type: MCFPPType): Any {
                 if (type is MCFPPGenericParamType && type.identifier in names) return names.getValue(type.identifier)
+                if (type is MCFPPObjectType) return listOf("object", type.fields.map {
+                    listOf(it.name, it.optional, identity(it.type))
+                })
+                if (type is MCFPPLiteralType) return listOf("literal", identity(type.primitive), type.value)
+                if (type is MCFPPIntersectionType) return listOf("intersection", type.components.map(::identity).sortedBy { it.toString() })
+                if (type is MCFPPUnionType) return listOf("union", type.types.map(::identity).sortedBy { it.toString() })
                 if (type is MCFPPTypeWithGeneric && type.generic.isNotEmpty()) {
                     val id = type.typeId
                     if (id is TypeId.Applied) return id.constructor to type.generic.map(::identity)
@@ -75,13 +81,28 @@ object ParameterMatcher {
         descriptors = StorageAccess.boundTypes(value)
     )
 
-    fun select(functions: List<Function>, key: String, readonly: List<Var<*>>, normal: List<Var<*>>): Function? {
-        val matches = functions.mapNotNull { match(it, key, readonly, normal, true) }
+    fun select(functions: List<Function>, key: String, readonly: List<Var<*>>, normal: List<Var<*>>, receiver: MCFPPType? = null): Function? {
+        val matches = functions.mapNotNull { function ->
+            match(function, key, readonly, normal, true)?.let { withReceiver(it, receiver) }
+        }
         if (matches.isEmpty()) return null
         val best = best(matches)
         if (best.size == 1) return best.single().function
         LogProcessor.error(ambiguity(key, best.map { it.function }))
         return UnknownFunction(key)
+    }
+
+    private fun withReceiver(match: Match, receiver: MCFPPType?): Match? {
+        if (receiver == null || match.function.isStatic) return match
+        val declaredReceiver = (match.function as? NativeFunction)?.caller?.takeUnless { it == MCFPPPrivateType.Void }
+            ?: (match.function.owner as? top.mcfpp.model.compound.DataTemplate)?.getType() ?: return match
+        val receiverTarget = if (match.function.isEntityMember && receiver is MCFPPEntityRefType &&
+            declaredReceiver is MCFPPDataTemplateType) MCFPPEntityRefType(declaredReceiver) else declaredReceiver
+        val element = (receiver as? MCFPPTypeWithGeneric)?.generic?.firstOrNull()
+        val formal = if (receiverTarget is MCFPPCompoundType && element != null)
+            receiverTarget.replaceGenericParam(mapOf("E" to element)) else receiverTarget
+        val rank = conversion(receiver, formal)?.rank ?: return null
+        return match.copy(ranks = listOf(rank) + match.ranks, targets = listOf(formal) + match.targets)
     }
 
     internal fun ambiguity(key: String, functions: List<Function>): String = "Ambiguous overload '$key': ${functions.joinToString { function ->
@@ -96,6 +117,9 @@ object ParameterMatcher {
     }
 
     fun selectConstructor(constructors: List<DataTemplateConstructor>, arguments: List<Var<*>>): TypeSelection = typeSelection(constructors.mapNotNull { match(it, it.identifier, emptyList(), arguments, true) })
+
+    fun selectFactory(factories: List<TemplateFactory>, arguments: List<Var<*>>): TypeSelection =
+        typeSelection(factories.mapNotNull { match(it, "new", emptyList(), arguments, true) })
 
     fun selectOperatorTypes(candidates: List<Pair<MCFPPType?, Function>>, actual: MCFPPType?): TypeSelection {
         val matches = candidates.mapNotNull { (formal, function) ->
@@ -123,8 +147,11 @@ object ParameterMatcher {
             if (ranks.all { (x, y) -> x <= y } && ranks.any { (x, y) -> x < y }) return true
             if (a.ranks != b.ranks) return false
             val targets = a.targets.zip(b.targets)
-            if (targets.all { (x, y) -> TypeRelations.isSubtype(x, y) } && targets.any { (x, y) -> x != y }) return true
-            return a.targets == b.targets && a.defaults < b.defaults
+            if (targets.all { (x, y) -> TypeRelations.isSubtype(x, y) } &&
+                targets.any { (x, y) -> !TypeRelations.isSubtype(y, x) }) return true
+            return a.targets.size == b.targets.size &&
+                targets.all { (x, y) -> TypeRelations.isSubtype(x, y) && TypeRelations.isSubtype(y, x) } &&
+                a.defaults < b.defaults
         }
         return matches.filter { candidate -> matches.none { other -> other !== candidate && better(other, candidate) } }
     }
@@ -134,9 +161,12 @@ object ParameterMatcher {
         key: String,
         readonlyArguments: List<DeclarationBinding.Bound>,
         normal: List<MCFPPType>,
-        receiverTypes: Map<String, MCFPPType> = emptyMap()
+        receiverTypes: Map<String, MCFPPType> = emptyMap(),
+        receiver: MCFPPType? = null
     ): TypeSelection {
-        return typeSelection(functions.mapNotNull { declaredMatch(it, key, readonlyArguments, normal, true, receiverTypes) })
+        return typeSelection(functions.mapNotNull { function ->
+            declaredMatch(function, key, readonlyArguments, normal, true, receiverTypes)?.let { withReceiver(it, receiver) }
+        })
     }
 
     internal sealed interface PreparedTypeSelection {

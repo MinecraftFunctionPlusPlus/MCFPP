@@ -14,7 +14,9 @@ object DeclarationFlags {
     const val DATA_ONLY = 128L
     const val ENTITY = 256L
     const val PARENT_CONSTRUCTOR = 512L
-    const val ALL = 1023L
+    const val FACTORY = 1024L
+    const val IMPLICIT_FACTORY = 2048L
+    const val ALL = 4095L
 }
 
 data class DeclCommon(

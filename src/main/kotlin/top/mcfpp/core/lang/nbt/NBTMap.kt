@@ -56,10 +56,10 @@ open class NBTMap : NBTBasedData {
         data.scope.forEachFunction {
             candidates.add(if (it is NativeFunction) it.replaceGenericParams(mapOf("E" to genericType)) else it)
         }
-        var result = top.mcfpp.model.function.ParameterMatcher.select(candidates, key, readOnlyArgs, normalArgs)
+        var result = top.mcfpp.model.function.ParameterMatcher.select(candidates, key, readOnlyArgs, normalArgs, type)
         val parents = data.parent.iterator()
         while (result == null && parents.hasNext()) {
-            val inherited = parents.next().getFunction(key, readOnlyArgs, normalArgs, isStatic)
+            val inherited = parents.next().getFunction(key, readOnlyArgs, normalArgs, isStatic, type)
             if (inherited !is UnknownFunction) result = inherited
         }
         val selected = result ?: UnknownFunction(key)

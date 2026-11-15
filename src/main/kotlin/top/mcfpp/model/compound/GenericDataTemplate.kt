@@ -673,6 +673,11 @@ open class GenericDataTemplate : DataTemplate {
                 if (function == null) Project.withCompilationContext(source) { LogProcessor.error("Missing constructor materialization") }
                 else { functions[declaration] = function; prototype?.let { functions[it] = function } }
             }
+            member.templateFactoryDeclaration()?.let { source ->
+                val function = template.scope.functions["new"].orEmpty().singleOrNull { ownsBody(it, source.curlBlock()) }
+                if (function == null) Project.withCompilationContext(source) { LogProcessor.error("Missing factory materialization") }
+                else { functions[declaration] = function; prototype?.let { functions[it] = function } }
+            }
         }
         entry.origins = MaterializedOrigins(fields, properties, functions)
     }

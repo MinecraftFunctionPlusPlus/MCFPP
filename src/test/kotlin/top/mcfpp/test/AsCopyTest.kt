@@ -47,7 +47,8 @@ class AsCopyTest {
         val main = compile("""
             func project(value: any): dict<list<int>> { return value as dict<list<int>>; }
             func main(){
-                var source: any = {items:[1,2]}
+                var dictionary: dict<list<int>> = {items:[1,2]}
+                var source: any = dictionary
                 var view: dict<list<int>> = (source as dict<list<int>>)
                 var frozen = source as dict<list<int>>
                 var returned = project(source as dict<list<int>>)

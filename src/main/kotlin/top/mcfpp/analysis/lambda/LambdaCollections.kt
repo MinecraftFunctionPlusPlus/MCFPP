@@ -271,7 +271,7 @@ internal object LambdaCollections {
                 .forEachIndexed { index, context -> target.declaredContextParameters += top.mcfpp.model.function.FunctionParam(context, "context$index", target) }
             target.buildParamVar()
             GlobalScope.getOrCreateNamespace(target.namespace).scope.addFunction(target, false)
-            Function.currFunction.child.add(target); target.parent.add(Function.currFunction)
+            Function.currFunction.recordCall(target)
             val result = target.invoke(args, null)
             if (call.name == "toImmutableList" && !result.isError) return StorageAccess.view(result, plan.result, diagnose = false)
             if (plan.writeBack && receiver != null && !result.isError) {

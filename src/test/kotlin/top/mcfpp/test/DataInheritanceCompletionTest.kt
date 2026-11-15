@@ -84,18 +84,19 @@ class DataInheritanceCompletionTest {
         }
     }
 
-    @Test fun anonymousGenericParentCompletesBeforeItsOwnInferredFields() {
+    @Test fun forwardGenericParentCompletesBeforeSignatureChildInference() {
         compileDeclarations(
             """
-            func consume(value:data:Parent<int>{var copied=this.value;}) {}
+            func consume(value:SignatureChild) {}
+            data SignatureChild:Parent<int>{var copied=this.value;}
             data Parent<T>{var value:T;}
             """.trimIndent()
         ) {
             assertEquals(0, Project.errorCount)
             val function = GlobalScope.localNamespaces.getValue("fixture").scope.functions.getValue("consume").single()
-            val anonymous = assertIs<MCFPPDataTemplateType>(function.normalParams.single().type).template
-            assertEquals(MCFPPBaseType.Int, assertNotNull(anonymous.scope.getVar("copied")).type)
-            assertEquals(MCFPPBaseType.Int, assertNotNull(anonymous.scope.getVar("value")).type)
+            val child = assertIs<MCFPPDataTemplateType>(function.normalParams.single().type).template
+            assertEquals(MCFPPBaseType.Int, assertNotNull(child.scope.getVar("copied")).type)
+            assertEquals(MCFPPBaseType.Int, assertNotNull(child.scope.getVar("value")).type)
         }
     }
 

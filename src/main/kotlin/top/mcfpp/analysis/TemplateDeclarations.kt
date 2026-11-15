@@ -98,6 +98,10 @@ internal class TemplateDeclarations(private val context: Context) {
     internal var templateDeclarationsReady = false
         private set
 
+    /** Source operands acquire inherited fields and declaration effects at this barrier. */
+    internal val shouldDeferTypeCompositions: Boolean
+        get() = !templateDeclarationsReady || templateSignatureCollectionDepth != 0 || completingTemplateContracts
+
     internal fun resolveImportedTemplateParents(): Unit = withTemplateHeaderBatch {
         for (namespace in GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values) {
             val scope = namespace.scope
@@ -254,6 +258,9 @@ internal class TemplateDeclarations(private val context: Context) {
                 // Resolving a signature or initializer can introduce another anonymous type
                 // or concrete generic binding. Complete those before refreshing/checking.
                 if (pendingTemplateContracts.any { it.inheritanceIdentity !in completedIds }) continue
+                completed.forEach { template ->
+                    templateCompletionStage(template) { template.normalizeDeclarationFieldTypes() }
+                }
                 functions.filter { refreshed.add(it) }.forEach { function ->
                     templateCompletionStage(function.owner as? DataTemplate) {
                         function.refreshTemplateSignature()

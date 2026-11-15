@@ -94,9 +94,9 @@ class NativeSelectorContractTest {
             import mcfpp.minecraft.resource:*
             data Box {
                 func observe(number: int, label: string, word: string, payload: nbt, bounds: range, mode: string, order: string):int {
-                    var kind = EntityType(); kind.id = label
-                    var predicate = Predicate(); predicate.id = label
-                    var advancement = Advancement(); advancement.id = label
+                    var kind = {id:label} as EntityType
+                    var predicate = {id:label} as Predicate
+                    var advancement = {id:label} as Advancement
                     var target = @e
                     target.x(number); target.y(number); target.z(number)
                     target.dx(number); target.dy(number); target.dz(number)

@@ -30,7 +30,9 @@ import top.mcfpp.library.model.*
 import top.mcfpp.library.syntax.*
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPDataTemplateType
+import top.mcfpp.type.MCFPPObjectType
 import top.mcfpp.type.MCFPPType
+import top.mcfpp.type.TypeCompositions
 import top.mcfpp.type.TypeId
 import java.nio.file.Files
 import java.nio.file.Path
@@ -236,30 +238,36 @@ class DataTemplateParentIdentityMetadataTest {
             data Holder{var ints:(Box<int>&Extra);var bools:(Box<bool>&Extra);}
         """)
         val oldHolder = local("Holder")
-        val oldTypes = listOf("ints", "bools").map { assertIs<MCFPPDataTemplateType>(oldHolder.scope.getVar(it)!!.type) }
+        val oldBox = assertIs<GenericDataTemplate>(local("Box"))
+        val arguments = listOf(MCFPPBaseType.Int, MCFPPBaseType.Bool)
+        val oldBindings = arguments.map { argument ->
+            assertNotNull(oldBox.compile(listOf(MCFPPTypeVar(argument)))).inheritanceIdentity
+        }
+        val oldTypes = listOf("ints", "bools").map { assertIs<MCFPPObjectType>(oldHolder.scope.getVar(it)!!.type) }
         write(output)
         read(output)
         val box = assertIs<GenericDataTemplate>(loaded("Box"))
         assertTrue(box.compiledTemplates.isEmpty(), "READ_LIB must not compile a specialized parent")
         val holder = loaded("Holder")
-        val types = listOf("ints", "bools").map { assertIs<MCFPPDataTemplateType>(holder.scope.getVar(it)!!.type).also { type -> type.tryResolve() } }
-        types.forEach { type ->
-            assertEquals(2, type.template.pendingParentTypeIds.size)
-            assertTrue(type.template.parent.isEmpty())
-            assertFalse(type.template.hasCompletedDeclaration)
-        }
+        val types = listOf("ints", "bools").map { assertIs<MCFPPObjectType>(holder.scope.getVar(it)!!.type) }
         complete()
         for ((index, type) in types.withIndex()) {
-            val argument = if (index == 0) MCFPPBaseType.Int else MCFPPBaseType.Bool
+            val argument = arguments[index]
             val canonical = assertNotNull(box.compile(listOf(MCFPPTypeVar(argument))))
             assertSame(box, canonical.originTemplate)
-            assertIs<TypeId.Specialized>(canonical.inheritanceIdentity)
-            assertEquals(listOf(canonical.inheritanceIdentity, loaded("Extra").inheritanceIdentity), type.template.parent.map { it.inheritanceIdentity })
-            assertSame(canonical, type.template.parent.first())
-            assertSame(canonical, type.template.scope.getVar("x")!!.declaredParentTemplate)
-            assertEquals(argument.typeId, type.template.scope.getVar("x")!!.type.typeId)
-            assertSame(type.template, UnionDataTemplate.resolve(listOf(canonical, loaded("Extra"))))
-            assertNotSame(oldTypes[index].template, type.template)
+            val identity = assertIs<TypeId.Specialized>(canonical.inheritanceIdentity)
+            assertEquals(box.nominalIdentity, identity.constructor)
+            assertEquals(assertIs<TypeId.Specialized>(oldBindings[index]).arguments, identity.arguments)
+            assertNotEquals(oldBindings[index], identity, "Imported nominal declarations belong to the fresh library session")
+            assertSame(canonical, box.compile(listOf(MCFPPTypeVar(argument))))
+            assertSame(canonical, canonical.scope.getVar("x")!!.declaredParentTemplate)
+            assertEquals(argument.typeId, canonical.scope.getVar("x")!!.type.typeId)
+            assertEquals(listOf("x", "y"), type.fields.map { it.name })
+            assertEquals(argument.typeId, type.fieldsByName.getValue("x").type.typeId)
+            assertEquals(MCFPPBaseType.Int.typeId, type.fieldsByName.getValue("y").type.typeId)
+            assertEquals(TypeCompositions.intersection(canonical.getType(), loaded("Extra").getType()).typeId, type.typeId)
+            assertEquals(oldTypes[index].typeId, type.typeId)
+            assertNotSame(oldTypes[index], type)
         }
         assertNotEquals(types[0].typeId, types[1].typeId)
         assertEquals(2, box.compiledTemplates.size)

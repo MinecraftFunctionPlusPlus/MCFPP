@@ -40,7 +40,7 @@ class NbtArrayIRTest {
         val main = compile("""
             func copy(value: any): any { return value; }
             func main(){
-                var source = {values:[I;2,3]}
+                var source: dict<any> = {values:[I;2,3]}
                 var view = source["values"] as IntArray
                 var copied = copy(view) as IntArray
                 view[0] = 7

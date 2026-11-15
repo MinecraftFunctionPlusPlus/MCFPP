@@ -345,7 +345,7 @@ class MniSourceEnvironmentTest {
                 }
                 file.namespace.scope.functions["legacy"] = arrayListOf(native)
                 function(file, "combine", List(4) { MCFPPBaseType.Int })
-                val templateSyntax = parser("data Box<T>{var value:T;func identity(v:T):T{return v;}constructor(v:T){var bodyOnly=17;}}")
+                val templateSyntax = parser("data Box<T>{var value:T;func identity(v:T):T{return v;}new(v:T){var bodyOnly=17;return {value:v};}}")
                     .templateDeclaration()
                 val prototype = GenericDataTemplate(templateSyntax.templateBody(), "Box", file.namespace.identifier).apply {
                     declarationFile = file
@@ -398,7 +398,7 @@ class MniSourceEnvironmentTest {
                 assertTrue(producer.compiledFunctions.isEmpty())
                 assertTrue(accept.compiledFunctions.isEmpty())
                 assertTrue(shell.scope.functions.values.flatten().all { !it.bodyCompiled })
-                assertTrue(shell.constructors.all { !it.bodyCompiled })
+                assertTrue(shell.factories.all { !it.bodyCompiled })
                 caller.scope.vars["runtime"] = MCInt("runtime")
                 // Ordinary VALUE arguments remain runtime reads. Static-source restrictions
                 // belong to INLINE bodies, not to a normally typed ordinary call.

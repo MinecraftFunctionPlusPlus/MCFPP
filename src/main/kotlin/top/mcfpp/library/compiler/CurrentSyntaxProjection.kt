@@ -51,7 +51,8 @@ sealed interface ProjectionTemplateDeclaration {
         val result: TypeSyntax, val body: BodyId?, val isOverride: Boolean = false, val isAbstract: Boolean = false,
         override val access: ProjectionAccess? = null,
         val contexts: List<ProjectionParameter> = emptyList(),
-        val isEntityMember: Boolean = false
+        val isEntityMember: Boolean = false,
+        val isFactory: Boolean = false
     ) : ProjectionTemplateDeclaration
     data class Constructor(
         val normal: List<ProjectionParameter>, val body: BodyId, override val access: ProjectionAccess? = null

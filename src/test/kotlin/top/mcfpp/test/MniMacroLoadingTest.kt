@@ -318,11 +318,17 @@ class MniMacroLoadingTest {
     @Test fun changingParentFactsOnTheSameObjectsAndSameDomainSizeRequiresANewSnapshot() {
         Project.init()
         val namespace = namespace(LoadingBaseMacro::class.java)
-        val parent = DataTemplate("Base", "fixture.loading").getType()
+        val parent = DataTemplate("Base", "fixture.loading").apply template@{
+            scope.putVar("required", top.mcfpp.core.lang.MCInt("required").apply {
+                declaredParentTemplate = this@template
+            })
+        }.getType()
         val child = DataTemplate("Child", "fixture.loading").getType()
         val early = prepare(namespace, listOf(parent, child))
         assertFailsWith<SourceBindingFailure> { bind(early, namespace, "accept", child) }
         child.parentType = ArrayList<MCFPPType>(child.parentType).apply { add(parent) }
+        // Completed inheritance exposes the parent's required field in the child's effective scope.
+        child.template.scope.putVar("required", assertNotNull(parent.template.scope.getVar("required")))
         val fresh = prepare(namespace, listOf(parent, child))
         assertSame(
             fresh.namespaces.getValue(namespace.identifier).find("accept").single().reference,

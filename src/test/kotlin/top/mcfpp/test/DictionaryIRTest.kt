@@ -59,8 +59,8 @@ class DictionaryIRTest {
     @Test fun deepMergeKeepsUntouchedFieldsAndCopiesTheSource() = modes {
         val main = compile("""
             func main(){
-                var values: dict<any> = {nested:{first:2, second:9}, untouched:true}
-                var source: dict<any> = {nested:{first:7}}
+                var values: dict<any> = {nested:({first:2, second:9} as dict<int>), untouched:true}
+                var source: dict<any> = {nested:({first:7} as dict<int>)}
                 values.merge(source)
                 var nested = values["nested"] as dict<int>
                 nested["first"] = 8
@@ -77,7 +77,7 @@ class DictionaryIRTest {
     @Test fun signaturesAndKeyCapabilitiesAreCheckedBeforeCommands() {
         for (source in listOf(
             "func main(){ var values: dict<int> = {first:2}; values.remove(1); }",
-            "func main(){ var values: dict<int> = {first:2}; values.merge({first:true}); }",
+            "func main(){ var values: dict<int> = {first:2}; values.merge({first:true} as dict<bool>); }",
             "func inspect(values: dict<int>, key: string): bool { return values.containsKey(key); }\nfunc main(){ var values: dict<int> = {first:2}; var found = inspect(values,\"first\"); }"
         )) {
             MCFPPStringTest.readFromString(source, version = "26.3")
@@ -106,29 +106,51 @@ class DictionaryIRTest {
         try {
             val declarations = """
                 namespace fixture.dictionary_composite
-                data Node { var value: int; var next: Node?; constructor(value: int){this.value=value;} }
+                data Node { var value: int; var next: Node?; new(value: int){ return {value: value}; } }
                 func readList(values: dict<list<int>>):int{return values["key"][0];}
                 func readNode(values: dict<Node>):int{return values["key"].value;}
                 func readNested(values: dict<dict<int>>):int{return values["key"]["value"];}
                 func returnNode(values: dict<Node>):Node{return values["key"];}
                 func sameNode(value: Node):Node{return value;}
-                func readDeep(values: dict<Node>):int{return values["key"].next.value;}
+                func readDeep(values: dict<Node>):int{
+                    var node=values["key"]
+                    if(node.next != null){return node.next.value;}
+                    return 0
+                }
                 func copyDeep(values: dict<Node>):int{
-                    var copied=values["key"];var before=copied.next.value
-                    copied.next.value=99;return before
+                    var copied=values["key"]
+                    if(copied.next != null){
+                        var before=copied.next.value
+                        copied.next.value=99;return before
+                    }
+                    return 0
                 }
                 func returnDeep(values: dict<Node>):int{
-                    var returned=sameNode(returnNode(values));var before=returned.next.value
-                    returned.next.value=88;return before+returned.next.value-before
+                    var returned=sameNode(returnNode(values))
+                    if(returned.next != null){
+                        var before=returned.next.value
+                        returned.next.value=88;return before+returned.next.value-before
+                    }
+                    return 0
                 }
                 func independentDeep(values: dict<Node>):int{
                     var original=values["key"];var copied=original
-                    copied.next.value=999;return copied.next.value
+                    if(copied.next != null){copied.next.value=999;return copied.next.value;}
+                    return 0
                 }
                 func repeatDeep(values: dict<Node>):int{
                     var first=returnNode(values);var second=first
                     var third=sameNode(second);var fourth=sameNode(third)
-                    return fourth.next.next.next.next.value
+                    if(fourth.next != null){
+                        if(fourth.next.next != null){
+                            if(fourth.next.next.next != null){
+                                if(fourth.next.next.next.next != null){
+                                    return fourth.next.next.next.next.value
+                                }
+                            }
+                        }
+                    }
+                    return 0
                 }
                 func copyNode(values: dict<Node>):int{
                     var original=values["key"];var copied=original;var returned=returnNode(values)
@@ -163,7 +185,7 @@ class DictionaryIRTest {
                 val main = GlobalScope.localNamespaces.values.flatMap { it.scope.functions["main"].orEmpty() }.single()
                 val node = assertNotNull(GlobalScope.getCanonicalTemplate("fixture.dictionary_composite", "Node"))
                 val functions = (GlobalScope.localNamespaces.values + GlobalScope.libNamespaces.values)
-                    .flatMap { it.scope.functions.values.flatten() }.plus(node.constructors + node.scope.functions.values.flatten())
+                    .flatMap { it.scope.functions.values.flatten() }.plus(node.factories + node.constructors + node.scope.functions.values.flatten())
                     .associate { it.namespaceID.toString() to it.commands.analyzeAll() } +
                     Project.macroFunction.mapKeys { "mcfpp:dynamic/${it.key}" }.mapValues { listOf(it.value) }
                 val machine = ScoreCommandExecutor(main.commands.analyzeAll(), functions)
@@ -255,7 +277,7 @@ class DictionaryIRTest {
 
     @Test fun compositeAccessDoesNotProveMissingFieldsOrErasedLayouts() {
         for (source in listOf(
-            "data Node { var value: int; constructor(){} }\nfunc main(){var node=Node();external result=node.value;}",
+            "data Node { var value: int; }\nfunc main(){var node=Node();external result=node.value;}",
             "func reject(values: dict<any>){external result=values[\"key\"][0];}\nfunc main(){}",
             "func reject(values: dict<object>){external result=values[\"key\"][0];}\nfunc main(){}"
         )) {

@@ -1,6 +1,6 @@
 data Box {
     var value: int = 0;
-    constructor(value: int) { this.value = value; }
+    new(value: int) { return { value }; }
     func add(extra: int): int { return this.value + extra; }
     func scale(extra: int): int { return this.value * extra; }
 }

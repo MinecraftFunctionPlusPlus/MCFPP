@@ -34,6 +34,7 @@ object SyntaxTags {
     const val FUNCTION_TYPE = 0x0209
     const val VOID_TYPE = 0x020a
     const val INFERRED_TYPE = 0x020b
+    const val OBJECT_TYPE = 0x020c
     const val BLOCK = 0x0301
     const val LOCAL = 0x0302
     const val EVALUATE = 0x0303
@@ -56,5 +57,5 @@ object SyntaxTags {
     const val ANNOTATION_CONSTRUCTION = 0x0404
 
     fun isKnown(tag: Int): Boolean = tag in LITERAL..INTERPOLATED_STRING ||
-        tag in TYPE_NAME..INFERRED_TYPE || tag in BLOCK..CONTEXT_SCOPE || tag in TEMPLATE_BODY..ANNOTATION_CONSTRUCTION
+        tag in TYPE_NAME..OBJECT_TYPE || tag in BLOCK..CONTEXT_SCOPE || tag in TEMPLATE_BODY..ANNOTATION_CONSTRUCTION
 }

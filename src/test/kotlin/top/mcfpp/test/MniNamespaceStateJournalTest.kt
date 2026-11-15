@@ -28,6 +28,13 @@ import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPListType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.TypeId
+import top.mcfpp.type.MCFPPObjectType
+import top.mcfpp.type.ObjectFieldContract
+import top.mcfpp.type.MCFPPLiteralType
+import top.mcfpp.type.MCFPPIntersectionType
+import top.mcfpp.type.MCFPPGenericParamType
+import top.mcfpp.type.MCFPPNeverType
+import top.mcfpp.analysis.CompilerValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -274,6 +281,22 @@ class MniNamespaceStateJournalTest {
             assertSame(MCFPPBaseType.Float, parameters.single())
             assertSame(declaration, original["real.generic.alias" to listOf(MCFPPBaseType.Float)])
         }
+    }
+
+    @Test fun compositionGenericKeysAreValidatedWithoutPreparingRuntimeFields() = isolated {
+        val scope = SimpleLibScope()
+        val shape = MCFPPObjectType(listOf(ObjectFieldContract("value", MCFPPBaseType.Int)))
+        val literal = MCFPPLiteralType(MCFPPBaseType.Int, CompilerValue.Integral(1))
+        val intersection = MCFPPIntersectionType(listOf(shape, MCFPPGenericParamType("T", arrayListOf())))
+        val arguments = listOf(shape, literal, intersection, MCFPPNeverType)
+        val declaration = generic()
+        scope.genericTemplate["composition" to arguments] = declaration
+        val before = NamespaceStateJournal.checkpoint(listOf(scope))
+        assertTrue(shape.rawTemplateDeclaration().scope.allVars.isEmpty())
+        scope.genericTemplate.clear()
+        before.restore()
+        assertSame(declaration, scope.genericTemplate["composition" to arguments])
+        assertTrue(shape.rawTemplateDeclaration().scope.allVars.isEmpty())
     }
 
     @Test fun fixedSizeGenericKeysRestoreThroughTheirBackingArrayWithoutChangingIdentity() = isolated {

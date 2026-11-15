@@ -50,9 +50,12 @@ class TemplateFieldInferenceTest {
         val main = compile("""
             data Box {
                 @DataOnly
-                var value = produce(initial) { get }
-                var next = this.value + 1
-                constructor(initial: int){}
+                var value = produce(0) { get }
+                var next = value + 1
+                new(initial: int){
+                    var value = produce(initial)
+                    return { value, next: value + 1 }
+                }
             }
             func produce(value: int): int {
                 /say produced
@@ -77,9 +80,12 @@ class TemplateFieldInferenceTest {
     @Test fun erasedReturnEvidenceAndOrdinaryConstructorValuesDoNotChangeFieldConstraints() {
         val main = compile("""
             data Box {
-                var erased: any = produce(initial)
-                var value = (this.erased as int) + 1 { get }
-                constructor(initial: int){}
+                var erased: any
+                var value = 1 { get }
+                new(initial: int){
+                    var erased = produce(initial)
+                    return { erased, value: (erased as int) + 1 }
+                }
             }
             func produce(value: int): any { return value; }
             func main(){
@@ -98,8 +104,8 @@ class TemplateFieldInferenceTest {
         compile("""
             data Box {
                 var value = initial { get }
-                constructor(initial: int){}
-                constructor(initial: bool){}
+                new(initial: int){ return { value: initial } }
+                new(initial: bool){ return { value: initial } }
             }
             func main(){}
         """, errors = 1)
@@ -140,7 +146,7 @@ class TemplateFieldInferenceTest {
         val main = compile("""
             @DataOnly
             data Box { var value = 4; }
-            data Parent { const value: int = 1; }
+            data Parent { const value: int = 8; }
             data Child: Parent {
                 @DataOnly
                 const value = 8
@@ -176,7 +182,7 @@ class TemplateFieldInferenceTest {
             data Parent { var value: int = 4; }
             @DataOnly
             data Middle: Parent {}
-            data Grand: Middle {}
+            data Grand: Middle { new(){ return { value: 4 } } }
             data Sibling: Parent {}
             func main(){var grand=Grand();external result=grand.value;}
         """)
@@ -258,7 +264,7 @@ class TemplateFieldInferenceTest {
 
     @Test fun constantInstanceWritesAreRejectedAndDoNotReplaceTheLocalInitializer() {
         MCFPPStringTest.readFromString("""
-            data Parent { const value: int = 1; }
+            data Parent { const value: int = 8; }
             data Child: Parent { const value: int = 8; }
             func main(){var child=Child();child.value=9;external result=child.value;}
         """.trimIndent(), version = "26.3")

@@ -6,8 +6,7 @@ data Area{
     var end: pos3
 
     /// 保存区域的起点和终点坐标。
-    constructor(start: pos3, end: pos3){
-        this.start = start
-        this.end = end
+    new(start: pos3, end: pos3){
+        return { start, end }
     }
 }

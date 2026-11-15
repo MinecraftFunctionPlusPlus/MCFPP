@@ -20,6 +20,7 @@ import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
 import top.mcfpp.test.util.compilerDiagnostics
+import top.mcfpp.test.util.executePublishedFunctions
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPConcreteType
 import top.mcfpp.type.MCFPPGenericParamType
@@ -33,21 +34,39 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class DataInheritanceMethodTest {
-    @Test fun moreSpecificDiamondOverrideWinsInBothParentOrders() {
+    @Test fun moreSpecificReceiverWinsInBothDiamondParentOrders() {
         for (parents in listOf("L,R", "R,L")) {
             val main = compile(
                 """
                 data A {func f():int{return 1;}}
                 data L:A {}
-                data R:A {override func f():int{return 2;}}
-                data C:$parents {}
+                data R:A {var marker:int;func f():int{return 2;}}
+                data C:$parents {new(){return{marker:1};}}
                 func main(){var c=C();external result=c.f();}
             """
             )
             assertEquals(0, Project.errorCount)
-            assertSame(template("R"), template("C").scope.getFunctionCandidates("f").single().owner)
+            assertEquals(setOf(template("A"), template("R")), template("C").scope.getFunctionCandidates("f").map { it.owner }.toSet())
+            assertFalse(template("C").scope.functions.containsKey("f"))
             assertEquals(2, execute(main).read(main.scope.getVar("result") as MCInt))
         }
+    }
+
+    @Test fun equivalentReceiverContractsDoNotGainVirtualPriorityFromNominalAncestry() {
+        val messages = compilerDiagnostics {
+            compile(
+                """
+                data A{func f():int{return 1;}}
+                data R:A{func f():int{return 2;}}
+                data C:R{}
+                func main(){var c=C();c.f();}
+            """
+            )
+        }.joinToString("\n")
+        assertTrue(Project.errorCount > 0)
+        assertAmbiguousOrigins(messages, "A", "R")
+        assertFalse(template("C").scope.functions.containsKey("f"))
+        assertEquals(2, template("C").scope.getFunctionCandidates("f").size)
     }
 
     @Test fun commonDiamondContributesOnlyOneOriginalMethod() {
@@ -132,18 +151,18 @@ class DataInheritanceMethodTest {
                 var calls:int=0;
                 func f(x:int):bool{this.calls=this.calls+1;return true;}
             }
-            data C:A,B {var result=this.f(3);}
+            data C:A,B {var calls:int=0;func choose():bool{return this.f(3);}}
             func main(){
                 var c=C();
+                external initialResult=c.choose();
                 external initialCalls=c.calls;
-                external initialResult=c.result;
                 external direct=c.f(3);
                 external finalCalls=c.calls;
             }
         """
         )
         assertEquals(0, Project.errorCount)
-        assertEquals(MCFPPBaseType.Bool.typeId, template("C").scope.getVar("result")!!.type.typeId)
+        assertEquals(MCFPPBaseType.Bool.typeId, infer(template("C"), "this.f(3)").type.typeId)
         assertEquals(discarded, Function.extraFunction.commands.analyzeAll(), "Type inference must not emit discarded calls")
         val machine = execute(main)
         assertEquals(1, machine.read(main.scope.getVar("initialCalls") as MCInt))
@@ -157,26 +176,26 @@ class DataInheritanceMethodTest {
             """
                 data A {func f<N:float>(x:int):int{return 1;}}
                 data B {func f<N:int>(x:int):bool{return true;}}
-                data C:A,B {var result=this.f<1>(3);}
-                func main(){var c=C();external result=c.result;}
+                data C:A,B {func choose():bool{return this.f<1>(3);}}
+                func main(){var c=C();external result=c.choose();}
             """,
             """
                 data A {func f<N:int=1>(x:int):int{return 1;}}
                 data B {func f(x:int):bool{return true;}}
-                data C:A,B {var result=this.f(3);}
-                func main(){var c=C();external result=c.result;}
+                data C:A,B {func choose():bool{return this.f(3);}}
+                func main(){var c=C();external result=c.choose();}
             """,
             """
                 data A {func f(x:int,y:int=0):int{return 1;}}
                 data B {func f(x:int):bool{return true;}}
-                data C:A,B {var result=this.f(3);}
-                func main(){var c=C();external result=c.result;}
+                data C:A,B {func choose():bool{return this.f(3);}}
+                func main(){var c=C();external result=c.choose();}
             """
         )
         for (source in programs) {
             val main = compile(source)
             assertEquals(0, Project.errorCount, source)
-            assertEquals(MCFPPBaseType.Bool.typeId, template("C").scope.getVar("result")!!.type.typeId)
+            assertEquals(MCFPPBaseType.Bool.typeId, template("C").scope.functions.getValue("choose").single().returnType.typeId)
             assertEquals(1, execute(main).read(main.scope.getVar("result") as ScoreBool))
         }
     }
@@ -185,7 +204,7 @@ class DataInheritanceMethodTest {
         compile(
             """
             data Base<T>{func f():int{return 1;}}
-            data Specific<T>:Base<(T)>{override func f():int{return 2;}}
+            data Specific<T>:Base<(T)>{func f():int{return 2;}}
             data IntSpecific:Specific<int>{}
             data BoolBase:Base<bool>{}
             func main(){}
@@ -199,7 +218,7 @@ class DataInheritanceMethodTest {
         assertEquals(specific.identifier, intBase.identifier)
         assertFalse(specific.inheritanceIdentity == intBase.inheritanceIdentity)
         assertFalse(intBase.inheritanceIdentity == boolBase.inheritanceIdentity)
-        assertSame(specific, specific.scope.getFunctionCandidates("f").single().owner)
+        assertEquals(setOf(specific, intBase), specific.scope.getFunctionCandidates("f").map { it.owner }.toSet())
         val combined = DataTemplate("Combined", "default.test")
         combined.extends(intBase).extends(boolBase)
         assertEquals(2, combined.scope.getFunctionCandidates("f").size, "Base<int> and Base<bool> are distinct origins")
@@ -254,22 +273,5 @@ class DataInheritanceMethodTest {
         }
     }
 
-    private fun execute(main: Function): ScoreCommandExecutor {
-        val functions = linkedMapOf<String, List<String>>()
-        val visited = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Function, Boolean>())
-        fun collect(function: Function) {
-            if (!visited.add(function)) return
-            functions[function.namespaceID.toString()] = function.commands.analyzeAll()
-            function.compiledFunctions.values.forEach(::collect)
-        }
-        GlobalScope.localNamespaces.values.forEach { namespace ->
-            namespace.scope.functions.values.flatten().forEach(::collect)
-            namespace.scope.template.values.forEach { template ->
-                template.constructors.forEach(::collect)
-                template.scope.forEachFunction(::collect)
-            }
-        }
-        functions.putAll(Project.macroFunction.mapKeys { "mcfpp:dynamic/${it.key}" }.mapValues { listOf(it.value) })
-        return ScoreCommandExecutor(main.commands.analyzeAll(), functions).also { assertEquals(0, it.stackDepth) }
-    }
+    private fun execute(main: Function): ScoreCommandExecutor = executePublishedFunctions(main).also { assertEquals(0, it.stackDepth) }
 }

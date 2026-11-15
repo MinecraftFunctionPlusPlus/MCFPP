@@ -6,6 +6,9 @@ import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ContextCommandExecutor
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.io.LibBinWriter
+import top.mcfpp.analysis.InheritanceContractValidator
+import top.mcfpp.core.lang.entity.EntityTemplates
+import top.mcfpp.model.compound.DataTemplate
 import java.nio.file.Files
 import top.mcfpp.util.LogProcessor
 import kotlin.test.*
@@ -14,11 +17,15 @@ class EntityTemplateTest {
     private val declarations = """
         namespace fixture.entitytemplates
         import mcfpp.minecraft.entity:*
+        func stoneDisplayData(n: nbt): nbt {
+            var defaults: nbt = {block_state: {Name: "minecraft:stone"}}
+            return defaults.merge(n)
+        }
         entity StoneDisplay: BlockDisplay {
             var initialCount: int = 10
             entity var count: int = initialCount
             private entity var consumed: int = 0
-            constructor(n: nbt): BlockDisplay({block_state: {Name: "minecraft:stone"}}.merge(n))
+            constructor(n: nbt): BlockDisplay(stoneDisplayData(n))
             entity func consume() {
                 this.count -= 1
                 this.consumed += 1
@@ -61,14 +68,15 @@ class EntityTemplateTest {
         assertFalse(template.scope.getVar("initialCount")!!.isEntityMember)
     }
 
-    @Test fun summonCanBeOverriddenAndMergesCallerDataLast() {
+    @Test fun ordinarySummonWrapperMergesCallerDataLast() {
         MCFPPStringTest.readFromString("""
             namespace fixture.entityoverride
             import mcfpp.minecraft.entity:*
             entity BaseStone: BlockDisplay {}
             entity CustomStone: BaseStone {
-                override func summon(d: nbt): EntityRef<CustomStone> {
-                    return super.summon({foo: 1, nested: {keep: 2, replace: 3}}.merge(d))
+                func spawnCustom(d: nbt): EntityRef<CustomStone> {
+                    var defaults: nbt = {foo: 1, nested: {keep: 2, replace: 3}}
+                    return this.summon(defaults.merge(d))
                 }
                 entity func speak() {
                     /say custom
@@ -76,19 +84,25 @@ class EntityTemplateTest {
             }
             entity InheritedStone: CustomStone {}
             func spawn(d: nbt) {
-                var ref = CustomStone().summon(d)
+                var ref = CustomStone().spawnCustom(d)
                 ref.speak()
             }
             func main() {
                 spawn({foo: 4, nested: {replace: 5}})
-                var child = InheritedStone().summon({foo: 6})
+                var child = InheritedStone().spawnCustom({foo: 6})
                 child.speak()
-                var empty = CustomStone().summon()
+                var empty = CustomStone().spawnCustom({})
                 empty.speak()
                 var plain = BaseStone().summon({foo: 7})
             }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
+        for (name in listOf("BaseStone", "CustomStone", "InheritedStone")) {
+            val template = GlobalScope.localNamespaces.getValue("fixture.entityoverride").scope.getTemplate(name)!!
+            val summon = template.scope.functions.getValue("summon").single { it is EntityTemplates.SummonFunction }
+            assertSame(template, summon.owner)
+            assertFalse(summon.isOverride)
+        }
         val machine = execute("fixture.entityoverride:main")
         assertEquals(4, machine.entities.size)
         val first = machine.entities.first().name
@@ -230,7 +244,7 @@ class EntityTemplateTest {
         }
     }
 
-    @Test fun exportedOverridesRetainTheGeneratedParentSummon() {
+    @Test fun exportedReceiverWrappersKeepTheirLocalIntrinsicSummon() {
         val includes = Project.config.includes
         try {
             MCFPPStringTest.readFromString("""
@@ -238,11 +252,12 @@ class EntityTemplateTest {
                 import mcfpp.minecraft.entity:*
                 entity Base: BlockDisplay {}
                 entity Child: Base {
-                    override func summon(d: nbt): EntityRef<Child> {
-                        return super.summon({foo: 1}.merge(d))
+                    func spawnCustom(d: nbt): EntityRef<Child> {
+                        var defaults: nbt = {foo: 1}
+                        return this.summon(defaults.merge(d))
                     }
                 }
-                func make(): EntityRef<Child> { return Child().summon({}) }
+                func make(): EntityRef<Child> { return Child().spawnCustom({}) }
             """.trimIndent(), version = "26.3")
             assertEquals(0, Project.errorCount)
             val output = Files.createTempDirectory("mcfpp-entity-override-library-")
@@ -251,11 +266,31 @@ class EntityTemplateTest {
             MCFPPStringTest.readFromString("""
                 namespace fixture.entityoverrideconsumer
                 import fixture.entityoverrideexport:*
-                func main() { var ref = Child().summon({bar: 2}) }
+                func main() { var ref = Child().spawnCustom({bar: 2}) }
             """.trimIndent(), version = "26.3")
             assertEquals(0, Project.errorCount)
+            val child = assertNotNull(GlobalScope.getTemplate("fixture.entityoverrideexport", "Child"))
+            val summon = child.scope.functions.getValue("summon").single { it is EntityTemplates.SummonFunction }
+            assertSame(child, summon.owner)
+            assertFalse(summon.isOverride)
         } finally {
             Project.config.includes = includes
         }
+    }
+
+    @Test fun intrinsicSummonDeclarationsBelongToEachReceiverWithoutOverrideMetadata() {
+        Project.init()
+        val root = DataTemplate("Entity", "mcfpp.minecraft.entity").apply { isEntityTemplate = true }
+        val child = DataTemplate("Child", "fixture.intrinsic").apply { isEntityTemplate = true; extends(root) }
+        EntityTemplates.installDefaultSummon(child)
+        val original = root.scope.functions.getValue("summon").single()
+        val local = child.scope.functions.getValue("summon").single()
+        assertNotSame(original, local)
+        assertSame(child, local.owner)
+        assertFalse(original.isOverride)
+        assertFalse(local.isOverride)
+        assertTrue(InheritanceContractValidator.check(child).isValid)
+        EntityTemplates.installDefaultSummon(child)
+        assertSame(local, child.scope.functions.getValue("summon").single())
     }
 }

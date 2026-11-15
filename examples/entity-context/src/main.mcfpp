@@ -64,8 +64,7 @@ func restoreBorrowed() {
 
 context(space: PosContext)
 func spawnAt() {
-    var pig = EntityType()
-    pig.id = "minecraft:pig"
+    var pig: EntityType = { id: "minecraft:pig" }
     summon(pig, space.pos)
 }
 

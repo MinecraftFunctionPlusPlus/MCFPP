@@ -22,11 +22,19 @@ internal class PresenceBool(val source: StorageBinding, val present: Boolean) : 
     override fun clone() = PresenceBool(source, present)
     override fun toScoreBool(replace: Boolean) = materializePredicate()
     fun assume(result: Boolean) {
-        val fact = source.data.facts.read(source.place) ?: source.data.declarations[source.place]?.let {
+        val fact = source.data.facts.read(source.place)
+            ?: source.data.facts.readAccess(source.place, source.data.declarations, source.data.types)
+            ?: source.data.declarations[source.place]?.let {
             ValueFacts(TypeKnowledge.Exact(it.declaredType), ValueKnowledge.Unknown)
         } ?: return
+        val presentNow = present == result
+        val identity = (fact.type as? TypeKnowledge.Exact)?.type
+        val descriptor = identity?.let(source.data.types::get)
+        val layout = if (presentNow && descriptor != null) RuntimeObjectLayouts.identity(descriptor) ?: fact.readableLayout
+            else fact.readableLayout
         source.data.facts.refine(source.place, fact.copy(
-            state = if (present == result) ValueState.INITIALIZED else fact.state,
-            presence = if (present == result) Presence.Present else Presence.Absent))
+            state = if (presentNow) ValueState.INITIALIZED else fact.state,
+            readableLayout = layout,
+            presence = if (presentNow) Presence.Present else Presence.Absent))
     }
 }

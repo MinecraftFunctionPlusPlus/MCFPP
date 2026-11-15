@@ -29,6 +29,8 @@ import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.TypeId
+import top.mcfpp.type.MCFPPNeverType
+import top.mcfpp.type.TypeCompositions
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.Utils.v
 
@@ -196,6 +198,16 @@ open class DataTemplate :
      * 构造函数
      */
     var constructors: ArrayList<DataTemplateConstructor> = ArrayList()
+
+    /** Factories belong to this declaration; data inheritance never copies them. */
+    val factories: List<top.mcfpp.model.function.TemplateFactory>
+        get() {
+            top.mcfpp.model.function.TemplateFactories.ensureImplicit(this)
+            return scope.functions["new"].orEmpty().filterIsInstance<top.mcfpp.model.function.TemplateFactory>()
+        }
+
+    fun resolveFactory(arguments: List<Var<*>>): ParameterMatcher.TypeSelection =
+        ParameterMatcher.selectFactory(factories, arguments)
 
     private val reference: ArrayList<DataTemplate> = ArrayList()
 
@@ -446,6 +458,24 @@ open class DataTemplate :
         return super.isSubOf(compoundData)
     }
 
+    /** A source parent qualifier names a bound declaration, independently of its emitted name. */
+    internal fun nominalAncestorsNamed(name: String): List<DataTemplate> {
+        val visited = hashSetOf<TypeId>()
+        visited.add(inheritanceIdentity)
+        val pending = ArrayDeque<CompoundData>().apply { addAll(parent) }
+        val matches = arrayListOf<DataTemplate>()
+        while (pending.isNotEmpty()) {
+            val current = pending.removeFirst()
+            if (!visited.add(current.inheritanceIdentity)) continue
+            if (current is DataTemplate) {
+                val sourceName = (current as? CompiledGenericDataTemplate)?.originTemplate?.identifier ?: current.identifier
+                if (sourceName == name) matches.add(current)
+            }
+            pending.addAll(current.parent)
+        }
+        return matches.sortedBy { it.inheritanceIdentity.toString() }
+    }
+
     /**
      * 向这个类中添加一个成员
      * @param member 要添加的成员
@@ -498,11 +528,6 @@ open class DataTemplate :
     override fun getAccess(compoundData: CompoundData): Member.AccessModifier {
         if (companionObject === compoundData || (compoundData as? DataTemplate)?.companionObject === this)
             return Member.AccessModifier.PRIVATE
-        if (compoundData is DataTemplate) {
-            if (getType().typeId == compoundData.getType().typeId) return Member.AccessModifier.PRIVATE
-            return if (getType().isSubOf(compoundData.getType())) Member.AccessModifier.PROTECTED
-            else Member.AccessModifier.PUBLIC
-        }
         return super.getAccess(compoundData)
     }
 
@@ -572,8 +597,8 @@ open class DataTemplate :
     @Transient private val appliedInheritedFieldEffects = hashSetOf<String>()
 
     /** Capture effective inherited metadata without turning its field into a local declaration. */
-    internal fun completedInheritedFields(): List<CompletedInheritedField> = inheritedLayoutFields.mapNotNull { name ->
-        val origin = scope.fieldOrigins[name]?.singleOrNull() ?: return@mapNotNull null
+    internal fun completedInheritedFields(): List<CompletedInheritedField> = inheritedLayoutFields.sorted().mapNotNull { name ->
+        val origin = scope.fieldOrigins[name]?.minByOrNull { it.owner.inheritanceIdentity.toString() } ?: return@mapNotNull null
         val field = scope.getVar(name) ?: return@mapNotNull null
         try {
             CompletedInheritedField(origin.owner.inheritanceIdentity, field, scope.getProperty(name))
@@ -612,7 +637,7 @@ open class DataTemplate :
         }
         // Normal layout has already canonicalized a same-origin diamond. Use its actual
         // declaration owner rather than treating equivalent bound model copies as a conflict.
-        val slotOwner = scope.fieldOrigins[name]?.singleOrNull()?.owner?.takeIf {
+        val slotOwner = scope.fieldOrigins[name]?.firstOrNull { it.owner.inheritanceIdentity == ownerId }?.owner?.takeIf {
             it.inheritanceIdentity == ownerId && it in owners
         }
         val owner = slotOwner ?: owners.singleOrNull() ?: throw InheritedFieldRestoreFailure(
@@ -651,11 +676,17 @@ open class DataTemplate :
 
     private fun applyRestoredInheritedFields() {
         for ((name, effect) in restoredInheritedFieldEffects) {
-            if (!appliedInheritedFieldEffects.add(name)) continue
+            if (name in appliedInheritedFieldEffects) continue
             // A genuine local declaration, including one still awaiting inference, always wins.
             if (name in deferredFields || scope.getVar(name)?.declaredParentTemplate === this) continue
-            val origin = scope.fieldOrigins[name]?.singleOrNull()
+            val origins = scope.fieldOrigins[name].orEmpty()
+            val origin = origins.minByOrNull { it.owner.inheritanceIdentity.toString() }
             val field = scope.getVar(name)
+            // The saved slot is final; source-style parent merging can still carry a
+            // provisional composition until the outer declaration barrier normalizes it.
+            if (field != null && (TypeCompositions.hasDeferredComposition(field.type) ||
+                TypeCompositions.hasDeferredComposition(effect.field.type))) continue
+            appliedInheritedFieldEffects.add(name)
             if (name !in inheritedLayoutFields || origin == null || field == null) {
                 fieldLayoutError("Cannot restore inherited field '$name' in $namespaceID: no unique inherited slot")
                 continue
@@ -665,7 +696,7 @@ open class DataTemplate :
                 continue
             }
             val saved = CompoundDataScope.FieldOrigin(origin.owner, effect.field, effect.property)
-            val differences = origin.differences(saved)
+            val differences = CompoundDataScope.FieldOrigin(origin.owner, field, scope.getProperty(name)).differences(saved)
             if (differences.isNotEmpty()) {
                 fieldLayoutError("Cannot restore inherited field '$name' in $namespaceID from ${effect.origin}: incompatible ${differences.joinToString()}")
                 continue
@@ -686,7 +717,7 @@ open class DataTemplate :
                 it.isInherited = true
             }
             if (property == null) scope.removeProperty(name) else scope.putProperty(name, property, true)
-            scope.fieldOrigins[name] = listOf(CompoundDataScope.FieldOrigin(origin.owner, field, property))
+            if (origins.size == 1) scope.fieldOrigins[name] = listOf(CompoundDataScope.FieldOrigin(origin.owner, field, property))
         }
     }
 
@@ -704,10 +735,71 @@ open class DataTemplate :
     private fun validateLocalField(local: Var<*>, origins: List<CompoundDataScope.FieldOrigin>) {
         val declaration = CompoundDataScope.FieldOrigin(this, local, scope.getProperty(local.identifier))
         for (origin in origins) {
-            val differences = origin.contract.replacementDifferences(declaration.contract)
+            val differences = buildList {
+                if (origin.isStatic != declaration.isStatic) add("static")
+                if (origin.isConst != declaration.isConst) add("var/const")
+                if (declaration.access > origin.access) add("access")
+                if (origin.isFinal) add("final")
+            }
             if (differences.isNotEmpty()) fieldLayoutError(
                 "Incompatible inherited field '${local.identifier}' in $namespaceID: " +
                     "${fieldOwnerLabel(origin.owner)} -> ${fieldOwnerLabel(this)} (${differences.joinToString()})"
+            )
+        }
+        val fieldTypes = origins.map { it.type } + declaration.type
+        val type = if (fieldTypes.any(TypeCompositions::hasDeferredComposition) ||
+            Project.shouldDeferTypeCompositions && fieldTypes.any(TypeCompositions::hasUncompletedNominal))
+            TypeCompositions.deferIntersection(fieldTypes)
+        else TypeCompositions.intersection(fieldTypes)
+        val optional = local.nullable && origins.all { it.nullable }
+        if (type.typeId == MCFPPNeverType.typeId && !optional) fieldLayoutError(
+            "Incompatible inherited field '${local.identifier}' in $namespaceID: required field type is never " +
+                "(${(origins.map { it.type.typeName } + declaration.type.typeName).sorted().joinToString(" & ")})"
+        )
+        local.type = type
+        local.nullable = optional
+    }
+
+    /** Publish field adapters only after every nominal operand has its completed declaration view. */
+    internal fun normalizeDeclarationFieldTypes() {
+        val deferredFields = scope.allVars.filter { TypeCompositions.hasDeferredComposition(it.type) }
+            .mapTo(hashSetOf()) { it.identifier }
+        val normalized = java.util.IdentityHashMap<Var<*>, Var<*>>()
+        fun normalize(field: Var<*>): Var<*> = normalized.getOrPut(field) {
+            val type = TypeCompositions.normalizeResolved(field.type)
+            if (type === field.type) field else type.buildUnConcrete(field.identifier).also { replacement ->
+                Property.copyFieldMetadata(field, replacement)
+                replacement.type = type
+                replacement.symbol = field.symbol?.copy(declaredType = type.typeId)
+                replacement.storageBinding = field.storageBinding
+                replacement.storageReadVersion = field.storageReadVersion
+                val constant = field.declarationConstant
+                if (constant != null) {
+                    val closed = if (constant is top.mcfpp.analysis.CompilerValue.Typed)
+                        top.mcfpp.analysis.CompilerValue.Typed(type.typeId, constant.payload) else constant
+                    top.mcfpp.analysis.ConstantBinding.bindDeclaration(replacement, closed, mapOf(type.typeId to type))
+                }
+            }
+        }
+        scope.allVars.toList().forEach { field ->
+            val replacement = normalize(field)
+            if (replacement !== field) scope.putVar(field.identifier, replacement, true)
+        }
+        scope.fieldOrigins.replaceAll { _, origins ->
+            origins.map { origin -> origin.copy(field = normalize(origin.field)) }
+        }
+        inheritedFieldRequirements.replaceAll { _, origins ->
+            origins.map { origin -> origin.copy(field = normalize(origin.field)) }
+        }
+        restoredInheritedFieldEffects.replaceAll { _, effect ->
+            val field = normalize(effect.field)
+            if (field === effect.field) effect else CompletedInheritedField(effect.origin, field, effect.property)
+        }
+        applyRestoredInheritedFields()
+        for (name in inheritedFieldRequirements.keys.intersect(deferredFields)) {
+            val field = scope.getVar(name) ?: continue
+            if (field.type === MCFPPNeverType && !field.nullable) fieldLayoutError(
+                "Incompatible inherited field '$name' in $namespaceID: required field type is never"
             )
         }
     }
@@ -750,11 +842,11 @@ open class DataTemplate :
         inheritedFieldRequirements.clear()
         scope.fieldOrigins.clear()
         val candidates = linkedMapOf<String, MutableList<CompoundDataScope.FieldOrigin>>()
-        for (compoundData in parent) {
+        for (compoundData in parent.sortedBy { it.inheritanceIdentity.toString() }) {
             val readonlyNames = (compoundData as? CompiledGenericDataTemplate)?.originTemplate
                 ?.readOnlyParams?.map { it.identifier }.orEmpty()
             val names = compoundData.scope.allVars.map { it.identifier } + compoundData.scope.fieldOrigins.keys
-            for (name in names.distinct()) {
+            for (name in names.distinct().sorted()) {
                 if (name in readonlyNames) continue
                 val field = compoundData.scope.getVar(name)
                 val savedOrigins = compoundData.scope.fieldOrigins[name]
@@ -776,7 +868,7 @@ open class DataTemplate :
                 candidates.getOrPut(name) { arrayListOf() }.addAll(origins)
             }
         }
-        for ((name, paths) in candidates) {
+        for ((name, paths) in candidates.toSortedMap()) {
             val merge = CompoundDataScope.InheritedFields.merge(
                 paths.map { origin ->
                     CompoundDataScope.FieldCandidate(
@@ -785,7 +877,8 @@ open class DataTemplate :
                         origin.contract,
                         origin
                     )
-                }
+                },
+                { it.type }
             )
             val origins = merge.origins.map { it.value }
             inheritedFieldRequirements[name] = origins
@@ -805,11 +898,9 @@ open class DataTemplate :
             val effective = merge.effective.map { it.value }
             scope.fieldOrigins[name] = effective
             if (conflicts.isNotEmpty()) continue
-            if (effective.size != 1) {
-                fieldLayoutError("Ambiguous inherited field '$name' in $namespaceID from $labels; declare a compatible local field")
-                continue
-            }
-            val selected = effective.single()
+            // Choosing an adapter never chooses a contract: its logical type and presence
+            // come from the shared intersection above. Prefer an exact adapter when possible.
+            val selected = effective.firstOrNull { it.field.type.typeId == merge.type.typeId } ?: effective.first()
             val inheritedProperty = try {
                 selected.property?.let { CompletedInheritedField.copyProperty(it) }
             } catch (failure: InheritedFieldRestoreFailure) {
@@ -819,7 +910,10 @@ open class DataTemplate :
             val inherited = selected.field.clone()
             // Some adapters' copy constructors retain their shape but default their type
             // to Any. The validated declaration supplies the exact inherited slot type.
-            inherited.type = selected.field.type
+            inherited.type = merge.type
+            inherited.nullable = merge.nullable
+            inherited.accessModifier = origins.minOf { it.access }
+            inherited.isFinal = origins.any { it.isFinal }
             inherited.annotations.clear()
             inherited.annotations.addAll(selected.field.annotations)
             scope.putVar(name, inherited)
@@ -852,12 +946,12 @@ open class DataTemplate :
         fun captureCurrent(): DeclarationStateCheckpoint = recapture()
     }
 
-    internal open fun checkpointDeclarationState(): DeclarationStateCheckpoint = captureDeclarationState(emptyList(), emptyList(), emptyList())
+    internal open fun checkpointDeclarationState(): DeclarationStateCheckpoint = captureDeclarationState(emptyList(), emptyList(), java.util.IdentityHashMap())
 
     private fun captureDeclarationState(
         retained: List<(TemplatePrivateCapture) -> Unit>,
         previous: List<Any>,
-        oldScopes: List<CompoundDataScope.JournalSnapshot>
+        oldScopes: java.util.IdentityHashMap<CompoundDataScope, CompoundDataScope.JournalSnapshot>
     ): DeclarationStateCheckpoint {
         val graph = TemplatePrivateCapture(previous)
         val restoreIdentity = checkpointSessionIdentity()
@@ -887,7 +981,10 @@ open class DataTemplate :
             RawPreparationFact.row(RawPreparationFact.scalar(name), RawPreparationFact.identity(action))
         }.toTypedArray())
         val savedGeneratedMetadata = ArrayList(generatedDeclarationMetadata)
-        val scopes = oldScopes + savedScope.checkpointRelations()
+        val scopes = java.util.IdentityHashMap<CompoundDataScope, CompoundDataScope.JournalSnapshot>().apply {
+            oldScopes.forEach { (scope, snapshot) -> put(scope, snapshot.captureCurrent()) }
+            if (!containsKey(savedScope)) put(savedScope, savedScope.checkpointRelations())
+        }
         graph.list(pendingParentTypes, TemplatePrivateCapture.ListRole.TYPE_IDS) { g, value -> g.element(value as TypeId) }
         graph.list(reference, TemplatePrivateCapture.ListRole.REFERENCES) { g, value -> g.element(value as DataTemplate) }
         graph.set(flattenedParents, TemplatePrivateCapture.SetRole.PARENTS) { g, value -> g.element(value as CompoundData) }
@@ -954,8 +1051,7 @@ open class DataTemplate :
                 "relations" to graph.preparationRelations()
             )
         )
-        for (snapshot in scopes) {
-            graph.element(snapshot)
+        for (snapshot in scopes.values) {
             val elements = snapshot.elements
             elements.variables.forEach(graph::variable)
             elements.types.forEach(graph::element)
@@ -988,24 +1084,18 @@ open class DataTemplate :
             generatedDeclarationMetadata.clear()
             generatedDeclarationMetadata.addAll(savedGeneratedMetadata)
             graph.restore()
-            scopes.forEach { it.restore() }
+            scopes.values.forEach { it.restore() }
             restoreMemberState?.invoke()
         }, {
-            captureDeclarationState(graph.roots, graph.elements, scopes.map { it.captureCurrent() })
+            captureDeclarationState(graph.roots, graph.elements, scopes)
         }, preparationFacts)
     }
 
-    /**
-     * Live declaration-side half of the generated-member contract. It reuses the same visible
-     * candidate walk as ordinary source lookup, so inherited hiding, overload identity and
-     * private-parent visibility are not reimplemented here. A detached method is never published
-     * before this check; [publishGeneratedMethod] repeats the local part immediately before the
-     * transactional registration.
-     */
+    /** A generated receiver function may share a signature with a different receiver's function. */
     internal fun generatedMethodSlotConflict(function: Function): Function? {
         if (function.owner !== this || function.isStatic || function.ownerType != Function.Companion.OwnerType.TEMPLATE)
             return function
-        return scope.getFunctionCandidates(function.identifier, null).firstOrNull {
+        return scope.functions[function.identifier].orEmpty().firstOrNull {
             ParameterMatcher.sameSignature(it, function)
         }
     }
@@ -1025,7 +1115,8 @@ open class DataTemplate :
         scope.ensureMembers()
         if (isEntityTemplate) top.mcfpp.core.lang.entity.EntityTemplates.installDefaultSummon(this)
         val result = top.mcfpp.analysis.InheritanceContractValidator.check(this)
-        val initialization = top.mcfpp.model.function.ConstructorPlan.build(this)
+        val initialization = if (isEntityTemplate || this is ObjectCompoundData || this is TypeDataTemplate)
+            top.mcfpp.model.function.ConstructorPlan.build(this) else null
         val entityParents = parent.filterIsInstance<DataTemplate>().filter { it.isEntityTemplate }
         val ordinaryParents = parent.filterIsInstance<DataTemplate>().filter { !it.isEntityTemplate && it !== baseDataTemplate }
         val entityDiagnostics = buildList {
@@ -1035,10 +1126,10 @@ open class DataTemplate :
             if (!isEntityTemplate && entityParents.isNotEmpty())
                 add("Data template '$namespaceID' cannot inherit an entity template; use an entity declaration")
         }
-        (result.diagnostics + initialization.diagnostics + entityDiagnostics).forEach {
+        (result.diagnostics + initialization?.diagnostics.orEmpty() + entityDiagnostics).forEach {
             if (inheritanceContractDiagnostics.add(it)) LogProcessor.error(it)
         }
-        return result.isValid && initialization.isValid && entityDiagnostics.isEmpty()
+        return result.isValid && initialization?.isValid != false && entityDiagnostics.isEmpty()
     }
 
     internal fun canInstantiate(): Boolean {

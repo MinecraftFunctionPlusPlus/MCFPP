@@ -35,7 +35,7 @@ class DeclarationsTest {
             data Box<T, N: int> {
                 var value: T
                 const count: int = 1
-                constructor(value: T) { this.value = value; }
+                new(value: T) { return {value: value, count: 1}; }
             }
             const func fixed(value: int): int { return value; }
             func nativeValue<T, N: int>(value: T) = example.Native.value
@@ -100,11 +100,11 @@ class DeclarationsTest {
         compile("""
             namespace fixture.declarations
             data NumberView as int {}
-            data Plain { var value: int; }
+            data Plain { var value: int = 0; }
             data Box<T, N: int> {
                 var value: T
                 const count: int = N
-                constructor(value: T) { this.value = value; }
+                new(value: T) { return {value: value, count: N}; }
             }
             func identity<T, N: int>(value: T): T { return value; }
             func accept(value: Plain) {}
@@ -136,13 +136,12 @@ class DeclarationsTest {
         assertTrue(main.scope.getVar("local")!!.isConst)
     }
 
-    @Test fun preservesUninitializedConstRuntimeDynamicAndInferredDeclarations() = isolated {
+    @Test fun preservesUninitializedVariablesLiteralConstantsRuntimeAndInferredDeclarations() = isolated {
         compile("""
             namespace fixture.variables
             func main() {
                 var typed: int
-                const fixed: int
-                fixed = 2
+                const fixed: int = 2
                 external runtime: int
                 runtime = 3
                 var inferred = 4
@@ -151,6 +150,9 @@ class DeclarationsTest {
         """.trimIndent())
         val main = GlobalScope.localNamespaces.getValue("fixture.variables").scope.functions.getValue("main").single()
         assertTrue(main.scope.getVar("fixed")!!.isConst)
+        val fixedType = assertIs<top.mcfpp.type.MCFPPLiteralType>(main.scope.getVar("fixed")!!.type)
+        assertEquals(MCFPPBaseType.Int, fixedType.primitive)
+        assertEquals(top.mcfpp.analysis.CompilerValue.Integral(2), fixedType.value)
         assertTrue(main.scope.getVar("runtime")!!.symbol!!.forceRuntime)
         assertTrue(main.scope.getVar("inferredRuntime")!!.symbol!!.forceRuntime)
         val machine = top.mcfpp.test.util.ScoreCommandExecutor(main.commands.analyzeAll())

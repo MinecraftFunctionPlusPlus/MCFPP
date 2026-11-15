@@ -64,10 +64,10 @@ open class NBTDictionary : NBTBasedData {
         data.scope.forEachFunction {
             candidates.add(if (it is NativeFunction) it.replaceGenericParams(mapOf("E" to (type as MCFPPDictType).generic[0])) else it)
         }
-        var re = top.mcfpp.model.function.ParameterMatcher.select(candidates, key, readOnlyArgs, normalArgs)
+        var re = top.mcfpp.model.function.ParameterMatcher.select(candidates, key, readOnlyArgs, normalArgs, type)
         val iterator = data.parent.iterator()
         while (re == null && iterator.hasNext()){
-            val inherited = iterator.next().getFunction(key, readOnlyArgs, normalArgs,isStatic)
+            val inherited = iterator.next().getFunction(key, readOnlyArgs, normalArgs, isStatic, type)
             if (inherited !is UnknownFunction) re = inherited
         }
         val selected = re ?: UnknownFunction(key)

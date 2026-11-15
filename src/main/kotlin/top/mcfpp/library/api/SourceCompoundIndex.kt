@@ -237,6 +237,9 @@ internal class SourceCompoundIndex(private val selection: OwnedLibrarySelection)
     }
     private fun includeType(type: MCFPPType) {
         when (type) {
+            is MCFPPObjectType -> type.fields.forEach { includeType(it.type) }
+            is MCFPPLiteralType -> includeType(type.primitive)
+            is MCFPPIntersectionType -> type.components.forEach(::includeType)
             is MCFPPDataTemplateType -> if (type.template !== DataTemplate.baseDataTemplate && owns(type.template)) template(type.template)
             is MCFPPEnumType -> {
                 if (!selection.ownership.isDependencyDeclaration(type.enum)) enumeration(type.enum)
@@ -351,8 +354,8 @@ internal class SourceCompoundIndex(private val selection: OwnedLibrarySelection)
         inheritedFields[template] = effects
         effects.forEach { effect ->
             effect.field.annotations.forEach(::completedEffect)
-            val origin = template.scope.fieldOrigins[effect.field.identifier]?.singleOrNull()
-                ?: fail("Completed inherited field ${effect.field.identifier} has no unique origin in ${template.namespaceID}")
+            val origin = template.scope.fieldOrigins[effect.field.identifier]?.minByOrNull { it.owner.inheritanceIdentity.toString() }
+                ?: fail("Completed inherited field ${effect.field.identifier} has no originating declaration in ${template.namespaceID}")
             val originOwner = (origin.owner as? CompiledGenericDataTemplate)?.originTemplate ?: origin.owner
             if (originOwner is DataTemplate && owns(originOwner)) this.template(originOwner)
             include(inheritedSlot(origin.owner, origin.field).type)
@@ -402,6 +405,7 @@ internal class SourceCompoundIndex(private val selection: OwnedLibrarySelection)
                 if (template.scope.functions.values.flatten().none { it === implementation }) targets[implementation] = slot
             } }
         }
+        TemplateFactories.ensureImplicit(template)
         val functions = template.scope.functions.values.flatten().filter { it.owner === template && !it.actualCallBody && it !is DataTemplateConstructor && it !is ExtensionFunction && it !is top.mcfpp.core.lang.entity.EntityTemplates.SummonFunction } + targets.keys
         val seen = IdentityHashMap<Function, Boolean>()
         functions.filter { seen.put(it, true) == null }.forEach { function ->
@@ -602,6 +606,21 @@ internal class SourceCompoundIndex(private val selection: OwnedLibrarySelection)
                 }
                 view.constructors.add(function)
             }
+            member.templateFactoryDeclaration()?.let { site ->
+                val function = TemplateFactory(view, site.curlBlock()).apply {
+                    declarationFile = source
+                    accessModifier = access
+                    scope.parent.add(source.field)
+                    sourceDeclarationContext = site
+                }
+                signatures[function] = FunctionSourceSignature(object : P.FunctionParamsContext(null, -1) {
+                    override fun normalParams() = site.normalParams()
+                }, null)
+                site.normalParams().parameterList()?.parameter().orEmpty().forEach { syntax ->
+                    function.normalParams.add(parameter(function, syntax.Identifier().text, declared(syntax.type(), function), syntax.value(), false))
+                }
+                view.scope.addFunction(function, true)
+            }
             member.operationOverrideDeclaration()?.let { site ->
                 val function = if (site.functionParams().readOnlyParams() != null) GenericFunction("__operator_$ordinal", view, site.curlBlock())
                     else Function("__operator_$ordinal", view, site.curlBlock())
@@ -706,13 +725,13 @@ internal class SourceCompoundIndex(private val selection: OwnedLibrarySelection)
         val name = syntax.templateFieldDeclaration()?.Identifier()?.text
         if (name != null) return entries.singleOrNull { it.owner === template && it.kind == 5 && it.name == name }
             ?: fail("Parsed field $name at ${site.start.line}:${site.start.charPositionInLine} has no unique source declaration identity in ${template.namespaceID}")
-        val declaration: ParserRuleContext = syntax.templateFunctionDeclaration() ?: syntax.templateConstructorDeclaration()
+        val declaration: ParserRuleContext = syntax.templateFunctionDeclaration() ?: syntax.templateFactoryDeclaration() ?: syntax.templateConstructorDeclaration()
             ?: syntax.operationOverrideDeclaration() ?: syntax.nativeOperationOverrideDeclaration()
             ?: fail("Unsupported parsed template member")
-        val body = syntax.templateFunctionDeclaration()?.curlBlock() ?: syntax.templateConstructorDeclaration()?.curlBlock()
+        val body = syntax.templateFunctionDeclaration()?.curlBlock() ?: syntax.templateFactoryDeclaration()?.curlBlock() ?: syntax.templateConstructorDeclaration()?.curlBlock()
             ?: syntax.operationOverrideDeclaration()?.curlBlock()
         val kind = when {
-            syntax.templateFunctionDeclaration() != null -> 2
+            syntax.templateFunctionDeclaration() != null || syntax.templateFactoryDeclaration() != null -> 2
             syntax.templateConstructorDeclaration() != null -> 4
             else -> 7
         }

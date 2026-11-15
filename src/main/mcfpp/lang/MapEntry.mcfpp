@@ -2,5 +2,5 @@
 data MapEntry<T> {
     var key: string
     var value: T
-    constructor(key: string, value: T) { this.key = key; this.value = value }
+    new(key: string, value: T) { return { key, value } }
 }

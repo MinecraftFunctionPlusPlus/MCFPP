@@ -109,6 +109,8 @@ internal class SourceDocumentation(unit: P.CompilationUnitContext, namespace: St
                 text(node).substringBefore('=').substringBefore('{').trim(), doc, access, result = node.templateType()?.text)
             is P.TemplateConstructorDeclarationContext -> add(node, "constructor", "constructor", owner,
                 "constructor${node.normalParams()?.let(::text) ?: "()"}", doc, access, params(node.normalParams()))
+            is P.TemplateFactoryDeclarationContext -> add(node, "new", "factory", owner,
+                "new${node.normalParams()?.let(::text) ?: "()"}", doc, access, params(node.normalParams()), result = owner)
             is P.ExtensionFunctionDeclarationContext -> add(node, node.Identifier().text, "extension", owner,
                 text(node).substringBefore('{').trim(), doc, access, params(node.functionParams().normalParams()), readonly(node.functionParams()),
                 node.functionReturnType()?.text ?: "void", node.type()?.text)

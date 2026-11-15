@@ -188,8 +188,11 @@ internal class LambdaCaptureScope(private val target: Function, private val lexi
                 val binding = StorageAccess.ensure(environment).field(captureKey(requireNotNull(alias.symbol).id))
                 StorageAccess.copyRuntimeEvidence(sourceBinding, binding)
                 binding.data.types[alias.type.typeId] = alias.type
-                binding.data.facts.refine(binding.place, ValueFacts(TypeKnowledge.Exact(alias.type.typeId),
-                    ValueKnowledge.Unknown, ValueState.INITIALIZED))
+                val fact = binding.data.facts.read(binding.place)
+                    ?: ValueFacts(TypeKnowledge.Exact(alias.type.typeId), ValueKnowledge.Unknown)
+                binding.data.facts.refine(binding.place, fact.copy(type = TypeKnowledge.Exact(alias.type.typeId),
+                    value = ValueKnowledge.Unknown, state = ValueState.INITIALIZED,
+                    readableLayout = fact.readableLayout?.takeIf { it == alias.type.typeId }))
                 StorageAccess.adapter(alias.type, name, binding)
             } else alias.clone()
             rebound.symbol = alias.symbol

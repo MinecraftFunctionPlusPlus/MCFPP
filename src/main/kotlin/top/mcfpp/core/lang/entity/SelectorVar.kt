@@ -14,6 +14,8 @@ import top.mcfpp.model.Member
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.NativeFunction
+import top.mcfpp.model.function.ParameterMatcher
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.type.MCFPPEntityType
 import top.mcfpp.type.MCFPPType
@@ -112,7 +114,7 @@ open class SelectorVar : Var<SelectorVar>, EntityTargetAccess {
         normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        return EntityMembers.data(this).getFunction(key, readOnlyArgs, normalArgs) to true
+        return EntityMembers.data(this).getFunction(key, readOnlyArgs, normalArgs, receiver = type) to true
     }
 
     override fun clone(): SelectorVar {
@@ -154,6 +156,22 @@ open class SelectorVar : Var<SelectorVar>, EntityTargetAccess {
                     extends(it.template)
                 }
                 injectedBy(SelectorData::class.java)
+                // The imported EntityData declaration may expose the same native
+                // filters. Keep that declaration as the single receiver function.
+                scope.functions.entries.removeIf { (_, declarations) ->
+                    declarations.removeIf { function ->
+                        function is NativeFunction && parent.any { ancestor ->
+                            ancestor.scope.getFunctionCandidates(function.identifier).any { inherited ->
+                                inherited is NativeFunction && inherited.javaMethod == function.javaMethod &&
+                                    ParameterMatcher.sameSignature(function, inherited) &&
+                                    inherited.caller.typeId == function.caller.typeId &&
+                                    inherited.returnType.typeId == function.returnType.typeId &&
+                                    inherited.isStatic == function.isStatic
+                            }
+                        }
+                    }
+                    declarations.isEmpty()
+                }
                 alwaysDynamic = true
                 //单实体的方法
             }

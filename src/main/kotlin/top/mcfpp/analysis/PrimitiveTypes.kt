@@ -17,6 +17,7 @@ internal object PrimitiveTypes {
     /** 此 IR 后端仅将 int/bool 放入记分板，其余支持类型使用 NBT 布局。 */
     fun nbt(type: TypeId) = type != int && type != bool
     fun supportedType(type: MCFPPType): Boolean = when (type) {
+        is MCFPPObjectType -> type.fields.all { supportedType(it.type) }
         is MCFPPListType, is MCFPPDictType, is MCFPPImmutableListType, is MCFPPMapType -> (type as MCFPPTypeWithGeneric).generic.all {
             it === MCFPPPrivateType.Wildcard || supportedType(it)
         }

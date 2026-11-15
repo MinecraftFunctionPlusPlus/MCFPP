@@ -9,6 +9,7 @@ import top.mcfpp.type.*
 import kotlin.test.Test
 import kotlin.test.assertIs
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ReinterpretationCompatibilityTest {
     private fun template(name: String, vararg fields: Pair<String, MCFPPType>) = DataTemplate(name, "shape").apply {
@@ -24,7 +25,7 @@ class ReinterpretationCompatibilityTest {
         val target = template("target", "count" to MCFPPBaseType.Int)
         target.scope.putVar("staticMember", MCInt("staticMember").apply { isStatic = true })
         compatible(source, target)
-        assertFalse(TypeRelations.isSubtype(source.getType(), target.getType()))
+        assertTrue(TypeRelations.isSubtype(source.getType(), target.getType()))
         unproven(target, source)
     }
 
@@ -39,7 +40,7 @@ class ReinterpretationCompatibilityTest {
         compatible(source, target)
     }
 
-    @Test fun writableFieldsAreInvariantAndReadonlyDoesNotUseNumericPromotion() {
+    @Test fun dataCompatibilityUsesFieldTypesWithoutNumericPromotion() {
         val source = template("source", "count" to MCFPPBaseType.Int)
         val target = template("target", "count" to MCFPPBaseType.Float)
         unproven(source, target)
@@ -47,7 +48,7 @@ class ReinterpretationCompatibilityTest {
         unproven(source, target)
         val same = template("same", "count" to MCFPPBaseType.Int)
         source.scope.getVar("count")!!.isConst = true
-        unproven(source, same)
+        compatible(source, same)
         same.scope.getVar("count")!!.isConst = true
         compatible(source, same)
     }
@@ -62,21 +63,23 @@ class ReinterpretationCompatibilityTest {
         unproven(source, target)
     }
 
-    @Test fun structureCannotSatisfyPrivateFieldsOrAbstractCapabilities() {
+    @Test fun fieldVisibilityAndMethodsDoNotChangeDataCompatibility() {
         val source = template("source", "count" to MCFPPBaseType.Int)
         val target = template("target", "count" to MCFPPBaseType.Int)
         source.scope.getVar("count")!!.accessModifier = Member.AccessModifier.PRIVATE
-        unproven(source, target)
+        compatible(source, target)
         source.scope.getVar("count")!!.accessModifier = Member.AccessModifier.PUBLIC
         target.scope.addFunction(Function("ability", context = null).apply { isAbstract = true }, false)
-        unproven(source, target)
+        compatible(source, target)
     }
 
-    @Test fun nominalUpcastsAndAnyAreCompatibleButDowncastsNeedProof() {
+    @Test fun nominalAncestryIsSeparateFromEmptyStructuralCompatibility() {
         val parent = template("parent")
         val child = template("child").apply { extends(parent) }
         compatible(child, parent)
-        unproven(parent, child)
+        compatible(parent, child)
+        assertTrue(TypeRelations.isNominalSubtype(child.getType(), parent.getType()))
+        assertFalse(TypeRelations.isNominalSubtype(parent.getType(), child.getType()))
         assertIs<ReinterpretationCompatibility.Result.Compatible>(TypeRelations.checkReinterpretation(MCFPPBaseType.Any, child.getType()))
         assertIs<ReinterpretationCompatibility.Result.Unproven>(TypeRelations.checkReinterpretation(MCFPPBaseType.Int, MCFPPBaseType.Float))
     }

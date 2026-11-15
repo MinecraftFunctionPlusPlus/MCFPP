@@ -121,7 +121,7 @@ class ContextOptimizationTest {
 
     @Test fun dynamicContextMacrosFuseTheirCallbackWithoutMovingArgumentPreparation() {
         val source = """
-            data Dimension { var id: string; constructor(id: string) { this.id = id } }
+            data Dimension { var id: string; new(id: string){ return {id: id }; } }
             func main() {
                 external name: string = "minecraft:the_nether"
                 var dimension = Dimension(name)
@@ -145,7 +145,7 @@ class ContextOptimizationTest {
 
     @Test fun ordinaryLiteralMacroSyntaxDoesNotCaptureTheDynamicEntryArguments() {
         val source = """
-            data Dimension { var id: string; constructor(id: string) { this.id = id } }
+            data Dimension { var id: string; new(id: string){ return {id: id }; } }
             func main() {
                 external name: string = "minecraft:the_nether"
                 var dimension = Dimension(name)
@@ -165,7 +165,7 @@ class ContextOptimizationTest {
 
     @Test fun aDynamicCallbackWithLocalReturnRemainsACallbackInsteadOfAnEntrance() {
         val source = """
-            data Dimension { var id: string; constructor(id: string) { this.id = id } }
+            data Dimension { var id: string; new(id: string){ return {id: id }; } }
             func main() {
                 external name: string = "minecraft:the_nether"
                 var dimension = Dimension(name)

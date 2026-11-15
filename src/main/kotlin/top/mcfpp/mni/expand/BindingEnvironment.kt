@@ -192,7 +192,9 @@ internal class SourceFunction(
     normalSymbols: List<SourceSymbol> = emptyList(),
     val preparedReadonly: SourcePreparedReadonly? = null,
     preparedCallSites: Set<SourceSpan> = emptySet(),
-    val compilerDeclarationId: Long? = null
+    val compilerDeclarationId: Long? = null,
+    val declaredReceiver: TypeRef<*>? = null,
+    val declaredEntityReceiver: TypeRef<*>? = null
 ) {
     val readonlyParameters: List<SourceParameter> = immutableList(
         readonlyParameters.map { parameter ->
@@ -394,6 +396,8 @@ private class SourceSnapshotOwnership(private val types: SourceTypeCatalog) {
     }
     fun function(function: SourceFunction) {
         if (!seen.add(function)) return
+        function.declaredReceiver?.let(::type)
+        function.declaredEntityReceiver?.let(::type)
         type(function.function.returnType())
         function.function.parameters().forEach { parameter ->
             type(parameter.type())

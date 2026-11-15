@@ -44,7 +44,7 @@ class EntityLibraryTest {
             import fixture.displaylibrary:*
             func main() {
                 const id = UUID("0-0-0-0-1")
-                const display = keep(entityByUUID<ItemDisplay>(id), id)
+                var display = keep(entityByUUID<ItemDisplay>(id), id)
                 display.transform.y = 3.0
                 later(id)
             }

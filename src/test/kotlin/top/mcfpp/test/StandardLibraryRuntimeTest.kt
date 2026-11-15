@@ -83,7 +83,7 @@ class StandardLibraryRuntimeTest {
                 }
                 /execute if block ~ ~ ~ minecraft:gold_block run scoreboard players add inherited_space mcfpp_default 1
                 var tagged = targets.hasTag("stdlib_visited");
-                var item = Item(); item.id = "minecraft:stone";
+                var item = {id: "minecraft:stone"} as Item;
                 var slot = Slot.weapon_mainhand;
                 var replaced = itemReplace(targets, slot, item, 2);
                 var chestSlot = Slot(0, SlotType.container);
@@ -92,10 +92,10 @@ class StandardLibraryRuntimeTest {
                 var toBlock = itemReplaceFrom(1 70 0, chestSlot, @p, slot);
                 var betweenBlocks = itemReplaceFrom(2 70 0, chestSlot, 1 70 0, chestSlot);
                 var copied = itemReplaceFrom(targets, slot, @p, slot);
-                var modifier = ItemModifier(); modifier.id = "fixture:set_count";
+                var modifier = {id: "fixture:set_count"} as ItemModifier;
                 var modified = itemModify(targets, slot, modifier);
                 var blockModified = itemModify(2 70 0, chestSlot, modifier);
-                var block = BlockState(); block.name = "minecraft:stone"; block.properties = {};
+                var block:BlockState = {name: "minecraft:stone", properties: {} as nbt};
                 var outlined = fillOutline(Area(0 80 0, 2 82 2), block);
                 var killed = @e.tag("stdlib_subject").limit(1).kill();
                 var remaining = targets.count();

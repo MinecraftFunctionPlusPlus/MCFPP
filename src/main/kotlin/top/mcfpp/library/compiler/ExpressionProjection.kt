@@ -218,7 +218,12 @@ class ExpressionProjection(
             if (member.keyword != MemberKeyword.IDENTIFIER) {
                 if (indices.isNotEmpty()) unsupported("Keyword members cannot have index suffixes in the current grammar")
                 child(this, node(P.MemberKeywordContext(null, -1), member) {
-                    token(this, if (member.keyword == MemberKeyword.MAP) L.MAP else L.SET, member.name)
+                    token(this, when (member.keyword) {
+                        MemberKeyword.MAP -> L.MAP
+                        MemberKeyword.SET -> L.SET
+                        MemberKeyword.NEW -> L.NEW
+                        MemberKeyword.IDENTIFIER -> L.Identifier
+                    }, member.name)
                 })
                 call?.let { child(this, arguments(it)) }
             } else child(this, node(P.VarContext(null, -1), call ?: member) {
@@ -620,6 +625,16 @@ class ExpressionProjection(
                     child(this, type(component))
                 }
                 token(this, L.RPAREN, ")")
+            })
+            is TypeSyntax.Object -> child(this, node(P.LiteralObjectTypeContext(null, -1), value) {
+                token(this, L.LCURL, "{")
+                value.fields.forEachIndexed { index, field ->
+                    if (index != 0) token(this, L.COMMA, ",")
+                    child(this, node(P.LiteralObjectTypeFieldContext(null, -1), value) {
+                        token(this, L.Identifier, field.name); token(this, L.COLON, ":"); child(this, type(field.type))
+                    })
+                }
+                token(this, L.RCURL, "}")
             })
             is TypeSyntax.AnonymousData -> child(this, structures.anonymousType(value, this@ExpressionProjection).also { remember(it, value) })
             is TypeSyntax.Function -> child(this, node(P.FunctionTypeContext(null, -1), value) {

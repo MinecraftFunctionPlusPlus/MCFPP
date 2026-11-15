@@ -52,15 +52,16 @@ class EntityCommandTargetTest {
             }
             @a.withEntityCtx { player -> player.executor.queryXpPoints(); }
         }
-    """.trimIndent()) { _, output ->
+    """.trimIndent()) { main, output ->
         val commands = exportedFunctions(output).values.flatten()
         assertTrue(commands.any { it.contains("run tag Alice add named") })
         assertTrue(commands.any { it.contains("run ride Alice mount 0-0-0-0-1") })
         assertTrue(commands.any { it.contains("run tag 0-0-0-0-1 list") })
         assertTrue(commands.any { it.contains("run ride 0-0-0-0-1 dismount") })
-        assertTrue(commands.any { it.contains("run tag @s add bound") })
-        assertTrue(commands.any { it.contains("run attribute @s fixture:test base get 1.0") })
-        assertTrue(commands.any { it.contains("run xp query @s points") })
+        assertTrue(commands.any { it == "tag @s add bound" || it.endsWith(" run tag @s add bound") })
+        assertTrue(commands.any { it == "attribute @s fixture:test base get 1.0" || it.endsWith(" run attribute @s fixture:test base get 1.0") })
+        assertTrue(main.commands.any { it.analyze().startsWith("execute as @e[tag=!mcfpp_context_anchor] run function ") })
+        assertTrue(commands.any { it == "execute as @a run xp query @s points" })
         val common = MCFPPEntityType.NormalSelector.instanceData
         assertNotNull(common.scope.getVar("commonField"))
         assertNull(common.scope.getVar("zombieOnly"))

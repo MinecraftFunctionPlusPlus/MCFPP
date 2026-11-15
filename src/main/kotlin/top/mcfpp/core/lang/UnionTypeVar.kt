@@ -3,6 +3,7 @@ package top.mcfpp.core.lang
 import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPUnionType
 
@@ -20,12 +21,16 @@ class UnionTypeVar : Var<UnionTypeVar> {
     override fun getFromStack() { StorageAccess.invalidateReads(listOf(this)) }
     override fun explicitCast(type: MCFPPType) = StorageAccess.view(this, type)
     override fun implicitCast(type: MCFPPType): Var<*> = if (type == this.type) this
-        else StorageAccess.actualView(this).implicitCast(type)
-    override fun canImplicitCast(type: MCFPPType) = type == this.type || unionTypes.all { it.isSubOf(type) }
+        else if (canImplicitCast(type)) StorageAccess.view(this, type, diagnose = false) else buildCastErrorVar(type)
+    override fun canImplicitCast(type: MCFPPType) = top.mcfpp.type.TypeRelations.resolveImplicitConversion(this.type, type) != null
     override fun canExplicitCast(type: MCFPPType) = true
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> =
-        StorageAccess.actualView(this).getMemberVar(key, accessModifier)
+        StorageAccess.unionMember(this, key, accessModifier)
     override fun getMemberFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>,
-                                  accessModifier: Member.AccessModifier): Pair<Function, Boolean> =
-        StorageAccess.actualView(this).getMemberFunction(key, readOnlyArgs, normalArgs, accessModifier)
+                                  accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
+        val members = unionTypes.map { it.buildUnConcrete(identifier).getMemberFunction(key, readOnlyArgs, normalArgs, accessModifier) }
+        val first = members.firstOrNull() ?: return UnknownFunction(key) to true
+        if (first.first is UnknownFunction || members.any { it.first !== first.first }) return UnknownFunction(key) to true
+        return first.first to members.all { it.second }
+    }
 }

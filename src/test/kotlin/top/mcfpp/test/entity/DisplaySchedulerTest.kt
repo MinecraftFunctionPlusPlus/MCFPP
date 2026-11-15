@@ -59,10 +59,10 @@ class DisplaySchedulerTest {
 
     @Test fun dynamicUUIDsRoundTripSignedWordsAndResolveDirectTargets() = fixture("""
         func update(input: string) {
-            const id = UUID(input)
+            var id = UUID(input)
             var payload: nbt = {UUID: id}
             /data modify storage fixture:uuid parsed append from storage mcfpp:system stack_frame[0].payload.UUID
-            const display = entityByUUID<ItemDisplay>(id)
+            var display = entityByUUID<ItemDisplay>(id)
             display.transform.y = 2.0
         }
         func main() {
@@ -101,7 +101,7 @@ class DisplaySchedulerTest {
 
     @Test fun delayedEntityReferencesOwnDynamicUUIDOperandsAfterTheCreatorReturns() = fixture("""
         func start(input: string) {
-            const display = entityByUUID<ItemDisplay>(input)
+            var display = entityByUUID<ItemDisplay>(input)
             tick { frame ->
                 display.transform.y = frame * 1.0
                 return frame < 1
@@ -175,10 +175,7 @@ class DisplaySchedulerTest {
             brightness.block = 7
             brightness.sky = 15
             display.brightness = brightness
-            var shownItem = ItemStackData()
-            shownItem.id = "minecraft:diamond"
-            shownItem.count = 1
-            shownItem.components = {}
+            var shownItem: ItemStackData = {id: "minecraft:diamond", count: 1, components: {}}
             display.item = shownItem
             if (display.exists() && display.checkType<ItemDisplay>() && display.checkType<DisplayEntity>()) {
                 /say correct-type
@@ -203,9 +200,7 @@ class DisplaySchedulerTest {
             label.alignment = TextAlignment.left
             label.shadow = true
             const block = entityByUUID<BlockDisplay>("0-0-0-0-3")
-            var state = BlockState()
-            state.name = "minecraft:oak_log"
-            state.properties = {axis: "x"}
+            var state: BlockState = {name: "minecraft:oak_log", properties: {axis: "x"} as nbt}
             block.blockState = state
         }
     """.trimIndent(), "26.3") { functions ->

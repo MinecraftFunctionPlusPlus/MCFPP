@@ -68,7 +68,8 @@ internal object MacroCallPipeline {
     /** Declaration inference prepares immutable argument/type facts without invoking or expanding a host. */
     fun declaredResultType(syntax: P.FunctionCallContext, caller: Function,
                            values: Map<String, top.mcfpp.analysis.DeclarationBinding.Bound> = emptyMap(),
-                           declarations: Map<top.mcfpp.library.syntax.DeclarationId, top.mcfpp.analysis.DeclarationBinding.Bound> = emptyMap()): top.mcfpp.type.MCFPPType? {
+                           declarations: Map<top.mcfpp.library.syntax.DeclarationId, top.mcfpp.analysis.DeclarationBinding.Bound> = emptyMap(),
+                           trailing: P.InlineLambdaContext? = null): top.mcfpp.type.MCFPPType? {
         val binding = StructuredBindings.name(syntax.namespaceID(), caller)
         val frozen = (binding as? StructuredNameBinding.Macros)?.candidates
         if (binding != null && frozen == null) return null
@@ -77,8 +78,8 @@ internal object MacroCallPipeline {
             return null
         if (frozen == null && !isPotentialMacro(syntax, caller)) return null
         val inference = SourceInferenceBindings(values, declarations)
-        val preparation = if (frozen == null) CompilerSourceIndex(caller, inference = inference).prepareCallDeclarations(syntax)
-            else prepareFrozen(syntax, caller, null, frozen, inference)
+        val preparation = if (frozen == null) CompilerSourceIndex(caller, inference = inference).prepareCallDeclarations(syntax, trailing)
+            else prepareFrozen(syntax, caller, trailing, frozen, inference)
         return when (preparation) {
             is CompilerCallPreparationResult.Rejected -> throw top.mcfpp.analysis.DeclarationBinding.Failure(
                 preparation.diagnostics.joinToString("\n") { it.message }.ifBlank { "Cannot prepare macro result type" })

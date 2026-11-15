@@ -179,8 +179,9 @@ open class CompoundData :
      *
      * @return 唯一匹配的函数；没有匹配或存在歧义时返回 UnknownFunction
      */
-    fun getFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, isStatic: Boolean = false): Function {
-        return scope.getFunction(key, readOnlyArgs, normalArgs)
+    fun getFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, isStatic: Boolean = false,
+                    receiver: top.mcfpp.type.MCFPPType? = (this as? DataTemplate)?.getType()): Function {
+        return scope.getFunction(key, readOnlyArgs, normalArgs, receiver)
     }
 
     /**

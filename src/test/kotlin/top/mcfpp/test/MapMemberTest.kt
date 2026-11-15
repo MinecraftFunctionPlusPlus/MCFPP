@@ -65,7 +65,7 @@ class MapMemberTest {
                 values["third"] = 5
                 values["third"] = 6
                 external result = values.size()*100 + values["first"]*10 + values["third"]
-                external rootValue = (source["entries"][0]["value"] as int) + 0
+                external rootValue = source.entries[0].value + 0
             }
         """)
         val machine = execute(main)

@@ -1,0 +1,2 @@
+# Published library manifests hash these exact bytes, including line endings.
+src/main/resources/datapack/** -text

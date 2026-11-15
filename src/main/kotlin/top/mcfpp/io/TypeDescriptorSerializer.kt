@@ -13,6 +13,31 @@ class TypeDescriptorSerializer : Serializer<MCFPPType>() {
 
     override fun write(kryo: Kryo, output: Output, value: MCFPPType) {
         when (value) {
+            is MCFPPObjectType -> {
+                output.writeByte(8)
+                output.writeInt(value.fields.size)
+                value.fields.forEach { field ->
+                    output.writeString(field.name)
+                    kryo.writeClassAndObject(output, field.type)
+                    output.writeBoolean(field.optional)
+                    output.writeString(field.kind.name)
+                    output.writeInt(field.origins.size)
+                    field.origins.sortedBy { it.toString() }.forEach { identities.write(kryo, output, it) }
+                    output.writeBoolean(field.readable)
+                    output.writeBoolean(field.writable)
+                }
+            }
+            is MCFPPLiteralType -> {
+                output.writeByte(9)
+                kryo.writeClassAndObject(output, value.primitive)
+                identities.writeValue(output, value.value)
+            }
+            is MCFPPIntersectionType -> {
+                output.writeByte(10)
+                output.writeInt(value.components.size)
+                value.components.forEach { kryo.writeClassAndObject(output, it) }
+            }
+            MCFPPNeverType -> output.writeByte(11)
             is MCFPPNBTRefType -> {
                 output.writeByte(7)
                 kryo.writeClassAndObject(output, value.valueType)
@@ -24,6 +49,8 @@ class TypeDescriptorSerializer : Serializer<MCFPPType>() {
                 output.writeInt(value.parameters.size)
                 value.parameters.forEach { kryo.writeClassAndObject(output, it) }
                 kryo.writeClassAndObject(output, value.result)
+                output.writeInt(value.contexts.size)
+                value.contexts.forEach { kryo.writeClassAndObject(output, it) }
             }
             is MCFPPTypeAliasType -> {
                 output.writeByte(5)
@@ -75,11 +102,13 @@ class TypeDescriptorSerializer : Serializer<MCFPPType>() {
         3 -> {
             val count = input.readInt()
             require(count > 0) { "Empty union declaration" }
-            val result = MCFPPUnionType(MCFPPPrivateType.Wildcard)
+            val deferred = top.mcfpp.Project.shouldDeferTypeCompositions
+            val result = if (deferred) MCFPPUnionType.deferred(listOf(MCFPPPrivateType.Wildcard))
+                else MCFPPUnionType(MCFPPPrivateType.Wildcard)
             kryo.reference(result)
             val alternatives = List(count) { kryo.readClassAndObject(input) as MCFPPType }
-            result.types = MCFPPUnionType(*alternatives.toTypedArray()).types
-            require(result.typeId == TypeId.Union(alternatives.map { it.typeId }.toSet()))
+            result.types = if (deferred) MCFPPUnionType.deferred(alternatives).types
+                else MCFPPUnionType(*alternatives.toTypedArray()).types
             result
         }
         4 -> {
@@ -126,11 +155,37 @@ class TypeDescriptorSerializer : Serializer<MCFPPType>() {
             require(count >= 0) { "Negative function parameter count" }
             val parameters = List(count) { kryo.readClassAndObject(input) as MCFPPType }
             val result = kryo.readClassAndObject(input) as MCFPPType
-            MCFPPFunctionType(parameters, result, category).also {
+            val contextCount = input.readInt()
+            require(contextCount >= 0) { "Negative function context count" }
+            val contexts = List(contextCount) { kryo.readClassAndObject(input) as MCFPPType }
+            MCFPPFunctionType(parameters, result, category, contexts).also {
                 require(it.typeId == identity) { "Restored function declaration identity differs: $identity" }
             }
         }
         7 -> MCFPPNBTRefType(kryo.readClassAndObject(input) as MCFPPType)
+        8 -> {
+            val count = input.readInt()
+            require(count >= 0) { "Negative object field count" }
+            MCFPPObjectType(List(count) {
+                val name = input.readString()
+                val fieldType = kryo.readClassAndObject(input) as MCFPPType
+                val optional = input.readBoolean()
+                val kind = ObjectMemberKind.valueOf(input.readString())
+                val originCount = input.readInt()
+                require(originCount >= 0) { "Negative object origin count" }
+                val origins = List(originCount) { identities.read(kryo, input, TypeId::class.java) }.toSet()
+                ObjectFieldContract(name, fieldType, optional, kind, origins, input.readBoolean(), input.readBoolean())
+            })
+        }
+        9 -> MCFPPLiteralType(kryo.readClassAndObject(input) as MCFPPType, identities.readValue(input))
+        10 -> {
+            val count = input.readInt()
+            require(count > 0) { "Empty intersection declaration" }
+            val components = List(count) { kryo.readClassAndObject(input) as MCFPPType }
+            if (top.mcfpp.Project.shouldDeferTypeCompositions) TypeCompositions.deferIntersection(components)
+            else TypeCompositions.intersection(components)
+        }
+        11 -> MCFPPNeverType
         else -> error("Unknown declaration descriptor encoding: $tag")
     }
 }

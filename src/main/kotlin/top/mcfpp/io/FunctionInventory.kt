@@ -11,14 +11,26 @@ import java.util.IdentityHashMap
 
 /** Includes bound bodies and private generated functions without completing unused declarations. */
 internal object FunctionInventory {
-    fun all(): List<Function> {
-        val functions = Collections.newSetFromMap(IdentityHashMap<Function, Boolean>())
+    fun clearCallGraph() {
+        // Shared intrinsic declarations outlive a Project. Their reverse call edges must
+        // release the completed project before its namespace roots are discarded.
+        val previous = collect(includeLibrarySession = false, includeSharedCallers = true)
+        previous.forEach { it.child.clear(); it.parent.clear() }
+    }
+
+    fun all(): List<Function> = collect(includeLibrarySession = true)
+
+    private fun collect(includeLibrarySession: Boolean, includeSharedCallers: Boolean = false): List<Function> {
+        val seenFunctions = Collections.newSetFromMap(IdentityHashMap<Function, Boolean>())
+        val functions = arrayListOf<Function>()
         val compounds = Collections.newSetFromMap(IdentityHashMap<CompoundData, Boolean>())
         fun function(value: Function) {
-            if (!functions.add(value)) return
+            if (!seenFunctions.add(value)) return
+            functions.add(value)
             value.compiledFunctions.values.forEach(::function)
             value.innerFunction.forEach(::function)
             value.child.forEach(::function)
+            if (includeSharedCallers) value.parent.forEach(::function)
         }
         fun compound(value: CompoundData) {
             if (!compounds.add(value)) return
@@ -41,7 +53,10 @@ internal object FunctionInventory {
             namespace.scope.genericTemplate.values.forEach(::compound)
             namespace.scope.forEachObject(::compound)
         }
-        Project.libraryImportSession?.functions()?.forEach(::function)
+        if (includeLibrarySession) Project.libraryImportSession?.functions()?.forEach(::function)
+        if (includeSharedCallers) InitializedBuiltinData.all().forEach { value ->
+            value.scope.functions.values.forEach { overloads -> overloads.forEach(::function) }
+        }
         PackEntrypoints.functions().forEach(::function)
         return functions.toList()
     }

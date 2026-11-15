@@ -24,7 +24,7 @@ class TypeVariableDeclarationTest {
             MCFPPStringTest.readFromString(source.replace(">=", "> = "),version="26.3")
             assertTrue(Project.errorCount>0,source)
         }
-        MCFPPStringTest.readFromString("data Bundle<Types: list<type>>{constructor(){}}\nfunc main(){var legal=Bundle<[int,bool]>();}",version="26.3")
+        MCFPPStringTest.readFromString("data Bundle<Types: list<type>>{}\nfunc main(){var legal=Bundle<[int,bool]>();}",version="26.3")
         assertEquals(0,Project.errorCount)
     }
     @Test fun ordinaryTypeLocalsAreRejectedWithoutRegisteringNames() {
@@ -83,7 +83,7 @@ class TypeVariableDeclarationTest {
             typealias int as Number
             data Box<T> {
                 private var value: T
-                constructor(v: T){this.value=v;}
+                new(v: T){ return {value: v}; }
                 func read():T{return this.value;}
             }
             func main(){

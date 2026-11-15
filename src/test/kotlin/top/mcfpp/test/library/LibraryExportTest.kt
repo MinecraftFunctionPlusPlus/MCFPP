@@ -29,7 +29,7 @@ class LibraryExportTest {
             files.apply { if (none { it === file }) add(file) }
         })
 
-    @Test fun realParsedFunctionsDefaultsLocalsControlAndPrivateClosureProduceAV1File() = source("""
+    @Test fun realParsedFunctionsDefaultsLocalsControlAndPrivateClosureProduceACurrentLibraryFile() = source("""
         namespace export.fixture
         func aHelper(value:int):int {
             /say captured
@@ -48,13 +48,13 @@ class LibraryExportTest {
         helper.accessModifier = Member.AccessModifier.PRIVATE
         val foo = functions.single { it.identifier == "foo" }
         val selection = selection(functions, listOf(foo))
-        val directory = Files.createTempDirectory("mcfpp-v1-export-")
+        val directory = Files.createTempDirectory("mcfpp-current-export-")
         val output = directory.resolve("bin.mclib")
         try {
             val result = LibraryExport.write(selection, output)
             val bytes = Files.readAllBytes(output)
             assertEquals(bytes.size.toLong(), result.bytesWritten)
-            assertEquals(1L, LibraryWire.decode(bytes).formatVersion)
+            assertEquals(LibraryWire.CURRENT_VERSION, LibraryWire.decode(bytes).formatVersion)
             val decoded = LibraryModelCodec().decode(bytes)
             val declarations = decoded.declarations.declarations.filterIsInstance<FunctionDeclaration>()
             assertEquals(setOf("foo", "aHelper"), declarations.map { it.common.name }.toSet())
@@ -82,7 +82,7 @@ class LibraryExportTest {
             decoded.syntax.scopes.flatMap { it.bindings }.forEach { assertIs<ValueDeclaration>(decoded.declarations.declaration(it)) }
             assertTrue(decoded.localReferencesValidated)
             assertTrue(decoded.syntax.externalReferencesValidated)
-            assertNull(decoded.debug)
+            assertEquals(LibraryDebug(emptyList(), emptyList(), emptyList()), decoded.debug)
             assertContentEquals(bytes, LibraryModelCodec().encode(LibraryExporter.capture(selection)))
             val retained = bytes.copyOf()
             val original = foo.ast

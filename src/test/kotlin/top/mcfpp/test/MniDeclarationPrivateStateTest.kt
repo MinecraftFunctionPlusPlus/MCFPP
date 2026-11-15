@@ -515,10 +515,11 @@ class MniDeclarationPrivateStateTest {
             }
         }
         @Suppress("UNCHECKED_CAST")
-        val sequence = CompilerValue.Sequence(listOf(host) as List<CompilerValue>)
+        val erased = listOf(host) as List<CompilerValue>
+        val sequence = CompilerValue.Sequence(emptyList())
         val key = SpecializationKey(template.declarationId, listOf(SpecializationArgument.Constant(sequence)), GenerationOptions("26.3", 0))
         template.compiledTemplates[key] = bound(template, "bad", 1)
-        hashes = 0
+        CompilerValue.Sequence::class.java.getDeclaredField("elements").apply { isAccessible = true }.set(sequence, erased)
         assertFailsWith<IllegalStateException> { template.checkpointDeclarationState() }
         assertEquals(0, hashes)
     }

@@ -38,6 +38,8 @@ object NumericConversions {
     @JvmStatic
     fun convert(value: Var<*>, target: MCFPPType): Var<*> {
         if (value.isError) return target.buildUnConcrete(TempPool.getVarIdentify()).apply { isError = true }
+        if (value.type is top.mcfpp.type.MCFPPLiteralType)
+            return convert(top.mcfpp.analysis.StorageAccess.primitiveView(value), target)
         val loaded = top.mcfpp.analysis.StorageAccess.read(value)
         if (loaded !== value) return convert(loaded, target)
         if (value.isError) return target.buildUnConcrete(TempPool.getVarIdentify()).apply { isError = true }

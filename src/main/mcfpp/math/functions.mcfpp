@@ -77,7 +77,7 @@ func cbrt(x: float): float { return nroot(x, 3) }
 data SinCos {
     var sin: float
     var cos: float
-    constructor(s: float, c: float) { this.sin = s; this.cos = c }
+    new(s: float, c: float) { return { sin: s, cos: c } }
 }
 /// 以弧度计算正余弦。
 func sinCos(x: float): SinCos = top.mcfpp.mni.MathData.sinCos

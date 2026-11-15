@@ -11,6 +11,11 @@ import top.mcfpp.util.LogProcessor
 import top.mcfpp.model.scope.FunctionScope
 import top.mcfpp.type.UnresolvedType
 import top.mcfpp.type.TypeRelations
+import top.mcfpp.type.MCFPPObjectType
+import top.mcfpp.type.MCFPPIntersectionType
+import top.mcfpp.type.MCFPPUnionType
+import top.mcfpp.type.ObjectFieldContract
+import top.mcfpp.type.TypeCompositions
 
 /** Ordinary runtime constants never cause a new function body. */
 object SpecializationPolicy {
@@ -52,6 +57,19 @@ object SpecializationPolicy {
 
     fun bind(type: MCFPPType, bindings: Map<String, MCFPPType>): MCFPPType = when (type) {
         is MCFPPGenericParamType -> bindings[type.identifier] ?: type
+        is MCFPPObjectType -> if (bindings.isEmpty()) type else MCFPPObjectType(type.fields.map {
+            ObjectFieldContract(it.name, bind(it.type, bindings), it.optional, it.kind, it.origins, it.readable, it.writable)
+        })
+        is MCFPPIntersectionType -> if (bindings.isEmpty()) type else {
+            val components = type.components.map { bind(it, bindings) }
+            if (components.any(TypeCompositions::hasUncompletedNominal)) TypeCompositions.deferIntersection(components)
+            else TypeCompositions.intersection(components)
+        }
+        is MCFPPUnionType -> if (bindings.isEmpty()) type else {
+            val alternatives = type.types.map { bind(it, bindings) }
+            if (alternatives.any(TypeCompositions::hasUncompletedNominal)) TypeCompositions.deferUnion(alternatives)
+            else TypeCompositions.union(alternatives)
+        }
         is MCFPPTypeWithGeneric -> if (bindings.isEmpty()) type else type.replaceGenericParam(bindings)
         else -> type
     }

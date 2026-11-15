@@ -130,8 +130,7 @@ internal class RuntimeStringConcatenation(
         require(namespace(function.namespace).scope.addFunction(function, false)) {
             "Runtime string helper '$name' collides with a published function"
         }
-        owner.child.add(function)
-        function.parent.add(owner)
+        owner.recordCall(function)
         function
     }
 

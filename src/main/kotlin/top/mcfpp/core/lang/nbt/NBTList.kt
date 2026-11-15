@@ -39,9 +39,9 @@ open class NBTList : NBTBasedData {
         members.scope.forEachFunction { function ->
             candidates.add(if (function is NativeFunction) function.replaceGenericParams(mapOf("E" to genericType)) else function)
         }
-        var result = top.mcfpp.model.function.ParameterMatcher.select(candidates, key, readOnlyArgs, normalArgs)
+        var result = top.mcfpp.model.function.ParameterMatcher.select(candidates, key, readOnlyArgs, normalArgs, type)
         for (parent in members.parent) if (result == null) {
-            val inherited = parent.getFunction(key, readOnlyArgs, normalArgs, isStatic)
+            val inherited = parent.getFunction(key, readOnlyArgs, normalArgs, isStatic, type)
             if (inherited !is UnknownFunction) result = inherited
         }
         val selected = result ?: UnknownFunction(key)

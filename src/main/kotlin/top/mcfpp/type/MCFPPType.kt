@@ -270,7 +270,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
 
         internal fun cachedSyntaxType(text: String): MCFPPType? = typeCache[text]
 
-        internal fun resolveTypeId(id: TypeId): MCFPPType? = when (id) {
+        internal fun resolveTypeId(id: TypeId): MCFPPType? = TypeCompositions.restore(id, ::resolveTypeId) ?: when (id) {
             is TypeId.Builtin -> builtinTypesById()[id]
                 ?: MCFPPPrivateType.Wildcard.takeIf { it.typeId == id }
             is TypeId.Declaration -> {
@@ -480,8 +480,9 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             if(typeStr.trimEnd().endsWith('!')) return null
             typeCache[typeStr]?.let { return it }
             nativeConstructor(typeStr)?.let { return it }
-            //使用泛型或函数类型；函数类型拼写包含 `(...) -> ...`。
-            if(typeStr.contains("<") || typeStr.contains("->")){
+            // Structured contracts must resolve their nested names in the supplied scope.
+            if(typeStr.contains("<") || typeStr.contains("->") || typeStr.trimStart().startsWith("{") ||
+                typeStr.trimStart().startsWith("(")){
                 val charStream: CharStream = CharStreams.fromString(typeStr)
                 val tokens = CommonTokenStream(mcfppLexer(charStream))
                 val parser = mcfppParser(tokens)

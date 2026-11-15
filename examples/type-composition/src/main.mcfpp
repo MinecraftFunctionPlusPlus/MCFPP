@@ -1,0 +1,48 @@
+namespace example.type_composition
+
+data Position {
+    var x: int
+    var y: int
+
+    new(x: int, y: int) { return { x, y } }
+}
+
+data Named {
+    var name: string
+}
+
+// Both parent contracts contribute fields to the same object.
+data Marker: Position, Named {
+    var active: bool
+
+    new(x: int, y: int, name: string) {
+        return { x, y, name, active: true }
+    }
+}
+
+data Defaults {
+    var amount: int = 4
+
+    new(amount: int) { return { amount } }
+}
+
+func total(position: Position): int { return position.x + position.y }
+
+func label(value: { name: string }): string { return value.name }
+
+func main() {
+    var position = Position(1, 2)
+    var marker = Marker(3, 4, "spawn")
+    var x = 5
+    var y = 6
+    var anonymous = { x, y, extra: true }
+    var fallback = Defaults()
+    var explicit = Defaults.new(9)
+
+    print(total(position))
+    print(total(marker))
+    print(total(anonymous))
+    print(fallback.amount)
+    print(explicit.amount)
+    print(label(marker))
+}

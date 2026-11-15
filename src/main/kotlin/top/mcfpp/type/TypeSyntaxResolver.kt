@@ -9,7 +9,6 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.mni.api.SourceSpan
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericDataTemplate
-import top.mcfpp.model.compound.UnionDataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.scope.IScopeWithType
@@ -143,7 +142,18 @@ internal object TypeSyntaxResolver {
                     ?: return context.invalid(syntax, TextTranslator.INVALID_TYPE_ERROR.translate(syntax.text))
                 alternatives.add(type)
             }
-            return MCFPPUnionType(*alternatives.toTypedArray())
+            return if (top.mcfpp.Project.shouldDeferTypeCompositions) TypeCompositions.deferUnion(alternatives)
+                else TypeCompositions.union(alternatives)
+        }
+        body.literalObjectType()?.let { objectSyntax ->
+            val fields = linkedMapOf<String, ObjectFieldContract>()
+            for (field in objectSyntax.literalObjectTypeField()) {
+                val name = field.Identifier().text
+                if (name in fields) return context.invalid(field, "Duplicate field '$name' in object type")
+                val type = resolve(field.type(), context) ?: return context.invalid(field, "Unknown field type '${field.type().text}'")
+                fields[name] = ObjectFieldContract(name, type)
+            }
+            return MCFPPObjectType(fields.values)
         }
         body.anonymousTemplateType()?.let { return context.anonymous(it) }
         val name = body.className()?.text ?: body.Identifier()?.text ?: body.text
@@ -208,10 +218,10 @@ internal open class LegacyTypeSyntaxContext(
 
     override fun specialize(head: GenericDataTemplate, arguments: List<Parser.ExpressionContext>,
                             site: Parser.TypeBodyContext): MCFPPType? {
-        val visitor = MCFPPReadonlyExprVisitor(lookupTypeScope = scope, lexicalCaller = caller)
         val values = arrayListOf<Var<*>>()
-        for (syntax in arguments) {
-            val value = visitor.visit(syntax) ?: return null
+        for ((index, syntax) in arguments.withIndex()) {
+            val value = MCFPPReadonlyExprVisitor(lookupTypeScope = scope, lexicalCaller = caller,
+                expectedType = head.readOnlyParams.getOrNull(index)?.type).visit(syntax) ?: return null
             if (value.isError || value is UnknownVar) return null
             values.add(value)
         }
@@ -228,13 +238,9 @@ internal open class LegacyTypeSyntaxContext(
     }
 
     override fun intersect(types: List<MCFPPType>, site: Parser.UnionTemplateTypeContext): MCFPPType {
-        val templates = arrayListOf<MCFPPDataTemplateType>()
-        types.forEachIndexed { index, type ->
-            if (type is MCFPPDataTemplateType) templates.add(type)
-            else invalid(site.type(index), "Union type can only be used with data template type")
-        }
-        templates.forEach { it.tryResolve() }
-        return UnionDataTemplate.resolve(templates.map { it.template }).getType()
+        types.forEach { it.tryResolve() }
+        return if (top.mcfpp.Project.shouldDeferTypeCompositions) TypeCompositions.deferIntersection(types)
+            else TypeCompositions.intersection(types)
     }
 
     override fun anonymous(site: Parser.AnonymousTemplateTypeContext): MCFPPType =

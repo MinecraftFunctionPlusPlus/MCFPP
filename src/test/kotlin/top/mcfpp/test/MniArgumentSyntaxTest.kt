@@ -101,6 +101,45 @@ class MniArgumentSyntaxTest {
         assertNull(parsed.call("empty").arguments().normalArgs().callArgumentList())
     }
 
+    @Test fun readonlyCallBoundariesPreserveComparisonsAndNestedGenericArguments() {
+        val siblings = parse("func main(){ combine(copy<int>(1),copy<float>(2.0f),copy(3)); }")
+        assertEquals(emptyList(), siblings.errors)
+        val copies = siblings.calls("copy")
+        assertEquals(listOf("int", "float", null), copies.map {
+            it.arguments().readOnlyArgs()?.expressionList()?.text
+        })
+        assertEquals(listOf("1", "2.0f", "3"), copies.map {
+            it.arguments().normalArgs().expressionList().text
+        })
+
+        val comparisons = parse("""
+            func main(){
+                select<3 > (2)>();
+                var plain = 3 > (2);
+                var result = copy<int>(1) > (2);
+                copyFloat<float>(2.0f);
+                outer<Box<list<int>>>();
+                if (display.exists() && display.checkType<ItemDisplay>() && display.checkType<DisplayEntity>()) {}
+            }
+        """.trimIndent())
+        assertEquals(emptyList(), comparisons.errors)
+        assertEquals("3>(2)", comparisons.call("select").arguments().readOnlyArgs().expressionList().text)
+        assertNull(comparisons.call("select").arguments().normalArgs().expressionList())
+        assertEquals("int", comparisons.call("copy").arguments().readOnlyArgs().expressionList().text)
+        assertEquals("float", comparisons.call("copyFloat").arguments().readOnlyArgs().expressionList().text)
+        assertEquals("Box<list<int>>", comparisons.call("outer").arguments().readOnlyArgs().expressionList().text)
+        assertEquals(listOf("ItemDisplay", "DisplayEntity"), comparisons.calls("checkType").map {
+            it.arguments().readOnlyArgs().expressionList().text
+        })
+        val relations = arrayListOf<String>()
+        fun visit(node: ParseTree) {
+            if (node is mcfppParser.RelationalExpressionContext && node.op.isNotEmpty()) relations.add(node.text)
+            for (index in 0 until node.childCount) visit(node.getChild(index))
+        }
+        visit(comparisons.tree)
+        assertEquals(listOf("3>(2)", "3>(2)", "copy<int>(1)>(2)"), relations)
+    }
+
     @Test fun refAlwaysReportsLocatedMigrationWhileRetainingTheDiagnosticNode() {
         val source = "func main(){ macro(ref state + 1, 2); }"
         val parsed = parse(source)
@@ -128,7 +167,7 @@ class MniArgumentSyntaxTest {
             "i => {}",
             "(i,) => {}",
             "(i) => i",
-            "(i) -> {}"
+            "(i) -> { target(i); }"
         )) assertTrue(parse("func main(){ macro($arguments); }").errors.isNotEmpty(), arguments)
     }
 
@@ -141,14 +180,16 @@ class MniArgumentSyntaxTest {
     }
 
     private data class Parsed(val tree: mcfppParser.CompilationUnitContext, val errors: List<String>) {
-        fun call(name: String): mcfppParser.FunctionCallContext {
+        fun call(name: String): mcfppParser.FunctionCallContext = calls(name).single()
+
+        fun calls(name: String): List<mcfppParser.FunctionCallContext> {
             val calls = arrayListOf<mcfppParser.FunctionCallContext>()
             fun visit(node: ParseTree) {
                 if (node is mcfppParser.FunctionCallContext && node.namespaceID().text == name) calls.add(node)
                 for (index in 0 until node.childCount) visit(node.getChild(index))
             }
             visit(tree)
-            return calls.single()
+            return calls
         }
     }
 

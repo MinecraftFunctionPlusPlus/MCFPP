@@ -404,21 +404,31 @@ class MniCompoundScopeJournalTest {
     }
 
     @Test fun nestedImmutableIdentityPayloadsAreCheckedBeforeTheMapCanHashTheirErasedHost() = inFunction { scope, _ ->
-        var hashes = 0
+        var hostCalls = 0
         val host = object {
             override fun hashCode(): Int {
-                hashes++
+                hostCalls++
                 return 3
+            }
+            override fun equals(other: Any?): Boolean {
+                hostCalls++
+                return this === other
+            }
+            override fun toString(): String {
+                hostCalls++
+                return "host"
             }
         }
         @Suppress("UNCHECKED_CAST")
-        val payload = CompilerValue.Sequence(listOf(host) as List<CompilerValue>)
+        val erased = listOf(host) as List<CompilerValue>
+        assertFailsWith<IllegalArgumentException> { CompilerValue.Sequence(erased) }
+        val payload = CompilerValue.Sequence(emptyList())
         val identity = TypeId.Specialized(TypeId.Declaration("template", "test", "Specialized"), listOf(payload))
         val key = MCFPPGenericDataTemplateType(DataTemplate("Specialized", "test"), arrayListOf(), identity)
         scope.operators["+"] = hashMapOf<MCFPPType?, Function>(key to Function("operator", "test", null))
-        hashes = 0
+        CompilerValue.Sequence::class.java.getDeclaredField("elements").apply { isAccessible = true }.set(payload, erased)
         assertFailsWith<IllegalStateException> { scope.checkpointRelations() }
-        assertEquals(0, hashes)
+        assertEquals(0, hostCalls)
     }
 
     @Test fun operatorKeyRootsCanComposeTypeRestorationBeforeEveryRepeatedMapRehash() = inFunction { scope, _ ->

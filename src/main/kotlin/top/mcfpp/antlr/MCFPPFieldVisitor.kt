@@ -8,7 +8,6 @@ import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.antlr.mcfppParser.TemplateDeclarationContext
 import top.mcfpp.compiletime.CompileTimeFunction
-import top.mcfpp.core.lang.UnionTypeVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.exception.UndefinedException
@@ -33,6 +32,7 @@ import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPNotCompiledGenericType
 import top.mcfpp.type.MCFPPTypeWithGeneric
+import top.mcfpp.type.TypeCompositions
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 import top.mcfpp.util.TextTranslator
@@ -336,7 +336,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 template.addMember(
                     TypeDataTemplateConstructor(template).apply { appendNormalParam(template.typeAs, "value") }
                 )
-            }else if(!template.isAbstract && template.constructors.isEmpty()){
+            }else if(template.isEntityTemplate && !template.isAbstract && template.constructors.isEmpty()){
                 template.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!, null))
             }
         }
@@ -399,9 +399,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         MCFPPAnnotationVisitor().visitTemplateBody(ctx.templateBody())
 
         //如果没有构造函数，生成默认的构造函数
-        if(template.constructors.isEmpty()){
-            template.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!, null))
-        }
         Project.registerAnonymousTemplate(template)
         DataTemplate.currTemplate = qwq
         typeScope = MCFPPFile.currFile!!.field.namespaceField
@@ -413,7 +410,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //解析成员
         //先解析函数
         for (c in ctx.templateMemberDeclaration()) {
-            if (c!!.templateMember().templateFunctionDeclaration() != null || c.templateMember().templateConstructorDeclaration() != null) {
+            if (c!!.templateMember().templateFunctionDeclaration() != null || c.templateMember().templateConstructorDeclaration() != null ||
+                c.templateMember().templateFactoryDeclaration() != null) {
                 visit(c)
             }
         }
@@ -453,6 +451,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             visitTemplateFieldDeclaration(ctx.templateFieldDeclaration())
         } else if(ctx.templateConstructorDeclaration() != null) {
             visitTemplateConstructorDeclaration(ctx.templateConstructorDeclaration())
+        } else if(ctx.templateFactoryDeclaration() != null) {
+            visitTemplateFactoryDeclaration(ctx.templateFactoryDeclaration())
         } else{
             return null
         }
@@ -529,7 +529,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                     }
                     unionTypes.add(alternative)
                 }
-                UnionTypeVar(ctx.Identifier().text, *unionTypes.toTypedArray()).apply {
+                val union = if (Project.shouldDeferTypeCompositions) TypeCompositions.deferUnion(unionTypes)
+                    else TypeCompositions.union(unionTypes)
+                union.buildUnConcrete(ctx.Identifier().text).apply {
                     nullable = it.unionTemplateFieldType().QUEST() != null
                 }
             }
@@ -574,7 +576,12 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val context = Function("constant-fields", template, null)
         val known = linkedMapOf<String, top.mcfpp.analysis.DeclarationBinding.Bound>()
         val types = template.scope.allVars.associate { it.identifier to it.type }
-        for (field in template.scope.allVars.filter { it.isConst && it.declaredParentTemplate === template }) {
+        val localConstants = template.scope.allVars.filter { it.isConst && it.declaredParentTemplate === template }
+            .associateBy { it.identifier }
+        // Initializer bindings follow source order; scope member lookup sorts names alphabetically.
+        val orderedConstants = template.preInit.keys.mapNotNull(localConstants::get) +
+            localConstants.values.filter { it.identifier !in template.preInit }
+        for (field in orderedConstants) {
             val initializer = template.preInit[field.identifier]
             if (initializer == null) {
                 if (field.declarationConstant == null)
@@ -704,6 +711,10 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     }
 
     override fun visitTemplateConstructorDeclaration(ctx: mcfppParser.TemplateConstructorDeclarationContext): Any? = withCompilationContext(ctx) {
+        if (DataTemplate.currTemplate !is ObjectCompoundData && DataTemplate.currTemplate?.isEntityTemplate != true) {
+            LogProcessor.error("The constructor declaration has been replaced by new(...){ return { ... } }; factories have no implicit this")
+            return null
+        }
         if(DataTemplate.currTemplate is TypeDataTemplate){
             LogProcessor.error("TypeDataTemplate cannot have constructor")
             return null to null
@@ -720,6 +731,23 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             return null
         }
         return f
+    }
+
+    override fun visitTemplateFactoryDeclaration(ctx: mcfppParser.TemplateFactoryDeclarationContext): Any? = withCompilationContext(ctx) {
+        val template = DataTemplate.currTemplate ?: return@withCompilationContext null
+        if (template is ObjectCompoundData || template is TypeDataTemplate || template.isEntityTemplate) {
+            LogProcessor.error("new factories require an ordinary data template")
+            return@withCompilationContext null
+        }
+        val factory = TemplateFactory(template, ctx.curlBlock())
+        factory.sourceDeclarationContext = ctx
+        factory.document = top.mcfpp.doc.SourceDocumentation.document(ctx)
+        factory.addParamsFromContext(ctx.normalParams())
+        if (template.scope.functions["new"].orEmpty().any { ParameterMatcher.sameSignature(it, factory) }) {
+            LogProcessor.error("Already defined factory: ${template.namespaceID}.new")
+            return@withCompilationContext null
+        }
+        factory
     }
 
     //endregion

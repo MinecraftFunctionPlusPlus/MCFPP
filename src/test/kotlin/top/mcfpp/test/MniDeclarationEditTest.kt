@@ -493,7 +493,7 @@ class MniDeclarationEditTest {
 
     @Test fun methodNamesMustBeExactLexerIdentifiersIncludingKeywordAndVectorTokenPriority() {
         val f = fixture()
-        for (name in listOf("if", "this", "int", "Type", "ref", "vec", "vec3", "vec42", "valid trailing", "valid!", " valid", "valid/*comment*/")) {
+        for (name in listOf("if", "this", "int", "Type", "new", "vec", "vec3", "vec42", "valid trailing", "valid!", " valid", "valid/*comment*/")) {
             f.rejects("Invalid generated member name '$name'") { ctx, _ ->
                 ctx.declarations().edits(listOf(ctx.declarations().method(f.owner, name, f.noArgs) { }))
             }
@@ -502,7 +502,7 @@ class MniDeclarationEditTest {
 
     @Test fun parameterNamesUseTheSameLexerIdentifierRulesAsMethodNames() {
         val f = fixture()
-        for (name in listOf("if", "this", "int", "ref", "vec3", "vec42", "value!", "value ")) {
+        for (name in listOf("if", "this", "int", "new", "vec3", "vec42", "value!", "value ")) {
             f.rejects("Invalid generated member name '$name'") { ctx, _ ->
                 val signature = FunctionSignature.of(listOf(ParameterView.of(name, f.int, ParamMode.VALUE)), f.void)
                 ctx.declarations().edits(listOf(ctx.declarations().method(f.owner, "validName", signature) { }))

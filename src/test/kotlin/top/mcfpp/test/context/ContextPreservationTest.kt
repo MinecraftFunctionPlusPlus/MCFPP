@@ -257,7 +257,7 @@ class ContextPreservationTest {
     }
 
     @Test fun dynamicDimensionEntryPreservesAncestorSpaceBeforeTheMacroSwitch() = compile("""
-        data Dimension { var id: string; constructor(id: string) { this.id = id } }
+        data Dimension { var id: string; new(id: string){ return {id: id }; } }
         func main() {
             external name: string = "minecraft:the_nether"
             var dimension = Dimension(name)
@@ -331,8 +331,8 @@ class ContextPreservationTest {
     }
 
     @Test fun modifierEntriesChangeTheirOwnComponentsAndRestoreTheirCaller() = compile("""
-        data Dimension { var id: string; constructor(id: string) { this.id = id } }
-        data EntityType { var id: string; constructor(id: string) { this.id = id } }
+        data Dimension { var id: string; new(id: string){ return {id: id }; } }
+        data EntityType { var id: string; new(id: string){ return {id: id }; } }
         func main() {
             withPosCtx(3.75 64 -4.25) { base ->
                 withAlignedCtx(Axes.xz) { aligned ->

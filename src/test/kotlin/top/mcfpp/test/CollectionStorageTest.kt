@@ -330,7 +330,7 @@ class CollectionStorageTest {
         val main = compile("func main(){ external values = []; }")
         val values = assertNotNull(main.scope.getVar("values"))
         assertTrue(values.type.hasRuntimeRepresentation)
-        assertEquals(CompilerValue.Typed(values.type.typeId, CompilerValue.Sequence(emptyList())), StorageAccess.snapshot(values))
+        assertNull(StorageAccess.snapshot(values), "External storage does not provide a compile-time constant")
         val binding = assertNotNull(values.storageBinding)
         assertEquals(0, binding.data.facts.length(binding.place))
         val observation = if (main.commands.last().toString() == top.mcfpp.command.Commands.stackOut().analyze())

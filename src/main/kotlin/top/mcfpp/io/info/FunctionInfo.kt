@@ -8,6 +8,8 @@ import top.mcfpp.model.function.GenericFunction
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.GenericExtensionFunction
+import top.mcfpp.model.function.TemplateFactory
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.type.MCFPPType
 
 interface AbstractFunctionInfo<T: Function>: ModelInfo<T> {
@@ -19,6 +21,7 @@ interface AbstractFunctionInfo<T: Function>: ModelInfo<T> {
 
         fun from(function: Function): AbstractFunctionInfo<*> {
             return when(function){
+                is TemplateFactory -> TemplateFactoryInfo(FunctionInfo.from(function), function.isImplicit)
                 is NativeFunction -> NativeFunctionInfo.from(function)
                 is ExtensionFunction -> ExtensionFunctionInfo.from(function)
                 is GenericFunction -> GenericFunctionInfo.from(function)
@@ -44,7 +47,10 @@ data class FunctionInfo(
     val annotations: List<top.mcfpp.model.annotation.Annotation> = emptyList()
 ): AbstractFunctionInfo<Function> {
     override fun get(): Function {
-        val f = Function(identifier, namespace, null)
+        return restore(Function(identifier, namespace, null))
+    }
+
+    internal fun <T : Function> restore(f: T): T {
         f.declarationFile = null
         f.declarationEnvironment = declarationEnvironment
         f.returnType = returnType
@@ -83,6 +89,17 @@ data class FunctionInfo(
                 top.mcfpp.model.property.Property.copyAnnotations(function.annotations)
             )
         }
+    }
+}
+
+/** Factories retain their declaring owner and generation origin, with ordinary function payloads. */
+data class TemplateFactoryInfo(val declaration: FunctionInfo, val isImplicit: Boolean) : AbstractFunctionInfo<TemplateFactory> {
+    override fun get(): TemplateFactory = get(requireNotNull(DataTemplateInfo.currTemplate ?: GenericDataTemplateInfo.currTemplate) {
+        "A template factory must be restored in its declaring template"
+    })
+
+    fun get(template: DataTemplate): TemplateFactory = declaration.restore(TemplateFactory(template, declaration.context, isImplicit)).also {
+        it.returnType = template.getType()
     }
 }
 

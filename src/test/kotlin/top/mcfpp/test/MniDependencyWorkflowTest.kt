@@ -36,7 +36,8 @@ class MniDependencyWorkflowTest {
                 }
             }
             val project = ProjectTemplates.create(root, false)
-            Files.writeString(project.file, toml(project.values + ("mni" to mapOf("enabled" to false, "repositories" to listOf(repository.toUri().toString())))))
+            Files.writeString(project.file, toml(project.values + ("mni" to mapOf("enabled" to false, "repositories" to listOf(
+                repository.toUri().toString(), "https://repo.maven.apache.org/maven2/")))))
             publish(listOf("1.0.0"))
             success("add", "--mni", "example:helper:1.+")
             assertTrue(ProjectDefinition.load(project.file).mniEnabled)

@@ -213,8 +213,8 @@ object CompoundDeclarations {
                 }
             }
             val inherited = bindings.inheritedFields(template).map { effect ->
-                val slot = template.scope.fieldOrigins[effect.field.identifier]?.singleOrNull()
-                    ?: unsupported("Completed inherited effect has no unique originating slot")
+                val slot = template.scope.fieldOrigins[effect.field.identifier]?.minByOrNull { it.owner.inheritanceIdentity.toString() }
+                    ?: unsupported("Completed inherited effect has no originating slot")
                 val effectField = field(effect.field, id)
                 val effectProperty = effect.property?.let { property(it, id) }
                 fun getterOwner(property: Property?): TypeRef? = when (val accessor = property?.accessor) {
@@ -519,7 +519,7 @@ object CompoundDeclarations {
                 is Var<*> -> member.templateFieldDeclaration()?.Identifier()?.text == value.identifier
                 is Property -> member.templateFieldDeclaration()?.Identifier()?.text == value.identifier
                 is DataTemplateConstructor -> member.templateConstructorDeclaration()?.curlBlock() === value.ast
-                is Function -> member.templateFunctionDeclaration()?.curlBlock() === value.ast
+                is Function -> (member.templateFunctionDeclaration()?.curlBlock() ?: member.templateFactoryDeclaration()?.curlBlock()) === value.ast
                 is OperatorSlot -> member.operationOverrideDeclaration()?.supportOperator()?.text == value.operator ||
                     member.nativeOperationOverrideDeclaration()?.supportOperator()?.text == value.operator
                 else -> false

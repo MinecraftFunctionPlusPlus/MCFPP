@@ -13,7 +13,6 @@ import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.model.compound.CompiledGenericDataTemplate
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericDataTemplate
-import top.mcfpp.model.compound.UnionDataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
@@ -117,23 +116,29 @@ class MniTypeSyntaxResolutionTest {
             """
             namespace fixture.walk
             typealias list<int> as Numbers
-            data A {}
-            data B {}
+            data A {var x:int;}
+            data B {var y:bool;}
             func main(){}
         """
         )
-        for (syntax in listOf("Numbers", "fixture.walk:A", "(A & B)")) {
-            val left = legacy(main, syntax)
-            val right = declaration(main, syntax)
-            if (syntax == "(A & B)") {
-                val union = assertIs<UnionDataTemplate>(assertIs<MCFPPDataTemplateType>(right).template)
-                val owners = GlobalScope.localNamespaces.getValue("fixture.walk").scope
-                assertTrue(union.parent.any { it === owners.getTemplate("A") })
-                assertTrue(union.parent.any { it === owners.getTemplate("B") })
-                assertIs<UnionDataTemplate>(assertIs<MCFPPDataTemplateType>(left).template)
-            } else assertEquals(left.typeId, right.typeId)
+        val owners = GlobalScope.localNamespaces.getValue("fixture.walk").scope
+        val a = assertNotNull(owners.getTemplate("A"))
+        val b = assertNotNull(owners.getTemplate("B"))
+        assertSame(a, assertIs<MCFPPDataTemplateType>(legacy(main, "fixture.walk:A")).template)
+        assertSame(a, assertIs<MCFPPDataTemplateType>(declaration(main, "fixture.walk:A")).template)
+        val expectedShape = MCFPPObjectType(listOf(
+            ObjectFieldContract("x", MCFPPBaseType.Int),
+            ObjectFieldContract("y", MCFPPBaseType.Bool)
+        ))
+        for (shape in listOf(legacy(main, "(A & B)"), declaration(main, "(A & B)"))) {
+            val objectType = assertIs<MCFPPObjectType>(shape)
+            assertEquals(expectedShape.typeId, objectType.typeId)
+            assertEquals(listOf("x", "y"), objectType.fields.map { it.name })
+            assertEquals(setOf(a.inheritanceIdentity), objectType.fieldsByName.getValue("x").origins)
+            assertEquals(setOf(b.inheritanceIdentity), objectType.fieldsByName.getValue("y").origins)
         }
         assertEquals(MCFPPListType(MCFPPBaseType.Int).typeId, declaration(main, "Numbers").typeId)
+        assertEquals(declaration(main, "Numbers").typeId, legacy(main, "Numbers").typeId)
         assertEquals(0, Project.errorCount)
     }
 

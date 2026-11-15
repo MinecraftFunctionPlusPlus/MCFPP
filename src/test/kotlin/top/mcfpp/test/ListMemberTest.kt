@@ -11,6 +11,8 @@ import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
 import top.mcfpp.type.MCFPPBaseType
+import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.test.*
 import kotlin.test.Test
 
@@ -21,7 +23,8 @@ class ListMemberTest {
         return GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
     }
 
-    private fun execute(main: Function) = ScoreCommandExecutor(main.commands.analyzeAll(),
+    private fun execute(main: Function, helpers: Map<String, List<String>> = emptyMap(), prelude: List<String> = emptyList()) =
+        ScoreCommandExecutor(prelude + main.commands.analyzeAll(), helpers +
         GlobalScope.localNamespaces.values.flatMap { it.scope.functions.values.flatten() }
             .associate { it.namespaceID.toString() to it.commands.analyzeAll() } +
             Project.macroFunction.mapKeys { "mcfpp:dynamic/${it.key}" }.mapValues { listOf(it.value) }).also {
@@ -262,7 +265,16 @@ class ListMemberTest {
                 external unknown = find(-0.0)
             }
         """, "1.20.1")
-        val machine = execute(main)
+        val datapack = Path.of("src/main/resources/datapack/stdlib/data")
+        val floatFunctions = datapack.resolve("math.float/function")
+        val functions = Files.walk(floatFunctions).use { paths ->
+            paths.filter { it.toString().endsWith(".mcfunction") }.iterator().asSequence().associate { path ->
+                "math.float:" + floatFunctions.relativize(path).toString().replace('\\', '/').removeSuffix(".mcfunction") to Files.readAllLines(path)
+            }
+        }
+        val constants = Files.readAllLines(datapack.resolve("math/function/_init.mcfunction"))
+            .filter { it.startsWith("scoreboard players set ") }
+        val machine = execute(main, functions, constants)
         assertEquals(0, machine.read(main.scope.getVar("unknown") as MCInt))
         assertEquals(0, machine.read(main.scope.getVar("known") as MCInt))
     }

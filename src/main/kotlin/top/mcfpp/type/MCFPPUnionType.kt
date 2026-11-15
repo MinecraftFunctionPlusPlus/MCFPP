@@ -3,12 +3,13 @@ package top.mcfpp.type
 import top.mcfpp.core.lang.UnionTypeVar
 import top.mcfpp.core.lang.Var
 
-class MCFPPUnionType(vararg alternatives: MCFPPType): MCFPPType() {
-    var types: Array<MCFPPType> = alternatives.flatMap { if (it is MCFPPUnionType) it.types.toList() else listOf(it) }
-        .distinctBy { it.typeId }.sortedBy { it.typeId.toString() }.toTypedArray()
+class MCFPPUnionType private constructor(alternatives: Collection<MCFPPType>, internal val deferredComposition: Boolean): MCFPPType() {
+    constructor(vararg alternatives: MCFPPType) : this(alternatives.toList(), false)
+
+    var types: Array<MCFPPType> = TypeCompositions.normalizeUnionAlternatives(alternatives, !deferredComposition).toTypedArray()
     init { require(types.isNotEmpty()) { "A union needs at least one alternative" } }
     override val hasRuntimeRepresentation: Boolean get() = types.all { it.hasRuntimeRepresentation }
-    override val typeId: TypeId get() = TypeId.Union(types.map { it.typeId }.toSet())
+    override val typeId: TypeId get() = if (types.size == 1) types.single().typeId else TypeId.Union(types.map { it.typeId }.toSet())
 
     override val typeName: String
         get() = "UnionType(${types.joinToString(", ")})"
@@ -26,7 +27,11 @@ class MCFPPUnionType(vararg alternatives: MCFPPType): MCFPPType() {
     }
 
     override fun buildUnConcrete(identifier: String): Var<*> {
-        return UnionTypeVar(identifier, *types)
+        return UnionTypeVar(identifier, *types).also { it.type = this }
+    }
+
+    companion object {
+        internal fun deferred(alternatives: Collection<MCFPPType>): MCFPPUnionType = MCFPPUnionType(alternatives, true)
     }
 
 }

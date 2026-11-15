@@ -81,7 +81,7 @@ object DocumentationExport {
                 val base = resolver.resolve(type, parent)?.takeIf { it.kind in setOf("data", "object") } ?: continue
                 inherit(base, active + type.id)
                 for (member in all.filter { it.namespace == base.namespace && it.packageId == base.packageId && it.owner == base.name }.toList()) {
-                    if (member.kind == "constructor" || member.access == "private") continue
+                    if (member.kind != "field" || member.access == "private") continue
                     val existing = all.firstOrNull { it.namespace == type.namespace && it.packageId == type.packageId && it.owner == type.name &&
                         it.name == member.name && it.parameters.map { p -> p.type } == member.parameters.map { p -> p.type } &&
                         it.readonlyParameters.map { p -> p.type } == member.readonlyParameters.map { p -> p.type } &&

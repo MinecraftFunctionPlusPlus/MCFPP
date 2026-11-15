@@ -21,7 +21,7 @@ data class FieldInfo(
             field.putVar(it.identifier, it.get(owner), true)
         }
         functions.forEach {
-            val function = it.get()
+            val function = if (it is TemplateFactoryInfo) it.get(requireNotNull(owner)) else it.get()
             if (owner != null) {
                 function.owner = owner
                 function.scope.parent.add(0, field)
@@ -84,6 +84,7 @@ data class FieldInfo(
 
     companion object {
         fun from(field: CompoundDataScope, owner: DataTemplate): FieldInfo {
+            top.mcfpp.model.function.TemplateFactories.ensureImplicit(owner)
             val functions = ArrayList<AbstractFunctionInfo<*>>()
             field.forEachFunction {
                 if (!it.actualCallBody && it.owner == owner) functions.add(AbstractFunctionInfo.from(it))

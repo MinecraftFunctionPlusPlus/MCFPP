@@ -49,7 +49,7 @@ internal object EntityTemplates {
         ?: if (template.identifier == "DisplayEntity" && template.namespace == "mcfpp.minecraft.entity")
             EntityTypes.DisplayEntity.entityKinds else null
 
-    /** Installs the covariant default `summon(d: nbt)` member on an entity template. */
+    /** Installs the default receiver function with this entity template's precise return type. */
     fun installDefaultSummon(template: DataTemplate) {
         installDefaultSummon(template, hashSetOf())
     }
@@ -64,14 +64,14 @@ internal object EntityTemplates {
         val local = template.scope.functions["summon"].orEmpty().firstOrNull(::matches)
         if (local != null && local !is SummonFunction) return
         val inherited = parents.flatMap { it.scope.getFunctionCandidates("summon") }.filter(::matches)
-        // Inherit user overrides unchanged. Only the intrinsic default is covariant in
-        // the receiver template; synthesizing over a user method would hide its body.
+        // Keep parent user receiver functions available through ordinary lookup. A local
+        // intrinsic would otherwise be preferred over that existing declaration.
         if (inherited.any { it !is SummonFunction }) {
             if (local != null) template.scope.functions["summon"]?.remove(local)
             return
         }
-        if (local != null) local.isOverride = inherited.isNotEmpty()
-        else template.scope.addFunction(SummonFunction(template).apply { isOverride = inherited.isNotEmpty() }, false)
+        if (local != null) local.isOverride = false
+        else template.scope.addFunction(SummonFunction(template), false)
     }
 
     /** Kept for source compatibility with the old zero/position-argument helper. */

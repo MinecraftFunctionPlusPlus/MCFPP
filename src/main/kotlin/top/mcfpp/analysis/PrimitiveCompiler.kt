@@ -71,7 +71,8 @@ object PrimitiveCompiler {
 
     private fun supportedSignature(function: Function) = function.contextParams.isEmpty() && function.ownerType == OwnerType.NONE && function !is NativeFunction &&
         function !is Generic<*> && function.normalParams.all { supportedType(it.type) } &&
-        (function.returnType === MCFPPPrivateType.Void || supportedType(function.returnType))
+        (function.returnType === MCFPPPrivateType.Void || supportedType(function.returnType)) &&
+        function.normalParams.none { it.type is MCFPPObjectType } && function.returnType !is MCFPPObjectType
 
     private fun conversion(function: Function) = function is NativeFunction &&
         function.javaMethod.declaringClass == top.mcfpp.mni.ConversionData::class.java
@@ -379,6 +380,9 @@ object PrimitiveCompiler {
             val binding = StorageBinding(data(place), place, backend.address(lowering.location(symbol)))
             adapter.storageBinding = binding
             adapter.nbtPath = if (nbt(symbol.declaredType)) backend.address(lowering.location(symbol)) else NBTPath.getNormalStackPath(adapter)
+            if (adapter.isConst) StorageAccess.snapshot(adapter)?.let {
+                ConstantBinding.bindDeclaration(adapter, it, binding.data.types)
+            }
             function.scope.putVar(symbol.name, adapter, true)
             lowering.declarationSites[symbol.id]?.let { StructuredBindings.publish(it, function, adapter) }
         }
@@ -408,10 +412,11 @@ object PrimitiveCompiler {
             types[type.typeId] = type
             (type as? MCFPPTypeWithGeneric)?.generic?.forEach(::register)
             (type as? MCFPPUnionType)?.types?.forEach(::register)
+            (type as? MCFPPObjectType)?.fields?.forEach { register(it.type) }
             return type
         }
         /** Reconstruct structural types learned from already compiled callees, without a global type cache. */
-        private fun register(id: TypeId): MCFPPType = types[id] ?: register(when (id) {
+        private fun register(id: TypeId): MCFPPType = types[id] ?: register(TypeCompositions.restore(id) { register(it) } ?: when (id) {
             MCFPPPrivateType.Wildcard.typeId -> MCFPPPrivateType.Wildcard
             is TypeId.Applied -> when (id.constructor) {
                 TypeId.Builtin("list") -> MCFPPListType(register(id.arguments.single()))
@@ -469,6 +474,7 @@ object PrimitiveCompiler {
         private var expectedLiteral: Pair<Int, MCFPPType>? = null
         private fun literalToken(node: ParserRuleContext): Int? = when {
             node is Parser.NbtValueContext && (node.nbtList() != null || node.nbtCompound() != null) -> node.start.tokenIndex
+            node is Parser.InlineLambdaContext && TemplateLiteralSupport.ambiguousObjectEntries(node) != null -> node.start.tokenIndex
             else -> node.children.orEmpty().filterIsInstance<ParserRuleContext>().singleOrNull()?.let(::literalToken)
         }
         private val provenConstants = mutableMapOf<Int, CompilerValue>()
@@ -799,6 +805,7 @@ object PrimitiveCompiler {
                 val previous = expectedLiteral
                 expectedLiteral = declared?.let { literalToken(initializer)?.let { token -> token to types.getValue(it) } }
                 val value = try { expression(initializer) } finally { expectedLiteral = previous }
+                if (modifier == "const" && types[value.type] is MCFPPObjectType) unsupported()
                 checkOrdinary(boundValue(value))
                 val view = value is ValueRef.Result && value.instruction in views
                 if (view && value.type !in setOf(float, MCFPPBaseType.Range.typeId) && types[value.type] !is MCFPPTypeWithGeneric && TypeRelations.arrayElementType(value.type) == null) unsupported()
@@ -988,6 +995,47 @@ object PrimitiveCompiler {
             instructions += Instruction.Construct(result, place, type, assignedParts, sequence)
             return ValueRef.Result(type, result)
         }
+        private fun objectLiteral(node: ParserRuleContext, entries: List<Pair<String, ParserRuleContext>>): ValueRef {
+            val expected = expectedLiteral?.takeIf { it.first == node.start.tokenIndex }?.second
+            val dictionary = expected as? MCFPPDictType
+            if (expected != null && TemplateLiteralSupport.containsTemplateLiteralTarget(expected)) unsupported()
+            val contracts = expected?.let(TypeCompositions::objectShape)?.fieldsByName.orEmpty()
+            val parts = entries.associate { (name, child) ->
+                val previous = expectedLiteral
+                val target = dictionary?.generic?.single() ?: contracts[name]?.type
+                expectedLiteral = target?.let { literalToken(child)?.let { token -> token to it } }
+                val field = try {
+                    when {
+                        node is Parser.InlineLambdaContext && TemplateLiteralSupport.hasInactiveObjectParameter(node, name) -> read(lookup(name), child)
+                        child is Parser.NbtKeyValuePairContext -> child.expression()?.let(::expression) ?: read(lookup(name), child)
+                        else -> expression(child)
+                    }
+                } finally { expectedLiteral = previous }
+                val supplied = boundValue(field)
+                val assigned = if (dictionary == null && target != null &&
+                    types[supplied.type]?.let { TypeRelations.resolveImplicitConversion(it, target) } != null)
+                    promote(supplied, target.typeId) else supplied
+                PathSegment.Field(name) as PathSegment to assigned
+            }
+            val descriptor = when {
+                dictionary != null -> null
+                expected == MCFPPNBTType.NBT -> MCFPPNBTType.NBT
+                else -> MCFPPObjectType(parts.map { (path, value) ->
+                    val name = (path as PathSegment.Field).name
+                    val supplied = types[value.type] ?: invalid("A void expression cannot initialize an object field")
+                    val target = contracts[name]?.type
+                    val fieldType = if (target != null && !TypeRelations.isSubtype(supplied, target) &&
+                        TypeRelations.resolveImplicitConversion(supplied, target) != null) target else supplied
+                    ObjectFieldContract(name, fieldType)
+                })
+            }
+            return construct(node, parts, false, descriptor)
+        }
+        private fun mapRepresentation(type: MCFPPMapType): MCFPPObjectType = MCFPPObjectType(listOf(
+            ObjectFieldContract("entries", MCFPPListType(MCFPPObjectType(listOf(
+                ObjectFieldContract("key", MCFPPBaseType.String), ObjectFieldContract("value", type.generic.single())
+            ))))
+        ))
         private fun array(node: Parser.NbtValueContext, type: MCFPPType, elements: List<Long>): ValueRef {
             val elementType = TypeRelations.arrayElementType(type.typeId)!!.typeId
             val parts = elements.mapIndexed { index, value ->
@@ -1195,7 +1243,11 @@ object PrimitiveCompiler {
             val frozen = StructuredBindings.memberFunctions(context.namespaceID(), container, function)
             if (frozen != null && frozen.isEmpty()) invalid("No author member candidate '$name'")
             if (frozen != null && frozen.any { it !is NativeFunction }) unsupported()
-            val candidates = (frozen ?: members.scope.getFunctionCandidates(name)).filterIsInstance<NativeFunction>()
+            val nativeCandidates = (frozen ?: members.scope.getFunctionCandidates(name)).filterIsInstance<NativeFunction>()
+            // Dictionary mutations keep the element contract even when an NBT parent has the same name.
+            val candidates = (if (container is MCFPPDictType && name in setOf("merge", "clear", "remove", "containsKey"))
+                nativeCandidates.filter { it.javaMethod.declaringClass == top.mcfpp.mni.NBTDictionaryData::class.java }
+                else nativeCandidates)
                 .map { it.replaceGenericParams(mapOf("E" to (container as MCFPPTypeWithGeneric).generic.single())) }
             val arguments = context.arguments().normalArgs().expressionList()?.expression().orEmpty().mapIndexed { index, argument ->
                 val previous = expectedLiteral
@@ -1204,7 +1256,8 @@ object PrimitiveCompiler {
                 }
                 try { boundValue(expression(argument)) } finally { expectedLiteral = previous }
             }.toMutableList()
-            val selected = when (val selection = ParameterMatcher.selectTypes(candidates, name, arguments.map { types[it.type] ?: unsupported() })) {
+            val selected = when (val selection = ParameterMatcher.selectDeclaredTypes(candidates, name, emptyList(),
+                arguments.map { types[it.type] ?: unsupported() }, receiver = container)) {
                 is ParameterMatcher.TypeSelection.Selected -> selection.function as NativeFunction
                 is ParameterMatcher.TypeSelection.Ambiguous -> invalid("Ambiguous member '$name'")
                 ParameterMatcher.TypeSelection.Missing -> if (exploratory && arguments.any { it.type == any })
@@ -1282,7 +1335,16 @@ object PrimitiveCompiler {
                 declaration = (receiver as? ValueRef.Result)?.let { accessDeclarations[it.instruction] })
             return ValueRef.Result(if (result == null) MCFPPPrivateType.Void.typeId else bool, result ?: -1)
         }
+        private fun integralLiteral(node: ParserRuleContext): IntegralLiteralSyntax.Result.Value? =
+            when (val literal = IntegralLiteralSyntax.parse(node)) {
+                is IntegralLiteralSyntax.Result.Value -> literal.also { register(it.type) }
+                is IntegralLiteralSyntax.Result.Invalid -> invalid(literal.diagnostic)
+                null -> null
+            }
+
         private fun expression(node: ParserRuleContext): ValueRef {
+            if (node is Parser.UnaryExpressionContext || node is Parser.NbtValueContext)
+                integralLiteral(node)?.let { return ValueRef.Constant(it.type.typeId, it.value) }
             StructuredBindings.constant(node, function)?.let { bound ->
                 bound.descriptors.values.forEach(::register)
                 val type = register(bound.type)
@@ -1300,9 +1362,14 @@ object PrimitiveCompiler {
             is Parser.AdditiveExpressionContext -> fold(node.multiplicativeExpression(), node.op)
             is Parser.MultiplicativeExpressionContext -> fold(node.castExpression(), node.op)
             is Parser.CastExpressionContext -> {
-                val source = expression(node.unaryExpression())
-                if (node.type() == null) source else {
-                    val target = type(node.type()).typeId
+                val targetDescriptor = node.type()?.let(::type)
+                val previous = expectedLiteral
+                if (targetDescriptor is MCFPPDictType || targetDescriptor is MCFPPMapType)
+                    literalToken(node.unaryExpression())?.let { expectedLiteral = it to
+                        if (targetDescriptor is MCFPPMapType) mapRepresentation(targetDescriptor) else targetDescriptor }
+                val source = try { expression(node.unaryExpression()) } finally { expectedLiteral = previous }
+                if (targetDescriptor == null) source else {
+                    val target = targetDescriptor.typeId
                     if (!FloatProviders.enabled && target == float && boundValue(source).type in
                         setOf(int, bool, MCFPPNBTType.Byte.typeId, MCFPPNBTType.Short.typeId)) unsupported()
                     if (target !in setOf(int, bool, float, MCFPPBaseType.Range.typeId, MCFPPNBTType.NBT.typeId) && types[target] !is MCFPPTypeWithGeneric && TypeRelations.arrayElementType(target) == null) unsupported()
@@ -1328,8 +1395,20 @@ object PrimitiveCompiler {
             }
             is Parser.UnaryExpressionContext -> if (node.rightVarExpression() != null) expression(node.rightVarExpression()) else {
                 val value = expression(node.unaryExpression())
-                if (node.SUB() != null && value.type == int && value is ValueRef.Constant && value.value is CompilerValue.Integral)
-                    ValueRef.Constant(int, CompilerValue.Integral((-value.value.value.toInt()).toLong()))
+                if (node.SUB() != null && value is ValueRef.Constant && value.value is CompilerValue.Integral &&
+                    value.type in setOf(int, MCFPPNBTType.Byte.typeId, MCFPPNBTType.Short.typeId, MCFPPNBTType.Long.typeId)) {
+                    val negated = when (value.type) {
+                        MCFPPNBTType.Byte.typeId -> (-value.value.value).toByte().toLong()
+                        MCFPPNBTType.Short.typeId -> (-value.value.value).toShort().toLong()
+                        MCFPPNBTType.Long.typeId -> -value.value.value
+                        else -> (-value.value.value.toInt()).toLong()
+                    }
+                    ValueRef.Constant(value.type, CompilerValue.Integral(negated))
+                } else if (node.SUB() != null && value.type == MCFPPNBTType.Double.typeId &&
+                    value is ValueRef.Constant && value.value is CompilerValue.DoubleBits)
+                    ValueRef.Constant(value.type, CompilerValue.DoubleBits(value.value.bits xor Long.MIN_VALUE))
+                else if (node.SUB() != null && value.type == float && value is ValueRef.Constant && value.value is CompilerValue.FloatBits)
+                    ValueRef.Constant(float, CompilerValue.FloatBits(value.value.bits xor Int.MIN_VALUE))
                 else if (node.SUB() != null && boundValue(value).type == float)
                     binary("*", ValueRef.Constant(float, CompilerValue.FloatBits((-1f).toRawBits())), value)
                 else if (node.SUB() != null) binary("-", ValueRef.Constant(int, CompilerValue.Integral(0)), value)
@@ -1347,10 +1426,15 @@ object PrimitiveCompiler {
             is Parser.JvmAccessExpressionContext -> expression(node.propertyOperator())
             is Parser.PropertyOperatorContext -> if (node.propertyOperatorExpression().isNotEmpty()) unsupported() else expression(node.primary())
             is Parser.PrimaryContext -> when {
+                node.inlineLambda() != null -> expression(node.inlineLambda())
                 node.value() != null -> expression(node.value())
                 node.`var`() != null -> expression(node.`var`())
                 node.range() != null -> rangeValue(node.range())
                 else -> unsupported()
+            }
+            is Parser.InlineLambdaContext -> {
+                val entries = TemplateLiteralSupport.ambiguousObjectEntries(node) ?: unsupported()
+                objectLiteral(node, entries)
             }
             is Parser.VarContext -> when {
                 node.bucketExpression() != null -> expression(node.bucketExpression().expression() ?: unsupported())
@@ -1375,11 +1459,27 @@ object PrimitiveCompiler {
                 }
                 node.nbtBool() != null -> ValueRef.Constant(bool, CompilerValue.Bool(node.nbtBool().TRUE() != null))
                 node.LineString() != null -> ValueRef.Constant(MCFPPBaseType.String.typeId, CompilerValue.Text((Tag.toNBT(node.LineString().text) as StringTag).value))
-                node.nbtList() != null -> construct(node, node.nbtList().expression().mapIndexed { index, part -> PathSegment.Index(index) as PathSegment to boundValue(expression(part)) }.toMap(), true)
-                node.nbtCompound() != null -> construct(node, node.nbtCompound().nbtKeyValuePair().associate { PathSegment.Field(it.key.text) as PathSegment to boundValue(expression(it.expression())) }, false)
-                node.nbtByteArray() != null -> array(node, MCFPPNBTType.ByteArray, node.nbtByteArray().nbtByte().map { it.text.toNBTByte().toLong() })
-                node.nbtIntArray() != null -> array(node, MCFPPNBTType.IntArray, node.nbtIntArray().nbtInt().map { it.text.toInt().toLong() })
-                node.nbtLongArray() != null -> array(node, MCFPPNBTType.LongArray, node.nbtLongArray().nbtLong().map { it.text.toNBTLong() })
+                node.nbtList() != null -> {
+                    val expected = expectedLiteral?.takeIf { it.first == node.start.tokenIndex }?.second
+                    val element = (expected as? MCFPPTypeWithGeneric)?.takeIf {
+                        it is MCFPPListType || it is MCFPPImmutableListType
+                    }?.generic?.single()
+                    val parts = node.nbtList().expression().mapIndexed { index, part ->
+                        val previous = expectedLiteral
+                        expectedLiteral = element?.let { literalToken(part)?.let { token -> token to it } }
+                        val value = try { expression(part) } finally { expectedLiteral = previous }
+                        PathSegment.Index(index) as PathSegment to boundValue(value)
+                    }.toMap()
+                    construct(node, parts, true)
+                }
+                node.nbtCompound() != null -> {
+                    val entries = try { TemplateLiteralSupport.compoundEntries(node.nbtCompound()) }
+                        catch (failure: DeclarationBinding.Failure) { invalid(failure.message.orEmpty()) }
+                    objectLiteral(node, entries)
+                }
+                node.nbtByteArray() != null -> array(node, MCFPPNBTType.ByteArray, node.nbtByteArray().nbtByte().map { integralLiteral(it)?.value?.value ?: unsupported() })
+                node.nbtIntArray() != null -> array(node, MCFPPNBTType.IntArray, node.nbtIntArray().nbtInt().map { integralLiteral(it)?.value?.value ?: unsupported() })
+                node.nbtLongArray() != null -> array(node, MCFPPNBTType.LongArray, node.nbtLongArray().nbtLong().map { integralLiteral(it)?.value?.value ?: unsupported() })
                 else -> unsupported()
             }
             else -> unsupported()

@@ -88,11 +88,7 @@ class MCFPPFunctionType(
 
     companion object {
         private fun substitute(candidate: MCFPPType, bindings: Map<String, MCFPPType>): MCFPPType =
-            when (candidate) {
-                is MCFPPGenericParamType -> bindings[candidate.identifier] ?: candidate
-                is MCFPPTypeWithGeneric -> candidate.replaceGenericParam(bindings)
-                else -> candidate
-            }
+            top.mcfpp.model.function.SpecializationPolicy.bind(candidate, bindings)
 
         /**
          * Restores a function type from a [TypeId.function] identity. Returns null when a

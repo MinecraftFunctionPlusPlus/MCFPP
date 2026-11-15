@@ -325,21 +325,22 @@ class MniReadonlyPreparationFactsTest {
         val (file, _) = fixture()
         val syntax = value("{left: 1, right: 2}")
         val fact = binding(file).readonlyValue(syntax)
-        val dict = MCFPPDictType(MCFPPBaseType.Int)
+        val shape = assertIs<MCFPPObjectType>(fact.type)
+        val left = shape.fieldsByName.getValue("left").type
+        val right = shape.fieldsByName.getValue("right").type
         fun catalog(right: MCFPPType) = SourceTypeCatalog.snapshot(
-            listOf(MCFPPBaseType.Int, MCFPPBaseType.Bool, dict),
+            (fact.descriptors.values + MCFPPBaseType.Bool).distinctBy { it.typeId },
             emptyList(),
             emptyList(),
-            mapOf(
-                dict.typeId to SourceConstantSchema.Record(
+            shape.fields.associate { it.type.typeId to SourceConstantSchema.Scalar(ConstantShape.INT32) } +
+                (shape.typeId to SourceConstantSchema.Record(
                     mapOf(
-                        "left" to MCFPPBaseType.Int.typeId,
+                        "left" to left.typeId,
                         "right" to right.typeId
                     )
-                )
-            )
+                ))
         )
-        val literal = SourceDefaultBinder().typedLiteral(fact, catalog(MCFPPBaseType.Int), preparationSpan(syntax))
+        val literal = SourceDefaultBinder().typedLiteral(fact, catalog(right), preparationSpan(syntax))
         assertEquals(
             mapOf("left" to ConstantValue.Integral(1), "right" to ConstantValue.Integral(2)),
             assertIs<ConstantValue.Record>(literal.constant).fields

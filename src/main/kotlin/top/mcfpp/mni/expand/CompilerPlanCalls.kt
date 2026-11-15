@@ -72,8 +72,7 @@ internal class CompilerPlanCalls(private val out: CompilerPlanEmitter) {
         // The visitor records the declared target for overload/tree purposes even when the
         // runtime body was specialized. The generated block is the actual caller here.
         val caller = Function.currFunction
-        caller.child.add(target)
-        target.parent.add(caller)
+        caller.recordCall(target)
     }
 
     /** Complete result slots and stores are shared with the later ordinary member emitter. */
@@ -290,8 +289,7 @@ internal class CompilerPlanCalls(private val out: CompilerPlanEmitter) {
         }
         out.emit("data remove storage mcfpp:system stack_frame[0]")
         val caller = Function.currFunction
-        caller.child.add(callee)
-        callee.parent.add(caller)
+        caller.recordCall(callee)
     }
 
     private fun stackParameter(name: String): String = "storage mcfpp:system stack_frame[0].${top.mcfpp.analysis.StorageAccess.quotedKey(name)}"
@@ -347,8 +345,7 @@ internal class CompilerPlanCalls(private val out: CompilerPlanEmitter) {
             out.fail("Complete native call to '${spec.name}' did not produce a valid runtime invocation")
         storeResult(spec, operation, returned)
         val caller = Function.currFunction
-        caller.child.add(target)
-        target.parent.add(caller)
+        caller.recordCall(target)
     }
 
     private fun validateNativeTarget(spec: PlanFunction, target: NativeFunction, operation: PlanOperation.Call) {

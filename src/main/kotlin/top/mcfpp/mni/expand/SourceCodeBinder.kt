@@ -2,6 +2,7 @@ package top.mcfpp.mni.expand
 
 import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.Token
+import top.mcfpp.analysis.IntegralLiteralSyntax
 import top.mcfpp.mni.api.*
 import top.mcfpp.type.*
 import top.mcfpp.antlr.mcfppParser as P
@@ -85,7 +86,8 @@ internal class SnapshotSourceCodeBinder : SourceCodeBinder {
                 }
             },
             source,
-            env
+            env,
+            receiver?.type
         )
         val raw = pending.mapIndexed { index, item ->
             if (target.function.parameters().getOrNull(index)?.mode() == ParamMode.INLINE && parsed[index] != null)
@@ -141,20 +143,21 @@ internal class SnapshotSourceCodeBinder : SourceCodeBinder {
 
     private fun inlineSyntax(item: ParserRuleContext): P.InlineLambdaContext? = when (item) {
         is P.InlineLambdaContext -> item
-        is P.CallArgumentContext -> item.inlineLambda() ?: item.expression()?.primary()?.inlineLambda()
-        is P.ExpressionContext -> item.primary()?.inlineLambda()
+        is P.CallArgumentContext -> item.inlineLambda() ?: item.expression()?.let(::transparentPrimary)?.inlineLambda()
+        is P.ExpressionContext -> transparentPrimary(item)?.inlineLambda()
         else -> null
+    }
+
+    private fun transparentPrimary(node: ParserRuleContext): P.PrimaryContext? {
+        if (node is P.PrimaryContext) return node
+        if (node is P.UnaryExpressionContext && node.rightVarExpression() == null ||
+            node is P.CastExpressionContext && node.type() != null) return null
+        return node.children.orEmpty().filterIsInstance<ParserRuleContext>().singleOrNull()?.let(::transparentPrimary)
     }
 
     private fun emptyCallbackExpression(item: ParserRuleContext): P.ExpressionContext? {
         val expression = when (item) { is P.ExpressionContext -> item; is P.CallArgumentContext -> item.expression(); else -> null }
-        fun primary(node: ParserRuleContext): P.PrimaryContext? {
-            if (node is P.PrimaryContext) return node
-            if (node is P.UnaryExpressionContext && node.rightVarExpression() == null ||
-                node is P.CastExpressionContext && node.type() != null) return null
-            return node.children.orEmpty().filterIsInstance<ParserRuleContext>().singleOrNull()?.let(::primary)
-        }
-        return expression?.takeIf { primary(it)?.value()?.nbtValue()?.nbtCompound()?.text?.filterNot { char -> char.isWhitespace() } == "{}" }
+        return expression?.takeIf { transparentPrimary(it)?.value()?.nbtValue()?.nbtCompound()?.text?.filterNot { char -> char.isWhitespace() } == "{}" }
     }
 
     override fun condition(syntax: P.ConditionExpressionContext, env: BindingEnvironment): BoundExpr =
@@ -297,6 +300,18 @@ internal class SnapshotSourceCodeBinder : SourceCodeBinder {
         return types.singleOrNull()
     }
 
+    private fun signedIntegerLiteral(tree: P.UnaryExpressionContext, env: BindingEnvironment): BoundExpr? {
+        if (tree.SUB() == null) return null
+        return when (val parsed = IntegralLiteralSyntax.parse(tree)) {
+            is IntegralLiteralSyntax.Result.Value -> if (parsed.type == MCFPPBaseType.Int) {
+                val constant = ConstantValue.Integral(parsed.value.value)
+                BoundExpr(BoundExprNode.Literal(constant), env.types.ref(parsed.type), constant, BoundEffect.PURE, span(tree, env))
+            } else null
+            is IntegralLiteralSyntax.Result.Invalid -> fail(span(tree, env), parsed.diagnostic)
+            null -> null
+        }
+    }
+
     private fun bind(tree: ParserRuleContext, env: BindingEnvironment): BoundExpr {
         StructuredSourceFacts.literal(tree, env)?.let { return it }
         return when (tree) {
@@ -367,7 +382,7 @@ internal class SnapshotSourceCodeBinder : SourceCodeBinder {
                 )
             }
         }
-        is P.UnaryExpressionContext -> if (tree.rightVarExpression() != null) bind(tree.rightVarExpression(), env) else {
+        is P.UnaryExpressionContext -> signedIntegerLiteral(tree, env) ?: if (tree.rightVarExpression() != null) bind(tree.rightVarExpression(), env) else {
             val value = bind(tree.unaryExpression(), env)
             val operator = if (tree.EXCL() != null) UnaryOperator.NOT else UnaryOperator.NEGATE
             val sourceType = env.types.facts(value.type).id
@@ -614,7 +629,8 @@ internal class SnapshotSourceCodeBinder : SourceCodeBinder {
         readonly: List<BoundExpr>,
         argumentTypes: List<TypeRef<*>?>,
         source: SourceSpan,
-        env: BindingEnvironment
+        env: BindingEnvironment,
+        receiver: TypeRef<*>?
     ): SourceFunction {
         fun match(candidate: SourceFunction): CallMatch? {
             val function = candidate.function as? ImmutableFunctionRef<*> ?: return null
@@ -627,9 +643,14 @@ internal class SnapshotSourceCodeBinder : SourceCodeBinder {
             ) return null
             if (readonly.any { it.constant == null }) return null
             if (!SourceDefaultBinder.acceptsPrepared(candidate, readonly, env.types)) return null
-            val targetTypes = candidate.readonlyParameters.take(readonly.size).map { it.type } +
+            val entityReceiver = receiver?.let { env.types.facts(it).id as? TypeId.Applied }
+                ?.constructor == TypeId.Builtin("EntityRef")
+            val receiverTarget = if (receiver == null) null else if (entityReceiver)
+                candidate.declaredEntityReceiver ?: candidate.declaredReceiver else candidate.declaredReceiver
+            val targetTypes = listOfNotNull(receiverTarget) + candidate.readonlyParameters.take(readonly.size).map { it.type } +
                 params.take(argumentTypes.size).map { it.type() }
             val ranks = arrayListOf<Int>()
+            if (receiverTarget != null) ranks += env.types.conversionRank(requireNotNull(receiver), receiverTarget) ?: return null
             for ((actual, target) in readonly.map { it.type }.zip(candidate.readonlyParameters.map { it.type })) {
                 ranks += env.types.conversionRank(actual, target) ?: return null
             }

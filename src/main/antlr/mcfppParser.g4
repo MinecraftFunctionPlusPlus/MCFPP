@@ -38,6 +38,55 @@ options {
 // existing read-only consumers while they migrate to the new rules.
 tokens { LEGACY_ACCESSOR_SHIM }
 
+@members {
+private boolean startsExplicitObjectLiteral() {
+    if (_input.LA(1) != LCURL) return false;
+    int offset = 2;
+    while (_input.LA(offset) == NL) offset++;
+    int key = _input.LA(offset++);
+    if (key != Identifier && key != DATA && key != ENTITY && key != TYPE && key != NBT && key != LineString)
+        return false;
+    while (_input.LA(offset) == NL) offset++;
+    return _input.LA(offset) == COLON;
+}
+
+private boolean startsSignedNumericRange() {
+    // Keep the sign on the left endpoint, including the minimum integer literal.
+    if (_input.LA(1) != SUB || _input.LA(3) != RANGE) return false;
+    int number = _input.LA(2);
+    return number == NBTByte || number == NBTShort || number == NBTInt ||
+        number == NBTLong || number == NBTFloat || number == NBTDouble;
+}
+
+private boolean endsReadonlyCallArguments() {
+    if (_input.LA(1) != RANGLE) return false;
+    int offset = 2;
+    while (_input.LA(offset) == NL) offset++;
+    if (_input.LA(offset) != LPAREN) return false;
+    // A top-level readonly argument ends before the ordinary argument list.
+    // A grouped comparison or a nested call owns a nearer expression context.
+    ParserRuleContext context = _ctx;
+    while (context != null && !(context instanceof ExpressionContext)) context = context.getParent();
+    if (context == null || !(context.getParent() instanceof ExpressionListContext) ||
+        !(context.getParent().getParent() instanceof ReadOnlyArgsContext)) return false;
+    // In f<a > (b)>(), the first group is the comparison's right operand.
+    // Closing there instead would leave an empty () as a comparison operand.
+    int depth = 0;
+    do {
+        int token = _input.LA(offset++);
+        if (token == Token.EOF) return true;
+        if (token == LPAREN) depth++;
+        else if (token == RPAREN) depth--;
+    } while (depth > 0);
+    while (_input.LA(offset) == NL) offset++;
+    if (_input.LA(offset++) != RANGLE) return true;
+    while (_input.LA(offset) == NL) offset++;
+    if (_input.LA(offset++) != LPAREN) return true;
+    while (_input.LA(offset) == NL) offset++;
+    return _input.LA(offset) != RPAREN;
+}
+}
+
 //一个mcfpp文件
 compilationUnit
     :   (separator* namespaceDeclaration (separator | EOF))?
@@ -167,6 +216,7 @@ templateMember
     |   templateDeclaration
     |   templateFieldDeclaration
     |   templateConstructorDeclaration
+    |   templateFactoryDeclaration
     |   operationOverrideDeclaration
     |   nativeOperationOverrideDeclaration
     |   annotation
@@ -274,6 +324,12 @@ templateConstructorDeclaration
     :   CONSTRUCTOR NL* normalParams? NL* (COLON NL* functionCall (NL* curlBlock)? | curlBlock)
     ;
 
+// Factories are ordinary functions associated with the enclosing template.
+// Their return type is the complete instantiated Self, and there is no implicit this.
+templateFactoryDeclaration
+    :   NEW NL* normalParams NL* curlBlock
+    ;
+
 //变量声明
 fieldDeclaration
     :   doc_comment? NL* (VAR | fieldModifier) NL* Identifier NL* (COLON NL* type)? NL* (ASSIGNMENT NL* expression)?
@@ -364,7 +420,7 @@ equalityExpression
 
 //比较关系
 relationalExpression
-    :   additiveExpression (op+=(LANGLE | RANGLE | LE | GE) NL* additiveExpression )*
+    :   additiveExpression ({!endsReadonlyCallArguments()}? op+=(LANGLE | RANGLE | LE | GE) NL* additiveExpression )*
     ;
 
 //加减
@@ -384,7 +440,7 @@ castExpression
 
 //一元表达式
 unaryExpression
-    :   (EXCL | SUB) NL* unaryExpression
+    :   {!startsSignedNumericRange()}? (EXCL | SUB) NL* unaryExpression
     |   rightVarExpression
     ;
 
@@ -413,8 +469,9 @@ propertyOperatorExpression
 //初级表达式
 primary
     :   range
-    |   value
+    |   {startsExplicitObjectLiteral()}? value
     |   inlineLambda
+    |   value
     |   var
     |   THIS
     |   SUPER
@@ -451,6 +508,7 @@ selector
 // Type/accessor keywords can also name ordinary member calls.
 memberKeyword
     :   MAP
+    |   NEW
     |   ANY
     |   GET
     |   SET
@@ -623,6 +681,7 @@ typeBody
     |   unionType
     |   unionTemplateType
     |   anonymousTemplateType
+    |   literalObjectType
     |   functionType
     ;
 
@@ -639,6 +698,14 @@ contextTypeParameters
 
 anonymousTemplateType
     :   DATA (NL* COLON NL* extendName (NL* COMMA NL* extendName)*)? NL* templateBody
+    ;
+
+literalObjectType
+    :   LCURL NL* (literalObjectTypeField (NL* COMMA NL* literalObjectTypeField)*)? NL* RCURL
+    ;
+
+literalObjectTypeField
+    :   Identifier NL* COLON NL* type
     ;
 
 unionType
@@ -749,7 +816,10 @@ nbtIntArray: NBT_INT_ARRAY_BEGIN NL* (nbtInt (NL* COMMA NL* nbtInt)*)? NL* RSQUA
 nbtLongArray: NBT_LONG_ARRAY_BEGIN NL* (nbtLong (NL* COMMA NL* nbtLong)*)? NL* RSQUARE;
 
 nbtList: LSQUARE NL* (expression (NL* COMMA NL* expression)*)? NL* RSQUARE;
-nbtKeyValuePair: key=(Identifier | DATA | ENTITY | TYPE | NBT | LineString) NL* COLON NL* expression;
+nbtKeyValuePair
+    :   key=(Identifier | DATA | ENTITY | TYPE | NBT | LineString) NL* COLON NL* expression
+    |   key=Identifier
+    ;
 nbtCompound: LCURL (NL* nbtKeyValuePair (NL* COMMA NL* nbtKeyValuePair)* )* NL* RCURL;
 
 multiLineStringLiteral

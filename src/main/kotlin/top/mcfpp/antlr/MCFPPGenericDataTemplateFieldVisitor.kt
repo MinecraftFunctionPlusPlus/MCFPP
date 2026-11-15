@@ -18,7 +18,8 @@ class MCFPPGenericDataTemplateFieldVisitor(val template: DataTemplate) : MCFPPFi
         for (c in ctx.templateMemberDeclaration()) {
             c!!
             if (c.templateMember() != null && (c.templateMember().templateFunctionDeclaration() != null ||
-                        c.templateMember().templateConstructorDeclaration() != null)) {
+                        c.templateMember().templateConstructorDeclaration() != null ||
+                        c.templateMember().templateFactoryDeclaration() != null)) {
                 visit(c)
             }
         }
@@ -29,7 +30,7 @@ class MCFPPGenericDataTemplateFieldVisitor(val template: DataTemplate) : MCFPPFi
             }
         }
         //如果没有构造函数，自动添加默认的空构造函数
-        if (!template.isAbstract && template.constructors.isEmpty()) {
+        if ((template is ObjectCompoundData || template.isEntityTemplate) && !template.isAbstract && template.constructors.isEmpty()) {
             DataTemplate.currTemplate!!.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!, null))
         }
         DataTemplate.currTemplate = null

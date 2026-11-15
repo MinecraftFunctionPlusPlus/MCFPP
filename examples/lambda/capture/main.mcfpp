@@ -51,7 +51,7 @@ func main() {
         /setblock ~ ~ ~ minecraft:gold_block
     };
     contextValue = 90;
-    execute(pos = 21 70 3) { probe(); }
+    withPosCtx(21 70 3) { ctx -> probe(); }
     /execute if block 21 70 3 minecraft:gold_block run data modify storage lambda:results position set value 1
     /data modify storage lambda:results first set from storage mcfpp:system stack_frame[0].first
     /data modify storage lambda:results again set from storage mcfpp:system stack_frame[0].again

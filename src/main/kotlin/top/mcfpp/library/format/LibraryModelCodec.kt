@@ -69,9 +69,15 @@ private class PendingNominalUses(private val tables: LibraryTables) {
         is LibraryType.Intersection -> value.components
         is LibraryType.Function -> value.contexts + value.parameters + value.result
         is LibraryType.NbtRef -> listOf(value.value)
+        is LibraryType.Object -> value.fields.map { it.type }
+        is LibraryType.Literal -> listOf(value.primitive)
         else -> emptyList()
     }
-    private fun typeConstants(value: LibraryType): List<ConstantRef> = (value as? LibraryType.Specialized)?.arguments.orEmpty()
+    private fun typeConstants(value: LibraryType): List<ConstantRef> = when (value) {
+        is LibraryType.Specialized -> value.arguments
+        is LibraryType.Literal -> listOf(value.value)
+        else -> emptyList()
+    }
     private fun constantTypes(value: ConstantValue): List<TypeRef> = when (value) {
         is ConstantValue.TypeValue -> listOf(value.value)
         is ConstantValue.Typed -> listOf(value.type)
@@ -146,7 +152,7 @@ class LibraryModelCodec(handlers: List<DeclarationPayloadHandler> = emptyList())
 
     /** Decode to an isolated protocol document. Dependency symbol resolution still belongs to the import session. */
     fun decode(bytes: ByteArray, compatibility: LibraryCompatibility = LibraryCompatibility()): LibraryModel {
-        val container = LibraryWire.decode(bytes, minimumVersion = 3L)
+        val container = LibraryWire.decode(bytes, minimumVersion = 4L)
         return LibraryReadVersion.withVersion(container.formatVersion) {
         fun section(id: Int) = requireNotNull(container.section(id)).payload
         val manifest = ManifestCodec.decode(section(1))

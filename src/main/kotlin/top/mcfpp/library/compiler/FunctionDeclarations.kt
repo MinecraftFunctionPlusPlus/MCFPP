@@ -11,6 +11,7 @@ import top.mcfpp.model.Generic
 import top.mcfpp.model.Member
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.*
@@ -157,6 +158,8 @@ object FunctionDeclarations {
                 (if (function.isStatic) DeclarationFlags.STATIC else 0) or
                 (if (function.isAbstract) DeclarationFlags.ABSTRACT else 0) or
                 (if (function.isOverride) DeclarationFlags.OVERRIDE else 0) or
+                (if (function is TemplateFactory) DeclarationFlags.FACTORY else 0) or
+                (if (function is TemplateFactory && function.isImplicit) DeclarationFlags.IMPLICIT_FACTORY else 0) or
                 (if (execution == FunctionExecutionKind.COMPILE_TIME || function is NativeFunction && function.returnsConstWhenArgsConst) DeclarationFlags.CONST else 0)
             val common = DeclCommon(bindings.key(function), bindings.origin(function), bindings.declarationName(function),
                 bindings.declarationOwner(function), environment, access(function.accessModifier), flags,
@@ -175,7 +178,16 @@ object FunctionDeclarations {
         // Current subtype constructors require a context. Never expose the empty allocation context as an executable body.
         val allocationContext = context ?: Parser.CurlBlockContext(null, -1)
         val receiver = declaration.receiver?.let(bindings::type)
-        val function: Function = when (declaration.execution) {
+        require(common.flags and DeclarationFlags.IMPLICIT_FACTORY == 0L || common.flags and DeclarationFlags.FACTORY != 0L) {
+            "An implicit factory must be a factory declaration"
+        }
+        val function: Function = if (common.flags and DeclarationFlags.FACTORY != 0L) {
+            require(common.name == "new" && declaration.execution == FunctionExecutionKind.ORDINARY && receiver == null && declaration.readonly.isEmpty()) {
+                "A factory must be an ordinary static template function"
+            }
+            val template = requireNotNull(common.owner?.let(bindings::owner) as? DataTemplate) { "A factory requires its declaring template" }
+            TemplateFactory(template, context, common.flags and DeclarationFlags.IMPLICIT_FACTORY != 0L)
+        } else when (declaration.execution) {
             FunctionExecutionKind.NATIVE -> {
                 val native = requireNotNull(declaration.native)
                 val method = bindings.nativeMethod(native)
@@ -248,7 +260,8 @@ object FunctionDeclarations {
         declaration.normal.forEachIndexed { index, reference -> function.normalParams.add(restoreParameter(reference, false, index)) }
         function.contextParametersPrepared = true
         declaration.contexts.forEachIndexed { index, reference -> function.declaredContextParameters.add(restoreParameter(reference, false, index, context = true)) }
-        function.returnType = declaration.result?.let(bindings::type) ?: MCFPPPrivateType.Void
+        function.returnType = if (function is TemplateFactory) function.template.getType()
+            else declaration.result?.let(bindings::type) ?: MCFPPPrivateType.Void
         declaration.tags.forEach { function.addTag(FunctionTag(it.namespace, it.name)) }
         function.annotations.addAll(common.annotations.map(bindings::annotation))
         require(function.isStatic == (common.flags and DeclarationFlags.STATIC != 0L)) { "Static flag does not match the restored declaration owner" }
@@ -258,11 +271,17 @@ object FunctionDeclarations {
 
     fun sourceSignature(function: Function): FunctionSourceSignature? {
         when (val source = function.sourceDeclarationContext) {
+            is Parser.TemplateFactoryDeclarationContext -> return FunctionSourceSignature(object : Parser.FunctionParamsContext(null, -1) {
+                override fun normalParams() = source.normalParams()
+            }, null)
             is Parser.FunctionDeclarationPartContext -> return FunctionSourceSignature(source.functionParams(), source.functionReturnType())
             is Parser.ExtensionFunctionDeclarationContext -> return FunctionSourceSignature(source.functionParams(), source.functionReturnType(), source.type())
             is Parser.OperationOverrideDeclarationContext -> return FunctionSourceSignature(source.functionParams(), source.functionReturnType())
         }
         val parent = function.ast?.parent
+        if (parent is Parser.TemplateFactoryDeclarationContext) return FunctionSourceSignature(object : Parser.FunctionParamsContext(null, -1) {
+            override fun normalParams() = parent.normalParams()
+        }, null)
         val part = when (parent) {
             is Parser.FunctionDeclarationContext -> parent.functionDeclarationPart()
             is Parser.InlineFunctionDeclarationContext -> parent.functionDeclarationPart()

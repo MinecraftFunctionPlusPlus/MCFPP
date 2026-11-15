@@ -168,7 +168,7 @@ class NativeTemplateCommandContractTest {
         reject("""
             import mcfpp.minecraft.other:*;import mcfpp.minecraft.resource:*;import mcfpp.minecraft.std:*
             func main(){external index=3;var slot=Slot(index,SlotType.container)
-                var loot=LootTable();loot.id="fixture:loot";var result=lootReplace(0 0 0,slot,loot);}
+                var loot={id:"fixture:loot"} as LootTable;var result=lootReplace(0 0 0,slot,loot);}
         """, version = "1.19.4", operation = "loot")
     }
 
@@ -237,7 +237,8 @@ class NativeTemplateCommandContractTest {
                     var copied=indexed
                     indexed.index=index+1
                     var unindexed=Slot(SlotType.weapon_mainhand)
-                    var loot=LootTable();loot.id=id
+                    var loot={id:id} as LootTable
+                    id="fixture:changed"
                     var first=lootReplace(0 0 0,copied,loot)
                     var second=lootReplace(0 0 0,unindexed,loot)
                     var third=lootReplace(0 0 0,indexed,loot)
@@ -295,7 +296,6 @@ class NativeTemplateCommandContractTest {
             val executed = machine.messages.filter { it.startsWith(functionTrace) }.map { it.removePrefix(functionTrace) }.toSet()
             val selectedCommands = executed.flatMap { functions.getValue(it) }
             assertTrue(selectedCommands.any { "set from storage mcfpp:system stack_frame[0].index" in it })
-            assertTrue(selectedCommands.any { "stack_frame[0].loot.id set from storage mcfpp:system stack_frame[0].id" in it })
             assertTrue(selectedCommands.any { "set from storage mcfpp:system stack_frame[0].loot" in it })
             val selectedModels = GlobalScope.localNamespaces.values.flatMap { it.scope.functions.values.flatten() }
                 .plus(observed).filter { it.namespaceID.toString() in executed }

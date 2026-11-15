@@ -157,8 +157,12 @@ class ReferenceSourceTest {
             Project.config.includes = arrayListOf(result.toString(), resource.toString(), schema.toString())
             val factorySource = Files.readString(Path.of("src/main/mcfpp/lang/reference.mcfpp"))
             val entitySource = Files.readString(Path.of("src/main/mcfpp/lang/entity.mcfpp"))
+            val (sourceImports, sourceDeclarations) = (factorySource.lines() + entitySource.lines())
+                .partition { it.trimStart().startsWith("import ") }
+            val source = (listOf("import mcfpp.minecraft.entity:*", "import mcfpp.minecraft.resource:*") +
+                sourceImports + sourceDeclarations + program).joinToString("\n")
             val diagnostics = LogProcessor.beginDiagnosticCapture().use { capture ->
-                MCFPPStringTest.readFromString("import mcfpp.minecraft.entity:*\nimport mcfpp.minecraft.resource:*\n$factorySource\n$entitySource\n$program", version = "26.3")
+                MCFPPStringTest.readFromString(source, version = "26.3")
                 capture.seal().diagnostics.map { it.message }
             }
             if (expectErrors) {

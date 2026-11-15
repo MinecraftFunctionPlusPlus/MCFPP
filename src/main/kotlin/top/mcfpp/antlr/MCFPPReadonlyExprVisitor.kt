@@ -15,7 +15,8 @@ import top.mcfpp.type.MCFPPType
 class MCFPPReadonlyExprVisitor(
     private val enumType: MCFPPEnumType? = null,
     private val lookupTypeScope: IScopeWithType? = null,
-    private val lexicalCaller: Function? = null
+    private val lexicalCaller: Function? = null,
+    private val expectedType: MCFPPType? = null
 ) : mcfppParserBaseVisitor<Var<*>?>() {
     override fun visitExpression(ctx: mcfppParser.ExpressionContext): Var<*>? = withCompilationContext(ctx) {
         val caller = lexicalCaller ?: Function.currFunction
@@ -30,8 +31,10 @@ class MCFPPReadonlyExprVisitor(
         }.orEmpty()
         val bound = try {
             DeclarationBinding(caller, emptyMap(), members, lookupScope = scope, captureValues = true)
-                .expression(ctx)
+                .readonly(ctx, expectedType)
         } catch (_: DeclarationBinding.Failure) {
+            return@withCompilationContext null
+        } catch (_: top.mcfpp.analysis.PreparationFactFailure) {
             return@withCompilationContext null
         }
         val snapshot = bound.constant ?: return@withCompilationContext null

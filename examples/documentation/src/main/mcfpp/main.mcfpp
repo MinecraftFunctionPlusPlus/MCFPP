@@ -20,7 +20,7 @@ data Counter {
     var value: int = 0
 
     /// 创建从零开始的计数器。
-    constructor() { this.value = 0 }
+    new() { return { value: 0, internalValue: 0 } }
 
     /// 读取当前累计值。
     ///
@@ -36,7 +36,7 @@ data Counter {
     private var internalValue: int = 0
 }
 
-/// 带名称的计数器，继承 [Counter.read()] 的文档。
+/// 带名称的计数器，字段合同组合自 [Counter]。参见 [Counter.read()]。
 data NamedCounter: Counter {
     /// 显示名称。
     var name: string = "counter"

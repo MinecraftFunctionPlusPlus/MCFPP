@@ -292,15 +292,23 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             } catch (failure: top.mcfpp.analysis.DeclarationBinding.Failure) {
                 LogProcessor.error(failure.message ?: "Cannot bind variable declaration")
                 return null
+            } catch (failure: top.mcfpp.analysis.PreparationFactFailure) {
+                LogProcessor.error(failure.message ?: "Cannot prepare variable declaration")
+                return null
             }
         }
         if (Project.errorCount != declarationErrors) return null
+        val inferredMutableLiteral = ctx.type() == null && fieldModifier != "const" && ctx.expression()?.let {
+            top.mcfpp.analysis.TemplateLiteralSupport.isCompoundLiteral(it) ||
+                top.mcfpp.analysis.TemplateLiteralSupport.isListLiteral(it)
+        } == true
+        if (inferredMutableLiteral) type = type?.let(top.mcfpp.type.TypeCompositions::widen)
         var init: Var<*>? = null
         if (ctx.expression() != null) {
             Function.addComment(ctx.text)
             init = MCFPPExprVisitor(
                 if(type is MCFPPEnumType) type else null
-            ).visitExpression(ctx.expression(), if (ctx.type() != null) type else null)
+            ).visitExpression(ctx.expression(), if (ctx.type() != null || inferredMutableLiteral) type else null)
             if (init.isError) {
                 if (Project.errorCount == declarationErrors)
                     LogProcessor.error("Cannot resolve initializer for variable '${ctx.Identifier().text}': ${ctx.expression().text}")
@@ -314,6 +322,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         }else if(type == null){
             type = init!!.type
         }
+        if (ctx.type() == null && fieldModifier != "const")
+            type = top.mcfpp.type.TypeCompositions.widen(type)
         TypeUsage.ordinaryDiagnostic(type, init?.let(StorageAccess::snapshot))?.let {
             LogProcessor.error(it)
             return null

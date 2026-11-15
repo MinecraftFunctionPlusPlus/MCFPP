@@ -68,8 +68,8 @@ data Example{
     }
   }
 
-  constructor(i: int){
-    this.i = i
+  new(i: int){
+    return { i }
   }
 
   func print(){
@@ -99,8 +99,8 @@ func example(){
 data Example<T>{
   var i: T
 
-  constructor(i: T){
-    this.i = i
+  new(i: T){
+    return { i }
   }
 
   public func print(){

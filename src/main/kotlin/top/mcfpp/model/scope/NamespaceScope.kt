@@ -153,12 +153,12 @@ class NamespaceScope: SimpleLibScope{
     override fun getType(key: String): MCFPPType? {
         (getEnum(key) ?: getTemplate(key))?.getType()?.let { return it }
         if (typeAlias.containsKey(key)) return resolveAlias(key)
-        return fileFields.firstOrNull { it.containType(key) }?.getType(key)
+        return fileFields.firstOrNull { it.containsLocalType(key) }?.getLocalType(key)
     }
 
     override fun containType(id: String): Boolean {
         return hasEnum(id) || hasTemplate(id) || typeAlias.containsKey(id)
-                || fileFields.any { it.containType(id) }
+                || fileFields.any { it.containsLocalType(id) }
     }
 
     override fun forEachType(action: (MCFPPType) -> Any?) {

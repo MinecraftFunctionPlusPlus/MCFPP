@@ -202,8 +202,18 @@ class StorageViewTest {
     @Test fun aNumericViewInitializerCopiesWithoutNumericConversion() {
         val function = compile("func main(){ var value = 7; var view = value as float; }")
         val view = function.scope.getVar("view")!!
-        assertNull(view.storageBinding!!.view)
-        assertNotEquals(function.scope.getVar("value")!!.storageBinding!!.place, view.storageBinding!!.place)
+        val original = function.scope.getVar("value")!!.storageBinding!!
+        val copied = view.storageBinding!!
+        assertNotSame(original.data, copied.data)
+        assertNotEquals(original.place, copied.place)
+        val access = assertIs<ValueRef.TypedView>(copied.view)
+        assertEquals(copied.place, access.place)
+        val read = assertIs<ValueRef.Read>(access.source)
+        assertEquals(copied.place, read.place)
+        assertEquals(MCFPPBaseType.Int.typeId, read.type)
+        assertEquals(MCFPPBaseType.Int, StorageAccess.actualType(view))
+        assertEquals(MCFPPBaseType.Float, view.type)
+        assertFalse(copied.trustConstants)
         val commands = function.commands.analyzeAll().filterNot { it.startsWith("#") }
         assertEquals(1, commands.count { it.contains("set value 7") }, commands.toString())
         assertFalse(commands.any { it.contains("from_int") || it.contains("_scoreto") }, commands.toString())
@@ -241,8 +251,9 @@ class StorageViewTest {
             data Target {
                 var present: int
                 var missing: int
-                constructor(){
+                new(){
                     /say constructor
+                    return {present: 0, missing: 0}
                 }
             }
             func main(){ var source = {present:4}; var view = source as Target; }

@@ -23,9 +23,34 @@ object TypeRelations {
     fun isSubtype(source: MCFPPType, target: MCFPPType): Boolean =
         subtype(source, target, hashSetOf())
 
+    /** Declaration ancestry remains independent from open structural compatibility. */
+    fun isNominalSubtype(source: MCFPPType, target: MCFPPType): Boolean {
+        val visited = hashSetOf<TypeId>()
+        fun visit(current: MCFPPType): Boolean {
+            if (current.typeId == target.typeId) return true
+            if (!visited.add(current.typeId)) return false
+            if (current is MCFPPDataTemplateType && target is MCFPPDataTemplateType &&
+                target.typeId == top.mcfpp.model.compound.DataTemplate.baseDataTemplate.getType().typeId) return true
+            return current.parentType.any(::visit)
+        }
+        return visit(source)
+    }
+
     private fun subtype(source: MCFPPType, target: MCFPPType, visited: MutableSet<Pair<TypeId, TypeId>>): Boolean {
         if (source.typeId == target.typeId) return true
-        if (!visited.add(source.typeId to target.typeId)) return false
+        if (source === MCFPPNeverType) return target.isValueType
+        if (target === MCFPPNeverType) return false
+        // Recursive object contracts are compared coinductively. The surrounding field
+        // checks still reject missing fields and incompatible non-recursive leaves.
+        if (!visited.add(source.typeId to target.typeId)) return true
+        if (target is MCFPPIntersectionType) return target.components.all { subtype(source, it, HashSet(visited)) }
+        if (source is MCFPPIntersectionType) return TypeCompositions.objectShape(source)?.let {
+            subtype(it, target, HashSet(visited))
+        } ?: source.components.any { subtype(it, target, HashSet(visited)) }
+        if (source is MCFPPUnionType) return source.types.all { subtype(it, target, HashSet(visited)) }
+        if (target is MCFPPUnionType) return target.types.any { subtype(source, it, HashSet(visited)) }
+        if (source is MCFPPLiteralType) return subtype(source.primitive, target, HashSet(visited))
+        if (target is MCFPPLiteralType) return false
         if (source is MCFPPEntityRefType && target is MCFPPEntityRefType)
             return subtype(source.templateArgument, target.templateArgument, visited)
         if (source is top.mcfpp.core.lang.context.MCFPPExecutionContextType ||
@@ -41,8 +66,6 @@ object TypeRelations {
         if (target == MCFPPBaseType.Object) return true
         if (source is MCFPPDataTemplateType && target is MCFPPDataTemplateType &&
             target.typeId == top.mcfpp.model.compound.DataTemplate.baseDataTemplate.getType().typeId) return true
-        if (source is MCFPPUnionType) return source.types.all { subtype(it, target, HashSet(visited)) }
-        if (target is MCFPPUnionType) return target.types.any { subtype(source, it, HashSet(visited)) }
         val sourceTemplate = (source as? MCFPPDataTemplateType)?.template as? top.mcfpp.model.compound.CompiledGenericDataTemplate
         val targetTemplate = (target as? MCFPPDataTemplateType)?.template as? top.mcfpp.model.compound.CompiledGenericDataTemplate
         if (sourceTemplate != null && targetTemplate != null &&
@@ -66,14 +89,27 @@ object TypeRelations {
         }
         // Container arguments remain invariant, including the read-only list interface.
         if (source is MCFPPTypeWithGeneric && target is MCFPPTypeWithGeneric) return false
+        if (source is MCFPPDataTemplateType && target is MCFPPDataTemplateType) {
+            val supplied = TypeCompositions.objectShape(source)!!
+            val required = TypeCompositions.objectShape(target)!!
+            return required.fields.all { field ->
+                val actual = supplied.fieldsByName[field.name]
+                when {
+                    actual == null -> field.optional
+                    actual.optional && !field.optional -> false
+                    actual.optional && actual.type === MCFPPNeverType -> field.optional
+                    else -> subtype(actual.type, field.type, HashSet(visited))
+                }
+            }
+        }
         return source.parentType.any { subtype(it, target, HashSet(visited)) }
     }
 
     /**
      * Safe function compatibility. Arity and execution category are invariant, parameter
      * types are contravariant and the result type is covariant. Every constituent still
-     * goes through [subtype], so nominal object compatibility is never widened to a
-     * structural rule. Function types are also handled before the ordinary value-type
+     * goes through [subtype], including the central structural data relation.
+     * Function types are also handled before the ordinary value-type
      * gate and before the `object` top type, so a function value never silently becomes an
      * ordinary object value.
      */
@@ -98,6 +134,11 @@ object TypeRelations {
 
     fun resolveImplicitConversion(source: MCFPPType, target: MCFPPType): Conversion? {
         if (source.typeId == target.typeId) return Conversion.EXACT
+        if (source is MCFPPLiteralType && target !is MCFPPLiteralType) {
+            return resolveImplicitConversion(source.primitive, target)?.let {
+                if (it == Conversion.EXACT) Conversion.NOMINAL else it
+            }
+        }
         if (source is MCFPPEntityRefType && target is MCFPPEntityType) {
             val kinds = (source.templateArgument as? MCFPPDataTemplateType)?.template
                 ?.let(top.mcfpp.core.lang.entity.EntityTemplates::kinds)

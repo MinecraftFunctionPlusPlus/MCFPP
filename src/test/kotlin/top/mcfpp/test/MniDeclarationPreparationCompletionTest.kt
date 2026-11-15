@@ -120,7 +120,7 @@ class MniDeclarationPreparationCompletionTest {
             data Box<T>{
                 var value:T;
                 func identity(value:T):T{return value}
-                constructor(value:T){var bodyOnly=17;}
+                new(value:T){var bodyOnly=17;return {value:value};}
             }
             """.trimIndent()
         )
@@ -182,7 +182,7 @@ class MniDeclarationPreparationCompletionTest {
         assertFalse(Project.templateDeclarationsReady)
         assertFalse(reservation.isPublished)
         assertTrue(shell.scope.allVars.isEmpty())
-        assertTrue(shell.constructors.isEmpty())
+        assertTrue(shell.factories.isEmpty())
         assertEquals(0, prototype.index)
         assertEquals(commands, ambient.commands.toList())
 
@@ -195,7 +195,7 @@ class MniDeclarationPreparationCompletionTest {
         assertSame(MCFPPBaseType.Int, shell.scope.getVar("value")!!.type)
         assertEquals(23, assertIs<MCInt>(shell.scope.getVar("generated")).value)
         val method = shell.scope.functions.getValue("identity").single { it.owner === shell }
-        val constructor = shell.constructors.single { it.ast != null }
+        val constructor = shell.factories.single { it.ast != null }
         assertFalse(method.bodyCompiled)
         assertFalse(constructor.bodyCompiled)
         assertTrue(method.commands.isEmpty())
@@ -248,7 +248,7 @@ class MniDeclarationPreparationCompletionTest {
         assertFalse(reservation.model.isFinal)
         assertFalse(reservation.model.hasDeclarationCompletionFailure)
         assertTrue(reservation.model.scope.allVars.isEmpty())
-        assertTrue(reservation.model.constructors.isEmpty())
+        assertTrue(reservation.model.factories.isEmpty())
         assertTrue(reservation.model.parent.isEmpty())
         assertTrue(prototype.compiledTemplates.isEmpty())
         assertEquals(0, prototype.index)

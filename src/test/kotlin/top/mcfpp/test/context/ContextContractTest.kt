@@ -170,8 +170,8 @@ class ContextContractTest {
         val operands = java.nio.file.Files.readString(java.nio.file.Path.of("src/main/mcfpp/lang/context.mcfpp"))
         compile("""
             $operands
-            data Dimension { var id: string; constructor(id: string) { this.id = id } }
-            data EntityType { var id: string; constructor(id: string) { this.id = id } }
+            data Dimension { var id: string; new(id: string){ return {id: id }; } }
+            data EntityType { var id: string; new(id: string){ return {id: id }; } }
             func main() {
                 withCurrentCtx { root ->
                     withRotationCtx(rotation(90f, 0f)) { rotated -> }

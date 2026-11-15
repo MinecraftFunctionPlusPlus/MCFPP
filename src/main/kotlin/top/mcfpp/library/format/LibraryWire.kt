@@ -49,7 +49,7 @@ class LibraryContainer internal constructor(val formatVersion: Long, sections: L
 
 /** Versioned container codec. Section payload semantics belong to separate explicit codecs. */
 object LibraryWire {
-    const val CURRENT_VERSION = 3L
+    const val CURRENT_VERSION = 4L
     const val HEADER_BYTES = 24
     const val SECTION_HEADER_BYTES = 12
     private val magic = byteArrayOf(0x4d, 0x43, 0x46, 0x50, 0x4c, 0x49, 0x42, 0)

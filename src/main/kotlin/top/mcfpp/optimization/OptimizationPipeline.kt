@@ -11,6 +11,8 @@ import top.mcfpp.lib.StorageSource
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPPrivateType
+import java.util.Collections
+import java.util.IdentityHashMap
 
 internal object OptimizationPipeline {
     private val scalars get() = setOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.Bool.typeId)
@@ -109,7 +111,8 @@ internal object OptimizationPipeline {
                 if (function.declarationId !in invalid) generate()
             }
         }
-        val functions = FunctionInventory.all()
+        // Local declarations are discovered first. One runtime target owns one command body.
+        val functions = FunctionInventory.all().distinctBy { it.namespaceID.toString() }
         val config = Project.config.optimization
         val contextOptimization = !Project.config.debugInfo && config.enabled(PassIds.CONTEXTS)
         // Run before the first publication boundary as well as final cleanup: library
@@ -135,7 +138,11 @@ internal object OptimizationPipeline {
             }
         }
         if (contextOptimization) ContextRegionFusion.prune(functions, regions)
-        for (function in FunctionInventory.all()) {
+        val retained = Collections.newSetFromMap(IdentityHashMap<Function, Boolean>()).apply {
+            addAll(FunctionInventory.all())
+        }
+        for (function in functions) {
+            if (function !in retained) continue
             val input = regions.getValue(function.namespaceID.toString())
             val planned = if (cleanup && Project.config.optimization.enabled(PassIds.FRAMES)) MinecraftFramePlanning.run(input) else input
             val output = if (cleanup && Project.config.optimization.enabled(PassIds.COMMANDS)) MinecraftCleanup.run(planned) else planned

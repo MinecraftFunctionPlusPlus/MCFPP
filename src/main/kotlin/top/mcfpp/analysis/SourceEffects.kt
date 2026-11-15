@@ -13,7 +13,65 @@ internal object SourceEffects {
     private data class Receiver(val type: MCFPPType, val place: Place?)
 
     fun preview(function: Function, receiver: Var<*>?): Effect = Analyzer().function(function,
-        receiver?.let { Receiver(StorageAccess.actualType(it), StorageAccess.ensure(it).place) })
+        receiver?.let { Receiver(it.type, StorageAccess.ensure(it).place) })
+
+    /** A direct static setter proves initialization without inferring conditional writes. */
+    fun definiteStaticInitializations(function: Function): Set<Place> {
+        val statements = function.bodyContext()?.statement() ?: return emptySet()
+        val parameters = function.normalParams.map { it.identifier }.toSet()
+        fun directValue(node: ParseTree): Boolean {
+            if (node is Parser.FunctionCallContext || node is Parser.SelectorContext ||
+                node is Parser.PropertyOperatorExpressionContext || node is Parser.InlineLambdaContext)
+                return false
+            if (node is Parser.ValueContext && node.NULL() != null) return false
+            if (node is Parser.VarWithSuffixContext &&
+                (node.identifierSuffix().isNotEmpty() || node.Identifier().text !in parameters)) return false
+            return (0 until node.childCount).all { directValue(node.getChild(it)) }
+        }
+        val places = linkedSetOf<Place>()
+        for (statement in statements) {
+            val assignment = statement.statementExpression() ?: return emptySet()
+            if (assignment.assignmentOperator()?.text != "=" || assignment.expression()?.text == "null" ||
+                assignment.expression()?.let(::directValue) != true) return emptySet()
+            val target = assignment.varWithSelector() ?: return emptySet()
+            val operator = target.jvmAccessExpression().propertyOperator()
+            if (operator.LSQUARE() != null) return emptySet()
+            val primary = operator.primary()
+            val qualifier = primary.`var`()?.varWithSuffix()?.takeIf { it.identifierSuffix().isEmpty() }
+            val root = qualifier?.Identifier()?.text
+                ?: primary.type()?.text ?: return emptySet()
+            val selectors = target.selector()
+            val field = if (selectors.isEmpty()) function.scope.getVar(root) else {
+                if (selectors.size != 1) return emptySet()
+                val member = selectors.single().`var`()?.varWithSuffix()?.takeIf { it.identifierSuffix().isEmpty() }
+                    ?: return emptySet()
+                val owner = (function.owner as? top.mcfpp.model.compound.DataTemplate)?.takeIf {
+                    it is top.mcfpp.model.compound.ObjectCompoundData && it.identifier == root
+                } ?: return emptySet()
+                if (function.scope.getVar(root) != null) continue
+                if (qualifier != null) {
+                    val binding = StructuredBindings.name(qualifier, function)
+                    val shadowed = when (binding) {
+                        null -> false
+                        is StructuredNameBinding.Type -> {
+                            // A library name retains its ordinary data declaration; static
+                            // selection reaches the companion paired with that declaration.
+                            val declaration = (binding.type as? top.mcfpp.type.MCFPPDataTemplateType)?.template
+                            declaration !== owner && declaration?.companionObject !== owner
+                        }
+                        else -> true
+                    }
+                    if (shadowed) continue
+                }
+                owner.scope.getVar(member.Identifier().text)
+            } ?: return emptySet()
+            if (!field.isStatic || field.isConst) return emptySet()
+            val property = field.declaredParentTemplate?.scope?.getProperty(field.identifier)
+            if (property != null && property.mutator !is SimpleMutator) return emptySet()
+            places += field.storageBinding?.place ?: return emptySet()
+        }
+        return places
+    }
 
     private class Analyzer {
         private val active = linkedMapOf<Function, Receiver?>()
@@ -60,12 +118,18 @@ internal object SourceEffects {
                     else top.mcfpp.model.scope.GlobalScope.getFunctionCandidates(
                         context.namespaceID().text.substringBefore(':', "").ifEmpty { null }, name, function.declarationFile?.field)
                 var target = base
+                if (name == "new" && base?.type is top.mcfpp.type.MCFPPDataTemplateType) {
+                    candidates = (base.type as top.mcfpp.type.MCFPPDataTemplateType).template.factories
+                    target = null
+                }
                 if (candidates.isEmpty() && base == null) {
                     val template = top.mcfpp.model.scope.GlobalScope.getTemplate(
                         context.namespaceID().text.substringBefore(':', "").ifEmpty { null }, name)
                     if (template != null) {
-                        candidates = template.constructors
-                        target = Receiver(template.getType(), null)
+                        val legacy = template.isEntityTemplate || template is top.mcfpp.model.compound.ObjectCompoundData ||
+                            template is top.mcfpp.model.compound.TypeDataTemplate
+                        candidates = if (legacy) template.constructors else template.factories
+                        target = if (legacy) Receiver(template.getType(), null) else null
                     }
                 }
                 context.arguments()?.let { visit(it) }
@@ -78,6 +142,13 @@ internal object SourceEffects {
                 val variable = primary.`var`()
                 var base = when {
                     primary.THIS() != null || primary.SUPER() != null -> receiver
+                    primary.type() != null -> {
+                        val declared = try { function.parseDeclaredType(primary.type()) } catch (_: DeclarationBinding.Failure) { null }
+                        val template = (declared as? top.mcfpp.type.MCFPPDataTemplateType)?.template
+                        val static = if (template is top.mcfpp.model.compound.ObjectCompoundData) template else template?.companionObject
+                        val factory = context.selector().firstOrNull()?.memberKeyword()?.text == "new"
+                        (if (factory) declared else static?.getType() ?: declared)?.let { Receiver(it, null) }
+                    }
                     variable?.functionCall() != null -> invocation(variable.functionCall(), null)
                     variable?.varWithSuffix() != null -> {
                         val identifier = variable.varWithSuffix().Identifier().text
@@ -88,6 +159,7 @@ internal object SourceEffects {
                         else if (identifier in locals) Receiver(locals.getValue(identifier), null)
                         else if (value == null) {
                             val objectType = top.mcfpp.model.scope.GlobalScope.getObject(null, identifier)?.getType()
+                                ?: top.mcfpp.model.scope.GlobalScope.getTemplate(null, identifier)?.getType()
                             if (objectType == null) observe(Effect.Unknown)
                             objectType?.let { Receiver(it, null) }
                         }
@@ -100,8 +172,17 @@ internal object SourceEffects {
                     val part = selector.`var`()
                     base = when {
                         part?.functionCall() != null -> invocation(part.functionCall(), base)
-                        part?.varWithSuffix() != null -> member(base, part.varWithSuffix().Identifier().text,
-                            write && index == selectors.lastIndex, backingOnly && index == selectors.lastIndex)
+                        part?.varWithSuffix() != null -> {
+                            val name = part.varWithSuffix().Identifier().text
+                            val parentFactory = selectors.getOrNull(index + 1)?.memberKeyword()?.text == "new"
+                            val parent = if (parentFactory) top.mcfpp.model.scope.GlobalScope.getTemplate(null, name) else null
+                            if (base != null && parent != null && top.mcfpp.type.TypeRelations.isNominalSubtype(base.type, parent.getType()))
+                                Receiver(parent.getType(), null)
+                            else member(base, name, write && index == selectors.lastIndex, backingOnly && index == selectors.lastIndex)
+                        }
+                        selector.memberKeyword() != null -> top.mcfpp.antlr.KeywordMemberCalls.call(selector)?.let {
+                            invocation(it, base)
+                        } ?: run { observe(Effect.Unknown); null }
                         else -> { observe(Effect.Unknown); null }
                     }
                     // Index expressions can themselves contain calls. An unknown index overlaps every element.

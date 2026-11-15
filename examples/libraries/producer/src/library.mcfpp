@@ -1,6 +1,6 @@
 namespace fixture.package
 data MathBox {
-    constructor() {}
+    new() { return {} }
     private func hidden(value:int):int {
         /say installed-private-body
         return value+1

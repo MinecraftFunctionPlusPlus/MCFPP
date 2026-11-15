@@ -11,6 +11,8 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
+import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.test.*
@@ -96,7 +98,16 @@ class LegacyFloatLayoutTest {
         """.trimIndent(), version = "1.20.1")
         assertEquals(0, Project.errorCount)
         val main = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
-        val machine = ScoreCommandExecutor(main.commands.analyzeAll())
+        val datapack = Path.of("src/main/resources/datapack/stdlib/data")
+        val floatFunctions = datapack.resolve("math.float/function")
+        val functions = Files.walk(floatFunctions).use { paths ->
+            paths.filter { it.toString().endsWith(".mcfunction") }.iterator().asSequence().associate { path ->
+                "math.float:" + floatFunctions.relativize(path).toString().replace('\\', '/').removeSuffix(".mcfunction") to Files.readAllLines(path)
+            }
+        }
+        val constants = Files.readAllLines(datapack.resolve("math/function/_init.mcfunction"))
+            .filter { it.startsWith("scoreboard players set ") }
+        val machine = ScoreCommandExecutor(constants + main.commands.analyzeAll(), functions)
         assertEquals(1, machine.read(main.scope.getVar("result") as ScoreBool))
     }
 

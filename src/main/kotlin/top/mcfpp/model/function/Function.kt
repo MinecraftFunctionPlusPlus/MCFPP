@@ -152,6 +152,11 @@ open class Function : Member, FieldContainer, WithDocument {
      */
     val parent: ArrayList<Function> = ArrayList()
 
+    internal fun recordCall(target: Function) {
+        if (child.none { it === target }) child.add(target)
+        if (target.parent.none { it === this }) target.parent.add(this)
+    }
+
     /**
      * 函数是否被返回。用于break和continue语句。
      */
@@ -168,6 +173,11 @@ open class Function : Member, FieldContainer, WithDocument {
     var isAbstract = false
 
     var isEntityMember = false
+
+    /** Associated factories retain template ownership without an implicit receiver. */
+    internal var receiverless = false
+
+    override val isStatic: Boolean get() = receiverless || owner is ObjectCompoundData
 
     /**
      * 函数是否有返回语句
@@ -263,7 +273,7 @@ open class Function : Member, FieldContainer, WithDocument {
             save(this::contextRegion), save(this::contextGenerated), save(this::nativeResultSlots),
             save(this::returnType), save(this::returnVar), save(this::commands),
             save(this::identifier), save(this::namespace), save(this::normalParams), save(this::scope),
-            save(this::isReturned), save(this::isEnded), save(this::isAbstract), save(this::isEntityMember), save(this::hasReturnStatement),
+            save(this::isReturned), save(this::isEnded), save(this::isAbstract), save(this::isEntityMember), save(this::receiverless), save(this::hasReturnStatement),
             save(this::accessModifier), save(this::owner), save(this::excludedArgIndex), save(this::hasDefaultValue),
             save(this::ast), save(this::bodyHandle), save(this::bodyCompiled), save(this::bodyBeingCompiled), save(this::runtimeEffect),
             save(this::context), save(this::typedIR), save(this::optimizedIR), save(this::backendValid), save(this::optimizedScalar), save(this::optimizedRegisters),
@@ -484,6 +494,7 @@ open class Function : Member, FieldContainer, WithDocument {
         this.returnVar = function.returnVar.clone()
         this.isAbstract = function.isAbstract
         this.isEntityMember = function.isEntityMember
+        this.receiverless = function.receiverless
         this.accessModifier = function.accessModifier
         this.ast = function.ast
         this.bodyHandle = function.bodyHandle
@@ -560,15 +571,34 @@ open class Function : Member, FieldContainer, WithDocument {
 
     internal fun refreshTemplateSignature() {
         if (bodyCompiled) return
-        for (param in normalParams) if (!param.isReadOnly && param.type is MCFPPDataTemplateType) {
+        fun retagDeclaration(value: Var<*>, type: MCFPPType) {
+            val declaration = value.symbol?.copy(declaredType = type.typeId) ?: return
+            value.symbol = declaration
+            value.storageBinding?.let { binding ->
+                binding.data.types[type.typeId] = type
+                binding.data.declarations[binding.place] = declaration
+            }
+        }
+        val readonly = (this as? Generic<*>)?.readOnlyParams ?: (this as? NativeFunction)?.readOnlyParams.orEmpty()
+        for (param in readonly + normalParams) {
+            val previous = param.type
+            param.type = TypeCompositions.normalizeResolved(previous)
             param.typeName = param.type.toString()
+            if (param !in normalParams || param.isReadOnly ||
+                param.type !is MCFPPDataTemplateType && param.type === previous) continue
             val value = param.buildVar()
             scope.putVar(param.identifier, value, true)
+            retagDeclaration(value, param.type)
             value.storageBinding = null
             top.mcfpp.analysis.StorageAccess.bindIncomingParameter(value)
         }
-        if (returnType is MCFPPDataTemplateType) {
-            returnVar = buildReturnVar(returnType).apply { bindDeclaration(previous = returnVar) }
+        val previousReturn = returnType
+        val normalizedReturn = TypeCompositions.normalizeResolved(previousReturn)
+        if (normalizedReturn is MCFPPDataTemplateType || normalizedReturn !== previousReturn) {
+            val previousValue = returnVar
+            if (normalizedReturn !== previousReturn) returnType = normalizedReturn
+            returnVar = buildReturnVar(normalizedReturn).apply { bindDeclaration(previous = previousValue) }
+            retagDeclaration(returnVar, normalizedReturn)
         }
     }
 
@@ -581,7 +611,8 @@ open class Function : Member, FieldContainer, WithDocument {
                     ((!top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(value) &&
                     top.mcfpp.analysis.StorageAccess.hasActualPayload(value)) ||
                     param.type is MCFPPFunctionType && binding.data.callableTargets[binding.place]?.isNotEmpty() == true ||
-                    hasReferenceEvidence(value))
+                    hasReferenceEvidence(value) ||
+                    param.type is MCFPPDataTemplateType && !binding.trustConstants)
                 if (!capturedPayload) top.mcfpp.analysis.StorageAccess.bindIncomingParameter(value)
             }
         }
@@ -645,7 +676,11 @@ open class Function : Member, FieldContainer, WithDocument {
             else if (bodyHandle != null) this.bodyContext() else context
         val compile = {
             val globals = if (this is DataTemplateConstructor || target.initializesReceiver) emptyList()
-                else top.mcfpp.analysis.StorageAccess.callGlobals()
+                // Compiler-only globals are tracked at compilation; there is no runtime
+                // producer whose value could change between emitted function invocations.
+                else top.mcfpp.analysis.StorageAccess.callGlobals().filter {
+                    top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(it)
+                }
             val savedGlobals = top.mcfpp.analysis.StorageAccess.flowSnapshot(globals)
             top.mcfpp.analysis.StorageAccess.invalidateMutableGlobals(globals)
             try {
@@ -841,7 +876,19 @@ open class Function : Member, FieldContainer, WithDocument {
         return invokeReady(completed, caller)
     }
 
-    private fun invokeReady(completed: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*>{
+    private fun invokeReady(completed: LinkedHashMap<String, Var<*>>, incomingCaller: CanSelectMember?): Var<*>{
+        val invocationErrors = Project.errorCount
+        val caller = if (receiverless) null else incomingCaller
+        if (isAbstract) {
+            LogProcessor.error("Cannot call abstract receiver function '$identifier'")
+            return UnknownVar("return").apply { type = returnType; isError = true }
+        }
+        val receiverContract = (owner as? DataTemplate)?.getType()
+        if (!isStatic && caller is DataTemplateObject && receiverContract != null &&
+            !top.mcfpp.type.TypeRelations.isSubtype(caller.type, receiverContract)) {
+            LogProcessor.error("Receiver '${caller.type}' does not satisfy '$receiverContract' for '$identifier'")
+            return UnknownVar("return").apply { type = returnType; isError = true }
+        }
         bodyHandle?.requireOpen()
         if (!actualCallBody) {
             try { completed.putAll(top.mcfpp.core.lang.context.ContextParameters.resolve(this)) }
@@ -866,6 +913,7 @@ open class Function : Member, FieldContainer, WithDocument {
                 !it.type.hasRuntimeRepresentation || completed[it.identifier]?.let { value -> !top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(value) } == true } ||
                 caller is DataTemplateObject && (!top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(caller) || sharesParentReceiver(caller)) ||
                 compilerOnlyOwner() || needsActualBinding() || completed.any { (name, value) ->
+                    normalParams.firstOrNull { it.identifier == name }?.let { untrustedRuntimeObjectArgument(it, value) } == true ||
                     hasReferenceEvidence(value) &&
                         (scope as? top.mcfpp.analysis.lambda.LambdaCaptureScope)?.isEnvironmentParameter(name) != true
                 })) {
@@ -899,6 +947,9 @@ open class Function : Member, FieldContainer, WithDocument {
             else -> returnVar
         }
         top.mcfpp.analysis.StorageAccess.applyEffect(observed, callEffect)
+        if (bodyCompiled && !result.isError && Project.errorCount == invocationErrors)
+            top.mcfpp.analysis.StorageAccess.applyDefiniteGlobalInitializations(observed,
+                top.mcfpp.analysis.SourceEffects.definiteStaticInitializations(this))
         if (result is top.mcfpp.core.lang.MCAny && top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(result)) {
             val value = result
             val binding = top.mcfpp.analysis.StorageAccess.ensure(value)
@@ -1127,8 +1178,7 @@ open class Function : Member, FieldContainer, WithDocument {
             }
             body.scope.putVar(parameter.identifier, value, true)
         }
-        body.parent.add(this)
-        child.add(body)
+        recordCall(body)
         owner.scope.addFunction(body, false)
         body.compileBodyWithPreparation(body, declaration?.ast) { target ->
             body.prepareBody(target)
@@ -1159,10 +1209,15 @@ open class Function : Member, FieldContainer, WithDocument {
             callerOwner.isSubOf(targetOwner) && !targetOwner.isSubOf(callerOwner)
     }
 
+    private fun untrustedRuntimeObjectArgument(parameter: FunctionParam, value: Var<*>): Boolean =
+        parameter.type is MCFPPDataTemplateType && value.storageBinding?.trustConstants == false &&
+            StorageAccess.hasRuntimeRepresentation(value)
+
     /** Identity of callback code/layout and any facts actually baked into an actual body. */
     private fun callbackReentryKey(arguments: Map<String, Var<*>>, receiver: DataTemplateObject?): SpecializationKey? {
         if (this is DataTemplateConstructor || compilerOnlyOwner() ||
             normalParams.none { it.type is MCFPPFunctionType } &&
+            normalParams.none { untrustedRuntimeObjectArgument(it, arguments.getValue(it.identifier)) } &&
             arguments.values.none { top.mcfpp.core.lang.context.ContextBorrowing.provenance(it).isNotEmpty() ||
                 hasReferenceEvidence(it) }) return null
         // Ordinary complete runtime receivers are copied into incoming `this`; their data
@@ -1183,7 +1238,8 @@ open class Function : Member, FieldContainer, WithDocument {
             val value = arguments.getValue(parameter.identifier)
             val facts = linkedMapOf<String, CompilerValue>(
                 "declaredType" to CompilerValue.TypeValue(parameter.type.typeId),
-                "actualType" to CompilerValue.TypeValue(StorageAccess.actualType(value).typeId))
+                "actualType" to CompilerValue.TypeValue(StorageAccess.actualType(value).typeId),
+                "trustedConstants" to CompilerValue.Bool(value.storageBinding?.trustConstants != false))
             if (parameter.type is MCFPPFunctionType) {
                 val targets = (value as? top.mcfpp.core.lang.FunctionValue)?.knownTargets().orEmpty()
                 if (targets.isEmpty()) return null
@@ -1218,8 +1274,7 @@ open class Function : Member, FieldContainer, WithDocument {
         if (reentrant?.bodyBeingCompiled == true) {
             // Reuse code, not invocation data. invokeComplete still creates a fresh runtime
             // frame and copies this call's arguments/environments and return payload.
-            reentrant.parent.add(currFunction)
-            currFunction.child.add(reentrant)
+            currFunction.recordCall(reentrant)
             return reentrant
         }
         val body = Function(this)
@@ -1259,6 +1314,9 @@ open class Function : Member, FieldContainer, WithDocument {
             parameter.identifier to (bind(parameter.type, parameter.identifier, arguments.getValue(parameter.identifier)) ?: return null)
         }
         body.boundContextArguments.forEach { (name, value) -> body.scope.putVar(name, value, true) }
+        val runtimeObjectLayout = body.normalParams.any {
+            untrustedRuntimeObjectArgument(it, arguments.getValue(it.identifier))
+        }
         for (parameter in body.normalParams) {
             val incoming = arguments.getValue(parameter.identifier)
             val value = if (parameter.type is MCFPPFunctionType) {
@@ -1283,8 +1341,15 @@ open class Function : Member, FieldContainer, WithDocument {
             } else if (parameter.type.hasRuntimeRepresentation && top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(incoming))
                 parameter.buildVar().also { value ->
                     val binding = top.mcfpp.analysis.StorageAccess.bindIncomingParameter(value)
+                    val untrusted = untrustedRuntimeObjectArgument(parameter, incoming)
                     incoming.storageBinding?.let {
-                        top.mcfpp.analysis.StorageAccess.copyRuntimeEvidence(it, binding)
+                        top.mcfpp.analysis.StorageAccess.copyRuntimeEvidence(it, binding, preserveShape = !runtimeObjectLayout)
+                    }
+                    if (untrusted) {
+                        value.storageBinding = binding.copy(trustConstants = false,
+                            view = top.mcfpp.analysis.ValueRef.TypedView(parameter.type.typeId,
+                                top.mcfpp.analysis.ValueRef.Read(StorageAccess.actualType(incoming).typeId, binding.place),
+                                binding.place))
                     }
                 }
                 else bind(parameter.type, parameter.identifier, incoming) ?: return null
@@ -1314,8 +1379,7 @@ open class Function : Member, FieldContainer, WithDocument {
             else bind(receiver.type, "this", receiver) as? DataTemplateObject ?: return null
         }
         body.returnVar = body.buildReturnVar(body.returnType)
-        body.parent.add(currFunction)
-        currFunction.child.add(body)
+        currFunction.recordCall(body)
         val owner = body.owner
         if (owner != null) owner.scope.addFunction(body, false)
         else GlobalScope.getOrCreateNamespace(namespace).scope.addFunction(body, false)

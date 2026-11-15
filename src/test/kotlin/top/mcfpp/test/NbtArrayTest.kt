@@ -155,7 +155,7 @@ class NbtArrayTest {
         val main = compile("""
             func copy(value: any): any { return value; }
             func main(){
-                var source = {values:[I;2,3]}
+                var source: dict<any> = {values:[I;2,3]}
                 var copied = source
                 copied["values"][0] = 9
                 var erased = copy(source["values"]) as IntArray

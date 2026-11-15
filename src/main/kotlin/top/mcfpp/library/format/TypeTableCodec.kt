@@ -10,6 +10,7 @@ object TypeTableCodec {
     fun collectStrings(tables: LibraryTables): Set<String> = buildSet {
         tables.types.filterIsInstance<LibraryType.Builtin>().forEach { add(it.key) }
         tables.types.filterIsInstance<LibraryType.UnresolvedNominal>().forEach { add(it.kind); add(it.namespace); add(it.name) }
+        tables.types.filterIsInstance<LibraryType.Object>().forEach { type -> type.fields.forEach { add(it.name) } }
         tables.constants.forEach { when (it) {
             is ConstantValue.Text -> add(it.value)
             is ConstantValue.Nbt -> add(it.snbt)
@@ -196,6 +197,10 @@ object TypeTableCodec {
             is LibraryType.UnresolvedNominal -> tagged(11) {
                 u32(strings.reference(value.kind)); u32(strings.reference(value.namespace)); u32(strings.reference(value.name))
             }
+            is LibraryType.Object -> tagged(12) {
+                list(value.fields) { u32(strings.reference(it.name)); u32(it.type.value); bool(it.optional); bool(it.readable); bool(it.writable) }
+            }
+            is LibraryType.Literal -> tagged(13) { u32(value.primitive.value); u32(value.value.value) }
         }
     }
 
@@ -213,6 +218,8 @@ object TypeTableCodec {
             9 -> LibraryType.NbtRef(TypeRef(u32()))
             10 -> LibraryType.Dependent(NodeRef(u32()), EnvironmentId(u32()), DeclarationId(u32()))
             11 -> LibraryType.UnresolvedNominal(strings.value(u32()), strings.value(u32()), strings.value(u32()))
+            12 -> LibraryType.Object(list { LibraryObjectField(strings.value(u32()), TypeRef(u32()), bool(), bool(), bool()) })
+            13 -> LibraryType.Literal(TypeRef(u32()), ConstantRef(u32()))
             else -> fail("Unknown T tag $tag", LibraryFormatCode.UNSUPPORTED)
         }
     }
@@ -298,6 +305,11 @@ object TypeTableCodec {
             is LibraryType.Intersection -> value.components.forEach(type)
             is LibraryType.Function -> { value.contexts.forEach(type); value.parameters.forEach(type); type(value.result) }
             is LibraryType.NbtRef -> type(value.value)
+            is LibraryType.Object -> {
+                require(value.fields.zipWithNext().all { (a, b) -> compareUtf8(a.name, b.name) < 0 }) { "Object fields must be sorted and unique" }
+                value.fields.forEach { type(it.type) }
+            }
+            is LibraryType.Literal -> { type(value.primitive); constant(value.value) }
             else -> Unit
         } } }
         constant = { ref -> visit(ref.value, constantState, "C") { when (val value = tables.constant(ref)) {
@@ -347,6 +359,8 @@ object TypeTableCodec {
             is LibraryType.Intersection -> value.copy(components = value.components.map(::t))
             is LibraryType.Function -> value.copy(parameters = value.parameters.map(::t), result = t(value.result), contexts = value.contexts.map(::t))
             is LibraryType.NbtRef -> value.copy(value = t(value.value))
+            is LibraryType.Object -> value.copy(fields = value.fields.sortedWith { a, b -> compareUtf8(a.name, b.name) }.map { it.copy(type = t(it.type)) })
+            is LibraryType.Literal -> value.copy(primitive = t(value.primitive), value = c(value.value))
             else -> value
         } }, constantOrder.map { ref -> when (val value = tables.constant(ref)) {
             is ConstantValue.TypeValue -> value.copy(value = t(value.value))
@@ -432,6 +446,13 @@ object TypeTableCodec {
                     bytes(identities.localDeclaration(value.owner))
                 }
                 is LibraryType.UnresolvedNominal -> tagged(11) { string(value.kind); string(value.namespace); string(value.name) }
+                is LibraryType.Object -> tagged(12) {
+                    require(value.fields.map { it.name }.distinct().size == value.fields.size) { "Duplicate object field" }
+                    list(value.fields.sortedWith { a, b -> compareUtf8(a.name, b.name) }) {
+                        string(it.name); child(type(it.type)); bool(it.optional); bool(it.readable); bool(it.writable)
+                    }
+                }
+                is LibraryType.Literal -> tagged(13) { child(type(value.primitive)); child(constant(value.value)) }
             } }.toByteArray()
             val result = intern(payload, children)
             activeTypes.remove(ref); types[ref] = result

@@ -44,8 +44,9 @@ open class MCInt : MCNumber<Int>, OnScoreboard {
     override fun assignCommand(a: MCNumber<*>): MCInt = doAssignedBy(a)
     override fun explicitCast(type: MCFPPType): Var<*> = StorageAccess.view(this, type)
     override fun canExplicitCast(type: MCFPPType): Boolean = true
-    override fun implicitCast(type: MCFPPType): Var<*> = if (this.type == MCFPPBaseType.Int && type == MCFPPBaseType.Float)
-        top.mcfpp.backend.NumericConversions.promoteToFloat(this) else super.implicitCast(type)
+    override fun implicitCast(type: MCFPPType): Var<*> = if ((this.type == MCFPPBaseType.Int ||
+            (this.type as? top.mcfpp.type.MCFPPLiteralType)?.primitive == MCFPPBaseType.Int) && type == MCFPPBaseType.Float)
+        top.mcfpp.backend.NumericConversions.promoteToFloat(StorageAccess.primitiveView(this) as MCInt) else super.implicitCast(type)
     private fun arithmetic(other: Var<*>, operation: String): Var<*> {
         if (other !is MCInt || other.type != MCFPPBaseType.Int) { LogProcessor.error("Int arithmetic requires int operands"); return UnknownVar(identifier).apply { isError = true } }
         val a = (StorageAccess.snapshot(this) as? CompilerValue.Typed)?.payload

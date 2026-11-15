@@ -79,8 +79,7 @@ internal object LambdaMemberReference {
                 return@runInFunction
             }
             val arguments = signature.parameters.indices.map { wrapper.scope.getVar("argument_$it")!! }
-            wrapper.child.add(method)
-            method.parent.add(wrapper)
+            wrapper.recordCall(method)
             val returned = method.invoke(arguments, capturedReceiver)
             if (!returned.isError && signature.result != MCFPPPrivateType.Void) wrapper.assignReturnVar(returned)
             Function.addCommand("return 1")

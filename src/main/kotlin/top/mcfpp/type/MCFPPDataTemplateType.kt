@@ -94,6 +94,7 @@ open class MCFPPDataTemplateType(
                 if (!seen.add(type)) continue
                 when (type) {
                     is MCFPPTypeDataTemplateType -> pending.add(type.typeAs)
+                    is MCFPPObjectType -> pending.addAll(type.fields.filterNot { it.optional && it.type === MCFPPNeverType }.map { it.type })
                     is MCFPPDataTemplateType -> if (templates.add(type.template)) {
                         type.instanceFields.forEach { pending.add(it.type) }
                     }
@@ -108,7 +109,7 @@ open class MCFPPDataTemplateType(
             return true
         }
 
-    internal val instanceFields: List<Var<*>>
+    internal open val instanceFields: List<Var<*>>
         get() {
             val readonly = (template as? top.mcfpp.model.compound.CompiledGenericDataTemplate)
                 ?.originTemplate?.readOnlyParams?.map { it.identifier }.orEmpty()
@@ -167,6 +168,7 @@ open class MCFPPDataTemplateType(
     companion object{
         private val checkpointClasses = setOf<Class<*>>(
             MCFPPDataTemplateType::class.java, MCFPPGenericDataTemplateType::class.java,
+            MCFPPObjectType::class.java,
             MCFPPObjectDataTemplateType::class.java,
             MCFPPGenericObjectDataTemplateType::class.java, MCFPPTypeDataTemplateType::class.java
         )

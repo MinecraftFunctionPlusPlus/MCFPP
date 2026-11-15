@@ -63,20 +63,20 @@ class StandardLibraryExpansionTest {
             import mcfpp.minecraft.other:*
             import mcfpp.minecraft.resource:*
             func main() {
-                var item = Item(); item.id = "minecraft:stone";
-                var modifier = ItemModifier(); modifier.id = "fixture:modify";
+                var item = {id: "minecraft:stone"} as Item;
+                var modifier = {id: "fixture:modify"} as ItemModifier;
                 var slot = Slot.weapon_mainhand;
                 var replaced = itemReplace(@a, slot, item, 2);
                 var defaultCount = itemReplace(@a, slot, item);
                 var copied = itemReplaceFrom(@a, slot, @p, slot);
                 var changed = itemModify(@a, slot, modifier);
                 var area = Area(0 64 0, 2 66 2);
-                var block = BlockState(); block.name = "minecraft:stone"; block.properties = {};
+                var block:BlockState = {name: "minecraft:stone", properties: {} as nbt};
                 var outlined = fillOutline(area, block);
                 var timing = titleTimes(@a, 5, 30, 5);
                 var damaged = damageResult(@e.limit(1), 1.0);
                 var cloned = cloneResult(area, 10 64 0);
-                var enchantment = Enchant(); enchantment.id = "minecraft:unbreaking";
+                var enchantment = {id: "minecraft:unbreaking"} as Enchant;
                 var enchanted = enchantResult(@a, enchantment);
             }
         """.trimIndent(), version = "26.3")

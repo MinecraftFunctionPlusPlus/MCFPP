@@ -57,7 +57,7 @@ internal object InternalReferenceCalls {
                             BoundCallArgument.Reference(location, span(node, environment))
                         }
                         parameter.mode() == ParamMode.INLINE -> {
-                            val lambda = (node as? P.CallArgumentContext)?.inlineLambda() ?: expression?.primary()?.inlineLambda()
+                            val lambda = inlineLambda(node)
                                 ?: throw SourceBindingFailure(span(node, environment), "Internal callback fixture requires a direct lambda")
                             val signature = parameter.inlineSignature() ?: parameter.type().inlineSignature()!!
                             BoundCallArgument.Callback(binder.callback(lambda, signature, environment), span(node, environment))
@@ -85,6 +85,14 @@ internal object InternalReferenceCalls {
         if (calls.isEmpty()) locationFailure?.let { throw it }
         if (calls.size != 1) throw SourceBindingFailure(source, "Internal compiler position arguments do not select one exact writable signature")
         return calls.single()
+    }
+
+    private fun inlineLambda(node: ParserRuleContext): P.InlineLambdaContext? {
+        if (node is P.InlineLambdaContext) return node
+        if (node is P.PrimaryContext) return node.inlineLambda()
+        if (node is P.UnaryExpressionContext && node.rightVarExpression() == null ||
+            node is P.CastExpressionContext && node.type() != null) return null
+        return node.children.orEmpty().filterIsInstance<ParserRuleContext>().singleOrNull()?.let(::inlineLambda)
     }
 
     fun expand(syntax: P.FunctionCallContext, caller: Function, positions: Set<Int>): Var<*> {

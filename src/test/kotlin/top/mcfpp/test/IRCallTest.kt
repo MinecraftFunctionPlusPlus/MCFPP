@@ -145,7 +145,7 @@ class IRCallTest {
             func increment(value: int): int { return value + 1; }
             func wrapper(value: int): int { return increment(value); }
             func main(){
-                var values = {field:2}
+                var values: dict<int> = {field:2}
                 var result = wrapper(4)
                 external number = values["field"] + result
             }

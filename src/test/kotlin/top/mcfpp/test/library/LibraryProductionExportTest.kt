@@ -97,12 +97,12 @@ class LibraryProductionExportTest {
         } finally { Project.errorCount = previous }
     }
 
-    @Test fun realCompilerApiPublishesV1AndAFreshConsumerUsesItsBodyAndStaticResources() = temporary { root ->
+    @Test fun realCompilerApiPublishesCurrentFormatAndAFreshConsumerUsesItsBodyAndStaticResources() = temporary { root ->
         val producer = producer(root.resolve("producer"))
         assertSuccess(compile(producer))
         val output = producer.parent.resolve("out")
         val binary = Files.readAllBytes(output.resolve("bin.mclib"))
-        assertEquals(1L, LibraryWire.decode(binary).formatVersion)
+        assertEquals(LibraryWire.CURRENT_VERSION, LibraryWire.decode(binary).formatVersion)
         val model = LibraryModelCodec(listOf(CompoundCodec, NativeCodec)).decode(binary)
         assertEquals("example:math", model.manifest.library.coordinate)
         assertEquals("1.2.3", model.manifest.library.version)

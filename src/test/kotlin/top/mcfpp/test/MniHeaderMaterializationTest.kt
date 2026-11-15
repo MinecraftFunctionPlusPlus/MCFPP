@@ -168,7 +168,7 @@ class MniHeaderMaterializationTest {
             {var value:T; var inferred=3;
              func same(value:int):int{return value;}
              func same(value:float):float{return value;}
-             constructor(value:T){} }
+             new(value:T){return {value:value,inferred:3};} }
             """.trimIndent()
         )
         val session = SignaturePreparationSession()
@@ -197,8 +197,8 @@ class MniHeaderMaterializationTest {
             val function = declaration.templateMember().templateFunctionDeclaration()
             assertSame(function.curlBlock(), origins.functions.getValue(declaration).ast)
         }
-        val constructor = prototype.ctx.templateMemberDeclaration().single { it.templateMember().templateConstructorDeclaration() != null }
-        assertSame(instance.constructors.single(), origins.functions[constructor])
+        val factory = prototype.ctx.templateMemberDeclaration().single { it.templateMember().templateFactoryDeclaration() != null }
+        assertSame(instance.factories.single(), origins.functions[factory])
         assertEquals(2, origins.fields.size)
         assertEquals(3, origins.functions.size)
         assertEquals(0, Project.errorCount)

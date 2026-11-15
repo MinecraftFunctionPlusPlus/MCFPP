@@ -47,13 +47,13 @@ class TypeSuffixSyntaxTest {
     @Test fun constReadonlyGenericsAndLogicalOperatorsRemainLegal() {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString("""
-            data Box<T> { var value: T; }
+            data Box<T> { var value: T; new(value:T){ return {value}; } }
             func main(){
                 const immutable: int=4
                 var ordinary: int=7
                 external negated=!false
                 external unequal=4!=7
-                var box=Box<int>()
+                var box=Box<int>(0)
             }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)

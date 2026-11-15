@@ -100,6 +100,7 @@ internal class NamespaceStateJournal private constructor(
             top.mcfpp.type.MCFPPEntityRefType::class.java,
             MCFPPReferenceType::class.java, MCFPPScoreRefType::class.java, MCFPPNBTRefType::class.java,
             MCFPPType::class.java, MCFPPConcreteType::class.java, MCFPPGenericParamType::class.java, MCFPPFunctionType::class.java,
+            MCFPPObjectType::class.java, MCFPPLiteralType::class.java, MCFPPIntersectionType::class.java, MCFPPNeverType::class.java,
             UnresolvedType::class.java, MCFPPTypeAliasType::class.java, MCFPPNotCompiledGenericType::class.java,
             MCFPPDataTemplateType::class.java, MCFPPTypeDataTemplateType::class.java,
             MCFPPObjectDataTemplateType::class.java, MCFPPEnumType::class.java,
@@ -413,6 +414,11 @@ internal class NamespaceStateJournal private constructor(
             check(type.javaClass in hashTypes) { "Namespace journal cannot hash type ${type.javaClass.name}" }
             check(active.add(type)) { "Namespace journal cannot hash a cyclic generic type" }
             try {
+                when (type) {
+                    is MCFPPObjectType -> type.fields.forEach { safeType(it.type, active) }
+                    is MCFPPLiteralType -> safeType(type.primitive, active)
+                    is MCFPPIntersectionType -> type.components.forEach { safeType(it, active) }
+                }
                 if (type is MCFPPTypeWithGeneric) {
                     val generic = type.generic
                     checkList(generic)

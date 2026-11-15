@@ -369,7 +369,10 @@ class MniTemplateProcessorJournalTest {
         val request = record(namespace, "First").single()
         val before = NamespaceStateJournal.checkpoint()
         @Suppress("UNCHECKED_CAST")
-        val payload = CompilerValue.Sequence(listOf(Unknown()) as List<CompilerValue>)
+        val erased = listOf(Unknown()) as List<CompilerValue>
+        assertFailsWith<IllegalArgumentException> { CompilerValue.Sequence(erased) }
+        val payload = CompilerValue.Sequence(emptyList())
+        CompilerValue.Sequence::class.java.getDeclaredField("elements").apply { isAccessible = true }.set(payload, erased)
         val invalid = TemplateProcessorRequest(
             request.registration,
             request.target,

@@ -31,6 +31,9 @@ import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPDataTemplateType
+import top.mcfpp.type.MCFPPObjectType
+import top.mcfpp.type.MCFPPNeverType
+import top.mcfpp.type.TypeCompositions
 import top.mcfpp.util.LogProcessor
 import java.nio.file.Files
 import java.nio.file.Path
@@ -40,7 +43,7 @@ import kotlin.test.Test
 class IntersectionTemplateCompletionTest {
     @Test fun sourceAndFreshFieldsCompleteForEarlySignaturesAndLateExpressions() {
         for (parents in listOf("A&B", "B&A")) {
-            var sourceIntersection: DataTemplate? = null
+            var sourceIntersection: top.mcfpp.type.TypeId? = null
             inBoth("data A{var x:int;}\ndata B{var y:int;}", """
                 data Holder{var pair:($parents);}
                 func read(value:($parents)):int{return value.x+value.y;}
@@ -52,25 +55,21 @@ class IntersectionTemplateCompletionTest {
             """) { entry, loaded ->
                 val first = assertIs<DataTemplateObject>(entry.scope.getVar("first"))
                 val second = assertIs<DataTemplateObject>(entry.scope.getVar("second"))
-                val intersection = assertIs<UnionDataTemplate>(first.templateType)
-                if (loaded) {
-                    assertNotSame(sourceIntersection, intersection)
-                    assertSame(intersection, UnionDataTemplate.resolve(parents.split('&').map { parentTemplate(it, true) }))
-                } else sourceIntersection = intersection
+                val intersection = assertNotNull(TypeCompositions.objectShape(first.type))
+                if (loaded) assertEquals(sourceIntersection, intersection.typeId)
+                else sourceIntersection = intersection.typeId
                 val holder = consumerTemplate("Holder", loaded)
-                val fieldType = assertIs<MCFPPDataTemplateType>(holder.scope.getVar("pair")!!.type)
-                fieldType.tryResolve()
-                assertSame(intersection, fieldType.template)
-                assertSame(intersection, second.templateType)
+                val fieldType = assertNotNull(TypeCompositions.objectShape(holder.scope.getVar("pair")!!.type))
+                assertEquals(intersection.typeId, fieldType.typeId)
+                assertEquals(intersection.typeId, TypeCompositions.objectShape(second.type)!!.typeId)
                 val read = GlobalScope.localNamespaces.getValue(consumerNamespace(loaded)).scope.functions.getValue("read").single()
-                assertSame(intersection, assertIs<MCFPPDataTemplateType>(read.normalParams.single().type).template)
+                assertEquals(intersection.typeId, TypeCompositions.objectShape(read.normalParams.single().type)!!.typeId)
                 assertTrue((read.namespaceID.identifier + ".mcfunction").length <= 255)
-                assertSame(intersection, Project.findRegisteredAnonymousTemplate(intersection.inheritanceIdentity))
-                assertEquals(intersection.inheritanceIdentity, first.type.typeId)
-                assertEquals(setOf("x", "y"), intersection.scope.allVars.map { it.identifier }.toSet())
-                for ((name, owner) in listOf("x" to "A", "y" to "B")) {
-                    assertSame(parentTemplate(owner, loaded), intersection.scope.getVar(name)!!.declaredParentTemplate)
-                    assertSame(parentTemplate(owner, loaded), intersection.scope.getProperty(name)!!.declaredParentTemplate)
+                assertEquals(listOf("x", "y"), intersection.fields.map { it.name })
+                val layout = intersection.templateForRuntime()
+                assertTrue(layout.parent.isEmpty())
+                assertEquals(listOf("x", "y"), layout.scope.allVars.map { it.identifier })
+                for (name in listOf("x", "y")) {
                     assertNotNull(first.getMemberVar(name, top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
                 }
                 assertEquals(18, execute(entry).read(assertIs<MCInt>(entry.scope.getVar("result"))))
@@ -79,35 +78,106 @@ class IntersectionTemplateCompletionTest {
         }
     }
 
-    @Test fun sourceAndFreshMethodsChooseTheMoreSpecificOwnerInEitherParentOrder() {
+    @Test fun inheritedAndNestedSignaturesNormalizeAfterAllNominalFieldsComplete() {
+        inBoth("""
+            data Root{var x:int;}
+            data A:Root{}
+            data B{var y:int;}
+            data PairBase{var pair:(A&B);}
+            data Left{var composed:A;}
+            data Right{var composed:B;}
+            data Holder:PairBase,Left,Right{var items:list<(A&B)>;}
+        """, """
+            func pass(value:(A&B)):(A&B){return value;}
+            func read(values:list<(A&B)>):int{return values[0].x+values[0].y;}
+            func main(){
+                var holder={pair:{x:3,y:4},composed:{x:7,y:8},items:[{x:5,y:6}]} as Holder;
+                var pair=pass(holder.pair);
+                external result=pair.x+pair.y+read(holder.items);
+            }
+        """) { entry, loaded ->
+            val holder = parentTemplate("Holder", loaded)
+            val pair = assertIs<DataTemplateObject>(holder.scope.getVar("pair"))
+            val shape = assertNotNull(TypeCompositions.objectShape(pair.type))
+            assertEquals(listOf("x", "y"), shape.fields.map { it.name })
+            assertEquals(shape.typeId, holder.scope.getVar("composed")!!.type.typeId)
+            val list = assertIs<top.mcfpp.type.MCFPPListType>(holder.scope.getVar("items")!!.type)
+            assertEquals(shape.typeId, list.generic.single().typeId)
+            assertFalse(TypeCompositions.hasDeferredComposition(list))
+            val functions = GlobalScope.localNamespaces.getValue(consumerNamespace(loaded)).scope.functions
+            val pass = functions.getValue("pass").single()
+            assertEquals(shape.typeId, pass.normalParams.single().type.typeId)
+            assertEquals(shape.typeId, pass.returnType.typeId)
+            val read = functions.getValue("read").single()
+            assertEquals(list.typeId, read.normalParams.single().type.typeId)
+            assertEquals(list.typeId, read.scope.getVar("values")!!.type.typeId)
+            assertEquals(18, execute(entry).read(assertIs<MCInt>(entry.scope.getVar("result"))))
+        }
+    }
+
+    @Test fun unionSignaturesKeepAlternativesUntilInheritedFieldsComplete() {
+        inBoth("""
+            data Root{var x:int;}
+            data A:Root{var common:int;}
+            data B{var common:int;var y:int;}
+            data Holder{var value:(A|B);}
+        """, """
+            func keep(value:(A|B)):(A|B){return value;}
+            func main(){
+                var holder={value:{common:8,y:9}} as Holder;
+                var value=keep(holder.value);
+                external result=value.common;
+            }
+        """) { entry, loaded ->
+            val field = parentTemplate("Holder", loaded).scope.getVar("value")!!
+            val union = assertIs<top.mcfpp.type.MCFPPUnionType>(field.type)
+            assertEquals(setOf(parentTemplate("A", loaded).getType().typeId, parentTemplate("B", loaded).getType().typeId),
+                union.types.map { it.typeId }.toSet())
+            assertFalse(TypeCompositions.hasDeferredComposition(union))
+            val keep = GlobalScope.localNamespaces.getValue(consumerNamespace(loaded)).scope.functions.getValue("keep").single()
+            assertEquals(union.typeId, keep.normalParams.single().type.typeId)
+            assertEquals(union.typeId, keep.returnType.typeId)
+            assertEquals(8, execute(entry).read(assertIs<MCInt>(entry.scope.getVar("result"))))
+        }
+    }
+
+    @Test fun sourceAndFreshIntersectionsCallOriginalReceiverFunctionsThroughNominalViews() {
         for (parents in listOf("Left&Right", "Right&Left")) {
             inBoth("""
                 data Root{var marker:int;func read():int{return 1;}}
                 data Left:Root{}
-                data Right:Root{override func read():int{return 2;}}
-            """, "func main(){var value={marker:0} as ($parents);external result=value.read();}") { entry, loaded ->
-                val intersection = assertIs<DataTemplateObject>(entry.scope.getVar("value")).templateType
-                assertSame(parentTemplate("Right", loaded), intersection.scope.getFunctionCandidates("read").single().owner)
+                data Right:Root{func read():int{return 2;}}
+            """, "func main(){var value={marker:0} as ($parents);var view=value as Right;external result=view.read();}") { entry, loaded ->
+                val intersection = TypeCompositions.objectShape(assertIs<DataTemplateObject>(entry.scope.getVar("value")).type)!!
+                assertTrue(intersection.templateForRuntime().scope.functions.isEmpty())
+                val original = parentTemplate("Right", loaded).scope.functions.getValue("read").single()
+                assertSame(parentTemplate("Right", loaded), original.owner)
                 assertEquals(2, execute(entry).read(assertIs<MCInt>(entry.scope.getVar("result"))))
             }
         }
     }
 
-    @Test fun sourceAndFreshFieldConflictsRemainErrorsInEitherParentOrder() {
+    @Test fun sourceAndFreshPlainIntersectionsNormalizeConflictingAndCompatibleFields() {
         for (parents in listOf("A&B", "B&A")) {
-            rejectsInBoth("data A{var x:int;}\ndata B{var x:bool;}",
-                "data Holder{var pair:($parents);}\nfunc main(){}",
-                "Incompatible inherited field 'x'", "typeId", "name=A", "name=B")
-            rejectsInBoth("data A{var x:int;}\ndata B{var x:int;}",
-                "data Holder{var pair:($parents);}\nfunc main(){}",
-                "Ambiguous inherited field 'x'", "name=A", "name=B")
+            inBoth("data A{var x:int;}\ndata B{var x:bool;}",
+                "func impossible(value:($parents)){}\nfunc main(){}") { _, loaded ->
+                val function = GlobalScope.localNamespaces.getValue(consumerNamespace(loaded)).scope.functions.getValue("impossible").single()
+                assertSame(MCFPPNeverType, function.normalParams.single().type)
+            }
+            inBoth("data A{var x:int;}\ndata B{var x:int;}",
+                "func main(){var value={x:3} as ($parents);external result=value.x;}") { entry, _ ->
+                val shape = TypeCompositions.objectShape(assertIs<DataTemplateObject>(entry.scope.getVar("value")).type)!!
+                assertEquals(listOf("x"), shape.fields.map { it.name })
+                assertEquals(MCFPPBaseType.Int.typeId, shape.fields.single().type.typeId)
+                assertEquals(3, execute(entry).read(assertIs<MCInt>(entry.scope.getVar("result"))))
+            }
         }
     }
 
-    @Test fun sourceAndFreshIntersectionsKeepProtectedAccessChecks() {
+    @Test fun sourceAndFreshNominalViewsKeepProtectedAccessChecks() {
         for (parents in listOf("A&B", "B&A")) {
             rejectsInBoth("data A{protected var x:int;}\ndata B{var y:int;}",
-                "func main(){var value={x:3,y:4} as ($parents);external result=value.x;}", "Cannot access")
+                "func main(){var value={x:3,y:4} as ($parents);var nominal=value as A;external result=nominal.x;}", "Cannot access")
         }
     }
 
@@ -157,43 +227,40 @@ class IntersectionTemplateCompletionTest {
         val program = "func main(){var holder={pair:{x:3,y:4}} as Holder;external result=holder.pair.x+holder.pair.y;}"
         source("$declarations\n$program")
         val sourceHolder = parentTemplate("Holder", false)
-        val sourceType = assertIs<MCFPPDataTemplateType>(sourceHolder.scope.getVar("pair")!!.type)
-        assertTrue(assertIs<MCInt>(sourceType.template.scope.getVar("x")).isDataOnly)
-        assertNotNull(sourceType.template.scope.getProperty("y"))
+        val sourceType = assertNotNull(TypeCompositions.objectShape(sourceHolder.scope.getVar("pair")!!.type))
+        val sourceOwner = parentTemplate("A", false)
+        assertTrue(assertIs<MCInt>(sourceOwner.scope.getVar("x")).isDataOnly)
+        assertEquals(listOf("x", "y"), sourceType.fields.map { it.name })
         val probe = RestoreProbe()
-        probe.on(sourceType.template)
+        probe.on(sourceOwner)
         val portableProbe = roundTrip(probe)
         assertEquals(1, portableProbe.applications, "Portable restore must retain the completed action count")
-        sourceType.template.annotations.add(portableProbe)
+        sourceOwner.annotations.add(portableProbe)
         assertEquals(1, probe.applications)
         assertEquals(7, execute(main(false)).read(assertIs<MCInt>(main(false).scope.getVar("result"))))
         write(output)
         fresh(output, program)
         val restoredHolder = parentTemplate("Holder", true)
         assertNotSame(sourceHolder, restoredHolder)
-        val restoredType = assertIs<MCFPPDataTemplateType>(restoredHolder.scope.getVar("pair")!!.type)
-        restoredType.tryResolve()
-        assertNotSame(sourceType.template, restoredType.template)
-        val restored = restoredType.template
-        assertEquals(listOf(parentTemplate("A", true).inheritanceIdentity, parentTemplate("B", true).inheritanceIdentity),
-            restored.parent.map { it.inheritanceIdentity })
-        assertSame(restored, UnionDataTemplate.resolve(listOf(parentTemplate("A", true), parentTemplate("B", true))))
-        val restoredProbe = restored.annotations.filterIsInstance<RestoreProbe>().single()
+        val restoredType = assertNotNull(TypeCompositions.objectShape(restoredHolder.scope.getVar("pair")!!.type))
+        assertNotSame(sourceType, restoredType)
+        assertEquals(sourceType.typeId, restoredType.typeId)
+        val restored = restoredType.templateForRuntime()
+        assertTrue(restored.parent.isEmpty())
+        assertTrue(restored.scope.functions.isEmpty())
+        val restoredOwner = parentTemplate("A", true)
+        val restoredProbe = restoredOwner.annotations.filterIsInstance<RestoreProbe>().single()
         assertNotSame(probe, restoredProbe)
         assertEquals(1, restoredProbe.applications, "Completed declaration annotations must not run again on restore")
-        val x = assertIs<MCInt>(restored.scope.getVar("x"))
+        val x = assertIs<MCInt>(restoredOwner.scope.getVar("x"))
         val y = assertNotNull(restored.scope.getProperty("y"))
-        assertTrue(x.isDataOnly, "Completed inherited field effects must survive embedded metadata")
+        assertTrue(x.isDataOnly, "Completed nominal declaration effects must survive metadata")
         assertSame(parentTemplate("Root", true), x.declaredParentTemplate)
-        assertSame(parentTemplate("B", true), y.declaredParentTemplate)
-        val otherType = assertIs<MCFPPDataTemplateType>(parentTemplate("Other", true).scope.getVar("pair")!!.type)
+        val otherType = assertNotNull(TypeCompositions.objectShape(parentTemplate("Other", true).scope.getVar("pair")!!.type))
         repeat(2) {
-            otherType.tryResolve()
-            restoredType.tryResolve()
-            assertSame(restored, otherType.template)
-            assertSame(restored, Project.findRegisteredAnonymousTemplate(restored.inheritanceIdentity))
-            assertSame(restored, UnionDataTemplate.resolve(listOf(parentTemplate("A", true), parentTemplate("B", true))))
-            assertSame(x, restored.scope.getVar("x"))
+            assertEquals(restoredType.typeId, otherType.typeId)
+            assertEquals(listOf("x", "y"), restored.scope.allVars.map { it.identifier })
+            assertSame(x, restoredOwner.scope.getVar("x"))
             assertSame(y, restored.scope.getProperty("y"))
             assertEquals(1, restoredProbe.applications)
         }
@@ -216,7 +283,7 @@ class IntersectionTemplateCompletionTest {
         """)
         val sourceHolder = parentTemplate("Holder", false)
         val sourceTypes = listOf("ints", "bools").map { name ->
-            assertIs<MCFPPDataTemplateType>(sourceHolder.scope.getVar(name)!!.type)
+            assertNotNull(TypeCompositions.objectShape(sourceHolder.scope.getVar(name)!!.type))
         }
         assertNotEquals(sourceTypes[0].typeId, sourceTypes[1].typeId)
         write(output)
@@ -225,17 +292,17 @@ class IntersectionTemplateCompletionTest {
         val box = assertIs<GenericDataTemplate>(parentTemplate("Box", true))
         val extra = parentTemplate("Extra", true)
         for ((index, name) in listOf("ints", "bools").withIndex()) {
-            val type = assertIs<MCFPPDataTemplateType>(restoredHolder.scope.getVar(name)!!.type)
-            type.tryResolve()
-            assertNotSame(sourceTypes[index].template, type.template)
+            val type = assertNotNull(TypeCompositions.objectShape(restoredHolder.scope.getVar(name)!!.type))
+            assertNotSame(sourceTypes[index], type)
             val argument = if (index == 0) MCFPPBaseType.Int else MCFPPBaseType.Bool
             val specialized = assertNotNull(box.compile(listOf(MCFPPTypeVar(argument))))
-            assertEquals(listOf(specialized.inheritanceIdentity, extra.inheritanceIdentity), type.template.parent.map { it.inheritanceIdentity },
-                "Embedded generic parents must retain their loaded specialization and parent order")
             assertSame(box, specialized.originTemplate)
-            assertSame(type.template, UnionDataTemplate.resolve(listOf(specialized, extra)))
-            assertSame(specialized, type.template.scope.getVar("x")!!.declaredParentTemplate)
-            assertEquals(argument.typeId, type.template.scope.getVar("x")!!.type.typeId)
+            assertSame(specialized, assertNotNull(box.compile(listOf(MCFPPTypeVar(argument)))))
+            assertEquals(sourceTypes[index].typeId, type.typeId)
+            assertEquals(argument.typeId, type.fieldsByName.getValue("x").type.typeId)
+            assertEquals(MCFPPBaseType.Int.typeId, type.fieldsByName.getValue("y").type.typeId)
+            assertEquals(type.typeId, TypeCompositions.objectShape(TypeCompositions.intersection(specialized.getType(), extra.getType()))!!.typeId)
+            assertTrue(type.templateForRuntime().parent.isEmpty())
         }
         assertEquals(0, Project.errorCount)
     }

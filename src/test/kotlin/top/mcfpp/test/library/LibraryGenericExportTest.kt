@@ -20,7 +20,7 @@ class LibraryGenericExportTest {
         namespace parameter.fixture
         data Parent<T> {
             var inherited:T
-            constructor(initial:T){this.inherited=initial}
+            new(initial:T){ return {inherited: initial}; }
         }
         data Child<T,N:int=3>:Parent<T> {
             var token:T
@@ -29,7 +29,7 @@ class LibraryGenericExportTest {
                 get=field
                 set=value
             }
-            constructor(initial:T,count:int=5){this.token=initial}
+            new(initial:T,count:int=5){ return {inherited: initial, token: initial, count: N, inferred: N+1}; }
             func echo(value:T):T{return value}
         }
         func identity<T>(value:T):T{return value}
@@ -65,7 +65,7 @@ class LibraryGenericExportTest {
             val result = LibraryExport.write(selection, output)
             val bytes = Files.readAllBytes(output)
             assertEquals(bytes.size.toLong(), result.bytesWritten)
-            assertEquals(2L, LibraryWire.decode(bytes).formatVersion)
+            assertEquals(LibraryWire.CURRENT_VERSION, LibraryWire.decode(bytes).formatVersion)
             val codec = LibraryModelCodec(listOf(CompoundCodec))
             val model = codec.decode(bytes)
             val declarations = model.declarations.declarations

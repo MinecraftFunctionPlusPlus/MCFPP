@@ -21,7 +21,7 @@ internal object ContextCallbacks {
             if (readonly) throw DeclarationBinding.Failure("Context '$name' does not accept readonly arguments")
             if (arguments.isEmpty()) throw DeclarationBinding.Failure("Context '$name' expects an inline synchronous callback")
             val argument = arguments.last()
-            return argument as? P.InlineLambdaContext ?: (argument as? P.ExpressionContext)?.primary()?.inlineLambda()
+            return top.mcfpp.analysis.TemplateLiteralSupport.unwrapInlineLambda(argument)
                 ?: throw DeclarationBinding.Failure("Context '$name' requires a statically bound inline lambda; runtime function values are unsupported")
         }
         fun operands(): List<P.ExpressionContext> {

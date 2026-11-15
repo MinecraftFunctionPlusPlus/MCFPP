@@ -364,7 +364,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
                     val id = tree.namespaceID()
                     val available = candidates(function, id.Identifier().text, id.namespacePath()?.text)
                     if (available.isEmpty()) declaredType(function, id.Identifier().text, id.namespacePath()?.text)?.let(compounds::include)
-                    available.forEach { candidate ->
+                    available.filterNot { it is top.mcfpp.core.lang.entity.EntityTemplates.SummonFunction }.forEach { candidate ->
                         if (owned(candidate)) enqueue(candidate)
                         else if (candidate !is NativeFunction || !coreNative(candidate)) foreign(candidate)
                     }
@@ -704,6 +704,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
                     is TypeSyntax.Entity -> { optional(value.limit) { c(constant(it)) }; list(value.names) { string(it) } }
                     is TypeSyntax.Union -> ns(value.alternatives)
                     is TypeSyntax.Intersection -> ns(value.components)
+                    is TypeSyntax.Object -> list(value.fields) { string(it.name); n(it.type) }
                     is TypeSyntax.Function -> { ns(value.parameters); n(value.result); u8(value.execution.wireValue); ns(value.contexts) }
                     is TypeSyntax.Void -> Unit
                     is TypeSyntax.Inferred -> n(value.expression)
@@ -747,6 +748,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
         is TypeSyntax.Container -> listOf(node.argument)
         is TypeSyntax.Union -> node.alternatives
         is TypeSyntax.Intersection -> node.components
+        is TypeSyntax.Object -> node.fields.map { it.type }
         is TypeSyntax.Function -> node.contexts + node.parameters + node.result
         is TypeSyntax.Inferred -> listOf(node.expression)
         is Expression.TypeValue -> listOf(node.type)
@@ -767,6 +769,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
         list(value.parent.filterIsInstance<DataTemplate>()) { bytes(TypeTableCodec.keyBytes(keyType(it.inheritanceIdentity))) }
     }.toByteArray().toList())
     private fun keyType(identity: TypeId): KeyType = signatureParameters[identity]
+        ?: compositionKey(identity)
         ?: LibraryBuiltinTypes.protocolKey(identity)?.let { KeyType.Builtin(it) }
         ?: (compounds.types[identity] as? UnionDataTemplate)?.let(::intersectionKey) ?: when (identity) {
         is TypeId.Builtin -> KeyType.Builtin(LibraryBuiltinTypes.protocolKey(identity) ?: unsupported("Unsupported builtin signature ${identity.key}"))
@@ -799,6 +802,28 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
             }
         }
         else -> unsupported("Readonly/dependent/opaque signatures require the complete exporter")
+    }
+    private fun compositionKey(identity: TypeId): KeyType? {
+        if (!TypeCompositions.isCompositionIdentity(identity) || identity == MCFPPNeverType.typeId) return null
+        return KeyType.Dependent(LibraryBinaryWriter().apply {
+            when (identity) {
+                is TypeId.Applied -> {
+                    val constructor = (identity.constructor as TypeId.Builtin).key
+                    string(constructor)
+                    if (constructor == TypeCompositions.OBJECT) list(identity.arguments) { field ->
+                        val arguments = (field as TypeId.Applied).arguments
+                        string((arguments[0] as TypeId.Builtin).key)
+                        bytes(TypeTableCodec.keyBytes(keyType(arguments[1])))
+                        bool(arguments[2] == TypeId.Builtin(TypeCompositions.OPTIONAL))
+                    } else list(identity.arguments) { bytes(TypeTableCodec.keyBytes(keyType(it))) }
+                }
+                is TypeId.Specialized -> {
+                    string(TypeCompositions.LITERAL)
+                    list(identity.arguments) { bytes(compilerConstantKey(it)) }
+                }
+                else -> error("Unsupported composition signature")
+            }
+        }.toByteArray().toList())
     }
     private fun compilerConstantKey(value: CompilerValue): ByteArray = LibraryBinaryWriter().apply {
         fun LibraryBinaryWriter.c(value: CompilerValue) {
@@ -958,6 +983,13 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
             }, type(actual, owner, node), node, null, null))
     }
     override fun name(name: String, namespace: String?, role: NameRole, site: ParserRuleContext): NameUse {
+        if (role == NameRole.TYPE && namespace == null &&
+            site is Parser.TypeBodyContext && site.normalType()?.text == name) {
+            // Reserved primitive syntax keeps its declared type even when the field's
+            // prepared descriptor has been narrowed to a compile-time literal.
+            val key = requireNotNull(LibraryBuiltinTypes.protocolKey(builtin(name).typeId))
+            return NameUse.Lookup(key, null, currentEnvironment, emptyList())
+        }
         if (role == NameRole.VALUE && namespace == null && top.mcfpp.core.lang.context.ContextCallbacks.recognizesGlobal(name))
             return NameUse.Lookup(name, null, currentEnvironment, emptyList())
         if (namespace == null) frames.asReversed().firstNotNullOfOrNull { it.names[name] }?.let { id ->
@@ -1153,14 +1185,17 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
             else if (nativeTypes.containsKey(actual.typeId)) nativeTypes.getValue(actual.typeId).let { internType(LibraryType.Parameter(DeclarationReference.Local(it.owner), ParameterRole.NATIVE_TYPE, it.index.toLong())) }
             else if (actual is UnresolvedType || (syntax != null && syntaxDependsOnReadonly(syntax)))
                 dependentType(owner, declared ?: unsupported("A dependent type requires its source type tree"))
-            else typeIdentity(actual.typeId)
+            else captureStructuralDescriptor(actual, { type(it, owner, null) }, ::typeIdentity) { constant(it, emptyMap()) }
+                ?.let(::internType)?.also { typeIds.putIfAbsent(actual.typeId, it) }
+                ?: typeIdentity(actual.typeId)
         actualTypes[reference] = actual
         return reference
     }
     private fun typeIdentity(identity: TypeId): TypeRef {
         capturedSourceTypes[identity]?.let { return sourceTypeReference(it.syntax, it.owner, it.environment) }
         typeIds[identity]?.let { return it }
-        val record = LibraryBuiltinTypes.protocolKey(identity)?.let { LibraryType.Builtin(it) } ?: when (identity) {
+        val record = captureCompositionIdentity(identity, ::typeIdentity) { constant(it, emptyMap()) }
+            ?: LibraryBuiltinTypes.protocolKey(identity)?.let { LibraryType.Builtin(it) } ?: when (identity) {
             in parameterTypes -> parameterTypes.getValue(identity).let { LibraryType.Parameter(DeclarationReference.Local(it.owner), ParameterRole.READONLY, it.index.toLong()) }
             in nativeTypes -> nativeTypes.getValue(identity).let { LibraryType.Parameter(DeclarationReference.Local(it.owner), ParameterRole.NATIVE_TYPE, it.index.toLong()) }
             is TypeId.Builtin -> LibraryType.Builtin(LibraryBuiltinTypes.protocolKey(identity) ?: unsupported("Unsupported builtin type"))
@@ -1279,6 +1314,8 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
         is TypeSyntax.AnonymousData -> (objectById[type.declaration] as? DataTemplate)?.getType() ?: unsupported("Anonymous type has no owned declaration")
         is TypeSyntax.Vector -> MCFPPVectorType(type.dimensions.toInt())
         is TypeSyntax.Union -> MCFPPUnionType(*type.alternatives.map(::actualType).toTypedArray())
+        is TypeSyntax.Object -> MCFPPObjectType(type.fields.map { ObjectFieldContract(it.name, actualType(it.type)) })
+        is TypeSyntax.Intersection -> TypeCompositions.intersection(*type.components.map(::actualType).toTypedArray())
         is TypeSyntax.Function -> MCFPPFunctionType(type.parameters.map(::actualType), actualType(type.result), contexts = type.contexts.map(::actualType))
         is TypeSyntax.Void -> MCFPPPrivateType.Void
         is TypeSyntax.Inferred -> capturedType(type)
@@ -1314,6 +1351,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
             is TypeSyntax.Entity -> typeIdentity(MCFPPEntityType.NormalSelector.typeId)
             is TypeSyntax.Union -> internType(LibraryType.Union(node.alternatives.map(::type)))
             is TypeSyntax.Intersection -> internType(LibraryType.Intersection(node.components.map(::type), null))
+            is TypeSyntax.Object -> internType(LibraryType.Object(node.fields.map { LibraryObjectField(it.name, type(it.type)) }.sortedWith { a, b -> compareUtf8(a.name, b.name) }))
             is TypeSyntax.AnonymousData -> internType(LibraryType.Declaration(DeclarationReference.Local(node.declaration)))
             is TypeSyntax.Function -> internType(LibraryType.Function(node.execution, node.parameters.map(::type), type(node.result), node.contexts.map(::type)))
             is TypeSyntax.Void -> typeIdentity(MCFPPPrivateType.Void.typeId)

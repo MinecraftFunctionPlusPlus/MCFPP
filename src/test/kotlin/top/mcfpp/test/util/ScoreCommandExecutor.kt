@@ -309,7 +309,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val compareNbt = Regex("execute store success score (\\S+ \\S+) run data modify storage (\\S+) ($nbtPath) set from storage (\\S+) ($nbtPath)")
         val compareNbtValue = Regex("execute store success score (\\S+ \\S+) run data modify storage (\\S+) ($nbtPath) set value (.*)", RegexOption.DOT_MATCHES_ALL)
         val removeNbt = Regex("data remove storage (\\S+) ($nbtPath)")
-        val testNbt = Regex("execute store success score (\\S+ \\S+) if data storage (\\S+) ($nbtPath)")
+        val testNbt = Regex("execute store success score (\\S+ \\S+) (?:run execute )?if data storage (\\S+) ($nbtPath)")
         val conditionalNbt = Regex("execute (if|unless) data storage (\\S+) ($nbtPath) (?:run (.*)|((?:if|unless) (?:score|data|function) .*))")
         val macroCall = Regex("function (\\S+) with storage (\\S+) ($nbtPath)")
         var steps = 0

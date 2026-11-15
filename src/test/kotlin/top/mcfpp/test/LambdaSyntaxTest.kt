@@ -296,8 +296,16 @@ class LambdaSyntaxTest {
             """.trimIndent()
         )
 
-        assertTrue(collect(tree, mcfppParser.InlineLambdaContext::class.java).isEmpty())
-        assertEquals(5, collect(tree, mcfppParser.NbtCompoundContext::class.java).size)
+        // Empty braces share syntax with lambdas; the expected type resolves them later.
+        val emptyBraces = collect(tree, mcfppParser.InlineLambdaContext::class.java)
+        assertEquals(2, emptyBraces.size)
+        emptyBraces.forEach {
+            assertEquals("{}", it.text)
+            assertNull(it.lambdaParameterList())
+            assertTrue(it.lambdaBody().statement().isEmpty())
+            assertNull(it.lambdaBody().lambdaTailExpression())
+        }
+        assertEquals(3, collect(tree, mcfppParser.NbtCompoundContext::class.java).size)
 
         val branch = collect(tree, mcfppParser.IfStatementContext::class.java).single()
         assertEquals("flag", branch.conditionExpression()?.text)

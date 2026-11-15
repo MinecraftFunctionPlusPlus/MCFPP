@@ -111,12 +111,12 @@ class TemplateInitializationTest {
     }
 
     @Test fun implicitAndExplicitInitializersRoundTripInDeclarationOrderAndRunForEveryInstance() {
-        for (constructor in listOf("", "constructor(){}")) withLibrary { output ->
+        for (constructor in listOf("", "new(){ return { z: 4, a: 5 } }")) withLibrary { output ->
             write("""
                 namespace fixture.defaults
                 data Box {
                     var z: int = 4
-                    var a: int = this.z + 1
+                    var a: int = z + 1
                     $constructor
                 }
                 func main(){}
@@ -136,7 +136,7 @@ class TemplateInitializationTest {
             val restored = GlobalScope.getTemplate("fixture.defaults", "Box")!!
             assertNotSame(original, restored)
             assertEquals(listOf("z", "a"), restored.preInit.keys.toList())
-            if (constructor.isEmpty()) assertNull(restored.constructors.single().ast)
+            assertEquals(constructor.isEmpty(), restored.factories.single().isImplicit)
             val machine = execute(main, output)
             assertEquals(4, machine.read(main.scope.getVar("z") as MCInt))
             assertEquals(5, machine.read(main.scope.getVar("a") as MCInt))
@@ -241,13 +241,13 @@ class TemplateInitializationTest {
             namespace fixture.members
             data Box {
                 var value: int
-                constructor(){}
-                constructor(value: int){ this.value = value; }
+                new(){ return { value: 0 }; }
+                new(value: int){ return { value }; }
                 func setValue(value: int){ this.value = value; }
                 func add<T>(amount: int): int { return this.value + amount; }
             }
             data Child : Box {
-                constructor(value: int){ this.value = value; }
+                new(value: int){ return { value }; }
             }
             func main(){}
         """, output)
@@ -269,7 +269,7 @@ class TemplateInitializationTest {
         assertNotSame(original, box)
         val setter = box.scope.functions.getValue("setValue").single()
         assertSame(box, setter.owner)
-        assertSame(box, child.scope.getFunction("setValue", emptyList(), listOf(top.mcfpp.core.lang.MCInt(7))).owner)
+        assertTrue(child.scope.functions["setValue"].isNullOrEmpty())
         val generic = box.scope.functions.getValue("add").single()
         assertSame(box, generic.owner)
         val machine = execute(main, output)

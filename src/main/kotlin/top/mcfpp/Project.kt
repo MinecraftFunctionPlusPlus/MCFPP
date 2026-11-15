@@ -151,6 +151,7 @@ object Project {
     })
 
     internal val templateDeclarationsReady get() = templateDeclarations.templateDeclarationsReady
+    internal val shouldDeferTypeCompositions get() = templateDeclarations.shouldDeferTypeCompositions
 
     internal fun invalidateTemplateInheritanceHeaders() = templateDeclarations.invalidateTemplateInheritanceHeaders()
 
@@ -250,6 +251,7 @@ object Project {
      * 初始化
      */
     fun init() {
+        top.mcfpp.io.FunctionInventory.clearCallGraph()
         closeLibraryImports()
         top.mcfpp.io.PackEntrypoints.reset()
         preparedObjectInitializers.clear()

@@ -24,8 +24,7 @@ import top.mcfpp.model.compound.CompiledGenericDataTemplate
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.Enum
 import top.mcfpp.model.compound.GenericDataTemplate
-import top.mcfpp.model.function.ConstructorPlan
-import top.mcfpp.model.function.DataTemplateConstructor
+import top.mcfpp.model.function.TemplateFactory
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.property.FunctionAccessor
@@ -201,12 +200,12 @@ class DataInheritanceLayoutRestoreTest {
         assertFalse(freshRoot.scope.getProperty("value")!!.isFinal)
     }
 
-    @Test fun localDeclarationsKeepTheirMetadataInitializersAndConstructorPlan() {
+    @Test fun localDeclarationsKeepTheirMetadataInitializersAndFactoryDeclaration() {
         Project.init()
         val root = model("Root").also { field(it) }
         root.preInit["value"] = parser("1").expression()
-        val rootConstructor = DataTemplateConstructor(root, parser("{}").curlBlock())
-        root.addMember(rootConstructor)
+        val rootFactory = TemplateFactory(root, parser("{return{value:1};}").curlBlock())
+        root.addMember(rootFactory)
         val middle = model("Middle", root).also(::complete)
         value(middle).isDataOnly = true
         val saved = middle.completedInheritedFields()
@@ -215,8 +214,8 @@ class DataInheritanceLayoutRestoreTest {
         own.annotations.add(Marker().apply { params.add("local") })
         val initializer = parser("9").expression()
         local.preInit["value"] = initializer
-        val constructor = DataTemplateConstructor(local, parser("{}").curlBlock())
-        local.addMember(constructor)
+        val factory = TemplateFactory(local, parser("{return{value:9};}").curlBlock())
+        local.addMember(factory)
         local.restoreInheritedFields(saved)
         complete(local)
         assertEquals(0, Project.errorCount)
@@ -228,16 +227,11 @@ class DataInheritanceLayoutRestoreTest {
         assertSame(initializer, local.preInit.getValue("value"))
         assertEquals("1", root.preInit.getValue("value").text)
         assertTrue(local.completedInheritedFields().isEmpty())
-        val plan = assertNotNull(ConstructorPlan.build(local).plan)
-        val stages = plan.stages(constructor)
-        assertEquals(2, stages.size)
-        assertSame(root, stages[0].owner)
-        assertSame(rootConstructor, stages[0].constructor)
-        assertSame(local, stages[1].owner)
-        assertSame(constructor, stages[1].constructor)
-        assertNull(rootConstructor.constructedReceiver)
-        assertTrue(rootConstructor.commands.isEmpty())
-        assertTrue(constructor.commands.isEmpty())
+        assertSame(factory, local.scope.functions.getValue("new").single())
+        assertSame(local, factory.owner)
+        assertNull(rootFactory.constructedReceiver)
+        assertTrue(rootFactory.commands.isEmpty())
+        assertTrue(factory.commands.isEmpty())
     }
 
     @Test fun canonicalOriginsAcceptFreshSameBindingsAndRejectDifferentBindingsWithTheSameDisplayName() {
@@ -276,7 +270,7 @@ class DataInheritanceLayoutRestoreTest {
         assertSame(freshBool, value(rejected).declaredParentTemplate)
     }
 
-    @Test fun completedEffectsCannotResolveAmbiguousParentsOrRepairIncompatibleSlots() {
+    @Test fun completedEffectsValidateTheCanonicalMergedOriginAndCannotRepairIncompatibleSlots() {
         Project.init()
         val root = model("Root").also { field(it) }
         val middle = model("Middle", root).also(::complete)
@@ -286,16 +280,16 @@ class DataInheritanceLayoutRestoreTest {
         val ambiguous = model("Ambiguous", root, other)
         ambiguous.restoreInheritedFields(saved)
         val ambiguity = diagnostics { complete(ambiguous) }.joinToString("\n")
-        assertTrue("Ambiguous inherited field 'value'" in ambiguity, ambiguity)
-        assertNull(ambiguous.scope.getVar("value"))
-        assertNull(ambiguous.scope.getProperty("value"))
+        assertTrue("Cannot restore inherited field 'value'" in ambiguity && "origin" in ambiguity, ambiguity)
+        assertEquals(1, ambiguous.scope.allVars.count { it.identifier == "value" })
+        assertNotNull(ambiguous.scope.getProperty("value"))
 
         val incompatible = model("Incompatible").also { field(it, MCFPPBaseType.Bool) }
         val invalid = model("Invalid", root, incompatible)
         val own = field(invalid)
         invalid.restoreInheritedFields(saved)
         val conflict = diagnostics { complete(invalid) }.joinToString("\n")
-        assertTrue("Incompatible inherited field 'value'" in conflict && "typeId" in conflict, conflict)
+        assertTrue("Incompatible inherited field 'value'" in conflict && "never" in conflict, conflict)
         assertSame(own, invalid.scope.getVar("value"))
         assertFalse(value(invalid).isDataOnly)
         assertSame(invalid, own.declaredParentTemplate)

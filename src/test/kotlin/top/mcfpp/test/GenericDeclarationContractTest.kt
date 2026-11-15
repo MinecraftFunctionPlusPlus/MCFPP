@@ -73,7 +73,7 @@ class GenericDeclarationContractTest {
             namespace fixture.companions
             data Box<N: int> {
                 private var value: int
-                constructor(value: int){this.value=value;}
+                new(value: int){ return {value: value}; }
                 func read():int{return this.value;}
                 func companionRead():int{return Box<N>.read();}
             }
@@ -174,6 +174,45 @@ class GenericDeclarationContractTest {
             compile(source)
             assertTrue(Project.errorCount > 0, source)
         }
+    }
+
+    @Test fun conditionalCompanionWritesDoNotProveInitialization() = isolated {
+        val diagnostics = compilerDiagnostics {
+            compile("""
+                object data State {
+                    private var value: int
+                    constructor(){}
+                    func setValue(value: int, ready: bool){ if(ready){ State.value=value; } }
+                    func read():int { return State.value; }
+                }
+                func main(){ State.setValue(3,false); external result=State.read(); }
+            """)
+        }
+        assertTrue(Project.errorCount > 0)
+        assertTrue(diagnostics.any { "uninitialized" in it }, diagnostics.joinToString("\n"))
+    }
+
+    @Test fun shadowedObjectQualifiersDoNotInitializeTheObjectField() = isolated {
+        val diagnostics = compilerDiagnostics {
+            compile("""
+                data Box { var x:int; }
+                object data State {
+                    var x:int
+                    var marker:int
+                    constructor(){}
+                    func initialize(State:Box){ State.x=1; marker=1; }
+                }
+                func main(){
+                    State.initialize({x:0})
+                    external marker=State.marker
+                    external result=State.x
+                }
+            """)
+        }
+        assertTrue(Project.errorCount > 0)
+        val uninitialized = diagnostics.filter { "Cannot read uninitialized variable" in it }
+        assertTrue(uninitialized.isNotEmpty(), diagnostics.joinToString("\n"))
+        assertTrue(uninitialized.all { "Cannot read uninitialized variable 'x'" in it }, diagnostics.joinToString("\n"))
     }
 
     private fun compile(source: String, output: Path? = null) {

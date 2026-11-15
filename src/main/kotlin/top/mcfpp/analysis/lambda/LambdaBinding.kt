@@ -317,7 +317,7 @@ internal object LambdaBinding {
         }
         val tailType = tail?.let {
             expressionType(it, environment, visible)
-                ?: it.primary()?.inlineLambda()?.let { lambda -> lambdaExpressionType(lambda, environment, expectedResult) }
+                ?: directLambda(it)?.let { lambda -> lambdaExpressionType(lambda, environment, expectedResult) }
         }
         val sourceResults = explicitReturns.types + listOfNotNull(tailType)
 
@@ -455,7 +455,7 @@ internal object LambdaBinding {
                 returns.sites += returned
             } else {
                 scanExpressionForIt(expression, visible, environment, expectedResult)?.let { return it }
-                val inline = expression.primary()?.inlineLambda()
+                val inline = directLambda(expression)
                 val type = if (inline != null) lambdaExpressionType(inline, environment, expectedResult)
                     else expressionType(expression, environment, visible)
                 if (type == null) returns.valueResults += diagnostic(returned,
@@ -526,14 +526,10 @@ internal object LambdaBinding {
         environment: Environment,
         expected: MCFPPType? = null
     ): Diagnostic? {
-        if (node is P.InlineLambdaContext) return scanNestedLambda(node, visible, environment, expected)
         // The expected result constrains a lambda used directly as this expression's value.
         // Keep it across the grammar's expression/primary wrappers, without applying it to
         // unrelated lambdas nested inside call arguments or binary operands.
-        if (node is P.ExpressionContext) node.primary()?.inlineLambda()?.let {
-            return scanNestedLambda(it, visible, environment, expected)
-        }
-        if (node is P.PrimaryContext) node.inlineLambda()?.let {
+        directLambda(node)?.let {
             return scanNestedLambda(it, visible, environment, expected)
         }
         if (node is P.VarWithSuffixContext && node.Identifier().text == "it" && !visible.containsKey("it"))
@@ -543,6 +539,15 @@ internal object LambdaBinding {
             scanExpressionForIt(node.getChild(index), visible, environment)?.let { return it }
         }
         return null
+    }
+
+    private fun directLambda(syntax: ParseTree): P.InlineLambdaContext? {
+        var node = syntax
+        while (true) {
+            if (node is P.InlineLambdaContext) return node
+            if (node.childCount != 1) return null
+            node = node.getChild(0)
+        }
     }
 
     private fun scanNestedLambda(

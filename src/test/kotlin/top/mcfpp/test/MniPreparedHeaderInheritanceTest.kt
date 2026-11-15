@@ -173,14 +173,20 @@ class MniPreparedHeaderInheritanceTest {
         }
     }
 
-    @Test fun unrelatedEqualSlotsRequireAnExplicitCompatibleLocalMerge() {
+    @Test fun unrelatedEqualSlotsMergeWithOrWithoutALocalDeclaration() {
         for (parents in listOf("A<T>,B<T>", "B<T>,A<T>")) for (local in listOf("", "var x:int=9;")) {
             val file = file()
             prototype(file, "data A<T>{var x:int;}")
             prototype(file, "data B<T>{var x:int;}")
             val child = prototype(file, "data Child<T>:$parents{$local}")
             val result = work(file).read()
-            if (local.isEmpty()) rejected(result, "Ambiguous inherited field 'x'", "name=A", "name=B")
+            if (local.isEmpty()) {
+                val view = header(result, child)
+                assertEquals(1, view.visibleFields.size)
+                assertEquals(2, view.visibleFields.single().origins.size)
+                assertSame(MCFPPBaseType.Int, view.visibleFields.single().bound.type)
+                unchanged(assertIs<HeaderReadResult.LocalHeaders>(result), child)
+            }
             else {
                 val view = header(result, child)
                 assertEquals(view.owner.identity, view.visibleFields.single().origin)
@@ -197,13 +203,12 @@ class MniPreparedHeaderInheritanceTest {
             prototype(file, "data A<T>{var x:int;}")
             prototype(file, "data B<T>{var x:bool;}")
             prototype(file, "data Child<T>:$parents{$local}")
-            rejected(work(file).read(), "Incompatible inherited field 'x'", "typeId", "name=A", "name=B")
+            rejected(work(file).read(), "Incompatible inherited field 'x'", "never", "\"A\"", "\"B\"")
         }
     }
 
-    @Test fun nullableConstAndStaticConflictsUseTheSharedSlotContract() {
+    @Test fun constAndStaticConflictsUseTheSharedSlotContract() {
         for ((first, second, reason) in listOf(
-            Triple("data A<T>{var x:int;}", "data B<T>{var x:int?;}", "nullable"),
             Triple("data A<T>{var x:int;}", "data B<T>{const x:int=1;}", "const"),
             Triple("data A<T>{var x:int;}", "object data B<T>{var x:int;}", "static")
         )) for (parents in listOf("A<T>,B<T>", "B<T>,A<T>")) {
@@ -212,6 +217,19 @@ class MniPreparedHeaderInheritanceTest {
             prototype(file, second)
             prototype(file, "data Child<T>:$parents{}")
             rejected(work(file).read(), "Incompatible inherited field 'x'", reason)
+        }
+    }
+
+    @Test fun optionalAndRequiredParentsComposeToOneRequiredSlot() {
+        for (parents in listOf("A<T>,B<T>", "B<T>,A<T>")) {
+            val file = file()
+            prototype(file, "data A<T>{var x:int;}")
+            prototype(file, "data B<T>{var x:int?;}")
+            val child = prototype(file, "data Child<T>:$parents{}")
+            val field = header(work(file).read(), child).visibleFields.single()
+            assertFalse(field.contract.nullable)
+            assertSame(MCFPPBaseType.Int, field.bound.type)
+            assertEquals(2, field.origins.size)
         }
     }
 
@@ -225,14 +243,22 @@ class MniPreparedHeaderInheritanceTest {
     @Test fun localAccessMayWidenAndKeepsItsOwnConstInitializerAndProperty() {
         val file = file()
         prototype(file, "data Root<T>{protected const x:int=1;}")
-        val child = prototype(file, "data Child<T>:Root<T>{const x:int=8;}")
+        val child = prototype(file, "data Child<T>:Root<T>{const x:int=1;}")
         val view = header(work(file).read(), child)
         val field = view.visibleFields.single()
         assertEquals(view.owner.identity, field.origin)
         assertEquals(AccessModifier.PUBLIC, field.contract.access)
         assertTrue(field.contract.isConst)
-        assertEquals(CompilerValue.Typed(MCFPPBaseType.Int.typeId, CompilerValue.Integral(8)), field.bound.constant)
+        val literal = assertIs<MCFPPLiteralType>(field.bound.type)
+        assertEquals(CompilerValue.Typed(literal.typeId, CompilerValue.Integral(1)), field.bound.constant)
         assertEquals(PreparedHeaderProperty.DEFAULT, field.property)
+    }
+
+    @Test fun differentConstValuesCannotComposeOneRequiredField() {
+        val file = file()
+        prototype(file, "data Root<T>{const x:int=1;}")
+        prototype(file, "data Child<T>:Root<T>{const x:int=2;}")
+        rejected(work(file).read(), "Incompatible inherited field 'x'", "never")
     }
 
     @Test fun differentBindingsOfTheSameGenericRemainDistinctOrigins() {
@@ -247,8 +273,10 @@ class MniPreparedHeaderInheritanceTest {
             val integer = identity(MCFPPBaseType.Int)
             val boolean = identity(MCFPPBaseType.Bool)
             assertNotEquals(integer, boolean)
-            val origins = if (parents.startsWith("Root<int>")) listOf(integer, boolean) else listOf(boolean, integer)
-            rejected(work(file).read(), "Ambiguous inherited field 'x'", "from ${origins.joinToString()}")
+            val field = assertIs<HeaderReadResult.LocalHeaders>(work(file).read()).headers
+                .single { it.owner.prototype.identifier == "Child" }.visibleFields.single()
+            assertEquals(setOf(integer, boolean), field.origins.map { it.first }.toSet())
+            assertSame(MCFPPBaseType.Int, field.bound.type)
         }
     }
 
@@ -256,7 +284,7 @@ class MniPreparedHeaderInheritanceTest {
         val file = file()
         prototype(file, "data A<T>:B<T>{}")
         prototype(file, "data B<T>:A<T>{}")
-        rejected(work(file, "A<int>").read(), "Cyclic inheritance", "name=A", "name=B")
+        rejected(work(file, "A<int>").read(), "Cyclic inheritance", "\"A\"", "\"B\"")
         val other = file()
         val node = prototype(other, "data Node<T>{var next:Node<T>;}")
         val view = header(work(other, "Node<int>").read(), node)
@@ -389,7 +417,13 @@ class MniPreparedHeaderInheritanceTest {
         val file = file()
         prototype(file, "data Root<T>{var x:T;}").isFinal = true
         prototype(file, "data Child<T>:Root<T>{}")
-        rejected(work(file).read(), "Cannot extend final template", "name=Root")
+        rejected(work(file).read(), "Cannot extend final template", "\"Root\"")
+    }
+
+    private fun Var<*>.asConstantDeclaration(): Var<*> = apply {
+        isConst = true
+        bindDeclaration()
+        ConstantBinding.bindDeclaration(this, assertNotNull(StorageAccess.snapshot(this)), StorageAccess.boundTypes(this))
     }
 
     private fun completedParent(file: MCFPPFile, field: Var<*>, extraParent: CompoundData? = null): DataTemplate {
@@ -417,14 +451,14 @@ class MniPreparedHeaderInheritanceTest {
             CompilerValue.Integral(value),
             "x",
             mapOf(MCFPPBaseType.Bool.typeId to MCFPPBaseType.Bool)
-        ).apply { isConst = true }
+        ).asConstantDeclaration()
         val field = literal(7)
         val parent = completedParent(file, field)
         val child = prototype(file, "data Child<T>:Parent{}")
         val first = assertIs<HeaderReadResult.LocalHeaders>(work(file).read())
         val record = header(first, child)
         val inherited = record.visibleFields.single()
-        val seven = CompilerValue.Typed(MCFPPBaseType.Int.typeId, CompilerValue.Integral(7))
+        val seven = CompilerValue.Typed(field.type.typeId, CompilerValue.Integral(7))
         assertEquals(seven, inherited.bound.constant)
         assertSame(MCFPPBaseType.Bool, inherited.bound.descriptors[MCFPPBaseType.Bool.typeId])
         assertSame(parent, field.declaredParentTemplate)
@@ -433,7 +467,7 @@ class MniPreparedHeaderInheritanceTest {
         val replacement = literal(9).apply { declaredParentTemplate = parent }
         assertTrue(parent.scope.putVar("x", replacement, true))
         assertEquals(
-            CompilerValue.Typed(MCFPPBaseType.Int.typeId, CompilerValue.Integral(9)),
+            CompilerValue.Typed(replacement.type.typeId, CompilerValue.Integral(9)),
             DeclarationLexicalSnapshot.rawValue(replacement)!!.constant
         )
         rejected(work(file).read(), "Published header facts changed")
@@ -451,7 +485,7 @@ class MniPreparedHeaderInheritanceTest {
             CompilerValue.Integral(7),
             "x",
             mapOf(nestedId to nested)
-        ).apply { isConst = true }
+        ).asConstantDeclaration()
         completedParent(file, field)
         val child = prototype(file, "data Child<T>:Parent{}")
         val first = assertIs<HeaderReadResult.LocalHeaders>(work(file).read())
@@ -478,7 +512,7 @@ class MniPreparedHeaderInheritanceTest {
         val nested = MCFPPListType(MCFPPListType(MCFPPBaseType.Int))
         val nestedId = nested.typeId
         val proof = CompilerValue.Sequence(listOf(CompilerValue.Sequence(listOf(CompilerValue.Integral(7)))))
-        val field = StorageAccess.literal(nested, proof, "x").apply { isConst = true }
+        val field = StorageAccess.literal(nested, proof, "x").asConstantDeclaration()
         completedParent(file, field)
         val child = prototype(file, "data Child<T>:Parent{}")
         val record = header(work(file).read(), child)
@@ -494,7 +528,7 @@ class MniPreparedHeaderInheritanceTest {
 
     @Test fun evenUnusedOrdinaryStorageDescriptorsMustHaveMatchingPreparedIdentities() {
         val file = file()
-        val field = StorageAccess.literal(MCFPPBaseType.Int, CompilerValue.Integral(7), "x").apply { isConst = true }
+        val field = StorageAccess.literal(MCFPPBaseType.Int, CompilerValue.Integral(7), "x").asConstantDeclaration()
         completedParent(file, field)
         field.storageBinding!!.data.types[MCFPPBaseType.Bool.typeId] = MCFPPListType(MCFPPBaseType.Int)
         prototype(file, "data Child<T>:Parent{}")
@@ -508,7 +542,7 @@ class MniPreparedHeaderInheritanceTest {
             CompilerValue.Integral(7),
             "x",
             mapOf(MCFPPBaseType.Bool.typeId to MCFPPBaseType.Bool)
-        ).apply { isConst = true }
+        ).asConstantDeclaration()
         val parent = completedParent(file, field)
         val dataObject = DataTemplate.baseDataTemplate
         val builtinObject = MCFPPBaseType.Object.instanceData
@@ -525,8 +559,9 @@ class MniPreparedHeaderInheritanceTest {
         assertEquals(setOf("x", "local"), view.visibleFields.map { it.name }.toSet())
         val inherited = view.visibleFields.single { it.name == "x" }
         assertEquals(parent.inheritanceIdentity, inherited.origin)
-        assertSame(MCFPPBaseType.Int, inherited.bound.type)
-        assertEquals(CompilerValue.Typed(MCFPPBaseType.Int.typeId, CompilerValue.Integral(7)), inherited.bound.constant)
+        assertEquals(field.type.typeId, inherited.bound.type.typeId)
+        assertSame(MCFPPBaseType.Int, assertIs<MCFPPLiteralType>(inherited.bound.type).primitive)
+        assertEquals(CompilerValue.Typed(field.type.typeId, CompilerValue.Integral(7)), inherited.bound.constant)
         assertSame(MCFPPBaseType.Bool, inherited.bound.descriptors[MCFPPBaseType.Bool.typeId])
         assertEquals(view.parents.single().source, inherited.source)
         assertEquals(source.file, inherited.source.file)

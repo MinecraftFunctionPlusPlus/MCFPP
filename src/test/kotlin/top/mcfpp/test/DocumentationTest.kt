@@ -91,7 +91,7 @@ class DocumentationTest {
             data Left: Root {}
             data Right: Root {
                 /// Right method.
-                override func method(): int { return unfinished; }
+                func method(): int { return unfinished; }
             }
             data Diamond: Left, Right {}
             data Reversed: Right, Left {}
@@ -101,8 +101,10 @@ class DocumentationTest {
         assertEquals(2, model.symbols.count { it.name == "read" && it.owner == null })
         assertEquals(2, model.symbols.filter { it.name == "read" && it.owner == null }.map { it.id }.distinct().size)
         assertFalse(model.symbols.any { it.name == "secret" })
-        assertEquals("Read the count.", model.symbols.single { it.owner == "Child" && it.name == "read" }.markdown)
-        assertNotNull(model.symbols.single { it.owner == "Child" && it.name == "read" }.inheritedFrom)
+        assertEquals("Read the count.", model.symbols.single { it.owner == "Base" && it.name == "read" }.markdown)
+        assertFalse(model.symbols.any { it.owner == "Child" && it.name == "read" })
+        assertEquals("Current **count**.", model.symbols.single { it.owner == "Child" && it.name == "value" }.markdown)
+        assertNotNull(model.symbols.single { it.owner == "Child" && it.name == "value" }.inheritedFrom)
         assertEquals("Stored value.", model.symbols.single { it.owner == "Box" && it.name == "value" }.markdown)
         assertEquals("Ready to use.", model.symbols.single { it.name == "ready" }.markdown)
         assertEquals("An integer alias.", model.symbols.single { it.name == "Count" }.markdown)
@@ -111,7 +113,9 @@ class DocumentationTest {
         assertTrue(references.all { it.included })
         assertTrue(model.warnings.isEmpty(), model.warnings.joinToString())
         assertEquals(1, model.symbols.single { it.name == "generic" }.references.size)
-        for (owner in listOf("Diamond", "Reversed")) assertEquals("Right method.", model.symbols.single { it.owner == owner && it.name == "method" }.markdown)
+        assertEquals("Root method.", model.symbols.single { it.owner == "Root" && it.name == "method" }.markdown)
+        assertEquals("Right method.", model.symbols.single { it.owner == "Right" && it.name == "method" }.markdown)
+        for (owner in listOf("Diamond", "Reversed")) assertFalse(model.symbols.any { it.owner == owner && it.name == "method" })
         assertFalse(Files.exists(root.resolve("build/bin.mclib")))
         val again = DocumentationExport.generate(request(root), DocumentationOptions(includePrivate = true))
         assertTrue(again.symbols.any { it.name == "secret" })
@@ -148,18 +152,23 @@ class DocumentationTest {
             data Parent {
                 /// Inherited value.
                 var inheritedValue: int
+                /// Creates a parent value.
+                new(inheritedValue: int) { return { inheritedValue } }
                 /// Parent method.
                 func method(): int { return 1; }
             }
             data Child: Parent {
                 /// Child method.
-                override func method(): int { return 2; }
+                func method(): int { return 2; }
             }
             data GrandChild: Child {}
             func main() {}
         """.trimIndent())
         val sourceModel = DocumentationExport.generate(request(root), DocumentationOptions(includePrivate = true))
         assertEquals("macro", sourceModel.symbols.single { it.name == "macroAnswer" }.kind)
+        val sourceFactory = sourceModel.symbols.single { it.owner == "Parent" && it.kind == "factory" }
+        assertEquals("new", sourceFactory.name)
+        assertEquals("new(inheritedValue: int)", sourceFactory.signature)
         assertEquals(0, DocumentationProvider.calls, "Documentation must not execute native or macro bodies")
         LibraryCompilerSession.openSession(request(root)).use {
             val result = LibraryCompilerSession.compileSession(it)
@@ -176,7 +185,13 @@ class DocumentationTest {
         assertTrue(restored.symbols.single { it.name == "macroAnswer" }.references.single().included)
         assertEquals("Inherited value.", restored.symbols.single { it.owner == "GrandChild" && it.name == "inheritedValue" }.markdown)
         assertNotNull(restored.symbols.single { it.owner == "GrandChild" && it.name == "inheritedValue" }.inheritedFrom)
-        assertEquals("Child method.", restored.symbols.single { it.owner == "GrandChild" && it.name == "method" }.markdown)
+        assertEquals("Child method.", restored.symbols.single { it.owner == "Child" && it.name == "method" }.markdown)
+        assertFalse(restored.symbols.any { it.owner == "GrandChild" && it.name == "method" })
+        val restoredFactory = restored.symbols.single { it.owner == "Parent" && it.kind == "factory" }
+        assertEquals(sourceFactory.markdown, restoredFactory.markdown)
+        assertEquals(sourceFactory.signature, restoredFactory.signature)
+        assertEquals(sourceFactory.parameters, restoredFactory.parameters)
+        assertFalse(restored.symbols.any { it.owner in setOf("Child", "GrandChild") && it.kind == "factory" })
         val oldLibrary = LibraryModel(library.manifest, library.declarations, library.tables, library.syntax, library.annotations,
             library.stateCells, library.runtime, library.resources)
         val old = DocumentationExport.fromLibraries("old", listOf(codec.decode(codec.encode(oldLibrary))))

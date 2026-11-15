@@ -101,7 +101,8 @@ class LibraryStatementTest {
                 field.expression()?.let { templateInitializers[declaration] = capture.expression(it) }
                 frames.last().names[field.Identifier().text] = declaration
             }
-            val body = function?.curlBlock() ?: member.templateConstructorDeclaration()?.curlBlock()
+            val body = function?.curlBlock() ?: member.templateFactoryDeclaration()?.curlBlock()
+                ?: member.templateConstructorDeclaration()?.curlBlock()
                 ?: member.operationOverrideDeclaration()?.curlBlock()
             if (body != null) templateBodies[declaration] = capture.block(body)
             return TemplateMember.Declaration(scope(site), declaration)
@@ -253,7 +254,7 @@ class LibraryStatementTest {
                 public var value: int = 1;
                 @Marker(2)
                 protected override func read(): int { return value; };
-                constructor() { value = 3; };
+                new() { return {value: 3}; };
                 operator +(other: int): int { return value; };
             }
         """.trimIndent()) { templateBody() }

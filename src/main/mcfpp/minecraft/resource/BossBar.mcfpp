@@ -15,15 +15,13 @@ data BossBar: ResourceID{
     var visible: bool { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; }
 
     /// 保存 Boss 栏标识符，并将其用作显示名称。调用 add() 在游戏中创建 Boss 栏。
-    constructor(id: string){
-        this.id = id
-        this.name = id.toText()
+    new(id: string){
+        return { id, name: id.toText() }
     }
 
     /// 保存 Boss 栏标识符和显示名称。调用 add() 在游戏中创建 Boss 栏。
-    constructor(id: string, name: text){
-        this.id = id
-        this.name = name
+    new(id: string, name: text){
+        return { id, name }
     }
 }
 

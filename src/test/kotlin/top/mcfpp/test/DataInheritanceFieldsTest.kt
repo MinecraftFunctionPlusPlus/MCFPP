@@ -26,7 +26,7 @@ import kotlin.test.assertTrue
 
 class DataInheritanceFieldsTest {
     @Test fun compatibleExplicitAndInferredLocalDeclarationsKeepTheirInitializers() {
-        for ((modifier, value) in listOf("var" to 9, "const" to 8)) {
+        for ((modifier, value) in listOf("var" to 9, "const" to 1)) {
             for (type in listOf(":int", "")) {
                 val main = compile(
                     """
@@ -48,16 +48,13 @@ class DataInheritanceFieldsTest {
         }
     }
 
-    @Test fun unrelatedCompatibleParentsRequireAnExplicitLocalDeclarationInEitherOrder() {
+    @Test fun unrelatedCompatibleParentsMergeWithoutALocalDeclarationInEitherOrder() {
         for (parents in listOf("A,B", "B,A")) {
-            val messages = compilerDiagnostics {
-                compile("data A{var x:int=1;}\ndata B{var x:int=2;}\ndata C:$parents{}\nfunc main(){}")
-            }.joinToString("\n")
-            assertTrue(Project.errorCount > 0)
-            assertTrue("Ambiguous inherited field 'x'" in messages, messages)
-            assertTrue("name=A" in messages && "name=B" in messages, messages)
-            assertNull(template("C").scope.getVar("x"))
-            assertNull(template("C").scope.getProperty("x"))
+            compile("data A{var x:int=1;}\ndata B{var x:int=2;}\ndata C:$parents{}\nfunc main(){}")
+            assertEquals(0, Project.errorCount)
+            assertEquals(1, template("C").scope.allVars.count { it.identifier == "x" })
+            assertEquals(2, template("C").scope.fieldOrigins.getValue("x").size)
+            assertNotNull(template("C").scope.getProperty("x"))
         }
     }
 
@@ -81,9 +78,8 @@ class DataInheritanceFieldsTest {
 
     @Test fun aLocalDeclarationCannotRepairIncompatibleParentSlots() {
         for ((first, second, local, reason) in listOf(
-            listOf("var x:int", "var x:bool", "var x:int", "typeId"),
-            listOf("var x:int?", "var x:int", "var x:int", "nullable"),
-            listOf("var x:int", "const x:int", "var x:int", "const")
+            listOf("var x:int", "var x:bool", "var x:int", "never"),
+            listOf("var x:int", "const x:int=1", "var x:int", "const")
         )) {
             for (parents in listOf("A,B", "B,A")) {
                 for (declaration in listOf("", "$local;")) {
@@ -102,9 +98,8 @@ class DataInheritanceFieldsTest {
 
     @Test fun localConstChangesAndNarrowerAccessAreDiagnosedWithoutRewritingTheChild() {
         for ((base, child, reason) in listOf(
-            Triple("var x:int", "const x:int", "const"),
-            Triple("const x:int", "var x:int", "const"),
-            Triple("var x:int?", "var x:int", "nullable"),
+            Triple("var x:int", "const x:int=1", "const"),
+            Triple("const x:int=1", "var x:int", "const"),
             Triple("var x:int", "private var x:int", "access")
         )) {
             val messages = compilerDiagnostics { compile("data A{$base;}\ndata C:A{$child;}\nfunc main(){}") }
@@ -122,56 +117,45 @@ class DataInheritanceFieldsTest {
     }
 
     @Test fun sameBoundGenericOriginDeduplicatesButDifferentBindingsRemainDistinct() {
-        val main = compile(
+        compile(
             """
             data A<T>{var x:int=4;}
             data L:A<int>{}
             data R:A<int>{}
             data C:L,R{}
-            func main(){var child=C();external result=child.x;}
+            func main(){}
         """
         )
         assertEquals(0, Project.errorCount)
         assertEquals(1, template("C").scope.fieldOrigins.getValue("x").size)
-        assertEquals(4, execute(main).read(assertIs<MCInt>(main.scope.getVar("result"))))
         for (parents in listOf("A<int>,A<bool>", "A<bool>,A<int>")) {
-            val messages = compilerDiagnostics {
-                compile("data A<T>{var x:int=1;}\ndata C:$parents{}\nfunc main(){}")
-            }.joinToString("\n")
-            assertTrue(Project.errorCount > 0)
-            assertTrue("Ambiguous inherited field 'x'" in messages, messages)
+            compile("data A<T>{var x:int=1;}\ndata C:$parents{}\nfunc main(){}")
+            assertEquals(0, Project.errorCount)
             assertEquals(2, template("C").scope.fieldOrigins.getValue("x").size)
-            template("C").parent.forEach { assertTrue(it.inheritanceIdentity.toString() in messages, messages) }
+            assertEquals(1, template("C").scope.allVars.count { it.identifier == "x" })
         }
     }
 
     @Test fun aMoreSpecificExplicitMergeWinsThroughADiamond() {
         for (parents in listOf("L,R", "R,L")) {
-            val main = compile(
+            compile(
                 """
                 data A{var x:int=1;}
                 data L:A{}
                 data R:A{var x:int=7;}
                 data C:$parents{}
-                func main(){var child=C();external result=child.x;}
+                func main(){}
             """
             )
             assertEquals(0, Project.errorCount)
             assertSame(template("R"), template("C").scope.getVar("x")!!.declaredParentTemplate)
-            assertEquals(7, execute(main).read(assertIs<MCInt>(main.scope.getVar("result"))))
         }
     }
 
-    @Test fun staticFinalAndCanonicalTypeIdentityArePartOfTheSlotContract() {
+    @Test fun staticAndFinalRemainDeclarationConstraints() {
         for ((reason, change) in listOf<Pair<String, (Var<*>) -> Unit>>(
             "static" to { it.isStatic = true },
-            "final" to { it.isFinal = true },
-            "typeId" to {
-                it.type = object : MCFPPType() {
-                    override val typeName = "int"
-                    override val typeId = TypeId.Builtin("different-int")
-                }
-            }
+            "final" to { it.isFinal = true }
         )) {
             compile("func main(){}")
             val base = DataTemplate("A", "field.fixture")

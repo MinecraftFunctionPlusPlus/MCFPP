@@ -48,15 +48,15 @@ class UnifiedValueContractTest {
     }
 
     @Test
-    fun constFirstAssignmentAndMutableContentsWorkAcrossLibraryReloads() = isolated { output ->
+    fun closedConstantsAndMutableCopiesWorkAcrossLibraryReloads() = isolated { output ->
         val body = """
-            const answer: int
+            const answer: int = 4
             var marker=0
             if(flag){marker=1;} else {marker=2;}
-            answer=4
-            const values: list<int> = [1]
+            const initial: list<int> = [1]
+            var values=initial
             values[0]=answer
-            const shared=values as list<int>
+            var shared=values as list<int>
             shared[0]=answer
             return values[0]+marker
         """.trimIndent()
@@ -160,7 +160,10 @@ class UnifiedValueContractTest {
         val declarations = """
             namespace fixture.formal_values
             data Base {var position: pos3=1 0 0;}
-            data Child:Base {var marker: int=2;}
+            data Child:Base {
+                var marker: int=2;
+                new(){return {position: 1 0 0, marker: 2};}
+            }
             func choose(value: Base):int {return 1;}
             func choose(value: Child):int {return 2;}
             func inspect(value: Base,count: int):int {return choose(value)*10+count;}
@@ -209,7 +212,7 @@ class UnifiedValueContractTest {
             func natural(start: int,finish: int):int {
                 var bounds=start .. finish
                 var sum=0
-                for(index:bounds){const term=index;sum+=term;bounds=1 .. 1;}
+                for(index:bounds){var term=index;sum+=term;bounds=1 .. 1;}
                 return sum
             }
             func early(start: int,finish: int):int {
@@ -268,11 +271,11 @@ class UnifiedValueContractTest {
         val payload = """
             data Payload {
                 var nested: dict<any>
-                constructor(value: float){
+                new(value: float){
                     var nested: dict<any> = {}
                     nested["value"]=value
                     nested["values"]=[value]
-                    this.nested=nested
+                    return {nested: nested}
                 }
             }
         """.trimIndent()

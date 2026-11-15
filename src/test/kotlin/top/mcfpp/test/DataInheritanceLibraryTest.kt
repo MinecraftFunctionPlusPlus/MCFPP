@@ -36,18 +36,25 @@ class DataInheritanceLibraryTest {
                     "data A{var x:int=1;}\ndata B{var x:bool=true;}",
                     "data Child:$parents{$local}\nfunc main(){}",
                     "Incompatible inherited field 'x'",
-                    "typeId",
+                    "required field type is never",
                     "name=A",
                     "name=B"
                 )
             }
-            rejectsInBoth(
-                "data A{var x:int=1;}\ndata B{var x:int=2;}",
-                "data Child:$parents{}\nfunc main(){}",
-                "Ambiguous inherited field 'x'",
-                "name=A",
-                "name=B"
-            )
+        }
+    }
+
+    @Test fun compatibleParentFieldsMergeIntoOneSlotInSourceAndFreshLibrariesInEitherOrder() {
+        for (parents in listOf("A,B", "B,A")) {
+            inBoth(
+                "data A{var x:int=1;}\ndata B{var x:int=2;}\ndata Child:$parents{new(){return {x:3}}}",
+                "func main(){var child=Child();external result=child.x;}"
+            ) { main, loaded ->
+                val child = template("Child", loaded)
+                assertEquals(1, child.scope.allVars.count { it.identifier == "x" })
+                assertEquals(2, child.scope.fieldOrigins.getValue("x").size)
+                assertEquals(3, execute(main).read(assertIs<MCInt>(main.scope.getVar("result"))))
+            }
         }
     }
 
@@ -70,48 +77,49 @@ class DataInheritanceLibraryTest {
         }
     }
 
-    @Test fun diamondMethodsChooseTheMoreSpecificOwnerAndConstructEveryAncestorOnce() {
+    @Test fun diamondFactoriesKeepMethodsLocalAndInvokeOnlyTheSelectedFactory() {
         for (parents in listOf("Left,Right", "Right,Left")) {
             inBoth(
                 """
-                data Root{var x:int=1;constructor(){this.x=7;
+                data Root{var x:int=1;new(){
                     /say root
+                    return {x:7}
                 }func read():int{return 1;}}
-                data Left:Root{constructor(){
+                data Left:Root{new(){
                     /say left
+                    return {x:7}
                 }}
-                data Right:Root{constructor(){
+                data Right:Root{new(){
                     /say right
-                }override func read():int{return 2;}}
-                data Child:$parents{var x:int=9;constructor(){
+                    return {x:8}
+                }func read():int{return 2;}}
+                data Child:$parents{var x:int=9;new(){
                     /say child
+                    return {x:9}
                 }}
             """,
-                "func main(){var child=Child();external result=child.x*10+child.read();}"
+                "func main(){var child=Child();external result=child.x;}"
             ) { main, loaded ->
-                val selected = template("Child", loaded).scope.getFunctionCandidates("read").single()
-                assertSame(template("Right", loaded), selected.owner)
+                assertFalse(template("Child", loaded).scope.functions.containsKey("read"))
+                assertSame(template("Right", loaded), template("Right", loaded).scope.functions.getValue("read").single().owner)
                 val machine = execute(main)
-                assertEquals(92, machine.read(assertIs<MCInt>(main.scope.getVar("result"))))
-                assertEquals(
-                    if (parents.startsWith("Left")) listOf("root", "left", "right", "child")
-                    else listOf("root", "right", "left", "child"),
-                    machine.messages
-                )
+                assertEquals(9, machine.read(assertIs<MCInt>(main.scope.getVar("result"))))
+                assertEquals(listOf("child"), machine.messages)
             }
         }
     }
 
-    @Test fun genericDiamondsDeduplicateCanonicalFieldOriginsAndConstructorStages() {
+    @Test fun genericDiamondsDeduplicateCanonicalFieldsAndUseExplicitParentFactoryCalls() {
         for (parents in listOf("Left,Right", "Right,Left")) {
             inBoth(
                 """
-                data Root<T>{var x:int=1;constructor(){this.x=7;
+                data Root<T>{var x:int=1;new(){
                     /say root
+                    return {x:7}
                 }}
                 data Left:Root<int>{}
                 data Right:Root<int>{}
-                data Child:$parents{}
+                data Child:$parents{new(){return Root<int>()}}
             """,
                 "func main(){var child=Child();external result=child.x;}"
             ) { main, loaded ->
@@ -128,20 +136,19 @@ class DataInheritanceLibraryTest {
         }
     }
 
-    @Test fun differentGenericBindingsKeepDistinctSameNamedFieldOrigins() {
+    @Test fun compatibleGenericBindingsMergeFieldsAndKeepTheirDistinctOrigins() {
         for (parents in listOf("Root<int>,Root<bool>", "Root<bool>,Root<int>")) {
-            rejectsInBoth(
-                "data Root<T>{var x:int=1;}",
-                "data Child:$parents{}\nfunc main(){}",
-                "Ambiguous inherited field 'x'",
-                "name=Root",
-                "Specialized"
-            ) { loaded ->
-                val child = consumerTemplate("Child", loaded)
+            inBoth(
+                "data Root<T>{var x:int=1;}\ndata Child:$parents{new(){return {x:6}}}",
+                "func main(){var child=Child();external result=child.x;}"
+            ) { main, loaded ->
+                val child = template("Child", loaded)
+                assertEquals(1, child.scope.allVars.count { it.identifier == "x" })
                 assertEquals(2, child.scope.fieldOrigins.getValue("x").size)
                 val bindings = child.parent.filterIsInstance<CompiledGenericDataTemplate>()
                 assertEquals(2, bindings.map { it.inheritanceIdentity }.distinct().size)
                 bindings.forEach { assertSame(template("Root", loaded), it.originTemplate) }
+                assertEquals(6, execute(main).read(assertIs<MCInt>(main.scope.getVar("result"))))
             }
         }
     }
@@ -149,8 +156,8 @@ class DataInheritanceLibraryTest {
     @Test fun localConstAnnotationsStayIsolatedAndReachTheActualInstanceFields() {
         inBoth(
             """
-            data Parent{const x:int=1;var observed:int=0;constructor(){this.observed=this.x;}}
-            data Child:Parent{@DataOnly const x:int=8;}
+            data Parent{const x:int=1;var observed:int=0;new(){return {x:1,observed:1}}}
+            data Child:Parent{@DataOnly const x:int=1;new(){return {x:1,observed:1}}}
             data Sibling:Parent{}
         """,
             "func main(){var child=Child();external result=child.x*10+child.observed;}"
@@ -173,13 +180,18 @@ class DataInheritanceLibraryTest {
             val member = instance.instanceField.getVar("x")!!
             assertTrue(member.isConst)
             assertTrue(assertIs<OnScoreboard>(member).isDataOnly)
-            assertEquals(81, execute(main).read(assertIs<MCInt>(main.scope.getVar("result"))))
+            assertEquals(11, execute(main).read(assertIs<MCInt>(main.scope.getVar("result"))))
         }
     }
 
     @Test fun restoredConstAndAccessContractsRejectIllegalInstanceOperations() {
-        val roots = "data Root{const x:int=1;protected var secret:int=2;}\ndata Child:Root{}"
-        rejectsInBoth(roots, "func main(){var child=Child();child.x=4;}", "constant")
+        val roots = "data Root{const x:int=1;protected var secret:int=2;}\ndata Child:Root{new(){return {x:1,secret:2}}}"
+        rejectsInBoth(
+            roots,
+            "func main(){var child=Child();child.x=child.x;}",
+            "Field 'x' cannot be written",
+            "no setter"
+        )
         rejectsInBoth(roots, "func main(){var child=Child();external result=child.secret;}", "Cannot access")
         rejectsInBoth(
             "data Root{var x:int=1;}",
@@ -191,7 +203,7 @@ class DataInheritanceLibraryTest {
         )
     }
 
-    @Test fun returnAccessAndAbstractContractsHaveTheSameSourceAndFreshLibraryDiagnostics() {
+    @Test fun overridesAreRejectedAndAbstractReceiversKeepOnlyTheirOwnConstructionRestriction() {
         val roots = """
             data Root{func read():int{return 1;}}
             abstract data Required{abstract func needed():int;}
@@ -199,38 +211,39 @@ class DataInheritanceLibraryTest {
         rejectsInBoth(
             roots,
             "data Child:Root{override func read():bool{return true;}}\nfunc main(){}",
-            "Incompatible override 'read'",
-            "return type",
-            "fixture.inheritance:Root"
+            "Function 'read'",
+            "cannot override",
+            "receiver functions"
         )
         rejectsInBoth(
             roots,
             "data Child:Root{private override func read():int{return 2;}}\nfunc main(){}",
-            "Incompatible override 'read'",
-            "access",
-            "fixture.inheritance:Root"
+            "Function 'read'",
+            "cannot override",
+            "receiver functions"
         )
-        rejectsInBoth(
-            roots,
-            "data Child:Required{}\nfunc main(){}",
-            "Abstract function 'needed' is not implemented",
-            "fixture.inheritance:Required"
-        )
-        // Source calls are rejected by constructor inference before a receiver is initialized.
+        inBoth("$roots\ndata Child:Required{}", "func main(){var child=Child();}") { main, loaded ->
+            val child = template("Child", loaded)
+            assertFalse(child.isAbstract)
+            assertFalse(child.scope.functions.containsKey("needed"))
+            assertTrue(template("Required", loaded).scope.functions.getValue("needed").single().isAbstract)
+            assertSame(child, assertIs<DataTemplateObject>(main.scope.getVar("child")).templateType)
+            assertEquals(0, execute(main).stackDepth)
+        }
         rejectsInBoth(
             roots,
             "func main(){var value=Required();}",
-            "Cannot bind constructor 'Required' to its declared argument types"
+            "Cannot bind factory 'Required.new' to its declared argument types"
         ) { loaded ->
             assertTrue(template("Required", loaded).isAbstract)
             val entry = main(loaded)
             assertTrue(entry.scope.getVar("value")?.isError != false)
-            assertTrue(entry.commands.analyzeAll().none { "_init_" in it })
+            assertTrue(entry.commands.analyzeAll().none { "required/new" in it })
             assertEquals(0, execute(entry).stackDepth)
         }
     }
 
-    @Test fun legalCovariantReturnsWidenedAccessAndConcreteObligationsSurviveRoundTrip() {
+    @Test fun independentChildReceiverFunctionsPreserveTheirOwnAccessAndReturnTypesThroughRoundTrip() {
         inBoth(
             """
             data Result{}
@@ -242,9 +255,10 @@ class DataInheritanceLibraryTest {
                 func make():Result{return Result();}
             }
             data Child:Root{
-                override func needed():int{return this.x;}
-                override func read():int{return this.x;}
-                override func make():Specific{return Specific();}
+                new(){return {x:5}}
+                func needed():int{return this.x;}
+                func read():int{return this.x;}
+                func make():Specific{return Specific();}
             }
         """,
             "func main(){var child=Child();external result=child.needed()+child.read();var made=child.make();}"
@@ -256,6 +270,7 @@ class DataInheritanceLibraryTest {
             assertEquals(AccessModifier.PROTECTED, root.scope.functions.getValue("read").single().accessModifier)
             assertEquals(AccessModifier.PUBLIC, child.scope.functions.getValue("read").single().accessModifier)
             assertFalse(child.scope.functions.getValue("needed").single().isAbstract)
+            assertTrue(child.scope.functions.values.flatten().none { it.isOverride })
             assertSame(
                 template("Specific", loaded),
                 assertIs<MCFPPDataTemplateType>(
@@ -354,9 +369,6 @@ class DataInheritanceLibraryTest {
     }
 
     private fun template(name: String, loaded: Boolean): DataTemplate = (if (loaded) GlobalScope.libNamespaces else GlobalScope.localNamespaces).getValue(namespace).scope.getTemplate(name)!!
-
-    private fun consumerTemplate(name: String, loaded: Boolean): DataTemplate = GlobalScope.localNamespaces
-        .getValue(if (loaded) "default.test" else namespace).scope.getTemplate(name)!!
 
     private fun main(loaded: Boolean): Function = GlobalScope.localNamespaces
         .getValue(if (loaded) "default.test" else namespace).scope.functions.getValue("main").single()

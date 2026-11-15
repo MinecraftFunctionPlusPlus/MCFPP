@@ -191,6 +191,7 @@ internal class DeclarationStateJournal private constructor(
             GenericFunction::class.java, ExtensionFunction::class.java, GenericExtensionFunction::class.java,
             InlineFunction::class.java, InternalFunction::class.java, NoStackFunction::class.java, MCFunction::class.java,
             DataTemplateConstructor::class.java, TypeDataTemplateConstructor::class.java, UnknownFunction::class.java,
+            top.mcfpp.model.function.TemplateFactory::class.java,
             UnresolvedFunction::class.java, UnresolvedNativeFunction::class.java
         )
         private val variableClasses = setOf<Class<*>>(
@@ -216,6 +217,7 @@ internal class DeclarationStateJournal private constructor(
             MCFPPUUIDType::class.java, top.mcfpp.core.lang.entity.DisplayProperties.ViewType::class.java,
             MCFPPReferenceType::class.java, MCFPPScoreRefType::class.java, MCFPPNBTRefType::class.java,
             MCFPPType::class.java, MCFPPConcreteType::class.java, MCFPPFunctionType::class.java,
+            MCFPPObjectType::class.java, MCFPPLiteralType::class.java, MCFPPIntersectionType::class.java, MCFPPNeverType::class.java,
             MCFPPGenericParamType::class.java, UnresolvedType::class.java, MCFPPTypeAliasType::class.java,
             MCFPPNotCompiledGenericType::class.java, MCFPPDataTemplateType::class.java, MCFPPTypeDataTemplateType::class.java,
             MCFPPObjectDataTemplateType::class.java, MCFPPEnumType::class.java,
@@ -535,9 +537,12 @@ internal class DeclarationStateJournal private constructor(
         }
 
         private fun declaration(value: CompoundData) {
-            check(value.javaClass in declarations || InheritedPropertyOwnerInfo.isOwnedReference(value) || SelectorVar.isOwnedDeclaration(value)) {
+            val structuralOwner = MCFPPObjectType.runtimeTemplateOwner(value)
+            check(value.javaClass in declarations || structuralOwner != null ||
+                InheritedPropertyOwnerInfo.isOwnedReference(value) || SelectorVar.isOwnedDeclaration(value)) {
                 "Declaration journal cannot capture declaration ${value.javaClass.name}"
             }
+            enqueue(structuralOwner)
             enqueue(InheritedPropertyOwnerInfo.ownedReferenceIdentity(value))
             val name = value.identifier
             val namespace = value.namespace
@@ -631,6 +636,19 @@ internal class DeclarationStateJournal private constructor(
             restores.add { value.parentType = parents }
             list(parents, Role.TYPES)
             if (value is MCFPPTypeWithGeneric) list(value.generic, Role.TYPES)
+            // The contracts own immutable collections; their nested type descriptors can
+            // still contain mutable generic bindings and must join this savepoint.
+            when (value) {
+                is MCFPPObjectType -> {
+                    enqueue(value.rawRuntimeTemplate())
+                    value.fields.forEach { field ->
+                        enqueue(field.type)
+                        field.origins.forEach(::enqueue)
+                    }
+                }
+                is MCFPPLiteralType -> { enqueue(value.primitive); enqueue(value.value) }
+                is MCFPPIntersectionType -> value.components.forEach(::enqueue)
+            }
             when (value) {
                 is MCFPPDataTemplateType -> {
                     val slot = value.checkpointPrivateState()

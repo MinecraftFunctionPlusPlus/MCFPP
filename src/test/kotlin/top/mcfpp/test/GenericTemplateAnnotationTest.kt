@@ -92,7 +92,7 @@ class GenericTemplateAnnotationTest {
         source("""
             @HeaderProbe
             data Parent{@BodyProbe var value:int=3;}
-            data Child:Parent{}
+            data Child:Parent{new(){return {value:3};}}
             func main(){var value=Child();}
         """)
         val parent = local("Parent")

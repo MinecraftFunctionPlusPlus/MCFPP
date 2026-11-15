@@ -29,7 +29,6 @@ import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
 import top.mcfpp.type.MCFPPBaseType
-import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -65,8 +64,8 @@ class DataInheritanceMethodEntryTest {
                 """
                 data A {func f():int{return 1;}}
                 data L:A {}
-                data R:A {override func f():int{return 2;}}
-                data C:$parents {}
+                data R:A {var marker:int;func f():int{return 2;}}
+                data C:$parents {new(){return{marker:1};}}
                 func main(){var c=C();external result=c.f();}
             """
             )
@@ -95,10 +94,8 @@ class DataInheritanceMethodEntryTest {
                 )
                 assertTrue(Project.errorCount > 0, "The actual source call must diagnose ambiguity")
                 assertNoParentCall(main, template("C"))
-                val receiver = if (parameters.first == parameters.second) {
-                    assertRejectedConstruction(main, template("C"))
-                    DataTemplateObject(template("C"), "model_receiver")
-                } else assertIs<DataTemplateObject>(main.scope.getVar("c"))
+                val receiver = assertIs<DataTemplateObject>(main.scope.getVar("c"))
+                assertFalse(receiver.isError, "Ambiguous receiver functions do not invalidate a factory result")
                 assertAmbiguousInvocation(receiver, values, "default.test:A", "default.test:B")
                 assertAmbiguousInvocation(primitive(template("C")), values, "default.test:A", "default.test:B")
                 execute(main)
@@ -120,7 +117,7 @@ class DataInheritanceMethodEntryTest {
             assertEquals(2, child.scope.getFunctionCandidates("f").size)
             assertFalse(child.parent[0].inheritanceIdentity == child.parent[1].inheritanceIdentity)
             assertNoParentCall(main, child)
-            assertRejectedConstruction(main, child)
+            assertFalse(assertIs<DataTemplateObject>(main.scope.getVar("c")).isError)
             val origins = child.parent.map { it.inheritanceIdentity.toString() }.toTypedArray()
             assertAmbiguousInvocation(DataTemplateObject(child, "model_receiver"), emptyList(), *origins)
             assertAmbiguousInvocation(primitive(child), emptyList(), *origins)
@@ -266,11 +263,6 @@ class DataInheritanceMethodEntryTest {
         return Invocation(entry, selected, result)
     }
 
-    private fun assertRejectedConstruction(entry: Function, owner: DataTemplate) {
-        assertTrue(entry.scope.getVar("c")?.isError != false)
-        assertTrue(entry.commands.analyzeAll().none { "function ${owner.namespaceID.toString().lowercase()}/_init_" in it })
-    }
-
     private fun expression(text: String): mcfppParser.ExpressionContext {
         val parser = mcfppParser(CommonTokenStream(mcfppLexer(CharStreams.fromString("func main(){ $text; }"))))
         val tree = parser.compilationUnit()
@@ -305,13 +297,9 @@ class DataInheritanceMethodEntryTest {
         }
     }
 
-    /** Keep a real primitive Var's storage type and give only this fixture its member graph. */
+    /** Exercise the ordinary Var entry with the same semantic receiver contract as the object entry. */
     private fun primitive(owner: CompoundData): MCInt = MCInt(0).apply {
-        type = object : MCFPPType() {
-            override val typeId = MCFPPBaseType.Int.typeId
-            override val typeName = MCFPPBaseType.Int.typeName
-            override val instanceData = owner
-        }
+        type = owner.getType()
     }
 
     private fun template(name: String) = GlobalScope.localNamespaces.getValue("default.test").scope.template.getValue(name)

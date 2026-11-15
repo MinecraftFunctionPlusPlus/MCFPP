@@ -64,6 +64,7 @@ private class DeclarationSyntaxToken private constructor(
                 is ByteArray -> append((data[index].toInt() and 255).toChar())
                 is CharArray -> append(data[index])
                 is IntArray -> appendCodePoint(data[index])
+                is StringBuilder -> append(data[index])
             }
         }
     }
@@ -80,6 +81,15 @@ private class DeclarationSyntaxToken private constructor(
             }
             error("Missing syntax backing slot '$name'")
         }
+        fun projectionInput(value: Any): Pair<String, StringBuilder> {
+            check(value.javaClass === top.mcfpp.library.compiler.ProjectionSource::class.java) {
+                "Unsupported declaration projection source"
+            }
+            val name = slot(value, "label") as? String ?: error("Invalid projection source name")
+            val buffer = slot(value, "buffer")
+            check(buffer?.javaClass === StringBuilder::class.java) { "Invalid projection source buffer" }
+            return name to (buffer as StringBuilder)
+        }
         fun read(value: org.antlr.v4.runtime.Token?): DeclarationSyntaxToken {
             check(value?.javaClass === org.antlr.v4.runtime.CommonToken::class.java) { "Unsupported syntax token" }
             val token = value as org.antlr.v4.runtime.CommonToken
@@ -87,14 +97,24 @@ private class DeclarationSyntaxToken private constructor(
             check(source?.javaClass === org.antlr.v4.runtime.misc.Pair::class.java) { "Unsupported token source pair" }
             val pair = source as org.antlr.v4.runtime.misc.Pair<*, *>
             val lexer = pair.a
-            check(lexer == null || lexer.javaClass === top.mcfpp.antlr.mcfppLexer::class.java) { "Unsupported declaration token source" }
             val stream = pair.b
+            val projected = lexer?.javaClass === top.mcfpp.library.compiler.ProjectionSource::class.java
+            check(lexer == null || lexer.javaClass === top.mcfpp.antlr.mcfppLexer::class.java || projected) {
+                "Unsupported declaration token source"
+            }
             // Lexer.getSourceName() reads _input, which need not equal the token's source pair.
-            check(lexer == null || slot(lexer, "_input") === stream) { "Mismatched declaration lexer input" }
+            check(lexer == null || if (projected) lexer === stream else slot(lexer, "_input") === stream) {
+                "Mismatched declaration lexer input"
+            }
             var name = "<declaration>"
             var buffer: Any? = null
             var size = 0
-            if (stream != null) {
+            if (projected) {
+                val input = projectionInput(requireNotNull(stream))
+                name = input.first
+                buffer = input.second
+                size = input.second.length
+            } else if (stream != null) {
                 val shape = stream.javaClass
                 val slotName = when (shape) {
                     streamClass("CodePoint8BitCharStream") -> "byteArray"
@@ -228,6 +248,9 @@ internal class DeclarationLexicalSnapshot private constructor(
         }
 
         private fun rawState(type: MCFPPType): State = when (type.javaClass) {
+            MCFPPObjectType::class.java -> State(children = (type as MCFPPObjectType).fields.map { it.type })
+            MCFPPLiteralType::class.java -> State(children = listOf((type as MCFPPLiteralType).primitive))
+            MCFPPIntersectionType::class.java -> State(children = (type as MCFPPIntersectionType).components)
             MCFPPListType::class.java, MCFPPImmutableListType::class.java, MCFPPCompoundType::class.java,
             MCFPPDictType::class.java, MCFPPMapType::class.java ->
                 State(children = ArrayList((type as MCFPPTypeWithGeneric).generic))
@@ -409,6 +432,9 @@ internal class DeclarationLexicalSnapshot private constructor(
             fun reference(type: MCFPPType) {
                 if (!visitedTypes.add(type)) return
                 when (type.javaClass) {
+                    MCFPPObjectType::class.java -> (type as MCFPPObjectType).fields.forEach { reference(it.type) }
+                    MCFPPLiteralType::class.java -> reference((type as MCFPPLiteralType).primitive)
+                    MCFPPIntersectionType::class.java -> (type as MCFPPIntersectionType).components.forEach(::reference)
                     MCFPPDataTemplateType::class.java, MCFPPObjectDataTemplateType::class.java,
                     MCFPPGenericDataTemplateType::class.java, MCFPPGenericObjectDataTemplateType::class.java -> {
                         val target = (type as MCFPPDataTemplateType).checkpointPrivateState().elements.single()
@@ -769,6 +795,9 @@ internal class DeclarationDomainStamp private constructor(
             is RawPreparationFact -> value.also(::follow)
             is ParserRuleContext -> syntax(value)
             is Class<*>, is java.lang.reflect.Method, is kotlin.reflect.KClass<*> -> RawPreparationFact.identity(value)
+            // These exact final adapters have no state or descendants. The owning property
+            // retains their identities, so replacing an adapter still invalidates the stamp.
+            is top.mcfpp.model.property.SimpleAccessor, is top.mcfpp.model.property.SimpleMutator -> RawPreparationFact.identity(value)
             else -> ref(value)
         }
         private fun follow(value: RawPreparationFact) {
@@ -817,7 +846,7 @@ internal class DeclarationDomainStamp private constructor(
         private fun required(owner: Any, vararg names: String) = slots(owner, names, required = true)
         private fun slot(owner: Any, name: String): Any? {
             val field = backingShapes.get(owner.javaClass).slots.firstOrNull { it.field.name == name }?.field
-                ?: fail("Missing required declaration backing slot '$name'")
+                ?: fail("Missing required declaration backing slot '$name' in ${owner.javaClass.name}")
             check(field.trySetAccessible()) { "Cannot read declaration backing slot '$name'" }
             return field.get(owner)
         }
@@ -897,6 +926,9 @@ internal class DeclarationDomainStamp private constructor(
             return RawPreparationFact.unordered(value.entries.map { RawPreparationFact.row(raw(it.key), raw(it.value)) })
         }
         private fun node(value: Any): RawPreparationFact = when (value) {
+            is top.mcfpp.library.compiler.ProjectionSource -> DeclarationSyntaxToken.projectionInput(value).let { (name, text) ->
+                RawPreparationFact.row(raw(name), raw(text.toString()))
+            }
             is ByteArray -> RawPreparationFact.buffer(value)
             is CharArray -> RawPreparationFact.buffer(value)
             is IntArray -> RawPreparationFact.buffer(value)
@@ -1037,7 +1069,8 @@ internal class DeclarationDomainStamp private constructor(
                 )
             }
             is Function -> {
-                supported(value, "top.mcfpp.model.function", functionShapes)
+                if (value.javaClass !== top.mcfpp.core.lang.entity.EntityTemplates.SummonFunction::class.java)
+                    supported(value, "top.mcfpp.model.function", functionShapes)
                 formals(value, "normalParams")
                 if (value is Generic<*> || value is NativeFunction) formals(value, "readOnlyParams")
                 if (value is NativeFunction) required(value, "javaMethod", "javaMethodName", "caller", "returnsConstWhenArgsConst")
@@ -1048,9 +1081,11 @@ internal class DeclarationDomainStamp private constructor(
                     ),
                     fields(
                         value, "readOnlyParams",
-                        "accessModifier", "isStatic", "isFinal", "isAbstract", "isOverride", "annotations", "runtimeEffect", "scope",
+                        "accessModifier", "isStatic", "receiverless", "isFinal", "isAbstract", "isOverride", "annotations", "runtimeEffect", "scope",
                         "declarationFile", "declarationEnvironment", "javaMethod", "javaMethodName", "caller", "returnsConstWhenArgsConst"
                     ),
+                    if (value is top.mcfpp.model.function.TemplateFactory) required(value, "template", "isImplicit")
+                        else RawPreparationFact.scalar(null),
                     RawPreparationFact.row(
                         RawPreparationFact.scalar("top.mcfpp.model.function.Function.ownerType"),
                         raw(value.declarationOwnerTypeState())
@@ -1110,11 +1145,30 @@ internal class DeclarationDomainStamp private constructor(
                     )
                 }
             }
+            is MCFPPObjectType -> {
+                types.add(value)
+                RawPreparationFact.row(required(value, "parentType"), RawPreparationFact.sequence(value.fields.map { field ->
+                    RawPreparationFact.row(raw(field.name), raw(field.type), raw(field.optional), raw(field.kind), raw(field.readable), raw(field.writable),
+                        RawPreparationFact.sequence(field.origins.sortedBy { it.toString() }.map(::raw)))
+                }))
+            }
+            is MCFPPLiteralType -> {
+                types.add(value)
+                RawPreparationFact.row(required(value, "parentType"), raw(value.primitive), raw(value.value))
+            }
+            is MCFPPIntersectionType -> {
+                types.add(value)
+                RawPreparationFact.row(required(value, "parentType"), RawPreparationFact.sequence(value.components.map(::raw)))
+            }
+            is MCFPPNeverType -> {
+                types.add(value)
+                required(value, "parentType")
+            }
             is MCFPPType -> {
                 val owned = top.mcfpp.model.compound.CompoundData.isOwnedCompoundDataType(value)
                 if (!owned && !admitted(value.javaClass, typeShapes) && value.javaClass !in DeclarationPreparationContext.leafClasses)
                     fail("Unsupported declaration type: ${value.javaClass.name}")
-                if (value is MCFPPTypeWithGeneric && value !is MCFPPFunctionType) {
+                if (value is MCFPPTypeWithGeneric && value !is MCFPPFunctionType && value.javaClass !== MCFPPEntityRefType::class.java) {
                     val arguments = slot(value, "generic")
                     if (arguments !is List<*> || arguments.javaClass.name !in lists || arguments.any { it !is MCFPPType })
                         fail("Invalid declaration generic argument relation")
@@ -1136,8 +1190,10 @@ internal class DeclarationDomainStamp private constructor(
                     ) else RawPreparationFact.scalar(null),
                     if (value.javaClass === MCFPPNBTRefType::class.java) required(value, "valueType")
                         else RawPreparationFact.scalar(null),
+                    if (value.javaClass === MCFPPEntityRefType::class.java) required(value, "templateArgument")
+                        else RawPreparationFact.scalar(null),
                     fields(
-                        value, "generic", "types", "identifier", "enum", "dimension",
+                        value, "generic", "types", "deferredComposition", "identifier", "enum", "dimension",
                         "limit", "isName", "originalTypeString", "typeAs", "typeId", "type", "owner", "t"
                     )
                 )
@@ -1246,6 +1302,7 @@ internal class DeclarationDomainStamp private constructor(
             private val functionShapes = setOf(
                 "Function", "NativeFunction", "GenericFunction", "ExtensionFunction", "GenericExtensionFunction",
                 "InlineFunction", "InternalFunction", "NoStackFunction", "MCFunction", "DataTemplateConstructor", "TypeDataTemplateConstructor",
+                "TemplateFactory",
                 "UnknownFunction", "UnresolvedFunction", "UnresolvedNativeFunction"
             )
             private val streamShapes = setOf("CodePoint8BitCharStream", "CodePoint16BitCharStream", "CodePoint32BitCharStream")
@@ -1261,7 +1318,7 @@ internal class DeclarationDomainStamp private constructor(
                     "NBTByteArray", "NBTIntArray", "NBTLongArray", "EntityUUIDVar"
                 ).map { "top.mcfpp.core.lang.nbt.$it" } +
                 setOf("DataTemplateObject", "TypeDataTemplateObject", "StaticMemberView", "EnumVar").map { "top.mcfpp.core.lang.obj.$it" } +
-                setOf("top.mcfpp.core.lang.bool.ScoreBool", "top.mcfpp.core.lang.entity.SelectorVar",
+                setOf("top.mcfpp.type.UUIDVar", "top.mcfpp.core.lang.bool.ScoreBool", "top.mcfpp.core.lang.entity.SelectorVar",
                     "top.mcfpp.core.lang.ref.ReferenceVar") +
                 setOf("ExecutionContextVar", "BoundExecutorVar", "BoundPositionVar").map { "top.mcfpp.core.lang.context.$it" }
             private val typeShapes = setOf(
@@ -1600,6 +1657,10 @@ internal class DeclarationPreparationContext private constructor(
             if (done.contains(value)) return
             if (!active.add(value)) reject() // These legacy identity getters cannot represent a recursive container.
             when (value.javaClass) {
+                MCFPPObjectType::class.java -> (value as MCFPPObjectType).fields.forEach { visit(it.type) }
+                MCFPPLiteralType::class.java -> visit((value as MCFPPLiteralType).primitive)
+                MCFPPIntersectionType::class.java -> (value as MCFPPIntersectionType).components.forEach(::visit)
+                MCFPPNeverType::class.java -> Unit
                 MCFPPDataTemplateType::class.java, MCFPPObjectDataTemplateType::class.java,
                 MCFPPGenericDataTemplateType::class.java, MCFPPGenericObjectDataTemplateType::class.java ->
                     if (value !in admitted &&
@@ -1695,7 +1756,7 @@ internal class DeclarationPreparationContext private constructor(
             val facts = arguments.mapIndexed { index, argument ->
                 val binder = DeclarationBinding(formalContext(declaration, index, previous, bindings))
                 val target = binder.preparedDeclaredType(frozen.readonly[index].type, origin(argument))
-                val raw = actual.readonly(argument)
+                val raw = actual.readonly(argument, target)
                 if (TypeRelations.resolveImplicitConversion(raw.type, target) == null)
                     throw PreparationFactFailure(PreparationFactCode.NON_CLOSED_VALUE, preparationSpan(argument), "Readonly template argument does not adapt to its formal type")
                 val converted = if (target == MCFPPBaseType.Any || target == MCFPPBaseType.Object)
@@ -1720,6 +1781,10 @@ internal class DeclarationPreparationContext private constructor(
             )
                 throw PreparationFactFailure(PreparationFactCode.UNPREPARED_TYPE, preparationSpan(site), "Type requires prepared header facts")
             return exportType(type, site, source)
+        }
+        override fun intersect(types: List<MCFPPType>, site: Parser.UnionTemplateTypeContext): MCFPPType {
+            types.forEach { preparedType(it, site, source) }
+            return TypeCompositions.intersection(types)
         }
     }
 
@@ -1838,6 +1903,7 @@ internal class DeclarationPreparationContext private constructor(
             MCFPPVectorType::class.java, MCFPPEnumType::class.java,
             MCFPPFunctionType::class.java,
             MCFPPScoreRefType::class.java,
+            MCFPPUUIDType::class.java,
             top.mcfpp.core.lang.context.MCFPPExecutionContextType::class.java,
             top.mcfpp.core.lang.context.MCFPPBoundPositionType::class.java,
             top.mcfpp.core.lang.context.MCFPPBoundComponentType::class.java

@@ -66,7 +66,9 @@ internal class SourceDefaultBinder(private val binder: SourceCodeBinder = Snapsh
             declaration.name, declaration.function, declaration.effect,
             declaration.readonlyParameters, declaration.defaultedReadonlyParameters, declaration.defaultedNormalParameters,
             readonly, normal, declaration.sourceBody, readonlySymbols, normalSymbols, declaration.preparedReadonly,
-            compilerDeclarationId = declaration.compilerDeclarationId
+            compilerDeclarationId = declaration.compilerDeclarationId,
+            declaredReceiver = declaration.declaredReceiver,
+            declaredEntityReceiver = declaration.declaredEntityReceiver
         )
         BindingEnvironment(
             environment.types,

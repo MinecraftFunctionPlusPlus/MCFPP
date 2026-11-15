@@ -1,0 +1,7 @@
+schema = 1
+name = "type-composition"
+namespace = "example.type_composition"
+version = "26.3"
+sourcePath = "src"
+targetPath = "build"
+description = "Data composition, structural arguments, and returned-value factories"

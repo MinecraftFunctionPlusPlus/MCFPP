@@ -257,7 +257,9 @@ class StatementProjection(
                     ProjectionAnnotation(declarations.annotationProvider(value.provider), value.arguments)))
                 else when (descriptor) {
                     is ProjectionTemplateDeclaration.Field -> child(this, templateField(value as TemplateMember.Declaration, descriptor))
-                    is ProjectionTemplateDeclaration.Function -> child(this, templateFunction(value as TemplateMember.Declaration, descriptor))
+                    is ProjectionTemplateDeclaration.Function -> if (descriptor.isFactory)
+                        child(this, templateFactory(value as TemplateMember.Declaration, descriptor))
+                        else child(this, templateFunction(value as TemplateMember.Declaration, descriptor))
                     is ProjectionTemplateDeclaration.Constructor -> child(this, templateConstructor(value as TemplateMember.Declaration, descriptor))
                     is ProjectionTemplateDeclaration.Operation -> child(this, templateOperation(value as TemplateMember.Declaration, descriptor))
                     null -> unsupported("Template member has no declaration metadata")
@@ -351,6 +353,13 @@ class StatementProjection(
         declared(context(P.TemplateConstructorDeclarationContext(null, -1), value) {
             token(this, L.CONSTRUCTOR, "constructor"); child(this, normalParameters(value, facts.normal)); space()
             child(this, block(bodyBlock(facts.body)))
+        }, value.declaration)
+
+    private fun templateFactory(value: TemplateMember.Declaration, facts: ProjectionTemplateDeclaration.Function): P.TemplateFactoryDeclarationContext =
+        declared(context(P.TemplateFactoryDeclarationContext(null, -1), value) {
+            require(facts.readonly.isEmpty() && facts.contexts.isEmpty()) { "A factory has only ordinary explicit parameters" }
+            token(this, L.NEW, "new"); child(this, normalParameters(value, facts.normal)); space()
+            child(this, block(bodyBlock(requireNotNull(facts.body))))
         }, value.declaration)
 
     private fun templateOperation(value: TemplateMember.Declaration, facts: ProjectionTemplateDeclaration.Operation): ParserRuleContext {

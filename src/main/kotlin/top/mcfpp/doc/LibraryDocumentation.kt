@@ -33,6 +33,8 @@ internal class LibraryDocumentation(private val model: LibraryModel, private val
         is LibraryType.NbtRef -> "NBTRef<${type(value.value)}>"
         is LibraryType.UnresolvedNominal -> value.name
         is LibraryType.Dependent -> syntaxType(model.syntax.node(value.syntax))
+        is LibraryType.Object -> value.fields.joinToString(", ", "{ ", " }") { field -> "${field.name}${if (field.optional) "?" else ""}: ${type(field.type)}" }
+        is LibraryType.Literal -> constant(value.value)
     } } ?: "void"
     private fun syntaxType(node: SemanticNode): String = when (node) {
         is TypeSyntax.Name -> when (val use = node.use) { is NameUse.Declaration -> name(use.target); is NameUse.Local -> declaration(use.target).common.name; is NameUse.Lookup -> use.name }
@@ -78,7 +80,8 @@ internal class LibraryDocumentation(private val model: LibraryModel, private val
                 if (common.name.startsWith("__") && id !in documents) return@mapIndexedNotNull null
                 normal = record.normal.map(::parameter); readonly = record.readonly.map(::parameter)
                 result = type(record.result); receiver = record.receiver?.let(::type)
-                when (record.execution) { FunctionExecutionKind.NATIVE -> "native"; FunctionExecutionKind.INLINE -> "inline"; FunctionExecutionKind.COMPILE_TIME -> "const-function"; else -> if (receiver != null) "extension" else "function" }
+                if (common.flags and DeclarationFlags.FACTORY != 0L) "factory"
+                else when (record.execution) { FunctionExecutionKind.NATIVE -> "native"; FunctionExecutionKind.INLINE -> "inline"; FunctionExecutionKind.COMPILE_TIME -> "const-function"; else -> if (receiver != null) "extension" else "function" }
             }
             is CompoundDeclaration -> {
                 if (record.category in setOf(CompoundCategory.ANONYMOUS, CompoundCategory.INTERSECTION)) return@mapIndexedNotNull null
@@ -117,6 +120,7 @@ internal class LibraryDocumentation(private val model: LibraryModel, private val
             "typealias" -> "typealias $result as $name"
             "enum-member" -> name
             "constructor" -> "constructor$normalText"
+            "factory" -> "new$normalText"
             "operator" -> "$name$normalText: $result"
             else -> "func ${receiver?.let { "$it." }.orEmpty()}$name$readonlyText$normalText: $result"
         }

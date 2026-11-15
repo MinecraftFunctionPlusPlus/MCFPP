@@ -75,7 +75,11 @@ class LoopIRTest {
             func main(){
                 var sum = 0
                 for(value : 2147483646 .. 2147483647){ sum += 1; }
-                for(value : -2147483648 .. -2147483647){ sum += 1; }
+                var minimum = 0
+                minimum -= 2147483647
+                minimum -= 1
+                var next = minimum + 1
+                for(value : minimum .. next){ sum += 1; }
                 external result = sum*100 + count(5,4)*10 + count(2147483647,2147483647)
             }
         """, "1.20.2")

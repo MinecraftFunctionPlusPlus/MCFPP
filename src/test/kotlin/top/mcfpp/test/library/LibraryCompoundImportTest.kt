@@ -35,12 +35,15 @@ class LibraryCompoundImportTest {
                 func seedValue():int {
                     /say initialized
                     return 4}
-                data Parent {var base:int=1;constructor(){}}
+                data Parent {var base:int=1}
                 data Box:Parent {
                     var z:int=seedValue()
                     var a:int=this.z+1
                     var value:int=3 {get {return field+1};set {field=value}}
-                    constructor(seed:int=6){this.z=seed}
+                    new(seed:int=6){
+                        var initial=seedValue()
+                        return {base: 1, z: seed, a: initial+1, value: 3}
+                    }
                     func read():int {if this.z>100{return 100};return this.z+this.base}
                     operator +(other:int):int {return this.z+other}
                     operator +(other:float):int {return 7}
@@ -117,7 +120,7 @@ class LibraryCompoundImportTest {
         val childPath = directory.resolve("child.mclib")
         val parentIdentity = LibraryIdentity(PackageKey("fixture:compound-parent", "1"), "main")
         try {
-            parse("namespace library.base\ndata Parent {constructor(){}}\nfunc main(){}")
+            parse("namespace library.base\ndata Parent {}\nfunc main(){}")
             val parentFile = sourceFile("library.base")
             LibraryExport.write(OwnedLibrarySelection(parentIdentity, LibraryTarget("26.3"), emptyList(), listOf(parentFile),
                 templates = listOf(parentFile.namespace.scope.template.getValue("Parent"))), parentPath)
@@ -127,7 +130,7 @@ class LibraryCompoundImportTest {
                 parse("""
                     namespace library.child
                     import library.base:*
-                    data Child:library.base:Parent {var own:int=12;constructor(){};func read():int{return this.own}}
+                    data Child:library.base:Parent {var own:int=12;func read():int{return this.own}}
                     func main(){}
                 """.trimIndent()) { sourceDependency.stage(parentPath); sourceDependency.bindAll(); sourceDependency.commit() }
                 val file = sourceFile("library.child")

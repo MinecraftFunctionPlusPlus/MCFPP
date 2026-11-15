@@ -15,6 +15,7 @@ import top.mcfpp.type.*
 internal object TemplateLiteralSupport {
     fun isTemplateLiteralType(type: MCFPPType): Boolean {
         if (type !is MCFPPDataTemplateType) return false
+        if (type is MCFPPObjectType) return false
         if (type is MCFPPTypeDataTemplateType || type is MCFPPObjectDataTemplateType) return false
         type.tryResolve()
         val template = type.template
@@ -41,12 +42,66 @@ internal object TemplateLiteralSupport {
         return null
     }
 
-    fun isCompoundLiteral(node: ParserRuleContext?): Boolean = unwrapNbtLiteral(node)?.nbtCompound() != null
+    fun unwrapInlineLambda(node: ParserRuleContext?): mcfppParser.InlineLambdaContext? {
+        var current = node
+        while (current != null) {
+            if (current is mcfppParser.InlineLambdaContext) return current
+            if (current is mcfppParser.PrimaryContext) return current.inlineLambda()
+            if (current is mcfppParser.UnaryExpressionContext && current.rightVarExpression() == null ||
+                current is mcfppParser.CastExpressionContext && current.type() != null) return null
+            current = current.children.orEmpty().filterIsInstance<ParserRuleContext>().singleOrNull()
+        }
+        return null
+    }
+
+    /** Empty and single-name braces share syntax with a lambda; its target decides the value kind. */
+    fun ambiguousObjectEntries(syntax: mcfppParser.InlineLambdaContext): List<Pair<String, mcfppParser.ExpressionContext>>? {
+        if (syntax.lambdaParameterList() != null) return null
+        val body = syntax.lambdaBody() ?: return null
+        if (body.statement().isNotEmpty()) return null
+        val expression = body.lambdaTailExpression()?.expression() ?: return emptyList()
+        if (expression.start.type != top.mcfpp.antlr.mcfppLexer.Identifier ||
+            expression.start.tokenIndex != expression.stop.tokenIndex) return null
+        return listOf(expression.start.text to expression)
+    }
+
+    fun unwrapAmbiguousObject(node: ParserRuleContext?): mcfppParser.InlineLambdaContext? {
+        var current = node
+        while (current != null) {
+            if (current is mcfppParser.InlineLambdaContext)
+                return current.takeIf { ambiguousObjectEntries(it) != null }
+            current = current.children.orEmpty().filterIsInstance<ParserRuleContext>().singleOrNull()
+        }
+        return null
+    }
+
+    /** A projected implicit lambda slot is inactive when its braces are selected as an object. */
+    fun hasInactiveObjectParameter(syntax: mcfppParser.InlineLambdaContext, name: String): Boolean {
+        if (name != "it") return false
+        val lambda = top.mcfpp.model.function.StructuredBodyContexts.origin(syntax)?.node
+            as? top.mcfpp.library.syntax.Expression.Lambda ?: return false
+        val use = (lambda.tail as? top.mcfpp.library.syntax.Expression.Name)?.use
+            as? top.mcfpp.library.syntax.NameUse.Local ?: return false
+        return !lambda.explicitParameters && use.target in lambda.parameters
+    }
+
+    fun isCompoundLiteral(node: ParserRuleContext?): Boolean =
+        unwrapNbtLiteral(node)?.nbtCompound() != null || unwrapAmbiguousObject(node) != null
 
     fun isListLiteral(node: ParserRuleContext?): Boolean = unwrapNbtLiteral(node)?.nbtList() != null
 
     fun unquoteKey(rawKey: String): String =
         if (rawKey.startsWith("\"") || rawKey.startsWith("'")) (Tag.toNBT(rawKey) as StringTag).value else rawKey
+
+    /** Decode keys before comparing them, so `x` and `"x"` name the same field. */
+    fun compoundEntries(compound: mcfppParser.NbtCompoundContext): List<Pair<String, mcfppParser.NbtKeyValuePairContext>> {
+        val names = hashSetOf<String>()
+        return compound.nbtKeyValuePair().map { entry ->
+            val name = unquoteKey(entry.key.text)
+            if (!names.add(name)) throw DeclarationBinding.Failure("Duplicate field '$name' in object literal")
+            name to entry
+        }
+    }
 
     fun canInstantiateTemplateLiteral(template: DataTemplate, caller: Function?): String? {
         template.scope.ensureMembers()
@@ -107,6 +162,7 @@ internal object TemplateLiteralSupport {
     }
 
     fun acceptsCompound(type: MCFPPType): Boolean = when {
+        TypeCompositions.objectShape(type) != null -> true
         isTemplateLiteralType(type) -> true
         type is MCFPPDictType -> true
         type == MCFPPNBTType.NBT -> true
@@ -126,7 +182,7 @@ internal object TemplateLiteralSupport {
     fun selectExpectedLiteralType(
         node: ParserRuleContext?,
         targets: List<MCFPPType>,
-        probeTemplate: (MCFPPDataTemplateType) -> Boolean
+        probeCompound: (MCFPPType) -> Boolean
     ): MCFPPType? {
         val distinct = targets.distinctBy { it.typeId }
         if (distinct.isEmpty()) return null
@@ -134,11 +190,12 @@ internal object TemplateLiteralSupport {
         if (isCompoundLiteral(node)) {
             val compatible = distinct.filter(::acceptsCompound)
             if (compatible.size == 1) return compatible.single()
-            val templates = compatible.filter(::isTemplateLiteralType).map { it as MCFPPDataTemplateType }
-            if (templates.isNotEmpty()) {
-                val matching = templates.filter(probeTemplate)
-                if (matching.size == 1) return matching.single()
-            }
+            val matching = compatible.filter(probeCompound)
+            if (matching.size == 1) return matching.single()
+            val mostSpecific = matching.filter { candidate -> matching.all { other ->
+                TypeRelations.resolveImplicitConversion(candidate, other) != null
+            } }
+            if (mostSpecific.size == 1) return mostSpecific.single()
         } else if (isListLiteral(node)) {
             val compatible = distinct.filter(::acceptsList)
             if (compatible.size == 1) return compatible.single()

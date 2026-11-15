@@ -28,7 +28,7 @@ class DeclarationInitializationContractTest {
         val declarations = """
             namespace fixture.declarations
             func identity(value: any):any{return value;}
-            data Leaf { var value: int; constructor(value: int){this.value=value;} }
+            data Leaf { var value: int; new(value: int){ return {value: value}; } }
             data Box {
                 var first=1
                 var second=this.first
@@ -43,9 +43,11 @@ class DeclarationInitializationContractTest {
                 var observed: int { get=backing as int; set {this.backing=value;} }
                 var chained: int {get=this.nested.value;}
                 var computed: int {get {return 7;}}
-                constructor(value: int){
+                new(value: int){
                     /say constructed
-                    this.backing=value;this.nested=Leaf(value)
+                    return {first: 1, second: 1, erased: identity(1), declaredAny: 1 as any,
+                        copiedAny: 1 as any, promoted: 1.0, copiedFloat: 1.0, bytes: [B;1b,2b],
+                        backing: value, nested: Leaf(value)}
                 }
                 func read():int{return this.observed;}
             }
@@ -85,9 +87,9 @@ class DeclarationInitializationContractTest {
             func erased(position: any):int{return observe(position as pos3);}
             data PositionBox {
                 private var position: any
-                constructor(position: pos3){
+                new(position: pos3){
                     /say constructed
-                    this.position=position
+                    return {position: position as any}
                 }
                 func read():int{return observe(this.position as pos3);}
                 func change(position: pos3):int{this.position=position;return observe(this.position as pos3);}
@@ -125,17 +127,17 @@ class DeclarationInitializationContractTest {
     @Test fun inferredVarianceUsesOriginalNestedFormalTypes() = isolated { output ->
         roundTrip("""
             namespace fixture.constfirst
-            data Fixed {const first: int;constructor(value: int){this.first=value;}
+            data Fixed<N: int> {const first: int=N;
                 func read():int{return first;}}
-        """, "func main(){var a=Fixed(4);var b=Fixed(9);external first=a.read();external second=b.read();}",output) { function,machine ->
+        """, "func main(){var a=Fixed<4>();var b=Fixed<9>();external first=a.read();external second=b.read();}",output) { function,machine ->
             assertEquals(4,machine.read(function.scope.getVar("first") as MCInt))
             assertEquals(9,machine.read(function.scope.getVar("second") as MCInt))
         }
-        compile("import fixture.constfirst:*;func main(){var item=Fixed(4);item.first=9;}")
+        compile("import fixture.constfirst:*;func main(){var item=Fixed<4>();item.first=9;}")
         assertEquals(1,Project.errorCount)
         Project.config.includes=arrayListOf()
         compile("""
-            data Wrapper<out T>{constructor(){}}
+            data Wrapper<out T>{}
             data Good<out T>{const item=Wrapper<T>();}
             func main(){var item=Good<int>();}
         """, output)
@@ -146,14 +148,14 @@ class DeclarationInitializationContractTest {
         for (declaration in listOf("var item=Wrapper<T>();", "const item=Invariant<T>();")) {
             Project.config.includes=arrayListOf()
             compile("""
-                data Wrapper<out T>{constructor(){}}
-                data Invariant<T>{constructor(){}}
+                data Wrapper<out T>{}
+                data Invariant<T>{}
                 data Bad<out T>{$declaration}
                 func main(){var item=Bad<int>();}
             """)
             assertTrue(Project.errorCount>0, declaration)
         }
-        compile("data Bad<out T>{const first: T;var second=this.first;}\nfunc main(){var item=Bad<int>();}")
+        compile("data Bad<out T>{var first: T {get};var second=this.first;}\nfunc main(){var item: Bad<int>;}")
         assertEquals(1,Project.errorCount)
     }
 
@@ -167,7 +169,7 @@ class DeclarationInitializationContractTest {
             object data First {var value: int=Second.read();func read():int{return value;}}
             object data Second {var value: int=number(9);func read():int{return value;}}
             object data Settings<N: int>{var value: int=number(N);func read():int{return value;}}
-            data Box {var value: int;constructor(value: int){this.value=value;}func read():int{return this.value;}}
+            data Box {var value: int;new(value: int){ return {value: value}; }func read():int{return this.value;}}
             func helper(flag: bool):int{
                 if(flag){return First.read();}
                 return Second.read()
@@ -199,7 +201,7 @@ class DeclarationInitializationContractTest {
                 private var backing: T
                 var value: T {get=this.backing as T;set {this.backing=value;}}
                 private var hidden: T {get=this.backing;}
-                constructor(value: T){this.backing=value;}
+                new(value: T){ return {backing: value}; }
                 func get_hidden():int{return 8;}
                 func readHidden():T{return this.hidden;}
             }
@@ -235,11 +237,11 @@ class DeclarationInitializationContractTest {
             func earlier(value: int,values: list<int> = [value]):int{return values[0];}
             func genericTake<T>(values: list<T> = [number()]):T{return values[0];}
             func sink(values: list<int> = [number()]):int=top.mcfpp.test.DeclarationInitializationContractTest.sink
-            data DefaultOwner {private var value: int;constructor(value: int){this.value=value;}
+            data DefaultOwner {private var value: int;new(value: int){ return {value: value}; }
                 func read(values: list<int> = [this.value]):int{return values[0];}}
             func DefaultOwner.extra<T>(values: list<T> = [this.read()]):T{return values[0];}
-            data Factory<N: int>{constructor(){}}
-            data RangeFactory<R: range>{constructor(){}}
+            data Factory<N: int>{}
+            data RangeFactory<R: range>{}
             data Ranges {const item=RangeFactory<1..3>();}
             enum Mode {first=3,second=7}
             data Choice {const selected=Mode.second;}
@@ -299,16 +301,17 @@ class DeclarationInitializationContractTest {
         val declarations="""
             namespace fixture.paths
             func observe(position: pos3):int=top.mcfpp.test.DeclarationInitializationContractTest.observe
-            data Stable {var position: pos3;constructor(flag: bool,position: pos3){
-                this.position=position
+            data Stable {var position: pos3;new(flag: bool,position: pos3){
                 if(flag){
                     /say side-effect
                 }
+                return {position: position}
             }
                 func read():int{return observe(this.position);}}
-            data Varying {var position: pos3;constructor(flag: bool,left: pos3,right: pos3){
-                this.position=left
-                if(flag){this.position=right;}
+            data Varying {var position: pos3;new(flag: bool,left: pos3,right: pos3){
+                var selected=left
+                if(flag){selected=right;}
+                return {position: selected}
             }
                 func read():int{return observe(this.position);}}
             func select(flag: bool):int{var item=Stable(flag,4 0 0);return item.read();}
@@ -332,7 +335,7 @@ class DeclarationInitializationContractTest {
             typealias int as Alias
             func choose(value: int):int{return 9;}
             func libraryOnly():int{return 4;}
-            data Box {var value: int;constructor(value: int){this.value=value;}func read():int{return this.value;}}
+            data Box {var value: int;new(value: int){ return {value: value}; }func read():int{return this.value;}}
             abstract data Marker {abstract func read():int;}
         """
         compile("$library func main(){}",output)
@@ -342,7 +345,7 @@ class DeclarationInitializationContractTest {
             namespace fixture.names
             typealias bool as Alias
             func choose(value: string):int{return 7;}
-            data Marker {constructor(){}}
+            data Marker {}
         """
         compile("""$local func main(){external localResult=choose("local");external libraryResult=libraryOnly()
             var box=Box(9);external fieldResult=box.read();var alias: Alias=true;}""")

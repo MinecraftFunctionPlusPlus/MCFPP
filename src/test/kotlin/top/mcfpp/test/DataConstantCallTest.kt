@@ -27,7 +27,7 @@ class DataConstantCallTest {
                     func increment(){ this.value += 1; }
                     func twice(){ this.increment(); this.increment(); }
                 }
-                func main(){ var box: Box = {value: 1}; box.twice(); external result = box.schema * 10 + box.value; }
+                func main(){ var box: Box = {schema: 5, value: 1}; box.twice(); external result = box.schema * 10 + box.value; }
             """.trimIndent(), version = "26.3")
         }
         assertEquals(0, Project.errorCount, diagnostics.joinToString("\n"))
@@ -66,7 +66,7 @@ class DataConstantCallTest {
                     State.counter = 0
                     State.increment()
                     State.increment()
-                    const box: Box = {value: 1}
+                    const box: Box = {schema: 5, value: 1}
                     box.touchGlobal()
                     change(box)
                     external result = State.counter * 10 + box.value

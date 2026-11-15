@@ -139,6 +139,7 @@ OUT: 'out';
 IN: 'in';
 
 CONSTRUCTOR:'constructor';
+NEW:'new';
 
 GLOBAL:'global';
 VAR:'var';

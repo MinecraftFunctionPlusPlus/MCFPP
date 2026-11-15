@@ -298,7 +298,15 @@ internal class CompilerSourceIndex(
                 collect(value.type)
                 value.descriptors.values.forEach(::collect)
             }
-            nativeDirectory?.let { directory -> directory.requireOpen(); directory.sourceTypes.forEach(::collect) }
+            nativeDirectory?.let { directory ->
+                directory.requireOpen()
+                directory.sourceTypes.forEach { type ->
+                    // Native metadata also contains receiver/result views of open generic
+                    // owners. Their selected signatures supply concrete types after binding.
+                    val owner = (type as? MCFPPDataTemplateType)?.checkpointPrivateState()?.elements?.single()
+                    if (owner !is GenericDataTemplate) collect(type)
+                }
+            }
             discover(caller, lexical)
             declarationTarget?.let { target ->
                 // The completed target is the actual lexical owner of the synthetic processor
@@ -392,6 +400,10 @@ internal class CompilerSourceIndex(
                             (signature.readonly + signature.normal).forEach { formal ->
                                 collect(formal.type)
                                 formal.defaultTypes.values.forEach(::collect)
+                            }
+                            declaredReceiver(signature)?.let { receiver ->
+                                collect(receiver)
+                                if (signature.function.isEntityMember) collect(MCFPPEntityRefType(receiver))
                             }
                             collect(signature.returnType)
                             signature.readonlyArguments.forEach { fact ->
@@ -939,6 +951,21 @@ internal class CompilerSourceIndex(
                     fieldAccess[identity] = null to AccessModifier.PUBLIC
                 }
             }
+            if (type is MCFPPObjectType) {
+                for (field in type.fields) {
+                    collect(field.type)
+                    // Source field descriptors have no presence predicate or getter capability.
+                    if (field.optional || !field.readable) continue
+                    val identity = SourceFieldId(type.typeId, "field:${field.name}")
+                    val declaration = SourceFieldDeclaration(identity, type.typeId, field.name, field.type.typeId,
+                        field.kind == ObjectMemberKind.VAR && field.writable, source)
+                    val previous = fieldDeclarations.putIfAbsent(identity, declaration)
+                    require(previous == null || previous == declaration) { "Conflicting structural source field facts" }
+                    fieldViews.add(SourceFieldView(type.typeId, identity))
+                    fieldAccess[identity] = null to AccessModifier.PUBLIC
+                }
+                return
+            }
             if (type is MCFPPDataTemplateType) {
                 val template = type.checkpointPrivateState().elements.single()
                 if (template is GenericDataTemplate || !template.hasCompletedDeclaration)
@@ -1018,6 +1045,9 @@ internal class CompilerSourceIndex(
             return fact
         }
 
+        private fun declaredReceiver(signature: PreparedCompilerSignature): MCFPPDataTemplateType? =
+            (signature.function.owner as? DataTemplate)?.takeUnless { signature.function.isStatic }?.getType()
+
         private fun project(signature: PreparedCompilerSignature, catalog: SourceTypeCatalog, universe: Long): SourceFunction {
             val declaration = declarationKey(signature, universe)
             // These keys identify immutable targets only within this catalog, never generated resources.
@@ -1049,6 +1079,7 @@ internal class CompilerSourceIndex(
                 SourceFunctionBody(sourceSlice(it), preparationSpan(it), structured, sourceBuffer(it),
                     signature.function.bodyHandle != null || structured != null)
             }
+            val receiver = declaredReceiver(signature)
             return SourceFunction(
                 signature.function.identifier, reference,
                 readonlyParameters = signature.readonly.map { SourceParameter(catalog.ref(it.type), ParamMode.CONST) },
@@ -1056,7 +1087,10 @@ internal class CompilerSourceIndex(
                 sourceBody = body, readonlySymbols = signature.readonly.map(::formal), normalSymbols = signature.normal.map(::formal),
                 preparedReadonly = SourcePreparedReadonly(declaration, readonly.map { TypedConstant(it.type, requireNotNull(it.constant), it.source) }, source),
                 preparedCallSites = callSignatures.filterValues { signature.identity in it }.keys,
-                compilerDeclarationId = signature.function.declarationId.value
+                compilerDeclarationId = signature.function.declarationId.value,
+                declaredReceiver = receiver?.let(catalog::ref),
+                declaredEntityReceiver = receiver?.takeIf { signature.function.isEntityMember }
+                    ?.let { catalog.ref(MCFPPEntityRefType(it)) }
             )
         }
 

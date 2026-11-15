@@ -62,7 +62,7 @@ class DataNestedTemplateTest {
             val rejected = compilerDiagnostics {
                 MCFPPStringTest.readFromString("""
                     import fixture.nested:Outer
-                    func main(){ const value: Outer.Inner = {value: 3}; value.mutate(); }
+                    func main(){ const value: Outer.Inner = {schema: 5, value: 3}; value.mutate(); }
                 """.trimIndent(), version = "26.3")
             }
             assertTrue(rejected.any { "constant" in it.lowercase() && "mutate" in it }, rejected.joinToString("\n"))
@@ -87,7 +87,7 @@ class DataNestedTemplateTest {
         compile("""
             namespace fixture.generic
             data Outer<N: int> { data Inner { const schema: int = N; var value: int = 1 } }
-            func main(){ var a: Outer.Inner<2> = {}; var b: Outer.Inner<3> = {}; }
+            func main(){ var a: Outer.Inner<2> = {schema: 2, value: 1}; var b: Outer.Inner<3> = {schema: 3, value: 1}; }
         """)
         val main = GlobalScope.localNamespaces.getValue("fixture.generic").scope.functions.getValue("main").single()
         assertNotEquals(main.scope.getVar("a")!!.type.typeId, main.scope.getVar("b")!!.type.typeId)

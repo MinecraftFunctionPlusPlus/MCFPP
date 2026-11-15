@@ -19,7 +19,7 @@ object IRCollectionValidation {
         MCFPPBaseType.Range.typeId -> "compound"
         is TypeId.Applied -> when (type.constructor) {
             TypeId.Builtin("list"), TypeId.Builtin("ImmutableList") -> "list"
-            TypeId.Builtin("dict"), TypeId.Builtin("map") -> "compound"
+            TypeId.Builtin("dict"), TypeId.Builtin("map"), TypeId.Builtin(TypeCompositions.OBJECT) -> "compound"
             else -> null
         }
         is TypeId.Union -> type.alternatives.map(::codec).takeUnless { it.any { part -> part == null } }?.distinct()?.singleOrNull()

@@ -66,7 +66,7 @@ class DataTemplateLiteralTest {
     }
 
     @Test
-    fun variableAndParameterTemplateLiteralsValidateDefaultsNestingInheritanceAndRuntimeValues() {
+    fun objectLiteralsCarryCompleteNestedValuesAndSupportLexicalShorthand() {
         val main = compile("""
             data Base {
                 var id: int
@@ -85,37 +85,44 @@ class DataTemplateLiteralTest {
                 var opt: int?
                 var boxed: Box<int> = { value: 9 }
             }
-            func scoreOf(o: Outer = { inner: { id: 4 } }): int {
+            func scoreOf(o: Outer = { inner: { id: 4, tag: 5, label: "ok", doubled: 8 }, items: [], boxed: { value: 9 } }): int {
                 return o.inner.id + o.inner.tag + o.inner.doubled + o.boxed.value
             }
             func overloadPick(a: int): int { return a }
             func overloadPick(b: Base): int { return b.id + b.tag }
             func main() {
-                var h: Outer = { inner: { id: 3 }, items: [{ id: 1 }] }
+                var h: Outer = { inner: { id: 3, tag: 5, label: "ok", doubled: 6 }, items: [{ id: 1, tag: 5, label: "ok", doubled: 2 }], boxed: { value: 9 } }
                 external runtimeId = 7
-                var runtimeOuter: Outer = { inner: { id: runtimeId }, opt: null }
+                var runtimeOuter: Outer = { inner: { id: runtimeId, tag: 5, label: "runtime", doubled: runtimeId * 2 }, items: [], boxed: { value: 9 } }
                 var fn: (Outer) -> int = scoreOf
-                external a = scoreOf({ inner: { id: 2 }, boxed: { value: 1 } })
+                external a = scoreOf({ inner: { id: 2, tag: 5, label: "ok", doubled: 4 }, items: [], boxed: { value: 1 } })
                 external b = scoreOf()
                 external doubledPart = h.inner.doubled
                 external tagPart = h.items[0].tag
                 external boxedPart = h.boxed.value
                 external c = h.inner.doubled + h.items[0].tag + h.boxed.value
                 external d = runtimeOuter.inner.doubled + runtimeOuter.inner.tag
-                external e = overloadPick({ id: 10 })
-                external f = fn({ inner: { id: 1 } })
+                external e = overloadPick({ id: 10, tag: 5, extra: "open" })
+                external f = fn({ inner: { id: 1, tag: 5, label: "ok", doubled: 2 }, items: [], boxed: { value: 9 } })
+                var id = 11
+                var inferred = { id, label: "lexical" }
+                external shorthand = inferred.id
+                var single = { id }
+                external singleShorthand = single.id
             }
         """)
         val machine = execute(main)
         assertEquals(2 + 5 + 4 + 1, machine.read(main.scope.getVar("a") as MCInt))
         assertEquals(4 + 5 + 8 + 9, machine.read(main.scope.getVar("b") as MCInt))
-        assertEquals(6, machine.read(main.scope.getVar("doubledPart") as MCInt), "nested default")
+        assertEquals(6, machine.read(main.scope.getVar("doubledPart") as MCInt), "nested field")
         assertEquals(5, machine.read(main.scope.getVar("tagPart") as MCInt), "list field")
         assertEquals(9, machine.read(main.scope.getVar("boxedPart") as MCInt), "generic field")
         assertEquals(6 + 5 + 9, machine.read(main.scope.getVar("c") as MCInt))
         assertEquals(14 + 5, machine.read(main.scope.getVar("d") as MCInt))
         assertEquals(15, machine.read(main.scope.getVar("e") as MCInt))
         assertEquals(1 + 5 + 2 + 9, machine.read(main.scope.getVar("f") as MCInt))
+        assertEquals(11, machine.read(main.scope.getVar("shorthand") as MCInt))
+        assertEquals(11, machine.read(main.scope.getVar("singleShorthand") as MCInt))
     }
 
     @Test
@@ -143,7 +150,7 @@ class DataTemplateLiteralTest {
                 }
                 func main() {
                     const display = entityByUUID<ItemDisplay>("0-0-0-0-1")
-                    var b: DisplayBrightness = { block: 7 }
+                    var b: DisplayBrightness = { block: 7, sky: 0 }
                     applyBrightness(display, { sky: 15, block: 12 })
                     display.item = { id: "minecraft:diamond", count: 3, components: {} }
                     display.transform.scale = { x: 2.0, y: 3.0, z: 4.0 }
@@ -196,28 +203,20 @@ class DataTemplateLiteralTest {
             data Inner { var a: int }
             data Outer {
                 var req: string
-                var opt: int = 0
-                var inner: Inner = { a: 1 }
-                private var secret: int = 2
+                var opt: int?
+                var inner: Inner?
             }
-            abstract data AbstractBox { var x: int = 1 }
-            data PrivateCtor {
-                var x: int
-                private constructor(x: int) { this.x = x }
-            }
+            data RequiredWithDefault { var value: int = 1 }
             func takeOuter(o: Outer) {}
         """.trimIndent()
         val invalidBodies = listOf(
-            "func main() { var h: Outer = { unknown: 1, req: \"ok\" }; }",
             "func main() { var h: Outer = {}; }",
             "func main() { var h: Outer = { req: 123 }; }",
             "func main() { var h: Outer = { req: null }; }",
             "func main() { var h: Outer = { req: \"a\", req: \"b\" }; }",
-            "func main() { var h: Outer = { req: \"a\", secret: 1 }; }",
             "func main() { var h: Outer = { req: \"a\", inner: { bad: 1 } }; }",
-            "func main() { var h: AbstractBox = { x: 1 }; }",
-            "func main() { var h: PrivateCtor = { x: 1 }; }",
-            "func main() { takeOuter({ unknown: 1, req: \"ok\" }); }",
+            "func main() { var h: Outer = { req: \"a\", opt: null }; }",
+            "func main() { var h: RequiredWithDefault = {}; }",
             "func main() { takeOuter({}); }",
             "func main() { takeOuter({ req: 123 }); }",
             "func main() { var xs: list<Inner> = [{ nope: 1 }]; }"
@@ -225,5 +224,38 @@ class DataTemplateLiteralTest {
         for (body in invalidBodies) {
             compileExpectError("$header\n$body")
         }
+    }
+
+    @Test
+    fun duplicateKeysAreRejectedInEveryObjectContextAfterUnquoting() {
+        for (body in listOf(
+            "var value = { x: 1, x: 2 }",
+            "var value: dict<int> = { x: 1, x: 2 }",
+            "var value: nbt = { x: 1, x: 2 }",
+            "var value: Point = { x: 1, x: 2 }",
+            "var value = { x: 1, \"x\": 2 }",
+            "var x = 1; var value = { x, x: 2 }",
+            "var value = { nested: { x: 1, x: 2 } }"
+        )) compileExpectError("data Point { var x: int }\nfunc main() { $body }")
+    }
+
+    @Test
+    fun openObjectContractsAllowExtraFieldsAndDoNotInvokeFactories() {
+        val main = compile("""
+            abstract data Point { var x: int }
+            data PrivateFactory {
+                var x: int
+                private new(x: int) { return { x } }
+            }
+            func take(point: Point): int { return point.x }
+            func main() {
+                var point: Point = { x: 4, label: "extra" }
+                var privateValue: PrivateFactory = { x: 7 }
+                external result = take({ x: 5, extra: true }) + point.x + privateValue.x
+            }
+        """)
+        val machine = execute(main)
+        assertEquals(16, machine.read(main.scope.getVar("result") as MCInt))
+        assertTrue(machine.messages.isEmpty())
     }
 }

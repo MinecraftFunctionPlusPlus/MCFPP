@@ -98,7 +98,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     }
     override fun getMemberFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
         val member = top.mcfpp.model.function.ParameterMatcher.select(
-            templateType.scope.getFunctionCandidates(key, Function.currFunction).filterNot { it.isEntityMember }, key, readOnlyArgs, normalArgs
+            templateType.scope.getFunctionCandidates(key, Function.currFunction).filterNot { it.isEntityMember }, key, readOnlyArgs, normalArgs, type
         ) ?: if (key == "summon" && templateType.isEntityTemplate)
             // Old source remains valid while the public default is summon(nbt).
             top.mcfpp.core.lang.entity.EntityTemplates.summonFunction(templateType, normalArgs)

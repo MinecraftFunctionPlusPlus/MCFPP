@@ -276,6 +276,7 @@ class StatementBridge(
             is TypeSyntax.Container -> readType(value.argument)
             is TypeSyntax.Union -> value.alternatives.forEach(::readType)
             is TypeSyntax.Intersection -> value.components.forEach(::readType)
+            is TypeSyntax.Object -> value.fields.forEach { readType(it.type) }
             is TypeSyntax.Function -> { value.contexts.forEach(::readType); value.parameters.forEach(::readType); readType(value.result) }
             is TypeSyntax.Vector, is TypeSyntax.Entity, is TypeSyntax.AnonymousData, is TypeSyntax.Void -> Unit
         }

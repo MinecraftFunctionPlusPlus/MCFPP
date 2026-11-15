@@ -98,10 +98,10 @@ class LibCacheFormatTest {
             val declarations = """
                 namespace fixture.descriptors
                 enum Mode {first=3,second=7}
-                data Frozen<M: Mode>{constructor(){}}
+                data Frozen<M: Mode>{}
                 data Node {
                     var children: list<Node>
-                    constructor(){this.children=[] as list<Node>;}
+                    new(){return {children: [] as list<Node>};}
                 }
                 func choose(modes: list<Mode> = [Mode.second]):int{return 7;}
             """.trimIndent()
@@ -123,7 +123,7 @@ class LibCacheFormatTest {
                     .map { it.templateType }
                 val functions=(top.mcfpp.model.scope.GlobalScope.localNamespaces.values+top.mcfpp.model.scope.GlobalScope.libNamespaces.values)
                     .flatMap { it.scope.functions.values.flatten() }.plus(actualTemplates.flatMap {
-                        it.constructors + it.scope.functions.values.flatten()
+                        it.constructors + it.factories + it.scope.functions.values.flatten()
                     }).associate { it.namespaceID.toString() to it.commands.analyzeAll() }+
                     Project.macroFunction.mapKeys { "mcfpp:dynamic/${it.key}" }.mapValues { listOf(it.value) }
                 val machine=top.mcfpp.test.util.ScoreCommandExecutor(main.commands.analyzeAll(),functions)

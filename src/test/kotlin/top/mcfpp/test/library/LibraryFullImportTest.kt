@@ -84,8 +84,8 @@ class LibraryFullImportTest {
         try {
             parse("""
                 namespace full.generic
-                data Parent<T> {var base:int=1;constructor(){}}
-                data Box<T>:Parent<T> {var item:T;constructor(initial:T){this.item=initial};func echo(value:T):T{return value}}
+                data Parent<T> {var base:int=1}
+                data Box<T>:Parent<T> {var item:T;new(initial:T){ return {base: 1, item: initial}; };func echo(value:T):T{return value}}
                 func add<T,N:int=2>(value:T=3):T {
                     /say once
                     return value+N

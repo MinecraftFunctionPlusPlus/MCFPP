@@ -55,6 +55,8 @@ object MCFPPStringTest {
         Project.config.root = Path.of("./")
         // This helper compiles the supplied string, not a previous CLI project's directory.
         Project.config.sourcePath = null
+        Project.config.dataPath = null
+        Project.config.assetsPath = null
         Project.config.name = "debug"
         //版本77
         Project.config.version = version

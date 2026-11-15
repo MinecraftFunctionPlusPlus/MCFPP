@@ -209,7 +209,7 @@ class BoundExecutorVar(
 
     override fun getMemberFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>,
                                    accessModifier: Member.AccessModifier): Pair<top.mcfpp.model.function.Function, Boolean> =
-        top.mcfpp.core.lang.entity.EntityMembers.data(this).getFunction(key, readOnlyArgs, normalArgs) to true
+        top.mcfpp.core.lang.entity.EntityMembers.data(this).getFunction(key, readOnlyArgs, normalArgs, receiver = type) to true
 }
 
 class BoundPositionVar(

@@ -119,8 +119,8 @@ class TemplateConstInitializationTest {
         for (assignment in listOf("", "first.value = 99;")) {
             val main = compile("""
                 data Box {
-                    var value: int = initial { get }
-                    constructor(initial: int){}
+                    var value: int { get }
+                    new(initial: int){ return { value: initial } }
                 }
                 func main(){
                     var first = Box(1)
@@ -131,7 +131,7 @@ class TemplateConstInitializationTest {
             """, if (assignment.isEmpty()) 0 else 1)
             val box = GlobalScope.getTemplate("default.test", "Box")!!
             assertFalse(box.scope.getVar("value")!!.isConst)
-            assertTrue(box.constructors.single().compiledFunctions.isEmpty())
+            assertTrue(box.factories.single().compiledFunctions.isEmpty())
             assertEquals(12, execute(main).read(main.scope.getVar("result") as MCInt))
         }
     }
@@ -142,7 +142,7 @@ class TemplateConstInitializationTest {
                 const required: int = 3
                 const mirrored = Defaults.required
             }
-            data Box { constructor(value: int){} }
+            data Box { new(value: int){ return {} } }
             func accept(value: int){ var accepted = Box(value); }
             func main(){ accept(3); }
         """)

@@ -162,6 +162,30 @@ class MniDeclarationStateJournalTest {
         }
     }
 
+    @Test fun compositionContractsAndLazyRuntimeFieldsRestoreTogether() = isolated { _ ->
+        val element = MCFPPListType(MCFPPBaseType.Int)
+        val literal = MCFPPLiteralType(MCFPPBaseType.Int, CompilerValue.Integral(1))
+        val shape = MCFPPObjectType(listOf(ObjectFieldContract("items", element), ObjectFieldContract("tag", literal)))
+        val residual = MCFPPIntersectionType(listOf(shape, MCFPPGenericParamType("T", arrayListOf())))
+        val shell = shape.rawTemplateDeclaration()
+        assertTrue(shell.scope.allVars.isEmpty())
+        val before = DeclarationStateJournal.checkpoint(listOf(shape, literal, residual, MCFPPNeverType))
+        shape.buildUnConcrete("value")
+        val originalField = shell.scope.getVar("items")!!
+        originalField.nullable = true
+        element.generic[0] = MCFPPBaseType.Bool
+        val after = before.captureCurrent()
+        before.restore()
+        assertTrue(shell.scope.allVars.isEmpty())
+        assertEquals(MCFPPBaseType.Int, element.generic.single())
+        shape.buildUnConcrete("rebuilt")
+        assertFalse(shell.scope.getVar("items")!!.nullable, "Rollback must restore lazy field preparation as well as the scope")
+        after.restore()
+        assertSame(originalField, shell.scope.getVar("items"))
+        assertTrue(originalField.nullable)
+        assertEquals(MCFPPBaseType.Bool, element.generic.single())
+    }
+
     @Test fun annotationCyclesAndDetachedParameterListsAreDeepRoots() = isolated { _ ->
         val owner = model("Owner")
         val annotation = Name("first").apply { params.add("before") }
@@ -230,6 +254,40 @@ class MniDeclarationStateJournalTest {
             assertEquals("after", annotation.params.single())
             assertTrue(function.commands.single().toString().contains("after"))
             assertEquals(Member.AccessModifier.PRIVATE, property.accessModifier)
+        }
+    }
+
+    @Test fun repeatedTemplateCapturesKeepBoundedRootsAndRestoreEveryDetachedScope() = isolated { _ ->
+        val owner = model("Owner")
+        val originalValue = field(owner)
+        val originalScope = owner.scope
+        val before = owner.checkpointDeclarationState()
+        val replacementScope = CompoundDataScope(arrayListOf())
+        val replacementValue = MCInt("replacement")
+        replacementScope.putVar("replacement", replacementValue)
+        owner.scope = replacementScope
+        originalScope.removeVar("value")
+        val detachedValue = MCInt("detached")
+        originalScope.putVar("detached", detachedValue)
+        var latest = before.captureCurrent()
+        val rootCount = latest.elements.size
+        repeat(3) {
+            latest = latest.captureCurrent()
+            assertEquals(rootCount, latest.elements.size, "An unchanged declaration must not retain historical checkpoint roots")
+            assertTrue(latest.elements.none { it is CompoundDataScope.JournalSnapshot })
+        }
+        repeat(2) {
+            originalScope.removeVar("detached")
+            replacementScope.removeVar("replacement")
+            latest.restore()
+            assertSame(replacementScope, owner.scope)
+            assertSame(detachedValue, originalScope.getVar("detached"))
+            assertNull(originalScope.getVar("value"))
+            assertSame(replacementValue, replacementScope.getVar("replacement"))
+            before.restore()
+            assertSame(originalScope, owner.scope)
+            assertSame(originalValue, originalScope.getVar("value"))
+            assertNull(originalScope.getVar("detached"))
         }
     }
 

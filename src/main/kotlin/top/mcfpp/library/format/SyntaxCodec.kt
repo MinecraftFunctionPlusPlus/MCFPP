@@ -63,6 +63,7 @@ object SyntaxCodec {
             is Expression.InterpolatedString -> text(node.parts)
             is TypeSyntax.Name -> name(node.use)
             is TypeSyntax.Entity -> addAll(node.names)
+            is TypeSyntax.Object -> node.fields.forEach { add(it.name) }
             is Statement.Assign -> add(node.operator)
             is Statement.TryStore -> name(node.destination)
             is Statement.Command -> text(node.parts)
@@ -309,6 +310,7 @@ object SyntaxCodec {
                 is TypeSyntax.Entity -> { optional(node.limit) { u32(it.value) }; list(node.names) { u32(strings.reference(it)) } }
                 is TypeSyntax.Union -> ns(node.alternatives)
                 is TypeSyntax.Intersection -> ns(node.components)
+                is TypeSyntax.Object -> list(node.fields) { u32(strings.reference(it.name)); n(it.type) }
                 is TypeSyntax.AnonymousData -> u32(node.declaration.value)
                 is TypeSyntax.Function -> { ns(node.parameters); n(node.result); u8(node.execution.wireValue); ns(node.contexts) }
                 is TypeSyntax.Void -> Unit
@@ -356,6 +358,7 @@ object SyntaxCodec {
         is TypeSyntax.Container -> listOf(node.argument)
         is TypeSyntax.Union -> node.alternatives
         is TypeSyntax.Intersection -> node.components
+        is TypeSyntax.Object -> node.fields.map { it.type }
         is TypeSyntax.Function -> node.contexts + node.parameters + node.result
         is TypeSyntax.Inferred -> listOf(node.expression)
         is Statement.Block -> node.statements
@@ -466,6 +469,9 @@ object SyntaxCodec {
             SyntaxTags.ENTITY_TYPE -> { val limit = optional { ConstantRef(u32()) }; val names = list { strings.value(u32()) }; { TypeSyntax.Entity(scope, limit, names) } }
             SyntaxTags.UNION_TYPE -> refs().let { values -> { r -> TypeSyntax.Union(scope, values.mapFrozen(r::type)) } }
             SyntaxTags.INTERSECTION_TYPE -> refs().let { values -> { r -> TypeSyntax.Intersection(scope, values.mapFrozen(r::type)) } }
+            SyntaxTags.OBJECT_TYPE -> list { strings.value(u32()) to ref() }.let { fields -> { r ->
+                TypeSyntax.Object(scope, fields.mapFrozen { ObjectFieldSyntax(it.first, r.type(it.second)) })
+            } }
             SyntaxTags.ANONYMOUS_DATA_TYPE -> DeclarationId(u32()).let { value -> { TypeSyntax.AnonymousData(scope, value) } }
             SyntaxTags.FUNCTION_TYPE -> { val parameters = refs(); val result = ref(); val execution = wireEnum(u8(), FunctionExecution.values()) { it.wireValue };
                 val contexts = if (LibraryReadVersion.current >= 2) refs() else emptyList();

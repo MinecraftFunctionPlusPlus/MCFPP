@@ -150,6 +150,9 @@ tasks.shadowJar {
 
 tasks.test {
     useJUnitPlatform()
+    // Each test class gets a fresh process for compiler singleton state.
+    forkEvery = 1
+    maxParallelForks = 1
     doFirst { systemProperty("mcfpp.compiler.classpath", sourceSets.main.get().runtimeClasspath.asPath) }
 }
 

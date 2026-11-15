@@ -40,7 +40,7 @@ class ConstructorExecutionTest {
             val main = compile("""
                 data Box {
                     var value: int
-                    constructor(value: int){ this.value = value; }
+                    new(value: int){ return { value }; }
                 }
                 func main(){
                     var first = Box(1)
@@ -49,18 +49,18 @@ class ConstructorExecutionTest {
                     external result = first.value*10 + second.value
                 }
             """, output)
-            val constructor = template().constructors.single()
+            val constructor = template().factories.single()
             assertTrue(constructor.compiledFunctions.isEmpty())
             assertTrue(constructor.bodyCompiled)
             assertEquals(92, execute(main).read(main.scope.getVar("result") as MCInt))
             val text = Files.readString(exported(output, constructor))
-            assertTrue(text.contains("stack_frame[0].this.value"), text)
+            assertTrue(text.contains("stack_frame[0].return"), text)
             assertTrue(text.contains("set from") || text.contains("store result"), text)
         } finally { output.toFile().deleteRecursively() }
     }
 
     @Test fun fieldInitializersRunForExplicitAndImplicitConstructors() {
-        for (constructor in listOf("", "constructor(){}")) {
+        for (constructor in listOf("", "new(){ return { value: 4 } }")) {
             val main = compile("""
                 data Box { var value: int = 4; $constructor }
                 func main(){
@@ -71,8 +71,8 @@ class ConstructorExecutionTest {
                 }
             """)
             assertEquals(94, execute(main).read(main.scope.getVar("result") as MCInt))
-            assertTrue(template().constructors.single().compiledFunctions.isEmpty())
-            if (constructor.isEmpty()) assertNull(template().constructors.single().ast)
+            assertTrue(template().factories.single().compiledFunctions.isEmpty())
+            assertEquals(constructor.isEmpty(), template().factories.single().isImplicit)
         }
         val output = Files.createTempDirectory("mcfpp-object-initializer-")
         try {
@@ -105,7 +105,7 @@ class ConstructorExecutionTest {
             val main = compile("""
                 data Box {
                     var value: int
-                    constructor(kind: int, value: int){ this.value = kind + value; }
+                    new(kind: int, value: int){ return { value: kind + value }; }
                 }
                 func main(){
                     var first = Box(1,1)
@@ -114,12 +114,12 @@ class ConstructorExecutionTest {
                     external result = first.value*100 + second.value*10 + third.value
                 }
             """, output)
-            val constructor = template().constructors.single()
+            val constructor = template().factories.single()
             assertTrue(constructor.compiledFunctions.isEmpty())
             assertEquals(listOf("kind", "value"), constructor.normalParams.map { it.identifier })
             assertNull(top.mcfpp.analysis.StorageAccess.snapshot(constructor.scope.getVar("kind")!!))
             assertNull(top.mcfpp.analysis.StorageAccess.snapshot(constructor.scope.getVar("value")!!))
-            assertTrue(Files.readString(exported(output, constructor)).contains("stack_frame[0].this.value"))
+            assertTrue(Files.readString(exported(output, constructor)).contains("stack_frame[0].return"))
             assertEquals(235, execute(main).read(main.scope.getVar("result") as MCInt))
         } finally { output.toFile().deleteRecursively() }
     }
@@ -129,9 +129,9 @@ class ConstructorExecutionTest {
             func bump(value: int): int { return value + 1; }
             data Box {
                 var value: int
-                constructor(value: int){
-                    this.value = value
-                    this.value += bump(value)
+                new(value: int){
+                    var result = value + bump(value)
+                    return { value: result }
                 }
             }
             func main(){
@@ -147,7 +147,7 @@ class ConstructorExecutionTest {
         val main = compile("""
             data Box {
                 var value: int
-                constructor(value: int){ this.value = value; }
+                new(value: int){ return { value }; }
                 func setValue(value: int){ this.value = value; }
             }
             func main(){
@@ -170,9 +170,9 @@ class ConstructorExecutionTest {
             }
             data Box {
                 var value: int
-                constructor(value: int){
-                    if(value > 0){ this.value = value; }
-                    else{ this.value = 0; }
+                new(value: int){
+                    if(value > 0){ return { value }; }
+                    else{ return { value: 0 }; }
                 }
             }
             func main(){
@@ -197,7 +197,7 @@ class ConstructorExecutionTest {
         val main = compile("""
             data Source {
                 var value: int
-                constructor(value: int){ this.value = value; }
+                new(value: int){ return { value }; }
             }
             data Target {
                 var value: int

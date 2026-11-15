@@ -1,7 +1,7 @@
 /// 命令执行结果，包含数值结果和成功状态。
 data CommandResult {
     /// Minecraft 命令返回的数值结果。
-    const result: int=0
+    var result: int = 0 { get }
     /// Minecraft 命令是否执行成功。
-    const success: bool=false
+    var success: bool = false { get }
 }

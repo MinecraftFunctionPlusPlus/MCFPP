@@ -319,19 +319,44 @@ class MniGeneratedDeclarationTest {
     }
 
     @Test
-    fun inheritedSignatureConflictIsRejectedBeforeAnyGeneratedMemberIsPublished() = isolated {
+    fun generatedReceiverWithParentSignatureKeepsBothOriginalDeclarations() = isolated {
+        Fixture().use { f ->
+            Function.currFunction = f.caller
+            val parent = f.box.parent.single { it.identifier == "Parent" }
+            val original = parent.scope.functions.getValue("touch").single()
+            val parentBefore = parent.scope.functions.mapValues { it.value.toList() }
+            assertFalse(f.box.scope.functions.containsKey("touch"))
+            f.install { ctx, _ ->
+                ctx.declarations().edits(listOf(ctx.declarations().method(f.owner, "touch", f.noArgs) { }))
+            }.use { installed ->
+                val generated = installed.compiler.compile().methods.single().function
+                assertSame(f.box, generated.owner)
+                assertNotSame(original, generated)
+                assertSame(generated, f.box.scope.functions.getValue("touch").single())
+                assertEquals(parentBefore, parent.scope.functions.mapValues { it.value.toList() })
+                val selected = f.prepare("box.touch()")
+                assertTrue(selected.environment.compilerFunctions.values.any { it === generated })
+                assertSame(generated, selected.environment.compilerFunctions[
+                    (selected.call.target.function as ImmutableFunctionRef<*>).key
+                ])
+                assertEquals(0, Project.errorCount)
+            }
+        }
+    }
+
+    @Test
+    fun localSignatureConflictIsRejectedBeforeAnyGeneratedMemberIsPublished() = isolated {
         Fixture().use { f ->
             Function.currFunction = f.caller
             val before = f.box.scope.functions.mapValues { it.value.toList() }
             f.install { ctx, _ ->
-                ctx.declarations().edits(listOf(ctx.declarations().method(f.owner, "touch", f.noArgs) { }))
+                ctx.declarations().edits(listOf(ctx.declarations().method(f.owner, "bump", f.oneInt) { }))
             }.use { installed ->
                 val failure = assertFailsWith<CodeModelException> { installed.compiler.compile() }
                 assertTrue(
                     failure.message.orEmpty().contains("conflicts with an existing signature"),
                     failure.message.orEmpty()
                 )
-                assertTrue(f.box.scope.getFunctionCandidates("touch").none { it.owner === f.box })
                 assertEquals(before, f.box.scope.functions.mapValues { it.value.toList() })
                 assertEquals(0, Project.errorCount)
             }

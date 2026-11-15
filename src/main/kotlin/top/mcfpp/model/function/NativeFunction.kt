@@ -168,7 +168,10 @@ class NativeFunction : Function, Native {
             if (index < readOnlyParams.size) value else top.mcfpp.analysis.StorageAccess.capture(value).also { copy ->
                 if (!copy.isError) {
                     val binding = top.mcfpp.analysis.StorageAccess.ensure(copy)
-                    val declaration = binding.data.declarations.getValue(binding.place).copy(mutable = true, readonly = false, isLiteral = false)
+                    copy.type = value.type
+                    binding.data.types[value.type.typeId] = value.type
+                    val declaration = binding.data.declarations.getValue(binding.place).copy(
+                        declaredType = value.type.typeId, mutable = true, readonly = false, isLiteral = false)
                     copy.isConst = false
                     copy.symbol = declaration
                     binding.data.declarations[binding.place] = declaration

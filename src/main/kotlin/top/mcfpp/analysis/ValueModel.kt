@@ -110,7 +110,7 @@ sealed interface ValueKnowledge {
 
 enum class ValueState { INITIALIZED, UNINITIALIZED, MAYBE_INITIALIZED, ERROR }
 enum class Presence { Present, Absent, Unknown }
-/** readableLayout proves access to an exact runtime DTO schema, not a complete value snapshot. */
+/** readableLayout proves the runtime fields guaranteed by a DTO or union, not a complete value snapshot. */
 data class ValueFacts(val type: TypeKnowledge, val value: ValueKnowledge, val state: ValueState = ValueState.INITIALIZED,
                       val readableLayout: TypeId? = null,
                       val reference: top.mcfpp.core.lang.ref.ReferenceMetadata? = null,
@@ -158,13 +158,14 @@ class FlowFacts private constructor(private var facts: PersistentMap.Builder<Pla
         reachable = source.reachable
     }
     /** Calls may transfer type and shape evidence, but never specialize on ordinary argument values. */
-    fun withoutValues(initializedOnly: Boolean = false) = FlowFacts(facts.filterValues {
+    fun withoutValues(initializedOnly: Boolean = false, preserveShape: Boolean = true) = FlowFacts(facts.filterValues {
         !initializedOnly || it.state == ValueState.INITIALIZED
     }.mapValuesTo(linkedMapOf()) { (_, fact) -> fact.copy(value = ValueKnowledge.Unknown,
         type = if (fact.state == ValueState.INITIALIZED) fact.type else TypeKnowledge.Unknown,
+        presence = if (preserveShape) fact.presence else Presence.Unknown,
         readableLayout = fact.readableLayout?.takeIf { fact.state == ValueState.INITIALIZED &&
             (fact.type as? TypeKnowledge.Exact)?.type == it }) },
-        reachable, lengths.build())
+        reachable, if (preserveShape) lengths.build() else emptyMap())
     private fun alternatives(place: Place): List<Place>? {
         var locations = listOf(Place(place.root))
         for (segment in place.path) locations = if (segment == PathSegment.UnknownIndex) {
@@ -214,6 +215,7 @@ class FlowFacts private constructor(private var facts: PersistentMap.Builder<Pla
                 val children = when (type) {
                     is top.mcfpp.type.MCFPPCompoundType -> type.generic
                     is top.mcfpp.type.MCFPPDataTemplateType -> type.instanceFields.map { it.type }
+                    is top.mcfpp.type.MCFPPUnionType -> type.types.toList()
                     else -> emptyList()
                 }
                 return children.firstNotNullOfOrNull(::find)
@@ -231,23 +233,23 @@ class FlowFacts private constructor(private var facts: PersistentMap.Builder<Pla
                 element != top.mcfpp.type.MCFPPBaseType.Any.typeId && element != top.mcfpp.type.MCFPPBaseType.Object.typeId &&
                 descriptor(element)?.hasRuntimeRepresentation == true) {
                 return ValueFacts(TypeKnowledge.Exact(element), ValueKnowledge.Unknown,
-                    readableLayout = element.takeIf { descriptor(it) is top.mcfpp.type.MCFPPDataTemplateType })
+                    readableLayout = descriptor(element)?.let(RuntimeObjectLayouts::identity))
             }
             val parentType = (parent?.type as? TypeKnowledge.Exact)?.type
             if (exact == null && parent?.state == ValueState.INITIALIZED &&
                 (read(parentPlace)?.state != ValueState.INITIALIZED ||
                     parentType != null && parent.readableLayout == parentType)) {
                 val owner = (parent.type as? TypeKnowledge.Exact)?.type?.let(::descriptor)
-                    as? top.mcfpp.type.MCFPPDataTemplateType
-                val field = owner?.takeIf { it.hasRuntimeRepresentation }?.instanceFields
-                    ?.firstOrNull { it.identifier == (place.path.last() as PathSegment.Field).name }
+                val field = owner?.takeIf { RuntimeObjectLayouts.identity(it) != null }
+                    ?.let { RuntimeObjectLayouts.field(it, (place.path.last() as PathSegment.Field).name) }
+                    ?.takeIf { owner !is top.mcfpp.type.MCFPPUnionType || !it.optional && it.readable }
                 val fieldType = field?.type?.let { descriptor(it.typeId) ?: it }
                 if (fieldType?.hasRuntimeRepresentation == true) {
                     val id = fieldType.typeId
                     return ValueFacts(if (id == top.mcfpp.type.MCFPPBaseType.Any.typeId ||
                         id == top.mcfpp.type.MCFPPBaseType.Object.typeId) TypeKnowledge.Unknown
                         else TypeKnowledge.Exact(id), ValueKnowledge.Unknown,
-                        readableLayout = id.takeIf { fieldType is top.mcfpp.type.MCFPPDataTemplateType })
+                        readableLayout = RuntimeObjectLayouts.identity(fieldType))
                 }
             }
         }
@@ -375,7 +377,10 @@ class FlowFacts private constructor(private var facts: PersistentMap.Builder<Pla
     fun join(other: FlowFacts): FlowFacts {
         if (!reachable) return other.fork()
         if (!other.reachable) return fork()
-        if (facts.build() === other.facts.build() && lengths.build() === other.lengths.build()) return fork()
+        if (facts.build() === other.facts.build() && lengths.build() === other.lengths.build() && facts.values.all { fact ->
+                fact.readableLayout == null || fact.state == ValueState.INITIALIZED &&
+                    (fact.type as? TypeKnowledge.Exact)?.type == fact.readableLayout
+            }) return fork()
         val joined = linkedMapOf<Place, ValueFacts>()
         for (place in facts.keys + other.facts.keys) {
             val a = facts[place]

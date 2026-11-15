@@ -137,6 +137,11 @@ sealed interface TypeSyntax : SemanticNode {
         val contexts: List<TypeSyntax> = emptyList()
     ) : TypeSyntax { override val tag: Int get() = 0x0209 }
     data class Void(override val scope: ScopeId) : TypeSyntax { override val tag: Int get() = 0x020a }
+    data class Object(override val scope: ScopeId, val fields: List<ObjectFieldSyntax>) : TypeSyntax {
+        override val tag: Int get() = 0x020c
+    }
 }
+
+data class ObjectFieldSyntax(val name: String, val type: TypeSyntax)
 
 enum class ContainerKind(val wireValue: Int) { LIST(1), IMMUTABLE_LIST(2), MAP(3), DICT(4) }

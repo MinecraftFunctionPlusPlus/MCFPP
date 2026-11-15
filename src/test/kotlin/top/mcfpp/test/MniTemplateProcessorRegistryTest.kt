@@ -159,11 +159,11 @@ class MniTemplateProcessorRegistryTest {
 
     @Test fun annotationNamesUseTheRealNamespaceAndIdentifierGrammar() {
         val namespace = namespace()
-        for (name in listOf("Mark", "méthode", "_mark2"))
+        for (name in listOf("Mark", "méthode", "_mark2", "ref"))
             assertTrue(namespace.registerTemplateProcessor("registry.owner:$name", Processor::class.java), name)
         for (name in listOf(
             "Mark", "other.owner:Mark", "registry.owner:if", "registry.owner:this",
-            "registry.owner:ref", "registry.owner:vec3", "registry.owner:Mark.more",
+            "registry.owner:vec3", "registry.owner:Mark.more",
             "registry.owner:Mark/*comment*/", "registry.owner: Mark", "registry.owner:Mark!"
         ))
             assertFalse(namespace.registerTemplateProcessor(name, Processor::class.java), name)

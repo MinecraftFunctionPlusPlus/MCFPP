@@ -33,7 +33,7 @@ class SpecializationPolicyTest {
                 if(flag){ return 1; }
                 return 2
             }
-            func main(){ var first = choose(true); var second = choose(false); }
+            func main(){ external first = choose(true); external second = choose(false); }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
         val machine = executeMain()
@@ -121,8 +121,8 @@ class SpecializationPolicyTest {
             func increment(value: int): int { return value + 1; }
             func add(left: int, right: int): int { return left + right; }
             func main(){
-                var expression = increment(1) + increment(2)
-                var arguments = add(increment(3), increment(4))
+                external expression = increment(1) + increment(2)
+                external arguments = add(increment(3), increment(4))
             }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
@@ -136,7 +136,7 @@ class SpecializationPolicyTest {
     @Test fun booleanCallResultsAreCapturedBeforeTheNextCall() {
         MCFPPStringTest.readFromString("""
             func identity(value: bool): bool { return value; }
-            func main(){ var different = identity(true) != identity(false); }
+            func main(){ external different = identity(true) != identity(false); }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
         val machine = executeMain()
@@ -149,7 +149,7 @@ class SpecializationPolicyTest {
             func choose(flag: bool): int {
                 if(flag){ return 1; } else { return 2; }
             }
-            func main(){ var first = choose(true); var second = choose(false); }
+            func main(){ external first = choose(true); external second = choose(false); }
         """.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
         assertNull(top.mcfpp.analysis.StorageAccess.snapshot(function("choose").returnVar))
