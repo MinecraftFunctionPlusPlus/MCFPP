@@ -141,7 +141,7 @@ object NativeDeclarations {
             is LibraryType.Specialized -> { visitType(type.constructor); type.arguments.forEach(::constant) }
             is LibraryType.Union -> type.alternatives.forEach(visitType)
             is LibraryType.Intersection -> type.components.forEach(visitType)
-            is LibraryType.Function -> { type.parameters.forEach(visitType); visitType(type.result) }
+            is LibraryType.Function -> { type.contexts.forEach(visitType); type.parameters.forEach(visitType); visitType(type.result) }
             is LibraryType.NbtRef -> visitType(type.value)
             else -> Unit
         } }

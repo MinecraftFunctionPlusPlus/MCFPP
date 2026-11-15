@@ -67,12 +67,18 @@ class FileScope: SimpleLibScope(){
         else importedNamespaceField[namespace]?.let(::declarations).orEmpty() + listOfNotNull(importField[namespace])
 
     fun getAccessibleTemplate(identifier: String): DataTemplate? {
-        return accessibleScopes().firstNotNullOfOrNull { it.getTemplate(identifier) }
+        return accessibleScopes().firstNotNullOfOrNull { nestedTemplate(it, identifier) }
     }
 
     fun getAccessibleTemplate(namespace:String, identifier: String): DataTemplate? {
-        return qualifiedScopes(namespace).firstNotNullOfOrNull { it.getTemplate(identifier) }
+        return qualifiedScopes(namespace).firstNotNullOfOrNull { nestedTemplate(it, identifier) }
     }
+
+    private fun nestedTemplate(scope: NamespaceScope, identifier: String): DataTemplate? =
+        scope.getTemplate(identifier) ?: identifier.takeIf { '.' in it }?.let {
+            val outer = scope.getTemplate(it.substringBefore('.')) ?: scope.getObject(it.substringBefore('.'))
+            outer?.let { owner -> GlobalScope.getCanonicalTemplate(owner.namespace, identifier) }
+        }
 
     fun getAccessibleAnnotation(identifier: String): Class<out Annotation>? {
         return namespaceField.getAnnotation(identifier)

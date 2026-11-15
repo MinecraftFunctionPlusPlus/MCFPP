@@ -27,6 +27,7 @@ internal object TemplateCommandFormat {
     fun build(value: DataTemplateObject): Command? = when {
         instance(value, "mcfpp.minecraft", "Area") -> area(value)
         instance(value, "mcfpp.minecraft.other", "Slot") -> slot(value)
+        instance(value, "mcfpp.minecraft.other", "BlockState") -> blockState(value)
         else -> null
     }
 
@@ -38,6 +39,25 @@ internal object TemplateCommandFormat {
     private fun field(value: DataTemplateObject, name: String): Var<*> {
         val result = DataTemplate.getField(value, name)!!
         return if (result is PropertyVar) result.get() else result
+    }
+
+    private fun blockState(value: DataTemplateObject): Command {
+        val properties = StorageAccess.constantEncoding(field(value, "properties")) as? CompoundTag
+        if (properties == null) {
+            LogProcessor.error("BlockState command properties require a compile-time NBT compound; use {} for no properties")
+            return Command()
+        }
+        val parts = properties.value.map { (key, tag) ->
+            val part = (tag as? StringTag)?.value
+            if (!key.matches(Regex("[a-z0-9_]+")) || part == null || !part.matches(Regex("[a-z0-9_]+"))) {
+                LogProcessor.error("BlockState properties must be block-state names and string values")
+                return Command()
+            }
+            "$key=$part"
+        }
+        return field(value, "name").toCommandPart().also { command ->
+            if (parts.isNotEmpty()) command.build(parts.joinToString(",", "[", "]"), false)
+        }
     }
 
     private fun area(value: DataTemplateObject): Command {
@@ -88,10 +108,11 @@ internal object TemplateCommandFormat {
         if (known != null) Function.addCommand(Commands.dataSetValue(token.nbtPath, StringTag(slotTokens.getValue(known.value.identifier))))
         else {
             Function.addCommand(Commands.dataSetValue(token.nbtPath, StringTag("")))
+            val ordinal = MCInt()
+            Function.addCommand(Command("execute store result score ${ordinal.name} ${ordinal.sbObject} run data get")
+                .build(binding.path.memberIndex("type").memberIndex("ordinal").toCommandPart()))
             for (member in type.enum.members.values) {
-                val filter = CompoundTag().apply { put("ordinal", IntTag(member.value)) }
-                val match = binding.path.memberIndex("type").toCommandPart().build(NbtEncoding.snbt(filter), false)
-                Function.addCommand(Command("execute if data").build(match).build("run")
+                Function.addCommand(Command("execute if score ${ordinal.name} ${ordinal.sbObject} matches ${member.value} run")
                     .build(Commands.dataSetValue(token.nbtPath, StringTag(slotTokens.getValue(member.identifier)))))
             }
         }

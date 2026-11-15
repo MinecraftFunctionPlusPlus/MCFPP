@@ -7,7 +7,8 @@ data PlayerData: EntityData, CreatureData {
     /// 保存数据时的版本编号。
     @Name("DataVersion") var dataVersion: int
     /// 玩家能力和移动参数。
-    @Name("Abilities") var abilities: data {
+    @Name("Abilities") var abilities: Abilities
+    data Abilities {
         /// 是否处于飞行状态。
         @Name("Flying") var flying: bool
         /// 飞行速度参数。
@@ -30,10 +31,11 @@ data PlayerData: EntityData, CreatureData {
     /// 维度标识符。
     @Name("Dimension") var dimension: string
     /// 关联的末影珍珠数据。
-    @Name("ender_pearls") var enderPearls: list<data: EnderPearlData {
+    @Name("ender_pearls") var enderPearls: list<EnderPearl>
+    data EnderPearl: EnderPearlData {
         /// 末影珍珠所在的维度。
         @Name("ender_pearl_dimension") var enderPearlDimension: string
-    }>
+    }
     /// 末影箱物品。
     @Name("EnderItems") var enderItems: list<ItemData>
     /// 进入下界前的位置。
@@ -51,7 +53,8 @@ data PlayerData: EntityData, CreatureData {
     /// 物品栏数据。
     @Name("Inventory") var inventory: list<ItemData>
     /// 上次死亡的位置和维度。
-    @Name("LastDeathLocation") var lastDeathLocation: data {
+    @Name("LastDeathLocation") var lastDeathLocation: LastDeathLocation
+    data LastDeathLocation {
         /// 维度标识符。
         var dimension: string
         /// 位置坐标，顺序为 X、Y、Z。
@@ -66,7 +69,8 @@ data PlayerData: EntityData, CreatureData {
     /// 配方书状态。
     @Name("RecipeBook") var recipeBook: list<RecipeBook>
     /// 最外层坐骑及乘坐连接的数据。
-    @Name("RootVehicle") var rootVehicle: data {
+    @Name("RootVehicle") var rootVehicle: RootVehicle
+    data RootVehicle {
         /// 乘坐连接目标的 UUID。
         @Name("Attach") var attach: IntArray
         /// 坐骑实体的数据。
@@ -101,7 +105,8 @@ data PlayerData: EntityData, CreatureData {
     /// 重生点的 Z 坐标。
     @Name("SpawnZ") var spawnZ: int
     /// 监守者召唤警告的状态。
-    @Name("warden_spawn_tracker") var wardenSpawnTracker: data {
+    @Name("warden_spawn_tracker") var wardenSpawnTracker: WardenSpawnTracker
+    data WardenSpawnTracker {
         /// 冷却时间。
         @Name("cooldown_ticks") var cooldownTicks: int
         /// 距离上一次警告的时间。

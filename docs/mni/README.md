@@ -170,32 +170,14 @@ fun damage(context: MacroContext, health: Ref<IntT>, amount: Value<IntT>): Block
 
 ## 7. 验证边界
 
-本页下列 CLI/DSB/回归结果和第 5 节状态表均是 **lambda 迁移前的历史证据**；不覆盖新语法、只读局部捕获或新增累加器重载。迁移后实际编译与 DSB 由协调者记录，文档编辑未运行这些检查。
-
-必须区分三种“执行”：
-
-1. **编译器生成代码**：协调者交付的 [`actual-examples-cli-check/attempt1/result.json`](../../build/inheritance-mni/actual-examples-cli-check/attempt1/result.json) 对 5 个示例 × Java/Kotlin 共 10 个 case 运行真实 CLI；记录全部 `cliExitCode=0`、`zeroErrorsWarnings=true`。本次文档修订复用该结果，没有重新运行这些命令。
-2. **生成命令解释器执行**：`MniDamageTest`/`MniRepeatTest` 等使用 `ScoreCommandExecutor`，上下文测试使用 `ContextCommandExecutor`，执行真实生成的 `.mcfunction` 行；这是确定性解释，不是 Minecraft。
-3. **DSB 功能执行**：保存的 [`functional-summary.json`](../../build/inheritance-mni/dsb-check/functional-summary.json) 显示 10 个 Java/Kotlin 示例 case 在 DSB 26.3 下全部功能 PASS：`damage`、`nbt-reference`、`raycast`、`score-mapping` 共 8 例复用 `attempt2` 的原生 DSB 通过报告；`repeat-Kotlin`/`repeat-Java` 2 例由 `attempt3` 新执行通过。执行前后 10 例原数据包/`Imports`、CLI 证据、Java 25 运行时和 DSB JAR 的 SHA-256 守卫一致，原产物未被改写。功能入口为 [`examples/mni/benchmark/verify-dsb.ps1`](../../examples/mni/benchmark/verify-dsb.ps1)，使用说明见 [`benchmark/README.md`](../../examples/mni/benchmark/README.md)；复跑需显式传新的 `-Attempt`（例如当前未占用的 `attempt4`），已有 `attempt1`–`attempt3` 均保留、不覆盖。
+MNI 的检查分别覆盖编译器生成代码、命令解释器执行和 DSB 数据包执行。测试类位于 `src/test/kotlin/top/mcfpp/test/Mni*Test.kt`；DSB 脚本与参数说明见 [示例验证说明](../../examples/mni/benchmark/README.md)。按实际修改选择检查，执行结果保存在对应构建目录。
 
 DSB 不是 Minecraft 服务端：它覆盖数据包命令语义、函数/回调控制流、固定上下文和调用帧，不证明客户端、物理、AI、MSPT 或游戏内耗时。**性能与真实游戏验收已按用户要求取消，不是任何示例或交付的门槛**，也不存在“等待实机/性能”的未完成项。
 
-历史解释器证据保留但不代表当前缺口：`attempt1` 中 score-mapping 两个观察 case 因探针在调用帧 pop 之后读取 `stack_frame[0].loadedHealth` 而失败，这是观察探针位置问题，不是生成命令结果不符；`approved-generated-context-batch14` 中 `MniScoreMappingTest` 的运行期断言通过、最后的 helper 可达路径结构计数断言失败。这两项作为历史记录保留，其功能结论已由上述 DSB 十例通过覆盖，不再列为当前完成门槛。`MniExecutionContextTest` 13、`MniNbtReferenceTest` 4、`MniRaycastTest` 3 的历史通过记录不变；`MniRepeatTest` 不在 batch14 中，repeat 的当前功能证据是 `attempt3` 的 DSB 新执行。
-
-`score-mapping` 的当前实现与证据：
-
-- 生成的每个分数读取先把自己的临时值清零，再做 `if score` 条件复制；因此真正缺失的 key 读出 `0`/`false`，不会复用上一次的临时值。
-- batch14 的运行期断言在同一个执行器中先写入分数，再 `reset` 真实 key，并用同一个生成 `main` 调用两次；缺失 key 下 int 读 `0`、bool 读 `false`，第二次 `save` 仍写 `9`/`1`，且没有失败的 score 操作。
-- 当前 `ScoreCommandExecutor` 已把缺失的 score 条件按 false 处理（`if` 不执行、`unless` 执行），`reset` 会删除真实 key；专门测试通过。`scoreboard players operation` 对缺失 key 仍会报错，这是测试执行器的限制，不是 Minecraft 语义声明。
-- `attempt2` 的 DSB 观察对 Kotlin/Java 两个 case 都得到 `loadedHealth=7`、`loadedAlive=1`，并断言 `#scores health_hp=7`、`state_alive=1` 和空调用帧；这覆盖了示例的实际存取功能。
-
-完整功能回归的合并证据已在 [regression-results.md](regression-results.md) 发布：旧全量运行与受影响测试的定向修复运行合成为完整证据，编译器导出字符串的 DSB 也已有实际通过记录。本页不复制会变化的计数；独立最终验收记录见 [acceptance.md](../implementation-review/acceptance.md)。
-
 ## 8. 当前边界
 
-- **功能回归**：全量运行中的 6 项失败已由定向运行解释并修复；合并证据、复用边界和字符串 DSB 结果见 [regression-results.md](regression-results.md)。本文不把合并证据写成一次新的全量同轮执行。
-- **API 稳定性**：仍为 `0.2.0-experimental`；兼容规则见 [api-versioning.md](api-versioning.md)。独立最终验收见 [acceptance.md](../implementation-review/acceptance.md)。
-- **验收范围**：示例功能已由 DSB 十例覆盖；性能、MSPT 和真实游戏实机验证已按用户要求取消，不属于未完成项。
+- **API 稳定性**：仍为 `0.2.0-experimental`；兼容规则见 [api-versioning.md](api-versioning.md)。
+- **验证范围**：检查范围以本次执行的测试和示例为准，历史报告不能代表后续修改的验证结果。
 
 ## 9. 相关文档
 

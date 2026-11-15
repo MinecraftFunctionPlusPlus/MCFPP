@@ -1,0 +1,13 @@
+import mcfpp.lang:*
+import mcfpp.minecraft.resource:*
+import mcfpp.minecraft.std:*
+func main() {
+    var targets = @e.tag("stdlib_skill_target").distance(0..8);
+    print(targets.count());
+    targets.forEachAt { ctx ->
+        if (!ctx.executor.hasTag("stdlib_skill_hit")) {
+            ctx.executor.damage(2.0);
+            ctx.executor.addTag("stdlib_skill_hit");
+        }
+    }
+}

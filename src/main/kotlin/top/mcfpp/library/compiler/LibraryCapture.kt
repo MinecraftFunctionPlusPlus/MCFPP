@@ -5,6 +5,7 @@ import org.antlr.v4.runtime.tree.ParseTree
 import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.antlr.mcfppParser as Parser
 import top.mcfpp.io.MCFPPFile
+import top.mcfpp.io.info.MacroFunctionInfo
 import top.mcfpp.library.api.SourceCompoundIndex
 import top.mcfpp.library.format.*
 import top.mcfpp.library.model.*
@@ -43,6 +44,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
     private val bodySources = ArrayList<SyntaxBodySource?>()
     private val roots = ArrayList<SyntaxRoot>()
     private val storedNodes = LinkedHashMap<NodeRef, TypeSyntax>()
+    private val storedExpressions = LinkedHashMap<NodeRef, Expression>()
     private val storedNodeReferences = IdentityHashMap<TypeSyntax, NodeRef>()
     private val rootCounts = HashMap<DeclarationId, Long>()
     private val types = ArrayList<LibraryType>()
@@ -176,6 +178,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
             val owner = functions.getValue(function)
             readonly(function).forEachIndexed { index, parameter -> reserveParameter(owner, parameter, true, index) }
             function.normalParams.forEachIndexed { index, parameter -> reserveParameter(owner, parameter, false, index) }
+            function.contextParams.forEachIndexed { index, parameter -> reserveParameter(owner, parameter, false, function.normalParams.size + index) }
         }
         compounds.templates.filterIsInstance<GenericDataTemplate>().forEach { template ->
             val owner = objects.getValue(template)
@@ -238,7 +241,8 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
         } }, bOrder.map { index -> requireNotNull(bodySources[index]) { "Incomplete lambda B shell" }.let {
             it.copy(owner = remap.declaration(it.owner), captures = it.captures.map(remap::reference), root = remap.node(it.root))
         } }, roots.map { it.copy(owner = remap.declaration(it.owner), node = remap.node(it.node)) })
-        val nodeRefs = storedNodes.mapValues { syntax.reference(remap.node(it.value)) }
+        val nodeRefs = storedNodes.mapValues { syntax.reference(remap.node(it.value)) } +
+            storedExpressions.mapValues { syntax.reference(remap.node(it.value)) }
         val finalDeclarations = declarations.indices.sortedBy { d.getValue(DeclarationId(it + 1L)).value }
             .map { rewriteDeclaration(requireNotNull(declarations[it]) { "Incomplete D shell" }, remap, nodeRefs) }
         val finalTables = remap.tables(canonical.tables, nodeRefs)
@@ -249,10 +253,42 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
             captured.annotations.map(remap::annotation), captured.stateCells.map(remap::stateCell), runtimeRecords.map(remap::runtime),
             selection.resources.map { resource -> LibraryResource(resource.path, resource.bytes.size.toULong(),
                 MessageDigest.getInstance("SHA-256").digest(resource.bytes).toList(), resource.owner?.let { remap.reference(reference(it)) }, resource.module,
-                resource.activation, resource.origin) })
+                resource.activation, resource.origin) },
+            debug = LibraryDebug(emptyList(), emptyList(), captureDocuments(files, remap)))
         val result = ExportDependencyClosure.trim(model)
         LibraryModelCodec(listOf(CompoundCodec, NativeCodec)).validate(result)
         return result
+    }
+
+    private fun captureDocuments(files: List<MCFPPFile>, remap: ExportNodeRemapper): List<DeclarationDocument> {
+        val documents = linkedMapOf<DeclarationId, String>()
+        objects.forEach { (value, id) ->
+            val entry = compounds.entry(value)
+            val file = entry?.source ?: (value as? Function)?.let(::sourceFile)
+            val context = entry?.context ?: (value as? Function)?.let { it.sourceDeclarationContext ?: it.ast }
+                ?: entry?.takeIf { it.kind in setOf(5, 6, 9) && (value is Var<*> || value is Property || value is EnumMember) }?.let { sourceEntry ->
+                    val owner = (sourceEntry.owner as? CompoundData)?.identifier
+                    file?.documentation?.declarations?.singleOrNull { item -> item.name == sourceEntry.name && item.owner == owner &&
+                        item.kind == (if (sourceEntry.kind == 9) "enum-member" else "field") }?.syntax
+                }
+            val text = when {
+                value is MacroFunctionInfo -> value.documentation
+                value is top.mcfpp.model.WithDocument && !value.document.isEmpty -> value.document.toSource()
+                file != null && context != null -> file.documentation.declaration(context)?.document?.toSource().orEmpty()
+                else -> ""
+            }
+            if (text.isNotBlank()) documents[remap.declaration(id)] = text
+        }
+        globalSites.forEach { (site, id) ->
+            val document = files.firstNotNullOfOrNull { file -> file.documentation.declarations.firstOrNull { it.syntax === site }?.document }
+            if (document != null && !document.isEmpty) documents[remap.declaration(id)] = document.toSource()
+        }
+        namespaces.forEach { (namespace, id) ->
+            val text = files.filter { it.namespace.identifier == namespace }.flatMap { it.documentation.declarations }
+                .filter { it.kind == "namespace" }.map { it.document.toSource() }.filter { it.isNotBlank() }.distinct().joinToString("\n\n")
+            if (text.isNotBlank()) documents[remap.declaration(id)] = text
+        }
+        return documents.entries.sortedBy { it.key.value }.map { DeclarationDocument(it.key, it.value) }
     }
     private fun canonicalIdentities(): CanonicalIdentityBindings = object : CanonicalIdentityBindings {
             override fun localDeclaration(reference: DeclarationId): ByteArray = stableDeclaration(reference)
@@ -302,7 +338,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
         val initialized = IdentityHashMap<DataTemplate, Boolean>()
         val scheduled = IdentityHashMap<Function, Boolean>()
         val pending = ArrayDeque<Function>()
-        fun enqueue(input: Function) { val function = compounds.entry(input)?.value as? Function ?: input; if (scheduled.put(function, true) == null) {
+        fun enqueue(input: Function) { val function = compounds.entry(input)?.value as? Function ?: input; if (function is top.mcfpp.core.lang.entity.EntityTemplates.SummonFunction) return; if (scheduled.put(function, true) == null) {
             val signature = source(function)
             readonly(function).forEachIndexed { index, parameter -> compounds.include(parameter.type, signature?.parameters?.readOnlyParams()?.readOnlyParameterList()?.readOnlyParameter()?.getOrNull(index)?.type()) }
             function.normalParams.forEachIndexed { index, parameter -> compounds.include(parameter.type, signature?.parameters?.normalParams()?.parameterList()?.parameter()?.getOrNull(index)?.type()) }
@@ -607,7 +643,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
             }), listOf(key(type.argument)))
             is TypeSyntax.Vector -> KeyType.Builtin("vec${type.dimensions}")
             is TypeSyntax.Union -> KeyType.Union(type.alternatives.map(::key))
-            is TypeSyntax.Function -> KeyType.Function(type.execution, type.parameters.map(::key), key(type.result))
+            is TypeSyntax.Function -> KeyType.Function(type.execution, type.parameters.map(::key), key(type.result), type.contexts.map(::key))
             is TypeSyntax.Void -> KeyType.Builtin("void")
             else -> KeyType.Dependent(inlineTree(type, { keys.getValue((it as NameUse.Local).target) }, { values[(it.value - 1).toInt()] },
                 { builtinKeys.getValue(it) }).toList())
@@ -668,7 +704,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
                     is TypeSyntax.Entity -> { optional(value.limit) { c(constant(it)) }; list(value.names) { string(it) } }
                     is TypeSyntax.Union -> ns(value.alternatives)
                     is TypeSyntax.Intersection -> ns(value.components)
-                    is TypeSyntax.Function -> { ns(value.parameters); n(value.result); u8(value.execution.wireValue) }
+                    is TypeSyntax.Function -> { ns(value.parameters); n(value.result); u8(value.execution.wireValue); ns(value.contexts) }
                     is TypeSyntax.Void -> Unit
                     is TypeSyntax.Inferred -> n(value.expression)
                     is Expression.Name -> TypeTableCodec.writeKeyType(this, name(value.use))
@@ -680,7 +716,10 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
                     is Expression.Cast -> { n(value.value); n(value.target) }
                     is Expression.Member -> { n(value.receiver); string(value.name); u8(value.keyword.wireValue) }
                     is Expression.Index -> { n(value.receiver); optional(value.index) { n(it) } }
-                    is Expression.Call -> { n(value.callee); ns(value.readonly); list(value.normal) { n(it.expression) }; optional(value.trailingLambda) { n(it) } }
+                    is Expression.Call -> {
+                        n(value.callee); ns(value.readonly); list(value.normal) { n(it.expression) }; optional(value.trailingLambda) { n(it) }
+                        if (value.normal.any { it.name != null }) { u8(1); list(value.normal) { optional(it.name) { string(it) } } }
+                    }
                     is Expression.PropertyFilter -> { n(value.receiver); list(value.entries) { string(it.name); n(it.value) } }
                     is Expression.Range -> { optional(value.lower) { n(it) }; optional(value.upper) { n(it) } }
                     is Expression.ListValue -> ns(value.elements)
@@ -708,7 +747,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
         is TypeSyntax.Container -> listOf(node.argument)
         is TypeSyntax.Union -> node.alternatives
         is TypeSyntax.Intersection -> node.components
-        is TypeSyntax.Function -> node.parameters + node.result
+        is TypeSyntax.Function -> node.contexts + node.parameters + node.result
         is TypeSyntax.Inferred -> listOf(node.expression)
         is Expression.TypeValue -> listOf(node.type)
         is Expression.Group -> listOfNotNull(node.value)
@@ -740,7 +779,8 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
                     "func.execution:generator" -> FunctionExecution.GENERATOR
                     else -> unsupported("Unsupported callback execution signature")
                 }
-                KeyType.Function(execution, (identity.arguments[1] as TypeId.Applied).arguments.map(::keyType), keyType(identity.arguments[2]))
+                KeyType.Function(execution, (identity.arguments[1] as TypeId.Applied).arguments.map(::keyType), keyType(identity.arguments[2]),
+                    (identity.arguments.getOrNull(3) as? TypeId.Applied)?.arguments.orEmpty().map(::keyType))
             }
             else -> KeyType.Applied(keyType(identity.constructor), identity.arguments.map(::keyType))
         }
@@ -918,6 +958,8 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
             }, type(actual, owner, node), node, null, null))
     }
     override fun name(name: String, namespace: String?, role: NameRole, site: ParserRuleContext): NameUse {
+        if (role == NameRole.VALUE && namespace == null && top.mcfpp.core.lang.context.ContextCallbacks.recognizesGlobal(name))
+            return NameUse.Lookup(name, null, currentEnvironment, emptyList())
         if (namespace == null) frames.asReversed().firstNotNullOfOrNull { it.names[name] }?.let { id ->
             if (role == NameRole.VALUE || id in readonlySlots) return NameUse.Local(id)
         }
@@ -1030,7 +1072,11 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
             builtinValueUses.containsKey(use) || ((use as? NameUse.Declaration)?.target as? DeclarationReference.Local)?.target?.let { objectById[it] is CompoundData || objectById[it] is MCFPPType } == true
         }
         val scope = (if (static) actual.objectData else actual.instanceData).scope
-        return identityDistinct(scope.getFunctionCandidates(name, current).filter { !it.actualCallBody }).map { function ->
+        val candidates = scope.getFunctionCandidates(name, current).filter { !it.actualCallBody }
+        // Intrinsic members are recreated from the nominal entity template on import.
+        // Leave their calls as member lookups instead of references to source declarations.
+        if (candidates.any { it is top.mcfpp.core.lang.entity.EntityTemplates.SummonFunction }) return null
+        return identityDistinct(candidates).map { function ->
             if (functions.containsKey(function) || function.ast != null && functions.keys.any { it.ast === function.ast && it.identifier == function.identifier }) reference(function)
             else selection.ownership.functionReference(function) ?: selection.ownership.declarationReference(function) ?: when {
                 function is NativeFunction && function.javaMethod.declaringClass.classLoader === MCFPPType::class.java.classLoader &&
@@ -1123,7 +1169,8 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
                 "NBTRef" -> LibraryType.NbtRef(typeIdentity(identity.arguments.single()))
                 TypeId.FUNCTION_CONSTRUCTOR -> {
                     val key = keyType(identity) as KeyType.Function
-                    LibraryType.Function(key.execution, (identity.arguments[1] as TypeId.Applied).arguments.map(::typeIdentity), typeIdentity(identity.arguments[2]))
+                    LibraryType.Function(key.execution, (identity.arguments[1] as TypeId.Applied).arguments.map(::typeIdentity), typeIdentity(identity.arguments[2]),
+                        (identity.arguments.getOrNull(3) as? TypeId.Applied)?.arguments.orEmpty().map(::typeIdentity))
                 }
                 else -> LibraryType.Applied(typeIdentity(identity.constructor), identity.arguments.map(::typeIdentity))
             }
@@ -1203,12 +1250,18 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
         is CompilerValue.Typed -> ConstantValue.Typed(typeIdentity(value.type), constant(value.payload, types))
         })
     }
-    override fun storeNode(owner: DeclarationId, node: TypeSyntax): NodeRef = storedNodeReferences.getOrPut(node) { NodeRef(storedNodes.size + 1L).also { reference ->
+    override fun storeNode(owner: DeclarationId, node: TypeSyntax): NodeRef = storedNodeReferences.getOrPut(node) { NodeRef(storedNodes.size + storedExpressions.size + 1L).also { reference ->
         storedNodes[reference] = node
         val index = rootCounts.getOrDefault(owner, 0); rootCounts[owner] = index + 1
         roots.add(SyntaxRoot(owner, listOf(index), node))
     } }
     override fun storeBody(body: SyntaxBodySource): BodyId = BodyId(bodySources.size + 1L).also { bodySources.add(body) }
+    override fun storeExpressionNode(owner: DeclarationId, node: Expression): NodeRef =
+        NodeRef(storedNodes.size + storedExpressions.size + 1L).also { reference ->
+            storedExpressions[reference] = node
+            val index = rootCounts.getOrDefault(owner, 0); rootCounts[owner] = index + 1
+            roots.add(SyntaxRoot(owner, listOf(index), node))
+        }
     private fun actualType(type: TypeSyntax): MCFPPType = when (type) {
         is TypeSyntax.Name -> (type.use as? NameUse.Local)?.target?.let { id ->
             readonlySlots[id]?.let { slot ->
@@ -1226,7 +1279,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
         is TypeSyntax.AnonymousData -> (objectById[type.declaration] as? DataTemplate)?.getType() ?: unsupported("Anonymous type has no owned declaration")
         is TypeSyntax.Vector -> MCFPPVectorType(type.dimensions.toInt())
         is TypeSyntax.Union -> MCFPPUnionType(*type.alternatives.map(::actualType).toTypedArray())
-        is TypeSyntax.Function -> MCFPPFunctionType(type.parameters.map(::actualType), actualType(type.result))
+        is TypeSyntax.Function -> MCFPPFunctionType(type.parameters.map(::actualType), actualType(type.result), contexts = type.contexts.map(::actualType))
         is TypeSyntax.Void -> MCFPPPrivateType.Void
         is TypeSyntax.Inferred -> capturedType(type)
         else -> unsupported("This declared type requires the complete exporter")
@@ -1262,7 +1315,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
             is TypeSyntax.Union -> internType(LibraryType.Union(node.alternatives.map(::type)))
             is TypeSyntax.Intersection -> internType(LibraryType.Intersection(node.components.map(::type), null))
             is TypeSyntax.AnonymousData -> internType(LibraryType.Declaration(DeclarationReference.Local(node.declaration)))
-            is TypeSyntax.Function -> internType(LibraryType.Function(node.execution, node.parameters.map(::type), type(node.result)))
+            is TypeSyntax.Function -> internType(LibraryType.Function(node.execution, node.parameters.map(::type), type(node.result), node.contexts.map(::type)))
             is TypeSyntax.Void -> typeIdentity(MCFPPPrivateType.Void.typeId)
             is TypeSyntax.Inferred -> dependent()
         }
@@ -1371,7 +1424,8 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
         val obj = if (namespace == null) field.getAccessibleObject(name) else field.getAccessibleObject(namespace, name)
         if (obj != null) return obj.getType()
         val enumeration = if (namespace == null) field.getAccessibleEnum(name) else field.getAccessibleEnum(namespace, name)
-        return enumeration?.getType() ?: if (namespace == null) field.getType(name) else null
+        return enumeration?.getType() ?: (if (namespace == null) field.getType(name) else null)
+            ?: (if (namespace == null || namespace == "mcfpp.minecraft.entity") top.mcfpp.type.EntityTypes.named(name) else null)
     }
     override fun id(value: Any, owner: DeclarationId?): DeclarationId {
         val canonical = compounds.entry(value)?.value ?: value
@@ -1447,7 +1501,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
             val capture = StatementBridge(this)
             return sourceParents.map { parent ->
                 val name = parent.className()
-                val base = TypeSyntax.Name(scope(parent), this.name(name.classWithoutNamespace().Identifier().text,
+                val base = TypeSyntax.Name(scope(parent), this.name(name.text.substringAfter(':'),
                     name.namespacePath()?.text, NameRole.TYPE, name))
                 val tree = parent.readOnlyArgs()?.let { TypeSyntax.Apply(scope(parent), base,
                     it.expressionList()?.expression().orEmpty().map(capture::expression)) } ?: base
@@ -1456,7 +1510,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
         }
         if (sourceParents.isNotEmpty()) return sourceParents.map { parent ->
             val name = parent.className()
-            val actual = declaredType(current, name.classWithoutNamespace().Identifier().text, name.namespacePath()?.text)
+            val actual = declaredType(current, name.text.substringAfter(':'), name.namespacePath()?.text)
                 ?: unsupported("A parent has no author declaration binding")
             ParentRecord(type(actual, objects.getValue(value), null), null)
         }
@@ -1520,7 +1574,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
             optional(record.common.owner) { bytes(stableDeclaration(it)) }
             u16(record.tag)
             (record as? ValueDeclaration)?.let { u8(when (it.role) {
-                ValueRole.READONLY_PARAMETER, ValueRole.NORMAL_PARAMETER, ValueRole.LAMBDA_PARAMETER -> 0
+                ValueRole.READONLY_PARAMETER, ValueRole.NORMAL_PARAMETER, ValueRole.LAMBDA_PARAMETER, ValueRole.CONTEXT_PARAMETER -> 0
                 ValueRole.LOCAL -> 1
                 else -> 2
             }); u8(it.role.wireValue) }

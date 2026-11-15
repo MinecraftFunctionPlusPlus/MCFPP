@@ -25,12 +25,48 @@ import kotlin.test.*
 
 /** Uses the bundled production library, without local replacements or ignoreStdLib. */
 class EntityLibraryTest {
+    @Test fun displaySubtypesUUIDsAndSchedulerSignaturesSurviveFreshLibraryImport() = isolated {
+        MCFPPStringTest.readFromString("""
+            namespace fixture.displaylibrary
+            func keep(actor: EntityRef<ItemDisplay>, id: UUID): EntityRef<DisplayEntity> { return actor }
+            func later(id: UUID) {
+                tick { frame ->
+                    entityByUUID<ItemDisplay>(id).transform.y = frame * 1.0
+                    return frame < 1
+                }
+            }
+        """.trimIndent(), version = "26.3")
+        assertEquals(0, Project.errorCount)
+        val library = Files.createTempDirectory("mcfpp-display-library-")
+        LibBinWriter.write(library.toString())
+        Project.config.includes = arrayListOf(library.toString())
+        MCFPPStringTest.readFromString("""
+            import fixture.displaylibrary:*
+            func main() {
+                const id = UUID("0-0-0-0-1")
+                const display = keep(entityByUUID<ItemDisplay>(id), id)
+                display.transform.y = 3.0
+                later(id)
+            }
+        """.trimIndent(), version = "26.3", afterFileCreated = {
+            val keep = GlobalScope.libNamespaces.getValue("fixture.displaylibrary").scope.functions.getValue("keep").single()
+            assertIs<top.mcfpp.type.MCFPPEntityRefType>(keep.normalParams[0].type).also {
+                assertEquals("ItemDisplay", it.templateType.simpleName)
+            }
+            assertSame(top.mcfpp.type.MCFPPUUIDType, keep.normalParams[1].type)
+            assertIs<top.mcfpp.type.MCFPPEntityRefType>(keep.returnType).also {
+                assertEquals("DisplayEntity", it.templateType.simpleName)
+            }
+        })
+        assertEquals(0, Project.errorCount, "Fresh imports must retain nominal entity types and scheduler callback signatures")
+    }
+
     @Test fun bundledLibraryAndFreshHelperImportExecuteEntityContextAndReadInterfaces() = isolated {
         val declarations = """
             namespace fixture.entitylibrary
             import mcfpp.lang:*
             func relocate(actor: entity, location: ContextPosition) { tp(actor, location); }
-            func observeContext(context: ExecutionContext) {}
+            func observeContext(ctx: ExecutionContext) {}
             func inspect(actor: entity) {
                 actor.withEntityCtx { self ->
                     var airFound = self.executor.dat.air.tryRead { air ->
@@ -82,14 +118,14 @@ class EntityLibraryTest {
             assertNull((restored.scope.getVar(restored.normalParams[1].identifier) as? ScopedContextValue)?.contextScope)
             val observer = GlobalScope.libNamespaces.getValue("fixture.entitylibrary").scope.functions.getValue("observeContext").single()
             assertEquals(ContextTypes.ExecutionContext, observer.normalParams.single().type)
-            assertNull((observer.scope.getVar("context") as? ScopedContextValue)?.contextScope)
+            assertNull((observer.scope.getVar("ctx") as? ScopedContextValue)?.contextScope)
         })
         assertEquals(0, Project.errorCount, "A fresh compiler session must resolve imported helpers and real EntityData @Name metadata")
         verifyExecution("imported", "default.test")
     }
 
     @Test fun legacyEntitySyntaxAndMetadataGiveMigrationDiagnostics() = isolated {
-        for (syntax in listOf("entity<1>", "entity<\"minecraft:pig\">", "entity<2,\"minecraft:pig\">", "Player")) {
+        for (syntax in listOf("entity<1>", "entity<\"minecraft:pig\">", "entity<2,\"minecraft:pig\">")) {
             val messages = LogProcessor.beginDiagnosticCapture().use { capture ->
                 MCFPPStringTest.readFromString("func legacy(target: $syntax) {}", version = "26.3")
                 capture.seal().diagnostics.map { it.message }
@@ -171,7 +207,7 @@ class EntityLibraryTest {
     }
 
     private fun exported(name: String, namespace: String): Map<String, List<String>> {
-        val output = Path.of("build/lambda/entity-library/$name")
+        val output = Files.createTempDirectory(Files.createDirectories(Path.of("build/lambda/entity-library")), "$name-")
         Project.config.name = "pack"
         Project.config.copyImport = false
         DatapackCreator.createDatapack(output.toString())

@@ -84,4 +84,4 @@ java -jar ../../../build/libs/MCFPP-0.1.0.jar build --project mcfpp.toml
 
 `MniRepeatTest` 不在 `approved-generated-context-batch14` 报告中；本页不把更早批次当作新运行。repeat 的当前功能证据是上述 `attempt3` DSB 执行，不是 Minecraft 实机。
 
-DSB 只覆盖数据包功能语义，不测性能，也不替代游戏。性能与真实游戏验收已按用户要求取消，不是本示例的完成门槛；统一回归与最终验收见 [`regression-results.md`](../../../docs/mni/regression-results.md)、[`acceptance.md`](../../../docs/implementation-review/acceptance.md)。
+DSB 只覆盖数据包功能语义，不测性能，也不替代游戏。性能与真实游戏验收已按用户要求取消，不是本示例的完成门槛。

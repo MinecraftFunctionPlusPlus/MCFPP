@@ -69,6 +69,7 @@ object LambdaCaptureRules {
 
         // A public reference owns its address descriptor; copying it never reads the target.
         type is MCFPPReferenceType -> LambdaCopyContract.RUNTIME_REPRESENTATION_COPY
+        type is top.mcfpp.type.MCFPPEntityRefType -> LambdaCopyContract.RUNTIME_REPRESENTATION_COPY
 
         // A private reference view points at someone else's storage; it does not own a copy.
         type == MCFPPPrivateType.StaticMemberViewType -> LambdaCopyContract.NOT_COPYABLE
@@ -104,6 +105,7 @@ object LambdaCaptureRules {
             type == MCFPPNBTType.ByteArray ||
             type == MCFPPNBTType.IntArray ||
             type == MCFPPNBTType.LongArray ||
+            type == top.mcfpp.type.MCFPPUUIDType ||
             type is MCFPPVectorType ||
             type == MCFPPBaseType.JsonText ||
             type is top.mcfpp.type.MCFPPDictType ||

@@ -1,0 +1,65 @@
+/// # Counter API
+///
+/// 用于记录和读取累计值。参见 [Counter]、[identity(int)] 和 [Box]。
+namespace docs
+
+/// 计数值的类型别名。
+typealias int as Count
+
+/// 计数器状态。
+enum State {
+    /// 已就绪。
+    ready,
+    /// 已完成。
+    done
+}
+
+/// 保存当前累计值。
+data Counter {
+    /// 当前累计值。
+    var value: int = 0
+
+    /// 创建从零开始的计数器。
+    constructor() { this.value = 0 }
+
+    /// 读取当前累计值。
+    ///
+    /// ```mcfpp
+    /// var counter = Counter()
+    /// var current = counter.read()
+    /// ```
+    /// @return 当前累计值。
+    /// @since 1.0.0
+    func read(): int { return this.value }
+
+    /// 实现细节，通过 --include-private 导出。
+    private var internalValue: int = 0
+}
+
+/// 带名称的计数器，继承 [Counter.read()] 的文档。
+data NamedCounter: Counter {
+    /// 显示名称。
+    var name: string = "counter"
+}
+
+/// 保存任意类型的值。
+data Box<T> {
+    /// 存储的值。
+    var value: T
+}
+
+/// 返回整数输入。
+/// @param value 要返回的整数。
+/// @return 输入值。
+/// @see identity(bool)
+func identity(value: int): int { return value }
+
+/// 返回布尔输入。
+/// @param value 要返回的布尔值。
+/// @return 输入值。
+/// @see identity(int)
+func identity(value: bool): bool { return value }
+
+/// 早期的读取入口。
+/// @deprecated 使用 [identity(int)]。
+func oldRead(value: int): int { return value }

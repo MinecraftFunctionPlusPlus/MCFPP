@@ -27,6 +27,7 @@ internal object EntityMembers {
     }
 
     fun member(receiver: Var<*>, key: String, access: Member.AccessModifier): Pair<Var<*>?, Boolean> {
+        DisplayProperties.member(receiver, key)?.let { return it to true }
         val target = receiver as EntityTargetAccess
         if (key == "dat") return EntityDataAddress.nbt(receiver, data(target).getType()) to true
         if (key == "score") return EntityDataAddress.scores(receiver) to true

@@ -59,8 +59,8 @@ func main() {
 
 // Invoke as an entity to inspect its Air field in the caller's execution context.
 func inspect() {
-    @s.withEntityCtx { context ->
-        const air: NBTRef<short> = context.executor.dat.air
+    @s.withEntityCtx { ctx ->
+        var air: NBTRef<short> = ctx.executor.dat.air
         var found = air.tryRead { value ->
             /say air-present
         }

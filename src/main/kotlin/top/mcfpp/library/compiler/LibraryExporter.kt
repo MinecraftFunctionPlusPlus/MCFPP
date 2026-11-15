@@ -127,14 +127,15 @@ internal class ExportNodeRemapper(private val canonical: CanonicalLibraryTables,
         return when (value) {
             is NamespaceDeclaration -> value.copy(common = common, members = value.members.map(::declaration).sortedBy { it.value })
             is FunctionDeclaration -> value.copy(common = common, receiver = value.receiver?.let(::type), readonly = value.readonly.map(::declaration),
-                normal = value.normal.map(::declaration), result = value.result?.let(::type), body = value.body?.let(::body), native = value.native?.let(::native))
+                normal = value.normal.map(::declaration), contexts = value.contexts.map(::declaration), result = value.result?.let(::type), body = value.body?.let(::body), native = value.native?.let(::native))
             is ValueDeclaration -> value.copy(common = common, type = value.type?.let(::type), declaredType = value.declaredType?.let(::n),
                 defaultBody = value.defaultBody?.let(::body), frozen = value.frozen?.let(::constant))
             is CompoundDeclaration -> value.copy(common = common, readonly = value.readonly.map(::declaration), parents = value.parents.map { ParentRecord(it.type?.let(::type), it.expression?.let(::n)) },
                 typeAs = value.typeAs?.let(::type), members = value.members.map(::declaration), memberOrder = value.memberOrder.map(::declaration), companion = value.companion?.let(::declaration),
                 inherited = value.inherited.map { it.copy(origin = type(it.origin), slot = reference(it.slot), field = declaration(it.field), property = it.property?.let(::declaration),
                     getterOwner = it.getterOwner?.let(::type), setterOwner = it.setterOwner?.let(::type)) })
-            is ConstructorDeclaration -> value.copy(common = common, normal = value.normal.map(::declaration), body = value.body?.let(::body))
+            is ConstructorDeclaration -> value.copy(common = common, normal = value.normal.map(::declaration), body = value.body?.let(::body),
+                parentCall = value.parentCall?.let(::n))
             is PropertyDeclaration -> value.copy(common = common, backing = value.backing?.let(::reference), getter = accessor(value.getter), setter = accessor(value.setter))
             is OperatorDeclaration -> value.copy(common = common, operand = value.operand?.let(::type), implementation = reference(value.implementation))
             is EnumDeclaration -> value.copy(common = common, members = value.members.map(::declaration))
@@ -189,7 +190,7 @@ internal class ExportNodeRemapper(private val canonical: CanonicalLibraryTables,
             is TypeSyntax.Entity -> original.copy(limit = original.limit?.let(::constant))
             is TypeSyntax.Union -> original.copy(alternatives = original.alternatives.map(::t))
             is TypeSyntax.Intersection -> original.copy(components = original.components.map(::t))
-            is TypeSyntax.Function -> original.copy(parameters = original.parameters.map(::t), result = t(original.result))
+            is TypeSyntax.Function -> original.copy(parameters = original.parameters.map(::t), result = t(original.result), contexts = original.contexts.map(::t))
             is TypeSyntax.Inferred -> original.copy(expression = e(original.expression))
             is TypeSyntax.AnonymousData -> original.copy(declaration = declaration(original.declaration))
             is Statement.Block -> original.copy(statements = original.statements.map(::s))
@@ -201,9 +202,7 @@ internal class ExportNodeRemapper(private val canonical: CanonicalLibraryTables,
             is Statement.DoWhile -> original.copy(body = s(original.body), condition = e(original.condition))
             is Statement.Foreach -> original.copy(variable = declaration(original.variable), iterable = e(original.iterable), body = s(original.body))
             is Statement.TryStore -> original.copy(body = s(original.body), destination = name(original.destination))
-            is Statement.Execute -> original.copy(contexts = original.contexts.map { context -> context.copy(
-                path = (context.path as? ExecutePath.Members)?.let { ExecutePath.Members(it.parts.map(::e)) } ?: context.path,
-                value = e(context.value)) }, body = s(original.body))
+            is Statement.ContextScope -> original.copy(contexts = original.contexts.map(::e), body = s(original.body))
             is Statement.Command -> original.copy(parts = parts(original.parts))
             is Statement.Return -> original.copy(value = original.value?.let(::e))
             is TemplateBody -> original.copy(members = original.members.map { node(it) as TemplateMember })
@@ -259,7 +258,7 @@ internal class ExportNodeRemapper(private val canonical: CanonicalLibraryTables,
         is Statement.DoWhile -> node.copy(scope = scope)
         is Statement.Foreach -> node.copy(scope = scope)
         is Statement.TryStore -> node.copy(scope = scope)
-        is Statement.Execute -> node.copy(scope = scope)
+        is Statement.ContextScope -> node.copy(scope = scope)
         is Statement.Command -> node.copy(scope = scope)
         is Statement.Break -> node.copy(scope = scope)
         is Statement.Continue -> node.copy(scope = scope)

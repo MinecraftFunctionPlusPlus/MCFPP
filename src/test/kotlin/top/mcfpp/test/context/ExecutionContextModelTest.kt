@@ -44,8 +44,8 @@ class ExecutionContextModelTest {
             assertSame(root, first.parent)
             assertSame(first, second.parent)
             assertSame(second, relation.parent)
-            assertEquals(ContextTypes.PosContext, ContextTypes.of(first))
-            assertEquals(ContextTypes.PosContext, ContextTypes.of(second))
+            assertEquals(ContextTypes.ExecutionContext, ContextTypes.of(first))
+            assertEquals(ContextTypes.ExecutionContext, ContextTypes.of(second))
             assertEquals(ContextTypes.RelationContext, ContextTypes.of(relation))
             assertTrue(TypeRelations.isSubtype(ContextTypes.RelationContext, ContextTypes.EntityContext))
             assertTrue(TypeRelations.isSubtype(ContextTypes.RelationContext, ContextTypes.ExecutionContext))
@@ -100,7 +100,8 @@ class ExecutionContextModelTest {
 
     @Test fun sourceAdaptersPreserveBindingAndScopeThroughMembersAliasesAndUpcasts() {
         ContextSession().use { session ->
-            val pos = session.root().withPosContext(session.openScope())
+            val actor = session.root().withEntityContext(session.openScope())
+            val pos = actor.withPosContext(session.openScope(actor.scope))
             val nested = pos.onRelation(ContextRelation.PASSENGERS, session.openScope(pos.scope))
             val source = ExecutionContextVar("position", pos, encoder = DirectContextCommandEncoder { nested })
             val alias = source.borrow(nested.scope, "alias")
@@ -146,7 +147,8 @@ class ExecutionContextModelTest {
         val positioned = root.withPosition(ExecutionContextId(session, 2))
         assertEquals(root.dimension, positioned.dimension)
         val changedDimension = positioned.withDimension(ExecutionContextId(session, 3))
-        assertEquals(positioned.position, changedDimension.position)
+        assertEquals(changedDimension.id, changedDimension.position)
+        assertNotEquals(positioned.position, changedDimension.position)
         assertEquals(positioned.rotation, changedDimension.rotation)
         val executor = changedDimension.withExecutor(ExecutionContextId(session, 4))
         val rotation = executor.withRotation(ExecutionContextId(session, 5))

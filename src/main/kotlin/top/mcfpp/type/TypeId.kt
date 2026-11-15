@@ -58,6 +58,7 @@ sealed interface TypeId {
 
         /** Reserved wrapper key that groups the parameter identities of a function type. */
         const val FUNCTION_PARAMETERS = "func.params"
+        const val FUNCTION_CONTEXTS = "func.contexts"
 
         /** Prefix of the execution-category discriminator inside a function identity. */
         const val FUNCTION_EXECUTION_PREFIX = "func.execution:"
@@ -74,14 +75,14 @@ sealed interface TypeId {
          * marker, and the result type. The marker nodes keep parameter order and the
          * parameter/result split unambiguous.
          */
-        fun function(parameterTypes: List<TypeId>, resultType: TypeId, executionCategory: String): TypeId =
+        fun function(parameterTypes: List<TypeId>, resultType: TypeId, executionCategory: String, contextTypes: List<TypeId> = emptyList()): TypeId =
             Applied(
                 Builtin(FUNCTION_CONSTRUCTOR),
                 listOf(
                     Builtin(FUNCTION_EXECUTION_PREFIX + executionCategory),
                     Applied(Builtin(FUNCTION_PARAMETERS), parameterTypes),
                     resultType
-                )
+                ) + if (contextTypes.isEmpty()) emptyList() else listOf(Applied(Builtin(FUNCTION_CONTEXTS), contextTypes))
             )
     }
 }

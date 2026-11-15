@@ -14,7 +14,10 @@ data class TargetCapability(
     val heterogeneousLists: Boolean,
     val emptyNbtPathKeys: Boolean,
     val executeRelations: Set<String> = emptySet()
-)
+) {
+    val itemCommands: Boolean get() = packFormat != null || (legacyPackFormat ?: 0) >= 7
+    val damageCommand: Boolean get() = packFormat != null || (legacyPackFormat ?: 0) >= 12
+}
 
 /** Explicit supported targets. An unverified future release never inherits capabilities by name. */
 object TargetCapabilities {

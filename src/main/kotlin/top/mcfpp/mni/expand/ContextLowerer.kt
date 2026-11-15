@@ -35,7 +35,8 @@ internal class ContextLowerer(private val arena: CodeArena, private val scope: (
                 component(actual.position),
                 component(actual.rotation),
                 scope(declaration),
-                component(actual.dimension)
+                component(actual.dimension),
+                component(actual.anchor)
             )
         }
     }

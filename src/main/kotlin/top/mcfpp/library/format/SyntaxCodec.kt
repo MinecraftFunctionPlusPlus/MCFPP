@@ -59,6 +59,7 @@ object SyntaxCodec {
             is Expression.Member -> add(node.name)
             is Expression.PropertyFilter -> node.entries.forEach { add(it.name) }
             is Expression.Compound -> node.entries.forEach { add(it.key) }
+            is Expression.Call -> node.normal.mapNotNull { it.name }.forEach(::add)
             is Expression.InterpolatedString -> text(node.parts)
             is TypeSyntax.Name -> name(node.use)
             is TypeSyntax.Entity -> addAll(node.names)
@@ -286,7 +287,9 @@ object SyntaxCodec {
                 is Expression.Index -> { n(node.receiver); maybe(node.index) }
                 is Expression.PropertyFilter -> { n(node.receiver); list(node.entries) { u32(strings.reference(it.name)); n(it.value) } }
                 is Expression.Call -> {
-                    n(node.callee); ns(node.readonly); list(node.normal) { u8(it.kind); n(it.expression) }; maybe(node.trailingLambda)
+                    n(node.callee); ns(node.readonly); list(node.normal) {
+                        u8(it.kind); n(it.expression); optional(it.name) { u32(strings.reference(it)) }
+                    }; maybe(node.trailingLambda)
                 }
                 is Expression.Lambda -> {
                     u32(node.declaration.value); list(node.parameters) { u32(it.value) }; bool(node.explicitParameters)
@@ -307,7 +310,7 @@ object SyntaxCodec {
                 is TypeSyntax.Union -> ns(node.alternatives)
                 is TypeSyntax.Intersection -> ns(node.components)
                 is TypeSyntax.AnonymousData -> u32(node.declaration.value)
-                is TypeSyntax.Function -> { ns(node.parameters); n(node.result); u8(node.execution.wireValue) }
+                is TypeSyntax.Function -> { ns(node.parameters); n(node.result); u8(node.execution.wireValue); ns(node.contexts) }
                 is TypeSyntax.Void -> Unit
                 is TypeSyntax.Inferred -> n(node.expression)
                 is Statement.Block -> ns(node.statements)
@@ -319,16 +322,7 @@ object SyntaxCodec {
                 is Statement.DoWhile -> { n(node.body); n(node.condition) }
                 is Statement.Foreach -> { u32(node.variable.value); n(node.iterable); n(node.body) }
                 is Statement.TryStore -> { n(node.body); writeName(this, node.destination, strings) }
-                is Statement.Execute -> {
-                    list(node.contexts) { context ->
-                        when (val path = context.path) {
-                            ExecutePath.As -> tagged(1) { }
-                            is ExecutePath.Members -> tagged(2) { ns(path.parts) }
-                        }
-                        n(context.value)
-                    }
-                    n(node.body)
-                }
+                is Statement.ContextScope -> { ns(node.contexts); n(node.body) }
                 is Statement.Command -> text(node.parts)
                 is Statement.Break, is Statement.Continue, is Statement.Empty -> Unit
                 is Statement.Return -> maybe(node.value)
@@ -362,7 +356,7 @@ object SyntaxCodec {
         is TypeSyntax.Container -> listOf(node.argument)
         is TypeSyntax.Union -> node.alternatives
         is TypeSyntax.Intersection -> node.components
-        is TypeSyntax.Function -> node.parameters + node.result
+        is TypeSyntax.Function -> node.contexts + node.parameters + node.result
         is TypeSyntax.Inferred -> listOf(node.expression)
         is Statement.Block -> node.statements
         is Statement.Local -> listOfNotNull(node.initializer)
@@ -373,9 +367,7 @@ object SyntaxCodec {
         is Statement.DoWhile -> listOf(node.body, node.condition)
         is Statement.Foreach -> listOf(node.iterable, node.body)
         is Statement.TryStore -> listOf(node.body)
-        is Statement.Execute -> node.contexts.flatMap { context ->
-            ((context.path as? ExecutePath.Members)?.parts ?: emptyList()) + context.value
-        } + node.body
+        is Statement.ContextScope -> node.contexts + node.body
         is Statement.Command -> node.parts.filterIsInstance<TextPart.Interpolation>().map { it.expression }
         is Statement.Return -> listOfNotNull(node.value)
         is TemplateBody -> node.members
@@ -449,9 +441,9 @@ object SyntaxCodec {
             SyntaxTags.CALL -> {
                 val callee = ref(); val readonly = refs(); val normal = list {
                     if (u8() != 1) fail("Legacy/unknown call argument kind", LibraryFormatCode.UNSUPPORTED)
-                    NodeRef(u32())
+                    NodeRef(u32()) to if (LibraryReadVersion.current >= 2) optional { strings.value(u32()) } else null
                 }; val trailing = maybe();
-                { r -> Expression.Call(scope, r.expression(callee), readonly.mapFrozen(r::expression), normal.mapFrozen { Argument(r.expression(it)) }, trailing?.let(r::expression)) }
+                { r -> Expression.Call(scope, r.expression(callee), readonly.mapFrozen(r::expression), normal.mapFrozen { Argument(r.expression(it.first), it.second) }, trailing?.let(r::expression)) }
             }
             SyntaxTags.LAMBDA -> {
                 val declaration = DeclarationId(u32()); val parameters = list { DeclarationId(u32()) }
@@ -475,7 +467,9 @@ object SyntaxCodec {
             SyntaxTags.UNION_TYPE -> refs().let { values -> { r -> TypeSyntax.Union(scope, values.mapFrozen(r::type)) } }
             SyntaxTags.INTERSECTION_TYPE -> refs().let { values -> { r -> TypeSyntax.Intersection(scope, values.mapFrozen(r::type)) } }
             SyntaxTags.ANONYMOUS_DATA_TYPE -> DeclarationId(u32()).let { value -> { TypeSyntax.AnonymousData(scope, value) } }
-            SyntaxTags.FUNCTION_TYPE -> { val parameters = refs(); val result = ref(); val execution = wireEnum(u8(), FunctionExecution.values()) { it.wireValue }; { r -> TypeSyntax.Function(scope, parameters.mapFrozen(r::type), r.type(result), execution) } }
+            SyntaxTags.FUNCTION_TYPE -> { val parameters = refs(); val result = ref(); val execution = wireEnum(u8(), FunctionExecution.values()) { it.wireValue };
+                val contexts = if (LibraryReadVersion.current >= 2) refs() else emptyList();
+                { r -> TypeSyntax.Function(scope, parameters.mapFrozen(r::type), r.type(result), execution, contexts.mapFrozen(r::type)) } }
             SyntaxTags.VOID_TYPE -> { { TypeSyntax.Void(scope) } }
             SyntaxTags.INFERRED_TYPE -> ref().let { value -> { r -> TypeSyntax.Inferred(scope, r.expression(value)) } }
             SyntaxTags.BLOCK -> refs().let { values -> { r -> Statement.Block(scope, values.mapFrozen(r::statement)) } }
@@ -487,18 +481,9 @@ object SyntaxCodec {
             SyntaxTags.DO_WHILE -> { val body = ref(); val condition = ref(); { r -> Statement.DoWhile(scope, r.statement(body), r.expression(condition)) } }
             SyntaxTags.FOREACH -> { val variable = DeclarationId(u32()); val iterable = ref(); val body = ref(); { r -> Statement.Foreach(scope, variable, r.expression(iterable), r.statement(body)) } }
             SyntaxTags.TRY_STORE -> { val body = ref(); val destination = readName(this, strings); { r -> Statement.TryStore(scope, r.statement(body), destination) } }
-            SyntaxTags.EXECUTE -> {
-                val contexts = list {
-                    val path = tagged { kind -> when (kind) {
-                        1 -> null
-                        2 -> list { NodeRef(u32()) }
-                        else -> fail("Unknown ExecutePath tag $kind", LibraryFormatCode.UNSUPPORTED)
-                    } }
-                    path to NodeRef(u32())
-                }; val body = ref();
-                { r -> Statement.Execute(scope, contexts.mapFrozen { (path, value) -> ExecuteContext(
-                    if (path == null) ExecutePath.As else ExecutePath.Members(path.mapFrozen(r::expression)), r.expression(value)) }, r.statement(body)) }
-            }
+            SyntaxTags.EXECUTE -> fail("Legacy execute body requires source migration and re-export", LibraryFormatCode.UNSUPPORTED)
+            0x0310 -> { val contexts = refs(); val body = ref();
+                { r -> Statement.ContextScope(scope, contexts.mapFrozen(r::expression), r.statement(body)) } }
             SyntaxTags.COMMAND -> text().let { values -> { r -> Statement.Command(scope, parts(values, r)) } }
             SyntaxTags.BREAK -> { { Statement.Break(scope) } }
             SyntaxTags.CONTINUE -> { { Statement.Continue(scope) } }

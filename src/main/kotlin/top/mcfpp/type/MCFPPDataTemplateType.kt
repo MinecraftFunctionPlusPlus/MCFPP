@@ -112,7 +112,8 @@ open class MCFPPDataTemplateType(
         get() {
             val readonly = (template as? top.mcfpp.model.compound.CompiledGenericDataTemplate)
                 ?.originTemplate?.readOnlyParams?.map { it.identifier }.orEmpty()
-            return template.scope.allVars.filterNot { it.isStatic || it.identifier in readonly }
+            return template.scope.allVars.filterNot { it.isStatic || it.isEntityMember || it.identifier in readonly }
+                .filter { top.mcfpp.analysis.MemberDescriptor.of(it, template.scope.getProperty(it.identifier)).backed }
         }
 
     override val instanceData: DataTemplate

@@ -48,7 +48,7 @@ class DirectContextCommandEncoder(private val current: () -> ExecutionContext) :
 
     override fun position(value: BoundPosition): Command {
         value.requireDirectUseIn(current())
-        return Command("~ ~ ~")
+        return Command(value.coordinates())
     }
 }
 
@@ -155,15 +155,34 @@ class ExecutionContextVar(
         else super.implicitCast(type)
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
+        if (ContextTypes.memberType(type, key) == null) return null to true
         val bound = requireContext()
         return when (key) {
             "executor" -> BoundExecutorVar(key, bound.executor, encoder).also { it.parent = this } to true
             "pos" -> BoundPositionVar(key, bound.pos, encoder).also { it.parent = this } to true
+            "rotation" -> BoundComponentVar(key, bound, ContextTypes.Rotation, encoder).also { it.parent = this } to true
+            "dimension" -> BoundComponentVar(key, bound, ContextTypes.Dimension, encoder).also { it.parent = this } to true
+            "anchor" -> BoundComponentVar(key, bound, ContextTypes.Anchor, encoder).also { it.parent = this } to true
             else -> null to true
         }
     }
 
     override fun toCommandPart(): Command = throw ContextAccessException("ExecutionContext is not a command argument")
+}
+
+class BoundComponentVar(
+    identifier: String,
+    val context: ExecutionContext?,
+    declaredType: MCFPPBoundComponentType,
+    val encoder: ContextCommandEncoder? = null
+) : ScopedContextVar<BoundComponentVar>(identifier, declaredType) {
+    val component: String get() = (type as MCFPPBoundComponentType).component
+    override val contextScope: ContextScope? get() = context?.scope
+    fun requireContext(): ExecutionContext = context?.also { it.scope.requireActive() }
+        ?: throw ContextAccessException("Component '$identifier' has no active source binding")
+    override fun requireUsableIn(scope: ContextScope) = requireContext().requireUsableIn(scope)
+    override fun clone(): BoundComponentVar = BoundComponentVar(identifier, context, type as MCFPPBoundComponentType, encoder).also { it.setAs(this) }
+    override fun toCommandPart(): Command = throw ContextAccessException("Bound $component requires a context-aware operation")
 }
 
 /** Implements the same entity-consumer contract as ordinary entity values. */

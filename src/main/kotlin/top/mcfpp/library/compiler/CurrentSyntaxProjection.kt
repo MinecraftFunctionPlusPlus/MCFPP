@@ -43,12 +43,15 @@ sealed interface ProjectionTemplateDeclaration {
     data class Field(
         val name: String, val constant: Boolean, val type: TypeSyntax?, val nullable: Boolean = false,
         val initializer: BodyId? = null, val getter: ProjectionAccessor? = null, val setter: ProjectionAccessor? = null,
-        override val access: ProjectionAccess? = null
+        override val access: ProjectionAccess? = null,
+        val isEntityMember: Boolean = false
     ) : ProjectionTemplateDeclaration
     data class Function(
         val name: String, val readonly: List<ProjectionParameter>, val normal: List<ProjectionParameter>,
         val result: TypeSyntax, val body: BodyId?, val isOverride: Boolean = false, val isAbstract: Boolean = false,
-        override val access: ProjectionAccess? = null
+        override val access: ProjectionAccess? = null,
+        val contexts: List<ProjectionParameter> = emptyList(),
+        val isEntityMember: Boolean = false
     ) : ProjectionTemplateDeclaration
     data class Constructor(
         val normal: List<ProjectionParameter>, val body: BodyId, override val access: ProjectionAccess? = null

@@ -4,7 +4,7 @@
 
 记录范围：自 [2026-10-07 类型系统讨论决策记录](type-system/design-decisions-2026-10-07.md) 之后的讨论，包含错误处理、跨 tick 执行、调度器、计算组合、generator、状态保存、lambda 及相互关系。此前关于名义类型、联合类型、方差、泛型、object/伴随对象、any、ScoreRef 与 NBTRef 的记录继续有效。
 
-本文是设计记录，不表示编译器已经实现这些能力。MCFPP 代码用于说明选定的语法方向和语义；尚未确定的库名称、完整类型签名和辅助 API 会特别说明。mcfunction 示例是手工展开，没有经过当前编译器生成或 Minecraft 服务端运行验证。
+本文保留 Result、跨 tick 执行和 generator 的设计方向，不表示这些能力已经实现。普通同步 lambda 的当前用法与限制见 [同步 lambda 教程](lambda/tutorial.md)。本文中的 MCFPP 代码用于说明讨论时选定的语法方向和语义；尚未确定的库名称、完整类型签名和辅助 API 会特别说明。mcfunction 示例是手工展开，没有经过当前编译器生成或 Minecraft 服务端运行验证。
 
 ## 1. 决策状态与阅读方式
 
@@ -1001,14 +1001,7 @@ Pending             内部等待，用户这次 await 尚未结束
 
 旧稿里以下内容也不能直接导入已确认规范：只支持固定键任务、禁止计算值放入任意容器或 any、统一一次消费规则、未消费计划一律报错、默认取消/分离行为、finally 的具体限制，以及复杂 capture 子句。
 
-相关旧文档保留为历史材料：
-
-- [异常效果早期设计](exception-effects-design.md)
-- [异常命令展开早期示例](exception-effects-examples.md)
-- [无栈效果与任务早期设计](stackless-effects-and-tasks-design.md)
-- [异常、任务、lambda 统一早期提案](exceptions-tasks-lambdas-design.md)
-
-这些文档与本文有冲突时，以用户本轮最新明确选择为准；本文的待定项仍保持待定。
+早期提案已由本文的已确认方向取代；待定项仍保持待定。
 
 ## 15. 尚未细化的接口和实现事项
 

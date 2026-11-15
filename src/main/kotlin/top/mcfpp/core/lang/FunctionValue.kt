@@ -44,6 +44,10 @@ class FunctionValue(identifier: String, signature: MCFPPFunctionType) : Var<Func
                 isError = true
                 return
             }
+            if (top.mcfpp.analysis.lambda.EntityCaptures.dynamic(source)) {
+                top.mcfpp.analysis.lambda.EntityCaptures.encode(source, binding.field("capture_${capture.symbol.value}"))
+                continue
+            }
             // Compiler-only immutable values are compiled into the isolated body. Only
             // existing runtime representations enter the owned runtime environment.
             if (!StorageAccess.hasRuntimeRepresentation(source)) continue

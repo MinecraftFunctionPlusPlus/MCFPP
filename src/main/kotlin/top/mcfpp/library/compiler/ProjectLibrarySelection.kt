@@ -128,10 +128,11 @@ internal object ExportSourceServices {
             (type as? MCFPPUnionType)?.types?.forEach(::collect)
         }
         listOf("object", "any", "int", "float", "bool", "string", "text", "range", "pos2", "pos3", "nbt", "byte", "short", "long", "double",
-            "ByteArray", "IntArray", "LongArray", "Type", "java", "void", "null", "entity", "ScoreRef", "DataObject").forEach { key ->
+            "ByteArray", "IntArray", "LongArray", "Type", "java", "void", "null", "entity", "UUID", "ScoreRef", "DataObject").forEach { key ->
             LibraryBuiltinTypes.restore(key).also { collect(it); types[key] = it }
         }
         types["type"] = MCFPPConcreteType.Type
+        top.mcfpp.type.EntityTypes.all.forEach(::collect)
         selection.functions.forEach { function -> function.normalParams.forEach { collect(it.type) }; collect(function.returnType) }
         selection.templates.forEach { template -> collect(template.getType()); template.scope.allVars.forEach { collect(it.type) } }
         val metadataTypes = lazy {

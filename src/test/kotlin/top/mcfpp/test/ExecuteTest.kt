@@ -10,7 +10,7 @@ class ExecuteTest {
         val test =
             """
                 func main(){
-                    execute(pos = ~ ~1 ~){
+                    withPosCtx(~ ~1 ~) { ctx ->
                         /say hi
                         /say qwq
                     }

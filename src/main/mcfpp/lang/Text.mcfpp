@@ -1,0 +1,16 @@
+/// 原始 JSON 文本的值构造器。样式方法返回新文本，源文本不变。
+@From("top.mcfpp.mni.TextData")
+object data Text {
+    /// 用分隔文本连接各项，空列表返回空文本。
+    func join(parts: list<text>, separator: text): text {
+        var output = Text.empty();
+        var first = true;
+        for (part : parts) {
+            if (!first) { output = output + separator; }
+            output = output + part;
+            first = false;
+        }
+        return output;
+    }
+    func join(parts: list<text>): text { return Text.join(parts, Text.empty()); }
+}

@@ -172,7 +172,4 @@ build/inheritance-mni/dsb-check/<Attempt>/
   下出现命令/资源诊断，脚本会如实失败并保留报告，不会跳过或伪造算法。
 - 本任务不要求真实游戏环境。原 `prepare-benchmark.ps1` 的服务器包装流程保留为
   可选的历史工具，不属于本验收入口，也不再被要求运行。
-- 本结论只覆盖这 10 个示例 case 的功能验收。编译器导出字符串后端已由
-  [`runtime-string-dsb/attempt2/result.json`](../../../build/inheritance-mni/runtime-string-dsb/attempt2/result.json)
-  的实际 DSB 通过记录覆盖（0 diagnostics）；全量与定向功能回归的合并结果见
-  [`regression-results.md`](../../../docs/mni/regression-results.md)，本页不声称整个项目已完成。
+- 每次检查的结论只覆盖该次执行选择的示例与断言。

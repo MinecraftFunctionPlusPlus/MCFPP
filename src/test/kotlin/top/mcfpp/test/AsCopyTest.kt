@@ -49,7 +49,7 @@ class AsCopyTest {
             func main(){
                 var source: any = {items:[1,2]}
                 var view: dict<list<int>> = (source as dict<list<int>>)
-                const frozen = source as dict<list<int>>
+                var frozen = source as dict<list<int>>
                 var returned = project(source as dict<list<int>>)
                 view["items"][0] = 9
                 frozen["items"][1] = 8

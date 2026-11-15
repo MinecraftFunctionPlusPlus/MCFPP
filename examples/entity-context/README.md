@@ -16,6 +16,8 @@ execute as @e[tag=carrier,limit=1] run function example.entitycontext:main
 
 `main` 保留用户原样的 `var qwq = @s`、`withPosCtx`、`onPassengers` 和 `tp` 正文，将执行者的每只**直接乘客**传送到执行者的位置。孙辈乘客需要额外的显式关系遍历；无目标或无乘客时不执行回调。末尾的石头检测使用进入函数时的空间，用于观察回调退出后的续接。
 
+默认优化将主体合并为 `execute at @s on passengers run tp @s ~ ~ ~`，后面直接跟随原来的石头检测；该路径无需上下文辅助函数、上下文帧或未使用的命令结果存储。
+
 `withPosCtx` 对应 `execute at`，保留调用点执行者；`withEntityCtx` 对应 `execute as`，保留调用点空间。因此把 `qwq` 改为其他目标时，`onPassengers` 仍沿继承的执行者访问关系。若要遍历其他目标自己的乘客，应先用 `withEntityCtx`，需要其位置时再加 `withPosCtx`。
 
 `inspect` 展示实体 NBT 与分数读取。可为承载实体设置零分后调用：
@@ -30,4 +32,6 @@ execute as @e[tag=carrier,limit=1] at @s run function example.entitycontext:insp
 
 `commandResults`（数据包入口 `example.entitycontext:command_results`）会将所有玩家传送到 `1 2 3`，展示成功和失败命令各自的 `CommandResult`；恰有两位玩家时还输出 `moved-result`。名为 `Missing` 的目标应不存在，才能观察该示例的失败分支。
 
-本轮正常 CLI 编译通过，0 错误、0 警告，已核验上述两个输出包。现有 `EntityContextTeleportTest` 直接读取本源码、正常加载实际标准库并执行导出命令，3 项全部通过，覆盖直接乘客、空关系/执行者、续接空间、命令结果以及存在零分/缺失值的读取回调。使用现有命令解释器验证，未启动 Minecraft 游戏。证据为 `build/entity-context-final-example.log` 与 `build/entity-context/D1E-pass-TEST-top.mcfpp.test.entity.EntityContextTeleportTest.xml`。更多语义与旧库迁移见 [使用说明](../../docs/entity-context.md)。
+`contexts` 展示具名上下文依赖：`restoreBorrowed(space: PosContext, actor: EntityContext)` 从不同祖先接收位置与执行者；`spawnAt` 将绑定位置交给召唤命令；`withPosCtx(original.pos.offset(...))` 显式进入保存的位置。调用方式为 `restoreBorrowed(space = original, actor = other)`。函数头使用 `context(...)` 声明依赖，普通调用保留当前命令环境。
+
+`EntityContextTeleportTest` 直接读取本源码、加载随附标准库并执行导出命令，覆盖直接乘客、空关系/执行者、续接空间、命令结果以及零分/缺失值读取。`ContextContractTest` 和 `ContextPreservationTest` 检查新的函数依赖与祖先帧语义。验证使用测试解释器，未启动 Minecraft 游戏。更多类型关系与旧库迁移见 [使用说明](../../docs/entity-context.md)。

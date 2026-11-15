@@ -44,27 +44,27 @@ internal object ContextCallbackLowering {
             if (containsReturn(call.lambda().lambdaBody()) &&
                 top.mcfpp.command.TargetCapabilities.forVersion(Project.config.version)?.functionReturnRun != true)
                 return fail("Context callback return requires a target with function return support")
-            val captured = StorageAccess.capture(receiver)
+            val captured = if (receiver === Void) Void else StorageAccess.capture(receiver)
             if (captured.isError) return captured
             val parent = ContextBorrowing.currentContext ?: ContextSession().also { ownSession = it }.root()
             val entity = captured as? EntityTargetAccess
             val origin = (captured as? ExecutionContextVar)?.requireContext()
+            val operands = call.operands().map { syntax ->
+                StorageAccess.capture(top.mcfpp.antlr.MCFPPExprVisitor(processVarCache = cache).visitExpression(syntax))
+            }
+            if (operands.any { it.isError }) return fail("Invalid context operand")
             // Freeze/validate target operands at the call site, before entering a child frame.
+            val transition = if (relation == null) ContextEntryOperations.prepare(plan.operation, entity, operands, parent) else null
             val prefix = if (relation != null) {
                 if (origin == null) return fail("Context '${call.name}' requires a bound ExecutionContext receiver")
                 origin.executor.requireUsableIn(parent.scope)
                 if (origin.executor.provenance == parent.components.executor) Command("execute on ${relation.commandName}")
                 else Command("execute as").build(ContextRuntime.executor(origin.executor)).build("on ${relation.commandName}")
-            } else {
-                if (entity == null) return fail("Context '${call.name}' requires an entity access")
-                val modifier = if (plan.operation == ContextCallbacks.Operation.POSITION) "at" else "as"
-                Command("execute $modifier").build(ContextRuntime.entity(entity))
-            }
+            } else requireNotNull(transition).prefix
             val scope = parent.session.openScope(parent.scope)
             val child = when (plan.operation) {
-                ContextCallbacks.Operation.POSITION -> parent.withPosContext(scope)
-                ContextCallbacks.Operation.ENTITY -> parent.withEntityContext(scope, requireNotNull(entity).entityFacts)
                 ContextCallbacks.Operation.RELATION -> requireNotNull(origin).onRelation(requireNotNull(relation), scope, parent)
+                else -> parent.derive(scope, requireNotNull(transition).change)
             }
             val observed = StorageAccess.visibleValues(creator.scope)
             StorageAccess.flush(observed)
@@ -77,6 +77,7 @@ internal object ContextCallbackLowering {
                     bodyHandle = structured
                     returnType = MCFPPPrivateType.Void
                     actualCallBody = true
+                    contextGenerated = true
                     declarationFile = creator.declarationFile
                     declarationEnvironment = creator.declarationEnvironment
                 }
@@ -87,6 +88,8 @@ internal object ContextCallbackLowering {
                 val argument = ExecutionContextVar(parameter.name, child,
                     parameter.type as MCFPPExecutionContextType, EntityContextCommandOperations.encoder())
                 captures.putVar(parameter.name, argument, true)
+                targetFunction.callbackContextArguments = listOf(argument)
+                targetFunction.callbackFrameType = plan.callback.parameters.single() as MCFPPExecutionContextType
                 GlobalScope.getOrCreateNamespace(creator.namespace).scope.addFunction(targetFunction, false)
                 targetFunction.compileBody()
                 if (Project.errorCount != errors) {
@@ -106,6 +109,10 @@ internal object ContextCallbackLowering {
                     returnType = MCFPPPrivateType.Void
                     declarationFile = creator.declarationFile
                     bodyCompiled = true
+                    contextGenerated = true
+                    contextRegion = top.mcfpp.optimization.ContextRegionInfo(
+                        targetFunction.namespaceID.toString(), parent.components, child.components,
+                        ordinary.isNotEmpty(), containsReturn(call.lambda().lambdaBody()))
                 }
                 GlobalScope.getOrCreateNamespace(creator.namespace).scope.addFunction(entry, false)
                 entry.runInFunction {
@@ -114,9 +121,13 @@ internal object ContextCallbackLowering {
                     Function.addCommand(ContextRuntime.popFrame())
                 }
                 if (Project.errorCount == errors) {
+                    Function.addCommands(transition?.before.orEmpty().toTypedArray())
                     Function.addCommands(region.before().toTypedArray())
-                    Function.addCommands(prefix.build("run function ${entry.namespaceID}").buildMacroFunction())
+                    val invocation = if (transition?.direct == true) Command("function ${entry.namespaceID}")
+                        else prefix.build("run function ${entry.namespaceID}")
+                    Function.addCommands(invocation.buildMacroFunction())
                     Function.addCommands(region.after().toTypedArray())
+                    Function.addCommands(transition?.after.orEmpty().toTypedArray())
                     creator.child.add(entry)
                     entry.parent.add(creator)
                     val effect = EffectAnalysis.recordCall(targetFunction)

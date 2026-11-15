@@ -1,0 +1,6 @@
+schema = 1
+name = "stdlib_text_ui"
+sourcePath = "src"
+targetPath = "build"
+namespace = "example.stdlib.text_ui"
+version = "26.3"

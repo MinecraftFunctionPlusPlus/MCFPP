@@ -103,7 +103,8 @@ internal data class PlanExecutionFrame(
     val position: PlanContextId,
     val rotation: PlanContextId,
     val scope: PlanScope,
-    val dimension: PlanContextId = position
+    val dimension: PlanContextId = position,
+    val anchor: PlanContextId = id
 )
 internal data class PlanEntity(val executor: PlanContextId, val scope: PlanScope, val site: PlanSite)
 internal class PlanEntityQuery(

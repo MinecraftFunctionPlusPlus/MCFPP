@@ -201,6 +201,9 @@ open class DataTemplate :
 
     var alwaysDynamic: Boolean = false
 
+    /** Entity templates keep template members and world-entity members separate. */
+    var isEntityTemplate: Boolean = false
+
     /**
      * 调用构造函数之前对成员进行初始化的部分
      */
@@ -450,7 +453,7 @@ open class DataTemplate :
     override fun addMember(member: Member): Boolean {
         return when (member) {
             is DataTemplateConstructor -> {
-                if (this.isAbstract) {
+                if (this.isAbstract && !isEntityTemplate) {
                     LogProcessor.error("Abstract DataTemplate Constructor")
                     return false
                 }
@@ -1020,12 +1023,22 @@ open class DataTemplate :
     /** Recompute after signature completion; only diagnostics are deduplicated, never validity. */
     internal fun validateInheritance(): Boolean {
         scope.ensureMembers()
+        if (isEntityTemplate) top.mcfpp.core.lang.entity.EntityTemplates.installDefaultSummon(this)
         val result = top.mcfpp.analysis.InheritanceContractValidator.check(this)
         val initialization = top.mcfpp.model.function.ConstructorPlan.build(this)
-        (result.diagnostics + initialization.diagnostics).forEach {
+        val entityParents = parent.filterIsInstance<DataTemplate>().filter { it.isEntityTemplate }
+        val ordinaryParents = parent.filterIsInstance<DataTemplate>().filter { !it.isEntityTemplate && it !== baseDataTemplate }
+        val entityDiagnostics = buildList {
+            if (isEntityTemplate && !(namespace == "mcfpp.minecraft.entity" && identifier == "Entity") &&
+                (entityParents.size != 1 || ordinaryParents.isNotEmpty()))
+                add("Entity template '$namespaceID' must extend exactly one entity template")
+            if (!isEntityTemplate && entityParents.isNotEmpty())
+                add("Data template '$namespaceID' cannot inherit an entity template; use an entity declaration")
+        }
+        (result.diagnostics + initialization.diagnostics + entityDiagnostics).forEach {
             if (inheritanceContractDiagnostics.add(it)) LogProcessor.error(it)
         }
-        return result.isValid && initialization.isValid
+        return result.isValid && initialization.isValid && entityDiagnostics.isEmpty()
     }
 
     internal fun canInstantiate(): Boolean {

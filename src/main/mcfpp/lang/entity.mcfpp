@@ -1,3 +1,5 @@
+import mcfpp.minecraft.std:CommandResult
+
 // Player names are 1..16 ASCII letters, digits or underscores.
 // UUID text has five nonempty hexadecimal groups, with maximum widths 8-4-4-4-12.
 // Short groups such as 0-0-0-0-1 are accepted; signs and oversized groups are rejected.
@@ -6,6 +8,19 @@
 func entityByName(name: string): entity = top.mcfpp.mni.EntityTargetData.entityByName
 /// 按 UUID 文本创建实体目标。文本由五组十六进制数字组成，最大宽度为 8-4-4-4-12。使用目标时查找对应实体。
 func entityByUUID(uuid: string): entity = top.mcfpp.mni.EntityTargetData.entityByUUID
+func entityByUUID<T>(uuid: string): EntityRef<T> = top.mcfpp.mni.EntityValuesData.typedTextTarget
+func entityByUUID(uuid: UUID): entity = top.mcfpp.mni.EntityValuesData.uuidTarget
+func entityByUUID<T>(uuid: UUID): EntityRef<T> = top.mcfpp.mni.EntityValuesData.typedUUIDTarget
+
+func UUID(input: string): UUID = top.mcfpp.mni.EntityValuesData.uuidFromText
+func UUID(words: IntArray): UUID = top.mcfpp.mni.EntityValuesData.uuidFromWords
+
+func summon<T>(position: pos3, initialNBT: nbt): CommandResult = top.mcfpp.mni.EntityValuesData.summon
+func summon<T>(position: pos3, initialNBT: any): CommandResult = top.mcfpp.mni.EntityValuesData.summonValue
+func summon<T>(position: ContextPosition, initialNBT: nbt): CommandResult = top.mcfpp.mni.EntityValuesData.summonAtContext
+func summon<T>(position: ContextPosition, initialNBT: any): CommandResult = top.mcfpp.mni.EntityValuesData.summonValueAtContext
+func summon<T>(position: pos3): CommandResult = top.mcfpp.mni.EntityValuesData.summonEmpty
+func summon<T>(position: ContextPosition): CommandResult = top.mcfpp.mni.EntityValuesData.summonEmptyAtContext
 
 // Compiler intrinsics on every entity value:
 // target.withPosCtx { ctx -> ... } establishes execute at (position, rotation, dimension).

@@ -1,0 +1,17 @@
+import mcfpp.lang:*
+import mcfpp.minecraft.std:*
+
+func rewardLabel(name: string, points: int): text {
+    var title = Text.of(name).color("gold").bold();
+    var value = Text.of(points).color("green");
+    return Text.join([title, value], Text.of(" + "))
+        .hover(Text.of("奖励已准备好；点击填写帮助命令"))
+        .suggestCommand("/help");
+}
+
+func main() {
+    var message = rewardLabel("任务奖励", 25);
+    print(message);
+    print(Text.of("跳跃键：") + Text.keybind("key.jump"));
+    print(Text.fromJson("{\"text\":\"原始 JSON 文本\",\"underlined\":true}"));
+}

@@ -1,0 +1,3 @@
+/// 拼接两个字符串，保留引号、反斜杠与 UTF-16 内容。也可调用 left.contact(right)。
+func contact(left: string, right: string): string = top.mcfpp.mni.StandardStringData.contact
+

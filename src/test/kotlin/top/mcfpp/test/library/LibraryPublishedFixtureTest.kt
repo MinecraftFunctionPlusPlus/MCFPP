@@ -72,12 +72,14 @@ class LibraryPublishedFixtureTest {
     }
 
     @Test
-    fun frozenFutureFormatIsRejectedByTheActualModelReaderWithUpgradeGuidance() {
+    fun futureFormatIsRejectedBeforeReadingTheFrozenPayloadWithUpgradeGuidance() {
         val future = fixture("future-v2.mclib", "610ab256647b055bcc8fb24ecdab97aa0c63077df510dbffc8d3280cee39d9a9")
+        // The frozen fixture predates v2. Advance only its version; retain its immutable payload.
+        top.mcfpp.library.format.LibraryBinaryWriter().apply { u32(3) }.toByteArray().copyInto(future, 8)
         val failure = assertFailsWith<LibraryFormatException> { codec.decode(future) }
         assertEquals(LibraryFormatCode.NEWER, failure.code)
         assertEquals(8L, failure.byteOffset)
-        assertTrue(failure.detail.contains("2"), failure.message)
+        assertTrue(failure.detail.contains("3"), failure.message)
         assertTrue(failure.detail.contains("upgrade"), failure.message)
     }
 

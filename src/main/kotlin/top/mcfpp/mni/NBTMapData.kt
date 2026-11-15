@@ -7,6 +7,9 @@ import top.mcfpp.mni.annotation.WritesReceiver
 
 /** Implements MCFPP map lookup, size, removal, and merge operations. */
 object NBTMapData {
+    /** Returns an independent list of string keys in entry order. */
+    @NoExternalWrites @JvmStatic @MNIFunction(caller = "map", genericType = ["E"], returnType = "list<string>")
+    fun keys(context: NativeCallContext) = context.withAdapters { caller, _ -> context.publishResult(MapOperations.keys(caller as top.mcfpp.core.lang.nbt.NBTMap)) }
     /** Removes all elements or entries from the receiver. */
     @WritesReceiver
     @MNIFunction(caller = "map", genericType = ["E"])

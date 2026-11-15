@@ -26,6 +26,14 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
      * @return null
      */
     override fun visitCompilationUnit(ctx: mcfppParser.CompilationUnitContext): Unit = withCompilationContext(ctx) {
+        // Source declarations use named types. Internal projection/restoration can still synthesize anonymous types.
+        object : mcfppParserBaseVisitor<Unit>() {
+            override fun visitAnonymousTemplateType(node: mcfppParser.AnonymousTemplateTypeContext) {
+                withCompilationContext(node) {
+                    LogProcessor.error("Anonymous data types in source must be replaced by a named data declaration; nested declarations are public")
+                }
+            }
+        }.visit(ctx)
         //命名空间
         if (ctx.namespaceDeclaration() != null) {
             //获取命名空间
@@ -73,7 +81,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
 
     override fun visitTemplateDeclaration(ctx: mcfppParser.TemplateDeclarationContext): Unit = withCompilationContext(ctx) {
         //注册模板
-        val id = (ctx.declarationName()?: ctx.compoundDeclaration().declarationName()).classWithoutNamespace().text
+        val id = top.mcfpp.analysis.NestedTemplates.name(ctx)
         val nsp = GlobalScope.localNamespaces[Project.currNamespace]!!
         if (nsp.scope.hasDeclaredType(id)) {
             //重复声明
@@ -95,13 +103,15 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
                 MCFPPPrivateType.Void
             }
             val template = TypeDataTemplate(type, id, Project.currNamespace)
-                nsp.scope.addTemplate(id, template)
+            template.document = top.mcfpp.doc.SourceDocumentation.document(ctx)
+            nsp.scope.addTemplate(id, template)
         }else{
-            val template = if(ctx.compoundDeclaration()?.declarationName()?.readOnlyParams() == null) {
+            val readonly = top.mcfpp.analysis.NestedTemplates.readonly(ctx)
+            val template = if(readonly.isEmpty()) {
                 DataTemplate(id,Project.currNamespace)
             } else {
                 val qwq = GenericDataTemplate(ctx.templateBody(), id, Project.currNamespace)
-                qwq.readOnlyParams.addAll(ctx.compoundDeclaration().declarationName().readOnlyParams().readOnlyParameterList().readOnlyParameter().map {
+                qwq.readOnlyParams.addAll(readonly.map {
                     DataTemplateParam(
                         ReadonlyParamsDeclarationSyntax.readonlyTypeName(it),
                         ReadonlyParamsDeclarationSyntax.readonlyParameterName(it),
@@ -115,9 +125,26 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
                 qwq
             }
             template.isAbstract = isAbstract
+            template.isEntityTemplate = ctx.ENTITY() != null
+            if (template.isEntityTemplate && ctx.compoundDeclaration().extendName().isEmpty() && id != "Entity")
+                template.parentID.add("mcfpp.minecraft.entity:Entity")
+            template.document = top.mcfpp.doc.SourceDocumentation.document(ctx)
             template.isFinal = isFinal
             template.parentID.addAll(ctx.compoundDeclaration().extendName().map { it.text })
             nsp.scope.addTemplate(id, template)
+        }
+        val registered = nsp.scope.getTemplate(id)!!
+        val owner = top.mcfpp.analysis.NestedTemplates.owner(registered)
+        if (owner != null) {
+            owner.scope.putType(id.substringAfterLast('.'), registered.getType())
+            registered.scope.parent.add(owner.scope)
+            val member = ctx.parent as? mcfppParser.TemplateMemberContext
+            val declaration = member?.parent as? mcfppParser.TemplateMemberDeclarationContext
+            if (declaration?.accessModifier()?.text?.let { it != "public" } == true)
+                LogProcessor.error("Nested template '$id' must be public")
+        }
+        ctx.templateBody()?.templateMemberDeclaration()?.forEach { member ->
+            member.templateMember().templateDeclaration()?.let(::visitTemplateDeclaration)
         }
     }
 
@@ -150,9 +177,13 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             qwq
         }
         template.isFinal = ctx.FINAL() != null
+        template.document = top.mcfpp.doc.SourceDocumentation.document(ctx)
         template.parentID.addAll(ctx.compoundDeclaration().extendName().map { it.text })
         template.companionObject = template
         nsp.scope.addObject(id, template)
+        ctx.templateBody()?.templateMemberDeclaration()?.forEach { member ->
+            member.templateMember().templateDeclaration()?.let(::visitTemplateDeclaration)
+        }
     }
 
     override fun visitEnumDeclaration(ctx: mcfppParser.EnumDeclarationContext): Unit = withCompilationContext(ctx) {
@@ -164,6 +195,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
         }
         val enum = Enum(id, Project.currNamespace)
+        enum.document = top.mcfpp.doc.SourceDocumentation.document(ctx)
         nsp.scope.addEnum(id, enum)
         //添加成员
         for (m in ctx.enumBody().enumMember()) {

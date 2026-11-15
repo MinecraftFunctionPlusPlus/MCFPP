@@ -67,7 +67,7 @@ private class PendingNominalUses(private val tables: LibraryTables) {
         is LibraryType.Specialized -> listOf(value.constructor)
         is LibraryType.Union -> value.alternatives
         is LibraryType.Intersection -> value.components
-        is LibraryType.Function -> value.parameters + value.result
+        is LibraryType.Function -> value.contexts + value.parameters + value.result
         is LibraryType.NbtRef -> listOf(value.value)
         else -> emptyList()
     }
@@ -146,7 +146,8 @@ class LibraryModelCodec(handlers: List<DeclarationPayloadHandler> = emptyList())
 
     /** Decode to an isolated protocol document. Dependency symbol resolution still belongs to the import session. */
     fun decode(bytes: ByteArray, compatibility: LibraryCompatibility = LibraryCompatibility()): LibraryModel {
-        val container = LibraryWire.decode(bytes)
+        val container = LibraryWire.decode(bytes, minimumVersion = 3L)
+        return LibraryReadVersion.withVersion(container.formatVersion) {
         fun section(id: Int) = requireNotNull(container.section(id)).payload
         val manifest = ManifestCodec.decode(section(1))
         ManifestCodec.validate(manifest, compatibility)
@@ -159,7 +160,8 @@ class LibraryModelCodec(handlers: List<DeclarationPayloadHandler> = emptyList())
             decodeRuntime(section(11), strings), decodeResources(section(12), strings),
             container.section(LibrarySectionId.DEBUG)?.let { decodeDebug(it.payload, strings) })
         validate(model, compatibility)
-        return model
+        model
+        }
     }
 
     fun collectStrings(model: LibraryModel): Set<String> = buildSet {

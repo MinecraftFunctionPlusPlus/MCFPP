@@ -23,7 +23,8 @@ data AllayData: EntityData, AIMobData, CreatureData {
 /// 实体的振动事件监听数据。
 data Listener {
     /// 振动事件数据。
-    var event: data {
+    var event: Event
+    data Event {
         /// 振动传播距离。
         var distance: float
         @Name("game_event")
@@ -44,11 +45,13 @@ data Listener {
     var eventDelay: int
     @Name("selector")
     /// 待处理振动事件的选择记录。
-    var _selector: data {
+    var _selector: PendingEvent
+    data PendingEvent {
         /// 记录事件时的游戏时间。
         var tick: long
         /// 振动事件数据。
-        var event: data {
+        var event: Event
+        data Event {
             /// 振动传播距离。
             var distance: float
             @Name("game_event")

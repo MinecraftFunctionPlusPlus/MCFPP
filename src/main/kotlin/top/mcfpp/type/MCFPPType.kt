@@ -93,6 +93,11 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
     }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
+        (this as? MCFPPDataTemplateType)?.let { outer ->
+            top.mcfpp.analysis.NestedTemplates.child(outer.template, key)?.let {
+                return top.mcfpp.core.lang.obj.StaticMemberView(it.getType()) to true
+            }
+        }
         val re = objectData.getVar(key)
         return if(re == null){
             Pair(null, true)
@@ -238,6 +243,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             MCFPPConcreteType.Type,
 
             MCFPPEntityType.NormalSelector,
+            MCFPPUUIDType,
             MCFPPScoreRefType,
 
             top.mcfpp.core.lang.context.ContextTypes.ExecutionContext,
@@ -245,13 +251,22 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             top.mcfpp.core.lang.context.ContextTypes.EntityContext,
             top.mcfpp.core.lang.context.ContextTypes.RelationContext,
             top.mcfpp.core.lang.context.ContextTypes.Position,
+            top.mcfpp.core.lang.context.ContextTypes.Context,
+            top.mcfpp.core.lang.context.ContextTypes.DimensionContext,
+            top.mcfpp.core.lang.context.ContextTypes.RotationContext,
+            top.mcfpp.core.lang.context.ContextTypes.AnchorContext,
+            top.mcfpp.core.lang.context.ContextTypes.EntityExecutionContext,
+            top.mcfpp.core.lang.context.ContextTypes.Rotation,
+            top.mcfpp.core.lang.context.ContextTypes.Dimension,
+            top.mcfpp.core.lang.context.ContextTypes.Anchor,
 
             MCFPPPrivateType.StaticMemberViewType
         ).associateBy { it.simpleName }.toMutableMap()}
 
         internal fun builtinTypesById(): Map<TypeId, MCFPPType> =
             typeCache.values.filter { it.typeId is TypeId.Builtin }.associateBy { it.typeId } +
-                (MCFPPEntityType.NormalSelector.typeId to MCFPPEntityType.NormalSelector)
+                (MCFPPEntityType.NormalSelector.typeId to MCFPPEntityType.NormalSelector) +
+                EntityTypes.all.associateBy { it.typeId }
 
         internal fun cachedSyntaxType(text: String): MCFPPType? = typeCache[text]
 
@@ -401,6 +416,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             "map" to {generic: MCFPPType -> MCFPPMapType(generic)},
             "ImmutableList" to {generic: MCFPPType -> MCFPPImmutableListType(generic)},
             "NBTRef" to {generic: MCFPPType -> MCFPPNBTRefType(generic)},
+            "EntityRef" to {generic: MCFPPType -> MCFPPEntityRefType(generic)},
         )
 
         private val genericTypeClassCache: MutableMap<String, KClass<out MCFPPType>> = mutableMapOf(
@@ -409,6 +425,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             "map" to MCFPPMapType::class,
             "ImmutableList" to MCFPPImmutableListType::class,
             "NBTRef" to MCFPPNBTRefType::class,
+            "EntityRef" to MCFPPEntityRefType::class,
         )
 
         internal fun nativeConstructor(name: String): MCFPPNotCompiledGenericType? =

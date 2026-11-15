@@ -59,7 +59,9 @@ internal object LambdaLowering {
         val captureScope = LambdaCaptureScope(target, caller.scope)
         target.scope = captureScope
         bound.parameters.forEach { target.appendNormalParam(it.type, it.name) }
+        installContexts(target, bound.signature)
         target.buildParamVar()
+        if (bound.signature.contexts.isNotEmpty()) captureScope.discover(syntax, bound.parameters.map { it.name }.toSet())
         GlobalScope.getOrCreateNamespace(target.namespace).scope.addFunction(target, false)
         val errors = top.mcfpp.Project.errorCount
         target.compileBody()
@@ -88,9 +90,17 @@ internal object LambdaLowering {
             declarationFile = creator.declarationFile
             declarationEnvironment = creator.declarationEnvironment
         }
+        installContexts(target, signature)
         GlobalScope.getOrCreateNamespace(target.namespace).scope.addFunction(target, false)
         target.compileBody()
         return FunctionValue(TempPool.getVarIdentify(), signature, target)
+    }
+
+    private fun installContexts(target: Function, signature: MCFPPFunctionType) {
+        target.contextParametersPrepared = true
+        signature.contexts.forEachIndexed { index, type ->
+            target.declaredContextParameters += top.mcfpp.model.function.FunctionParam(type, "__context$index", target)
+        }
     }
 
     fun hasCallbackTarget(name: String): Boolean = LambdaBinding.Environment(caller = Function.currFunction)
@@ -100,7 +110,7 @@ internal object LambdaLowering {
 
     private fun arguments(syntax: P.ArgumentsContext?): List<ParserRuleContext> {
         val normal = syntax?.normalArgs() ?: return emptyList()
-        normal.callArgumentList()?.let { list -> return list.callArgument().map { argument ->
+        normal.callArgumentList()?.let { list -> return list.callArgument().filter { it.ASSIGNMENT() == null }.map { argument ->
             argument.inlineLambda() ?: argument.expression()
                 ?: throw DeclarationBinding.Failure("REF arguments require a reference-capable call target")
         } }
@@ -135,12 +145,34 @@ internal object LambdaLowering {
             }
             val args = arrayListOf<Var<*>>()
             val visitor = MCFPPExprVisitor(processVarCache = cache)
-            for ((index, node) in nodes.withIndex()) {
+            val explicit = linkedMapOf<String, Var<*>>()
+            val mixed = syntax?.normalArgs()?.callArgumentList()?.callArgument()
+            val ordered = mixed?.map { argument ->
+                (if (argument.ASSIGNMENT() != null) argument.Identifier().text else null) to
+                    (argument.inlineLambda() ?: argument.expression())
+            } ?: arguments(syntax).map { null to it }
+            for ((parameterName, node) in ordered + listOfNotNull(trailing?.let { null to it })) {
+                if (parameterName != null) {
+                    if (parameterName in explicit) return fail("Duplicate context argument '$parameterName'")
+                    val expression = node as? P.ExpressionContext ?: return fail("Context argument requires an expression")
+                    val captured = StorageAccess.capture(visitor.visitExpression(expression))
+                    if (captured.isError) return captured
+                    explicit[parameterName] = captured
+                    cache += captured
+                    continue
+                }
+                val index = args.size
                 val targets = if (callable != null) listOfNotNull((callable.type as MCFPPFunctionType).parameters.getOrNull(index))
                     else signatures.filter { (_, types) -> args.indices.all {
                         TypeRelations.resolveImplicitConversion(args[it].type, types[it]) != null
                     } }.mapNotNull { it.second.getOrNull(index) }.distinctBy { it.typeId }
-                val expected = targets.singleOrNull()
+                val expected = if (node is P.ExpressionContext) {
+                    top.mcfpp.analysis.TemplateLiteralSupport.selectExpectedLiteralType(node, targets) { candidate ->
+                        val nbt = top.mcfpp.analysis.TemplateLiteralSupport.unwrapNbtLiteral(node) ?: return@selectExpectedLiteralType false
+                        try { DeclarationBinding(Function.currFunction, emptyMap()).nbtLiteral(nbt, candidate); true }
+                        catch (_: DeclarationBinding.Failure) { false }
+                    }
+                } else targets.singleOrNull()
                 val value = when (node) {
                     is P.InlineLambdaContext -> {
                         if (targets.size > 1) return fail("Lambda target is ambiguous: ${targets.joinToString { it.typeName }}")
@@ -155,7 +187,7 @@ internal object LambdaLowering {
                 args += captured
                 cache += captured
             }
-            if (callable != null) return invoke(callable, args)
+            if (callable != null) return top.mcfpp.core.lang.context.ContextParameters.withExplicit(explicit) { invoke(callable, args) }
             val selected = ParameterMatcher.selectDeclaredTypes(declarations,
                 if (boundCandidates != null) declarations.firstOrNull()?.identifier ?: name else name, supplied, args.map { it.type })
             val target = when (selected) {
@@ -165,13 +197,15 @@ internal object LambdaLowering {
             }
             Function.currFunction.child.add(target)
             target.parent.add(Function.currFunction)
-            return when (target) {
+            return top.mcfpp.core.lang.context.ContextParameters.withExplicit(explicit) { when (target) {
                 is Generic<*> -> target.invoke(readonly, args, null)
                 is NativeFunction -> target.invoke(readonly, args, null)
                 else -> target.invoke(args, null)
-            }
+            } }
         } catch (failure: DeclarationBinding.Failure) {
             return fail(failure.message ?: "Cannot bind callback arguments")
+        } catch (failure: top.mcfpp.core.lang.context.ContextAccessException) {
+            return fail(failure.message.orEmpty())
         } finally {
             while (cache.size > previousSize) cache.removeAt(cache.lastIndex)
             StorageAccess.restore(spills)

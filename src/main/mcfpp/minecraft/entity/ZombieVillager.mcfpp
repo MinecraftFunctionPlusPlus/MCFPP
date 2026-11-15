@@ -7,7 +7,8 @@ data ZombieVillagerData: EntityData, CreatureData, AIMobData, GeneralZombieData 
     @Name("ConversionPlayer") var conversionPlayer: IntArray
 
     /// 可提供的交易。
-    @Name("Offers") var offers: data {
+    @Name("Offers") var offers: Offers
+    data Offers {
         /// 配方或交易记录列表。
         @Name("Recipes") var recipes: list<VillagerRecipe>
     }
@@ -16,7 +17,8 @@ data ZombieVillagerData: EntityData, CreatureData, AIMobData, GeneralZombieData 
     @Name("Gossips") var gossips: list<VillagerGossip>
 
     /// 村民的等级、职业和外观数据。
-    @Name("VillagerData") var villagerData: data {
+    @Name("VillagerData") var villagerData: VillagerDetails
+    data VillagerDetails {
         /// 等级。
         var level: int
         /// 职业标识符。

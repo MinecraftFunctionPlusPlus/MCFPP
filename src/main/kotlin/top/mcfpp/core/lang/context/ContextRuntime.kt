@@ -30,8 +30,14 @@ internal object ContextRuntime : ContextCommandEncoder {
     const val ANCHOR_TAG = "mcfpp_context_anchor"
     private const val ABSENT = "@e[tag=mcfpp_context_absent,tag=!mcfpp_context_absent]"
 
-    internal enum class Component { EXECUTOR, POSITION }
-    internal data class Key(val component: Component, val provenance: ContextSourceId, val dimension: ContextSourceId? = null)
+    internal enum class Component { EXECUTOR, POSITION, ROTATION }
+    internal data class Key(val component: Component, val provenance: ContextSourceId, val dimension: ContextSourceId? = null,
+                            val transform: PositionTransform = PositionTransform())
+    private fun positionKey(value: BoundPosition) = Key(Component.POSITION, value.provenance, value.dimension, value.transform)
+    private fun positioned(transform: PositionTransform): String = buildString {
+        transform.local?.let { values -> append(" positioned "); append(values.joinToString(" ") { "^$it" }) }
+        if (transform.world.any { it != 0.0 }) { append(" positioned "); append(transform.world.joinToString(" ") { "~$it" }) }
+    }
     internal data class Capture(val key: Key, val name: String)
     private data class Slot(val capture: Capture, val depth: Int) {
         val path get() = "frames[$depth].${capture.name}"
@@ -65,14 +71,14 @@ internal object ContextRuntime : ContextCommandEncoder {
                     Command("data modify storage $STORAGE $path.uuid set from entity @s UUID"),
                     format
                 ))
-                listOf(initialize, Command("execute summon minecraft:marker run function ${save.namespaceID}"))
+                listOf(initialize, Command("execute${positioned(capture.key.transform)} summon minecraft:marker run function ${save.namespaceID}"))
             }
         }
 
         fun after(): List<Command> = captures.values.flatMap { capture ->
             val path = "frames[0].${capture.name}"
             buildList {
-                if (capture.key.component == Component.POSITION) add(macro("kill \$(target)", path))
+                if (capture.key.component != Component.EXECUTOR) add(macro("kill \$(target)", path))
                 add(Command("data remove storage $STORAGE $path"))
             }
         }
@@ -109,7 +115,10 @@ internal object ContextRuntime : ContextCommandEncoder {
         var depth = 0
         fun matches(context: ExecutionContext): Boolean = when (key.component) {
             Component.EXECUTOR -> context.components.executor == key.provenance
-            Component.POSITION -> context.components.position == key.provenance && context.components.dimension == key.dimension
+            Component.POSITION -> context.components.position == key.provenance && context.components.dimension == key.dimension &&
+                (key.transform.localComponents?.let { source -> source.rotation == context.components.rotation &&
+                    source.executor == context.components.executor && source.anchor == context.components.anchor } ?: true)
+            Component.ROTATION -> context.components.rotation == key.provenance
         }
         while (region != null) {
             if (matches(region.ambient) && !matches(region.context)) {
@@ -139,11 +148,55 @@ internal object ContextRuntime : ContextCommandEncoder {
 
     override fun position(value: BoundPosition): Command {
         value.requireUsableIn(current().scope)
-        if (value.provenance != current().components.position || value.dimension != current().components.dimension) {
+        if (!value.matches(current())) {
             LogProcessor.error("An ancestor position, including its dimension, requires a context-aware command such as tp")
             return Command("")
         }
-        return Command("~ ~ ~")
+        return try { Command(value.coordinates()) } catch (failure: ContextAccessException) {
+            LogProcessor.error(failure.message.orEmpty())
+            Command("")
+        }
+    }
+
+    internal fun rotationEntry(value: ExecutionContext): Command {
+        value.requireUsableIn(current().scope)
+        if (value.components.rotation == current().components.rotation) return Command("execute")
+        return Command("execute rotated as").build(target(saved(Key(Component.ROTATION, value.components.rotation)).path))
+    }
+
+    /** Restore position/dimension without replacing the caller's rotation or executor. */
+    internal fun positionEntry(value: BoundPosition): ContextEntryOperations.Entry {
+        value.requireUsableIn(current().scope)
+        if (value.matches(current()) && value.transform == PositionTransform())
+            return ContextEntryOperations.Entry(Command("execute"), ContextChange(), direct = true)
+        macros()
+        if (TargetCapabilities.forVersion(Project.config.version)?.executeRelations.isNullOrEmpty())
+            throw ContextAccessException("Preserving a context position requires execute summon support")
+        val before = arrayListOf<Command>()
+        val after = arrayListOf<Command>()
+        val positionPath = if (value.matches(current())) {
+            val path = "frames[0].context_entry_position_${TempPool.getVarIdentify()}"
+            val capture = function("context_entry_position", listOf(
+                Command("tag @s add $ANCHOR_TAG"), Command("tp @s ~ ~ ~ ~ ~"),
+                Command("data modify storage $STORAGE $path.uuid set from entity @s UUID"),
+                macro("data modify storage $STORAGE $path.target set value \"@e[nbt={UUID:\$(uuid)},limit=1]\"", path)))
+            before += Command("data modify storage $STORAGE $path set value {}")
+            before += Command("execute${positioned(value.transform)} summon minecraft:marker run function ${capture.namespaceID}")
+            after += macro("kill \$(target)", path)
+            after += Command("data remove storage $STORAGE $path")
+            path
+        } else saved(positionKey(value)).path
+        val path = "frames[0].context_entry_rotation_${TempPool.getVarIdentify()}"
+        val capture = function("context_entry_rotation", listOf(
+            Command("tag @s add $ANCHOR_TAG"), Command("tp @s ~ ~ ~ ~ ~"),
+            Command("data modify storage $STORAGE $path.uuid set from entity @s UUID"),
+            macro("data modify storage $STORAGE $path.target set value \"@e[nbt={UUID:\$(uuid)},limit=1]\"", path)))
+        return ContextEntryOperations.Entry(
+            Command("execute at").build(target(positionPath)).build("rotated as").build(target(path)),
+            ContextChange(position = true, dimension = true),
+            before + listOf(Command("data modify storage $STORAGE $path set value {}"),
+                Command("execute summon minecraft:marker run function ${capture.namespaceID}")),
+            after + listOf(macro("kill \$(target)", path), Command("data remove storage $STORAGE $path")))
     }
 
     /** Compiler anchors never participate in ordinary public entity queries. */
@@ -157,10 +210,10 @@ internal object ContextRuntime : ContextCommandEncoder {
     override fun operation(operands: List<ContextCommandOperand>, changesExecutor: Boolean, build: (List<Command>) -> Command): Command {
         val positions = operands.filterIsInstance<ContextCommandOperand.Position>()
         positions.forEach { it.value.requireUsableIn(current().scope) }
-        val domains = positions.map { it.value.provenance to it.value.dimension }.distinct()
+        val domains = positions.map { positionKey(it.value) }.distinct()
         if (domains.size > 1) throw ContextAccessException("One command cannot combine incompatible bound position/dimension contexts")
         val boundPosition = positions.firstOrNull()?.value
-        val changed = boundPosition != null && (boundPosition.provenance != current().components.position || boundPosition.dimension != current().components.dimension)
+        val changed = boundPosition != null && (!boundPosition.matches(current()) || boundPosition.transform != PositionTransform())
         val freezeExecutor = changesExecutor && operands.any(::dependsOnExecutor)
         if (!changed && !freezeExecutor) return build(operands.map { operand -> when (operand) {
             is ContextCommandOperand.Executor -> executor(operand.value)
@@ -174,7 +227,7 @@ internal object ContextRuntime : ContextCommandEncoder {
             throw ContextAccessException("Preserving command operands requires a target with function return support")
         if (changed && operands.any { it is ContextCommandOperand.Coordinates && it.value is Pos3Var })
             throw ContextAccessException("One command cannot combine a bound position with another coordinate context")
-        val oldPosition = if (changed) saved(Key(Component.POSITION, boundPosition!!.provenance, boundPosition.dimension)) else null
+        val savedPosition = if (changed && !boundPosition!!.matches(current())) saved(positionKey(boundPosition)).path else null
         val name = "context_operation_${TempPool.getVarIdentify()}"
         val path = "operations[0]"
         val wrapper = function("context_operation", emptyList())
@@ -194,6 +247,17 @@ internal object ContextRuntime : ContextCommandEncoder {
                     freeze(entity(operand.value), index, name, path, cleanups)
                 }
             } }
+            val oldPosition = savedPosition ?: if (changed) {
+                val position = "$path.position"
+                val savePosition = function("context_call_position", listOf(
+                    Command("tag @s add $ANCHOR_TAG"), Command("tp @s ~ ~ ~ ~ ~"),
+                    Command("data modify storage $STORAGE $position.uuid set from entity @s UUID"),
+                    macro("data modify storage $STORAGE $position.target set value \"@e[nbt={UUID:\$(uuid)},limit=1]\"", position)))
+                Function.addCommand(Command("data modify storage $STORAGE $position set value {}"))
+                Function.addCommand(Command("execute${positioned(boundPosition!!.transform)} summon minecraft:marker run function ${savePosition.namespaceID}"))
+                cleanups += macro("kill \$(target)", position)
+                position
+            } else null
             val core = Command("execute store result storage $STORAGE $path.result int 1 store success storage $STORAGE $path.success byte 1")
             if (oldPosition != null) {
                 val rotation = "$path.rotation"
@@ -205,7 +269,7 @@ internal object ContextRuntime : ContextCommandEncoder {
                     macro("data modify storage $STORAGE $rotation.target set value \"@e[nbt={UUID:\$(uuid)},limit=1]\"", rotation)
                 ))
                 Function.addCommand(Command("execute summon minecraft:marker run function ${saveRotation.namespaceID}"))
-                core.build("at").build(target(oldPosition.path)).build("rotated as").build(target(rotation))
+                core.build("at").build(target(oldPosition)).build("rotated as").build(target(rotation))
                 cleanups += macro("kill \$(target)", rotation)
             }
             core.build("run").build(build(parts))

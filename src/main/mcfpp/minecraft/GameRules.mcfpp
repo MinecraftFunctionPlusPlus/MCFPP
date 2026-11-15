@@ -1,0 +1,576 @@
+// Generated from src/main/resources/stdlib/game-rules.json by tools/generate-game-rules.mjs.
+/// 当前编译目标支持的类型化游戏规则。
+object data GameRules {
+#if MC >= 26.1
+    /// minecraft:advance_time，值类型为 bool。
+    var advanceTime: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:advance_weather，值类型为 bool。
+    var advanceWeather: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:allow_entering_nether_using_portals，值类型为 bool。
+    var allowEnteringNetherUsingPortals: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:block_drops，值类型为 bool。
+    var blockDrops: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:block_explosion_drop_decay，值类型为 bool。
+    var blockExplosionDropDecay: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:command_block_output，值类型为 bool。
+    var commandBlockOutput: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:command_blocks_work，值类型为 bool。
+    var commandBlocksWork: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:drowning_damage，值类型为 bool。
+    var drowningDamage: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:elytra_movement_check，值类型为 bool。
+    var elytraMovementCheck: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:ender_pearls_vanish_on_death，值类型为 bool。
+    var enderPearlsVanishOnDeath: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:entity_drops，值类型为 bool。
+    var entityDrops: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:fall_damage，值类型为 bool。
+    var fallDamage: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:fire_damage，值类型为 bool。
+    var fireDamage: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:fire_spread_radius_around_player，值类型为 int。
+    var fireSpreadRadiusAroundPlayer: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:forgive_dead_players，值类型为 bool。
+    var forgiveDeadPlayers: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:freeze_damage，值类型为 bool。
+    var freezeDamage: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:global_sound_events，值类型为 bool。
+    var globalSoundEvents: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:immediate_respawn，值类型为 bool。
+    var immediateRespawn: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:keep_inventory，值类型为 bool。
+    var keepInventory: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:lava_source_conversion，值类型为 bool。
+    var lavaSourceConversion: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:limited_crafting，值类型为 bool。
+    var limitedCrafting: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:locator_bar，值类型为 bool。
+    var locatorBar: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:log_admin_commands，值类型为 bool。
+    var logAdminCommands: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:max_block_modifications，值类型为 int。
+    var maxBlockModifications: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:max_command_forks，值类型为 int。
+    var maxCommandForks: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:max_command_sequence_length，值类型为 int。
+    var maxCommandSequenceLength: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:max_entity_cramming，值类型为 int。
+    var maxEntityCramming: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:max_minecart_speed，值类型为 int。
+    var maxMinecartSpeed: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:max_snow_accumulation_height，值类型为 int。
+    var maxSnowAccumulationHeight: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:mob_drops，值类型为 bool。
+    var mobDrops: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:mob_explosion_drop_decay，值类型为 bool。
+    var mobExplosionDropDecay: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:mob_griefing，值类型为 bool。
+    var mobGriefing: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:natural_health_regeneration，值类型为 bool。
+    var naturalHealthRegeneration: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:player_movement_check，值类型为 bool。
+    var playerMovementCheck: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:players_nether_portal_creative_delay，值类型为 int。
+    var playersNetherPortalCreativeDelay: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:players_nether_portal_default_delay，值类型为 int。
+    var playersNetherPortalDefaultDelay: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:players_sleeping_percentage，值类型为 int。
+    var playersSleepingPercentage: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:projectiles_can_break_blocks，值类型为 bool。
+    var projectilesCanBreakBlocks: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:pvp，值类型为 bool。
+    var pvp: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:raids，值类型为 bool。
+    var raids: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:random_tick_speed，值类型为 int。
+    var randomTickSpeed: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:reduced_debug_info，值类型为 bool。
+    var reducedDebugInfo: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:respawn_radius，值类型为 int。
+    var respawnRadius: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:send_command_feedback，值类型为 bool。
+    var sendCommandFeedback: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:show_advancement_messages，值类型为 bool。
+    var showAdvancementMessages: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:show_death_messages，值类型为 bool。
+    var showDeathMessages: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:spawn_mobs，值类型为 bool。
+    var spawnMobs: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:spawn_monsters，值类型为 bool。
+    var spawnMonsters: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:spawn_patrols，值类型为 bool。
+    var spawnPatrols: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:spawn_phantoms，值类型为 bool。
+    var spawnPhantoms: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:spawn_wandering_traders，值类型为 bool。
+    var spawnWanderingTraders: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:spawn_wardens，值类型为 bool。
+    var spawnWardens: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:spawner_blocks_work，值类型为 bool。
+    var spawnerBlocksWork: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:spectators_generate_chunks，值类型为 bool。
+    var spectatorsGenerateChunks: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:spread_vines，值类型为 bool。
+    var spreadVines: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:tnt_explodes，值类型为 bool。
+    var tntExplodes: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:tnt_explosion_drop_decay，值类型为 bool。
+    var tntExplosionDropDecay: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:universal_anger，值类型为 bool。
+    var universalAnger: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 26.1
+    /// minecraft:water_source_conversion，值类型为 bool。
+    var waterSourceConversion: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// announceAdvancements，值类型为 bool。
+    var announceAdvancements: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// commandBlockOutput，值类型为 bool。
+    var commandBlockOutput: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// disableElytraMovementCheck，值类型为 bool。
+    var disableElytraMovementCheck: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.14
+#if MC < 26.1
+    /// disableRaids，值类型为 bool。
+    var disableRaids: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// doDaylightCycle，值类型为 bool。
+    var doDaylightCycle: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// doEntityDrops，值类型为 bool。
+    var doEntityDrops: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// doFireTick，值类型为 bool。
+    var doFireTick: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.15
+#if MC < 26.1
+    /// doImmediateRespawn，值类型为 bool。
+    var doImmediateRespawn: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.15
+#if MC < 26.1
+    /// doInsomnia，值类型为 bool。
+    var doInsomnia: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// doLimitedCrafting，值类型为 bool。
+    var doLimitedCrafting: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// doMobLoot，值类型为 bool。
+    var doMobLoot: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// doMobSpawning，值类型为 bool。
+    var doMobSpawning: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.15.2
+#if MC < 26.1
+    /// doPatrolSpawning，值类型为 bool。
+    var doPatrolSpawning: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// doTileDrops，值类型为 bool。
+    var doTileDrops: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.15.2
+#if MC < 26.1
+    /// doTraderSpawning，值类型为 bool。
+    var doTraderSpawning: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.19
+#if MC < 26.1
+    /// doVinesSpread，值类型为 bool。
+    var doVinesSpread: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.19
+#if MC < 26.1
+    /// doWardenSpawning，值类型为 bool。
+    var doWardenSpawning: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// doWeatherCycle，值类型为 bool。
+    var doWeatherCycle: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.15
+#if MC < 26.1
+    /// drowningDamage，值类型为 bool。
+    var drowningDamage: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.15
+#if MC < 26.1
+    /// fallDamage，值类型为 bool。
+    var fallDamage: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.15
+#if MC < 26.1
+    /// fireDamage，值类型为 bool。
+    var fireDamage: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.16
+#if MC < 26.1
+    /// forgiveDeadPlayers，值类型为 bool。
+    var forgiveDeadPlayers: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.17
+#if MC < 26.1
+    /// freezeDamage，值类型为 bool。
+    var freezeDamage: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.19.3
+#if MC < 26.1
+    /// globalSoundEvents，值类型为 bool。
+    var globalSoundEvents: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// keepInventory，值类型为 bool。
+    var keepInventory: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.19.3
+#if MC < 26.1
+    /// lavaSourceConversion，值类型为 bool。
+    var lavaSourceConversion: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// logAdminCommands，值类型为 bool。
+    var logAdminCommands: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// maxCommandChainLength，值类型为 int。
+    var maxCommandChainLength: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.20.3
+#if MC < 26.1
+    /// maxCommandForkCount，值类型为 int。
+    var maxCommandForkCount: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// maxEntityCramming，值类型为 int。
+    var maxEntityCramming: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// mobGriefing，值类型为 bool。
+    var mobGriefing: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// naturalRegeneration，值类型为 bool。
+    var naturalRegeneration: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.17
+#if MC < 26.1
+    /// playersSleepingPercentage，值类型为 int。
+    var playersSleepingPercentage: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// randomTickSpeed，值类型为 int。
+    var randomTickSpeed: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// reducedDebugInfo，值类型为 bool。
+    var reducedDebugInfo: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// sendCommandFeedback，值类型为 bool。
+    var sendCommandFeedback: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// showDeathMessages，值类型为 bool。
+    var showDeathMessages: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.19.3
+#if MC < 26.1
+    /// snowAccumulationHeight，值类型为 int。
+    var snowAccumulationHeight: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// spawnRadius，值类型为 int。
+    var spawnRadius: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.13
+#if MC < 26.1
+    /// spectatorsGenerateChunks，值类型为 bool。
+    var spectatorsGenerateChunks: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.16
+#if MC < 26.1
+    /// universalAnger，值类型为 bool。
+    var universalAnger: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.19.3
+#if MC < 26.1
+    /// waterSourceConversion，值类型为 bool。
+    var waterSourceConversion: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.19.3
+#if MC < 26.1
+    /// blockExplosionDropDecay，值类型为 bool。
+    var blockExplosionDropDecay: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.19.3
+#if MC < 26.1
+    /// mobExplosionDropDecay，值类型为 bool。
+    var mobExplosionDropDecay: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.19.3
+#if MC < 26.1
+    /// tntExplosionDropDecay，值类型为 bool。
+    var tntExplosionDropDecay: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.19.4
+#if MC < 26.1
+    /// commandModificationBlockLimit，值类型为 int。
+    var commandModificationBlockLimit: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.20.3
+#if MC < 26.1
+    /// playersNetherPortalDefaultDelay，值类型为 int。
+    var playersNetherPortalDefaultDelay: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.20.3
+#if MC < 26.1
+    /// playersNetherPortalCreativeDelay，值类型为 int。
+    var playersNetherPortalCreativeDelay: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.20.3
+#if MC < 26.1
+    /// projectilesCanBreakBlocks，值类型为 bool。
+    var projectilesCanBreakBlocks: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.21.2
+#if MC < 26.1
+    /// enderPearlsVanishOnDeath，值类型为 bool。
+    var enderPearlsVanishOnDeath: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.21.6
+#if MC < 26.1
+    /// locatorBar，值类型为 bool。
+    var locatorBar: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.21.5
+#if MC < 26.1
+    /// allowFireTicksAwayFromPlayer，值类型为 bool。
+    var allowFireTicksAwayFromPlayer: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.21.2
+#if MC < 26.1
+    /// disablePlayerMovementCheck，值类型为 bool。
+    var disablePlayerMovementCheck: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.21.2
+#if MC < 26.1
+    /// minecartMaxSpeed，值类型为 int。
+    var minecartMaxSpeed: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.20.5
+#if MC < 26.1
+    /// spawnChunkRadius，值类型为 int。
+    var spawnChunkRadius: GameRule<int> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+#if MC >= 1.21.2
+#if MC < 26.1
+    /// tntExplodes，值类型为 bool。
+    var tntExplodes: GameRule<bool> { get = top.mcfpp.mni.minecraft.GameRulesData }
+#endif
+#endif
+}

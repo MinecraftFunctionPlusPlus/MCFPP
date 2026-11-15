@@ -105,7 +105,7 @@ open class FunctionScope : SimpleScopeWithVar, SimpleScopeWithType {
             val owner = if (property != null) property.declaredParentTemplate else declaration.declaredParentTemplate
             val access = property?.accessModifier ?: declaration.accessModifier
             if (owner != null && owner !is ObjectDataTemplate && !declaration.isStatic) {
-                val receiver = getVar("this") as? DataTemplateObject
+                val receiver = getVar("this")
                 if (receiver != null) {
                     if (caller.accessTo(owner) < access) return value to false
                     return receiver.getMemberVar(key, caller)

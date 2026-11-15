@@ -1,0 +1,6 @@
+/// 从下一 tick 开始执行。参数是从零开始的执行序号，返回 false 后停止。
+func tick(callback: (int) -> bool) = top.mcfpp.mni.SchedulerData.tick
+/// 等待 interval tick 后执行，之后每隔 interval tick 重复，返回 false 后停止。
+func loop(interval: int, callback: (int) -> bool) = top.mcfpp.mni.SchedulerData.loop
+/// 等待 delay tick 后执行一次。delay 为零时在当前调用处同步执行。
+func schedule(delay: int, callback: () -> void) = top.mcfpp.mni.SchedulerData.schedule

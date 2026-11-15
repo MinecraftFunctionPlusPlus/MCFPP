@@ -96,4 +96,4 @@ execute positioned 0.5 64.0 0.5 rotated 90 0 run function example.raycast:main
 & ./examples/mni/benchmark/verify-dsb.ps1 -Cases @('raycast-Kotlin','raycast-Java') -Attempt attempt4
 ```
 
-DSB 不是 Minecraft 实机，也不测性能；性能与真实游戏验收已按用户要求取消，不是本示例的完成门槛。统一回归与最终验收见 [`regression-results.md`](../../../docs/mni/regression-results.md)、[`acceptance.md`](../../../docs/implementation-review/acceptance.md)。
+DSB 不是 Minecraft 实机，也不测性能；性能与真实游戏验收已按用户要求取消，不是本示例的完成门槛。

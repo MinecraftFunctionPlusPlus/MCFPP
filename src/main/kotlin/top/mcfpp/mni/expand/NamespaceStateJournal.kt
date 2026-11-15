@@ -97,6 +97,7 @@ internal class NamespaceStateJournal private constructor(
             P.ObjectTemplateDeclarationContext::class.java,
         )
         private val hashTypes = setOf<Class<*>>(
+            top.mcfpp.type.MCFPPEntityRefType::class.java,
             MCFPPReferenceType::class.java, MCFPPScoreRefType::class.java, MCFPPNBTRefType::class.java,
             MCFPPType::class.java, MCFPPConcreteType::class.java, MCFPPGenericParamType::class.java, MCFPPFunctionType::class.java,
             UnresolvedType::class.java, MCFPPTypeAliasType::class.java, MCFPPNotCompiledGenericType::class.java,

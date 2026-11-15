@@ -212,7 +212,7 @@ class ExpressionProjection(
         })
     }
 
-    private fun selector(member: Expression.Member, indices: List<Expression.Index>, call: Expression.Call?): P.SelectorContext =
+    private fun selector(member: Expression.Member, indices: List<Expression.Index>, call: Expression.Call?, includeTrailing: Boolean = true): P.SelectorContext =
         node(P.SelectorContext(null, -1), call ?: member) {
             token(this, L.DOT, ".")
             if (member.keyword != MemberKeyword.IDENTIFIER) {
@@ -225,6 +225,9 @@ class ExpressionProjection(
                 if (call != null) child(this, functionCall(call, ProjectedName(member.name)))
                 else child(this, suffix(member.name, indices, member))
             })
+            if (includeTrailing) call?.trailingLambda?.let {
+                child(this, inlineLambda(it as? Expression.Lambda ?: unsupported("A trailing callback must be a lambda")))
+            }
         }
 
     private fun primary(value: Expression): P.PrimaryContext = when (value) {
@@ -301,11 +304,12 @@ class ExpressionProjection(
         if (call.readonly.isNotEmpty()) child(this, readonly(call.readonly, call))
         child(this, node(P.NormalArgsContext(null, -1), call) {
             token(this, L.LPAREN, "(")
-            if (call.normal.any { it.expression is Expression.Lambda }) {
+            if (call.normal.any { it.expression is Expression.Lambda || it.name != null }) {
                 child(this, node(P.CallArgumentListContext(null, -1), call) {
                     call.normal.forEachIndexed { index, argument ->
                         if (index != 0) token(this, L.COMMA, ",")
                         child(this, node(P.CallArgumentContext(null, -1), argument.expression) {
+                            argument.name?.let { token(this, L.Identifier, it); token(this, L.ASSIGNMENT, "=") }
                             val argumentValue = argument.expression
                             if (argumentValue is Expression.Lambda) child(this, inlineLambda(argumentValue))
                             else child(this, expression(argumentValue))
@@ -342,7 +346,7 @@ class ExpressionProjection(
                     receiver.children.orEmpty().toList().forEach { part ->
                         if (part is ParserRuleContext) child(this, part)
                     }
-                    child(this, selector(callee, emptyList(), call))
+                    child(this, selector(callee, emptyList(), call, includeTrailing = false))
                 }
                 is Expression.Index -> {
                     if (call.readonly.isNotEmpty() || call.normal.isNotEmpty())
@@ -619,6 +623,14 @@ class ExpressionProjection(
             })
             is TypeSyntax.AnonymousData -> child(this, structures.anonymousType(value, this@ExpressionProjection).also { remember(it, value) })
             is TypeSyntax.Function -> child(this, node(P.FunctionTypeContext(null, -1), value) {
+                if (value.contexts.isNotEmpty()) child(this, node(P.ContextTypeParametersContext(null, -1), value) {
+                    token(this, L.CONTEXT, "context"); token(this, L.LPAREN, "(")
+                    value.contexts.forEachIndexed { index, context ->
+                        if (index != 0) token(this, L.COMMA, ",")
+                        child(this, type(context))
+                    }
+                    token(this, L.RPAREN, ")"); space()
+                })
                 token(this, L.LPAREN, "(")
                 value.parameters.forEachIndexed { index, parameter ->
                     if (index != 0) token(this, L.COMMA, ",")

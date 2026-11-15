@@ -1,6 +1,6 @@
 @MCFPPEntity
 /// 岩浆怪的实体数据。继承的字段由各父数据类型提供。
-data MagmaCube: EntityData, CreatureData, AIMobData {
+data MagmaCubeData: EntityData, CreatureData, AIMobData {
     @Name("Size")
     /// 体型数值。
     var size: int

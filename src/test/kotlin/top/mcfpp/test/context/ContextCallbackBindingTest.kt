@@ -95,7 +95,7 @@ class ContextCallbackBindingTest {
         assertEquals(MCFPPPrivateType.Void, binder().expression(expression(source)).type)
         val outer = plan(source)
         assertEquals(ContextCallbacks.Operation.POSITION, outer.operation)
-        assertEquals(listOf(ContextTypes.PosContext), outer.callback.parameters)
+        assertEquals(listOf(ContextTypes.ExecutionContext), outer.callback.parameters)
         assertEquals(listOf("posCtx"), outer.binding.parameters.map { it.name })
         val inner = outer.nested.single()
         assertEquals(ContextCallbacks.Operation.RELATION, inner.operation)
@@ -108,12 +108,13 @@ class ContextCallbackBindingTest {
     @Test fun entrySignaturesAndPrototypeMemberTypesDoNotNeedALiveContextInstance() {
         val position = plan("qwq.withPosCtx { ctx -> ctx.pos }")
         val entity = plan("qwq.withEntityCtx { ctx -> ctx.executor }")
-        assertEquals(ContextTypes.PosContext, position.binding.parameters.single().type)
-        assertEquals(ContextTypes.EntityContext, entity.binding.parameters.single().type)
+        assertEquals(ContextTypes.ExecutionContext, position.binding.parameters.single().type)
+        assertEquals(ContextTypes.EntityExecutionContext, entity.binding.parameters.single().type)
         assertEquals(ContextCallbacks.Operation.ENTITY, entity.operation)
-        assertEquals(MCFPPEntityType.NormalSelector, ContextTypes.memberType(ContextTypes.ExecutionContext, "executor"))
+        assertNull(ContextTypes.memberType(ContextTypes.ExecutionContext, "executor"))
+        assertEquals(MCFPPEntityType.NormalSelector, ContextTypes.memberType(ContextTypes.EntityContext, "executor"))
         assertEquals(ContextTypes.Position, ContextTypes.memberType(ContextTypes.RelationContext, "pos"))
-        assertNull(ContextTypes.memberType(ContextTypes.PosContext, "missing"))
+        assertNull(ContextTypes.memberType(ContextTypes.ExecutionContext, "missing"))
         assertNull(ContextTypes.memberType(MCFPPBaseType.Int, "executor"))
     }
 
@@ -139,7 +140,7 @@ class ContextCallbackBindingTest {
     @Test fun relationshipFamilySharesSinglePresentContextCallbackSignature() {
         for (relation in ContextRelation.values()) {
             val name = "on" + relation.commandName.replaceFirstChar { it.uppercaseChar() }
-            val bound = plan("qwq.$name { related -> related.executor }", ContextTypes.PosContext)
+            val bound = plan("qwq.$name { related -> related.executor }", ContextTypes.ExecutionContext)
             assertEquals(ContextCallbacks.Operation.RELATION, bound.operation)
             assertEquals(relation, bound.relation)
             assertEquals(listOf(ContextTypes.RelationContext), bound.callback.parameters)
@@ -148,10 +149,10 @@ class ContextCallbackBindingTest {
     }
 
     @Test fun callbacksRequireStaticInlineBodyAndExactlyOneContextParameter() {
-        val callback = MCFPPFunctionType(listOf(ContextTypes.PosContext), MCFPPPrivateType.Void)
+        val callback = MCFPPFunctionType(listOf(ContextTypes.ExecutionContext), MCFPPPrivateType.Void)
         rejects("qwq.withPosCtx(callback)", "statically bound inline lambda", mapOf("callback" to callback))
         rejects("qwq.withPosCtx { first, second -> first }", "expects one parameter")
-        rejects("qwq.withPosCtx(1) { ctx -> ctx.pos }", "expects one inline synchronous callback")
+        rejects("qwq.withPosCtx(1) { ctx -> ctx.pos }", "expects 0 operand(s)")
         rejects("qwq.withPosCtx<int>() { ctx -> ctx.pos }", "does not accept readonly arguments")
         rejects("qwq.withPosCtx { ctx: int -> ctx }", "incompatible with callback parameter")
     }
@@ -182,6 +183,6 @@ class ContextCallbackBindingTest {
             }
         """.trimIndent())
         assertTrue(bound.nested.isEmpty(), "An ordinary lambda is not a Minecraft context operation")
-        assertEquals(listOf(ContextTypes.PosContext), bound.callback.parameters)
+        assertEquals(listOf(ContextTypes.ExecutionContext), bound.callback.parameters)
     }
 }

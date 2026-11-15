@@ -23,11 +23,15 @@ MCFPP是一个能被编译为Minecraft数据包的全新的面向对象的语言
 
 [类型规范](./docs/type-system/specification.md) · [迁移状态与指南](./docs/type-system/migration.md)
 
+[编译器工程维护指南](./docs/compiler-architecture.md)：编译阶段、包职责、资源所有权与验证入口。
+
 [ScoreRef / NBTRef 用法与迁移](./docs/type-system/reference-values.md)：保存和传递显式 Minecraft 地址，通过同步 `tryRead` 读取、通过 `set` 写入。
 
 [预编译库作者与消费者样例](./examples/libraries/README.md)：通过本地 Maven 打包、安装并在移走作者源码后编译消费者；嵌入接口见 [编译器桥接](./docs/library/compiler-bridge.md)。
 
 标准库默认通过 `%std` 按项目 `version` 选择对应 Minecraft 目标的实际编译产物；自定义标准库路径、资源及初始化规则见 [按 Minecraft 目标使用标准库](./docs/library/compiler-bridge.md#按-minecraft-目标使用标准库)。
+
+字符串、集合、高阶函数、常用命令和实体操作见[标准库开发指南](docs/standard-library.md)，附三个可构建的玩法示例。
 
 ## [后续计划](./TODO_CN.md)
 
@@ -52,8 +56,26 @@ JustMCF是一个简化mcfunction工程的项目。使用JustMCF，你不但可�
 func example(){
   external i: int = 1
   if(i > 0){
-    execute(as = @s) {
+    @s.withEntityCtx { actor ->
       /say Hello Minecraft!
+    }
+  }
+}
+```
+
+### 命令语句块
+
+`/{ ... }` 中每个非空行默认是一条原版命令，支持 `${表达式}` 插值。以 `/` 开头时，去掉开头的 `/` 后按普通 MCFPP 语句处理。结束的 `}` 单独占一行；空块可写成 `/{}`。
+
+```mcfpp
+func commands(){
+  var count = 1
+  /{
+    say hello
+    /count += 1
+    say count: ${count}
+    /if count > 0 {
+      /say inside ordinary MCFPP block
     }
   }
 }
@@ -130,6 +152,8 @@ func test(){
 ```
 
 ## 函数、注释与字段声明
+
+运行 `mcfpp doc` 可以导出离线 HTML 和 JSON API 文档，默认位于项目输出目录的 `docs` 子目录。支持 Markdown、`@param` 等标签、符号链接和库文档持久化。用法见 [API 文档导出](docs/documentation.md)。
 
 变量、具名参数和字段的类型标注使用 `:`，例如 `var x: int`。`const x = 1` 和 `external x: int = 1` 直接声明值，不加 `var`；导入变量仍写 `import var`。函数返回类型使用 `:`；普通注释以 `//` 开头，文档注释以 `///` 开头并使用 Markdown。连续的文档注释行组成一个文档块，`///` 后的一个空格作为分隔，其余缩进和 Markdown 标记保留。`data`、`object data` 和匿名 `data` 体内的字段使用 `var` 或 `const` 声明。
 

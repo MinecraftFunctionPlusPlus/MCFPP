@@ -178,17 +178,18 @@ internal data class ExecutionContextFrame(
     val executor: ExecutionContextId,
     val position: ExecutionContextId,
     val rotation: ExecutionContextId,
-    val dimension: ExecutionContextId = position
+    val dimension: ExecutionContextId = position,
+    val anchor: ExecutionContextId = id
 ) {
     init {
-        require(listOf(executor, position, rotation, dimension).all { it.session == id.session }) { "Execution context components belong to another session" }
+        require(listOf(executor, position, rotation, dimension, anchor).all { it.session == id.session }) { "Execution context components belong to another session" }
     }
-    fun withExecutor(next: ExecutionContextId) = ExecutionContextFrame(next, next, position, rotation, dimension)
-    fun withPosition(next: ExecutionContextId) = ExecutionContextFrame(next, executor, next, rotation, dimension)
-    fun withRotation(next: ExecutionContextId) = ExecutionContextFrame(next, executor, position, next, dimension)
-    fun withDimension(next: ExecutionContextId) = ExecutionContextFrame(next, executor, position, rotation, next)
+    fun withExecutor(next: ExecutionContextId) = copy(id = next, executor = next)
+    fun withPosition(next: ExecutionContextId) = copy(id = next, position = next, anchor = next)
+    fun withRotation(next: ExecutionContextId) = copy(id = next, rotation = next)
+    fun withDimension(next: ExecutionContextId) = copy(id = next, position = next, dimension = next)
     /** execute at entity establishes all spatial components, unlike positioned coordinates. */
-    fun atEntity(next: ExecutionContextId) = ExecutionContextFrame(next, executor, next, next, next)
+    fun atEntity(next: ExecutionContextId) = copy(id = next, position = next, rotation = next, dimension = next)
     companion object {
         fun root(id: ExecutionContextId) = ExecutionContextFrame(id, id, id, id, id)
     }

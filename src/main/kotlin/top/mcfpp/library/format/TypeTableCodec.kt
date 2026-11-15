@@ -133,6 +133,7 @@ object TypeTableCodec {
             }
             is KeyType.Function -> tagged(7) {
                 u8(value.execution.wireValue); list(value.parameters) { writeKeyType(this, it) }; writeKeyType(this, value.result)
+                list(value.contexts) { writeKeyType(this, it) }
             }
             is KeyType.Dependent -> tagged(8) { bytes(value.canonicalTree.toByteArray()) }
             is KeyType.Anonymous -> tagged(9) {
@@ -143,7 +144,7 @@ object TypeTableCodec {
 
     fun readKeyType(reader: LibraryBinaryReader): KeyType = reader.tagged { tag -> checked(this) {
         when (tag) {
-            1 -> KeyType.Builtin(string())
+            1 -> KeyType.Builtin(LibraryReadVersion.builtin(string()))
             2 -> KeyType.Nominal(readPackage(this), string(), string(), list { string() })
             3 -> KeyType.Parameter(u32(), parameterRole(u8()), u32())
             4 -> KeyType.Applied(readKeyType(this), list { readKeyType(this) })
@@ -155,7 +156,8 @@ object TypeTableCodec {
                 }
                 KeyType.Union(values)
             }
-            7 -> KeyType.Function(execution(u8()), list { readKeyType(this) }, readKeyType(this))
+            7 -> KeyType.Function(execution(u8()), list { readKeyType(this) }, readKeyType(this),
+                if (LibraryReadVersion.current >= 2) list { readKeyType(this) } else emptyList())
             8 -> KeyType.Dependent(bytes().toList())
             9 -> KeyType.Anonymous(readPackage(this), string(), readAnonymousOrigin(this))
             else -> fail("Unknown KeyType tag $tag", LibraryFormatCode.UNSUPPORTED)
@@ -185,6 +187,7 @@ object TypeTableCodec {
             }
             is LibraryType.Function -> tagged(8) {
                 u8(value.execution.wireValue); list(value.parameters) { u32(it.value) }; u32(value.result.value)
+                list(value.contexts) { u32(it.value) }
             }
             is LibraryType.NbtRef -> tagged(9) { u32(value.value.value) }
             is LibraryType.Dependent -> tagged(10) {
@@ -198,14 +201,15 @@ object TypeTableCodec {
 
     private fun readType(reader: LibraryBinaryReader, strings: LibraryStrings): LibraryType = reader.tagged { tag ->
         when (tag) {
-            1 -> LibraryType.Builtin(strings.value(u32()))
+            1 -> LibraryType.Builtin(LibraryReadVersion.builtin(strings.value(u32())))
             2 -> LibraryType.Declaration(readDeclarationReference(this))
             3 -> LibraryType.Parameter(readDeclarationReference(this), parameterRole(u8()), u32())
             4 -> LibraryType.Applied(TypeRef(u32()), list { TypeRef(u32()) })
             5 -> LibraryType.Specialized(TypeRef(u32()), list { ConstantRef(u32()) })
             6 -> LibraryType.Union(list { TypeRef(u32()) })
             7 -> LibraryType.Intersection(list { TypeRef(u32()) }, optional { DeclarationId(u32()) })
-            8 -> LibraryType.Function(execution(u8()), list { TypeRef(u32()) }, TypeRef(u32()))
+            8 -> LibraryType.Function(execution(u8()), list { TypeRef(u32()) }, TypeRef(u32()),
+                if (LibraryReadVersion.current >= 2) list { TypeRef(u32()) } else emptyList())
             9 -> LibraryType.NbtRef(TypeRef(u32()))
             10 -> LibraryType.Dependent(NodeRef(u32()), EnvironmentId(u32()), DeclarationId(u32()))
             11 -> LibraryType.UnresolvedNominal(strings.value(u32()), strings.value(u32()), strings.value(u32()))
@@ -292,7 +296,7 @@ object TypeTableCodec {
             is LibraryType.Specialized -> { type(value.constructor); value.arguments.forEach(constant) }
             is LibraryType.Union -> value.alternatives.forEach(type)
             is LibraryType.Intersection -> value.components.forEach(type)
-            is LibraryType.Function -> { value.parameters.forEach(type); type(value.result) }
+            is LibraryType.Function -> { value.contexts.forEach(type); value.parameters.forEach(type); type(value.result) }
             is LibraryType.NbtRef -> type(value.value)
             else -> Unit
         } } }
@@ -341,7 +345,7 @@ object TypeTableCodec {
             is LibraryType.Union -> value.copy(alternatives = value.alternatives.distinctBy { keys.type(it).id }
                 .sortedWith { a, b -> keys.compare(keys.type(a), keys.type(b)) }.map(::t))
             is LibraryType.Intersection -> value.copy(components = value.components.map(::t))
-            is LibraryType.Function -> value.copy(parameters = value.parameters.map(::t), result = t(value.result))
+            is LibraryType.Function -> value.copy(parameters = value.parameters.map(::t), result = t(value.result), contexts = value.contexts.map(::t))
             is LibraryType.NbtRef -> value.copy(value = t(value.value))
             else -> value
         } }, constantOrder.map { ref -> when (val value = tables.constant(ref)) {
@@ -420,6 +424,7 @@ object TypeTableCodec {
                 }
                 is LibraryType.Function -> tagged(8) {
                     u8(value.execution.wireValue); list(value.parameters) { child(type(it)) }; child(type(value.result))
+                    list(value.contexts) { child(type(it)) }
                 }
                 is LibraryType.NbtRef -> tagged(9) { child(type(value.value)) }
                 is LibraryType.Dependent -> tagged(10) {

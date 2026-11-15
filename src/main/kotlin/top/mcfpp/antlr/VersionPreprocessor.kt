@@ -134,8 +134,10 @@ object VersionPreprocessor {
                     line[i] == '"' -> state = SourceState.DOUBLE_STRING
                     line[i] == '\'' -> state = SourceState.SINGLE_STRING
                 }
-                SourceState.SINGLE_STRING -> if (line[i] == '\'') state = SourceState.CODE
-                SourceState.DOUBLE_STRING -> if (line[i] == '"') state = SourceState.CODE
+                SourceState.SINGLE_STRING -> if (line[i] == '\\') { i += 2; continue }
+                    else if (line[i] == '\'') state = SourceState.CODE
+                SourceState.DOUBLE_STRING -> if (line[i] == '\\') { i += 2; continue }
+                    else if (line[i] == '"') state = SourceState.CODE
                 SourceState.MULTILINE_STRING -> if (line.startsWith("\"\"\"", i)) {
                     state = SourceState.CODE
                     i += 3

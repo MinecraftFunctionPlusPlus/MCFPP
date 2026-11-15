@@ -1,9 +1,9 @@
 package top.mcfpp.library.api
 
-import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
 import top.mcfpp.command.TargetCapabilities
+import top.mcfpp.compiler.CompilationPipeline
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.mni.expand.CompilerStateJournal
 import top.mcfpp.util.LogLevel
@@ -28,21 +28,7 @@ class PlaygroundCompilerKernel private constructor(
     private var nextRequest = 0L
     private var baseline: CompilerStateJournal? = null
     private var restoreImports: (() -> Unit)? = null
-    private var settings: Settings? = null
-
-    private class Settings {
-        private val debug = CompileSettings.isDebug
-        private val ignore = CompileSettings.ignoreStdLib
-        private val library = CompileSettings.isLib
-        private val inline = CompileSettings.maxWhileInline
-        private val print = CompileSettings.printAll
-        private val level = LogProcessor.level
-        fun restore() {
-            CompileSettings.isDebug = debug; CompileSettings.ignoreStdLib = ignore
-            CompileSettings.isLib = library; CompileSettings.maxWhileInline = inline
-            CompileSettings.printAll = print; LogProcessor.level = level
-        }
-    }
+    private var settings: CompilerHostSettings? = null
 
     private fun configuration(root: Path) = ProjectConfig(
         version = minecraftVersion, rootNamespace = namespace, name = "playground", root = root,
@@ -50,14 +36,9 @@ class PlaygroundCompilerKernel private constructor(
     )
 
     private fun prepare() {
-        settings = Settings()
+        settings = CompilerHostSettings()
         started = true
-        CompileSettings.isDebug = false
-        CompileSettings.ignoreStdLib = false
-        CompileSettings.isLib = false
-        CompileSettings.maxWhileInline = 32
-        CompileSettings.printAll = false
-        LogProcessor.level = LogLevel.ERROR
+        CompilerHostSettings.applyDefaults(LogLevel.ERROR)
         Project.config = configuration(directory.resolve("library"))
         Project.init()
         Project.prepareLibraryKernel()
@@ -98,11 +79,7 @@ class PlaygroundCompilerKernel private constructor(
                 Files.createDirectory(root)
                 Project.beginKernelCompilation(configuration(root), source)
                 val mark = System.nanoTime()
-                Project.indexType()
-                if (Project.errorCount == 0) Project.resolveField()
-                if (Project.errorCount == 0) Project.runAnnotation()
-                if (Project.errorCount == 0) Project.compile()
-                if (Project.errorCount == 0) Project.optimization()
+                CompilationPipeline.compileSources()
                 if (Project.errorCount == 0) {
                     Project.ctx.clear()
                     Project.compileStage = Project.CompileStage.GEN_DATAPACK

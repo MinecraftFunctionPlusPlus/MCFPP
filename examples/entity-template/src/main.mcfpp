@@ -1,0 +1,33 @@
+namespace example.entitytemplate
+import mcfpp.minecraft.entity:*
+
+entity StoneDisplay: BlockDisplay {
+    var initialCount: int = 10
+    entity var count: int = initialCount
+
+    constructor(n: nbt): BlockDisplay(n)
+
+    override func summon(d: nbt): EntityRef<StoneDisplay> {
+        return super.summon({block_state: {Name: "minecraft:stone"}}.merge(d))
+    }
+
+    entity func sayImStone() {
+        /say Im stone
+    }
+
+    entity func consume() {
+        this.count -= 1
+    }
+}
+
+func main() {
+    var template = StoneDisplay({data: {qwq: 1}})
+    template.initialCount = 20
+    var ref = template.summon()
+    var another = template.summon({block_state: {Name: "minecraft:granite"}})
+    ref.sayImStone()
+    ref.consume()
+    var remaining = ref.count
+    var untouched = another.count
+    /say remaining=${remaining}, untouched=${untouched}
+}

@@ -95,6 +95,7 @@ object InheritanceContractValidator {
                 val reasons = buildList {
                     if (base.function.isFinal) add("final")
                     if (!compatibleReturn(function, base.function)) add("return type")
+                    if (function.contextParams.map { it.identifier to it.type.typeId } != base.function.contextParams.map { it.identifier to it.type.typeId }) add("context requirements")
                     if (function.accessModifier > base.function.accessModifier) add("access")
                 }
                 if (reasons.isNotEmpty()) diagnostics.add(

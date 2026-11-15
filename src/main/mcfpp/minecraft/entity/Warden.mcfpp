@@ -2,14 +2,16 @@
 /// 监守者的实体数据。继承的字段由各父数据类型提供。
 data WardenData: EntityData, CreatureData, AIMobData {
     /// 愤怒值。
-    @Name("Anger") var anger: data {
+    @Name("Anger") var anger: Anger
+    data Anger {
         /// 可提供的交易。
-        var offers: list<data {
+        var offers: list<Offer>
+        data Offer {
             /// 愤怒值。
             var anger: int
             /// 以四个整数保存的实体 UUID。
             var uuid: IntArray
-        }>
+        }
     }
     /// 振动监听数据。
     var listener: Listener

@@ -191,7 +191,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         return when (value.getString("type")) {
             "minecraft:storage" -> (readNbt(value.getString("storage"), value.getString("path")).value as Number).toFloat()
             "minecraft:score" -> values.getValue("${value.getJSONObject("target").getString("name")} ${value.getString("score")}").toFloat()
-            "minecraft:from_int" -> input("input")
+            "minecraft:from_int" -> integerProvider(value["input"]!!).toFloat()
             "minecraft:from_float" -> input("input").toInt().toFloat()
             "minecraft:add" -> value.getJSONArray("inputs").map(::provider).fold(0f, Float::plus)
             "minecraft:mul" -> value.getJSONArray("inputs").map(::provider).fold(1f, Float::times)
@@ -199,17 +199,90 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             "minecraft:div" -> input("left") / input("right")
             "minecraft:mod" -> input("left") % input("right")
             "minecraft:negate" -> -input("input")
+            "minecraft:abs" -> kotlin.math.abs(input("input"))
+            "minecraft:min" -> value.getJSONArray("inputs").minOf(::provider)
+            "minecraft:max" -> value.getJSONArray("inputs").maxOf(::provider)
+            "minecraft:floor" -> kotlin.math.floor(input("input"))
+            "minecraft:ceil" -> kotlin.math.ceil(input("input"))
+            "minecraft:truncate" -> input("input").let { if (it < 0) kotlin.math.ceil(it) else kotlin.math.floor(it) }
+            "minecraft:round" -> kotlin.math.floor(input("input").toDouble() + 0.5).toFloat()
+            "minecraft:sqrt" -> kotlin.math.sqrt(input("input"))
+            "minecraft:sin" -> kotlin.math.sin(input("input"))
+            "minecraft:cos" -> kotlin.math.cos(input("input"))
+            "minecraft:pow" -> {
+                val base = input("base")
+                val exponent = input("exponent")
+                if (base == 0f && exponent == 0f) Float.NaN else Math.pow(base.toDouble(), exponent.toDouble()).toFloat()
+            }
+            "minecraft:length" -> kotlin.math.sqrt(value.getJSONArray("inputs").map(::provider).fold(0f) { sum, x -> sum + x*x })
+            "minecraft:conditional" -> if (providerCondition(value.getJSONObject("condition"))) input("on_true") else value["on_false"]?.let(::provider) ?: 0f
             else -> error("Unsupported float provider: $value")
         }
+    }
+
+    private fun integerProvider(source: Any): Int {
+        if (source is Number) return source.toInt()
+        val p = source as JSONObject
+        fun input(name: String) = integerProvider(p[name]!!)
+        fun checked(value: Long): Int {
+            if (value !in Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong()) throw ArithmeticException("int overflow")
+            return value.toInt()
+        }
+        return when (p.getString("type")) {
+            "minecraft:score" -> values.getValue("${p.getJSONObject("target").getString("name")} ${p.getString("score")}")
+            "minecraft:from_float" -> {
+                val f = provider(p["input"]!!)
+                if (!f.isFinite() || f.toDouble() < Int.MIN_VALUE || f.toDouble() >= 2147483648.0) throw ArithmeticException("float outside int range")
+                f.toInt()
+            }
+            "minecraft:abs" -> Math.absExact(input("input"))
+            "minecraft:min" -> p.getJSONArray("inputs").minOf(::integerProvider)
+            "minecraft:max" -> p.getJSONArray("inputs").maxOf(::integerProvider)
+            "minecraft:mod" -> input("left") % input("right")
+            "minecraft:floor_mod" -> Math.floorMod(input("left"), input("right"))
+            "minecraft:floor_div" -> checked(Math.floorDiv(input("left").toLong(), input("right").toLong()))
+            "minecraft:pow" -> {
+                var base = input("base")
+                var exponent = input("exponent")
+                if (exponent < 0 || base == 0 && exponent == 0) throw ArithmeticException("invalid power")
+                var result = 1
+                while (exponent > 0) {
+                    if (exponent % 2 != 0) result = Math.multiplyExact(result, base)
+                    exponent /= 2
+                    if (exponent > 0) base = Math.multiplyExact(base, base)
+                }
+                result
+            }
+            else -> error("Unsupported integer provider: $p")
+        }
+    }
+
+    private fun providerCondition(p: JSONObject): Boolean = when (p.getString("type")) {
+        "minecraft:all_of" -> p.getJSONArray("terms").all { providerCondition(it as JSONObject) }
+        "minecraft:any_of" -> p.getJSONArray("terms").any { providerCondition(it as JSONObject) }
+        "minecraft:inverted" -> !providerCondition(p.getJSONObject("term"))
+        "minecraft:int_value_check", "minecraft:float_value_check" -> {
+            val integer = p.getString("type") == "minecraft:int_value_check"
+            fun number(x: Any) = if (integer) integerProvider(x).toDouble() else provider(x).toDouble()
+            val actual = number(p["value"]!!)
+            val test = p["test"]!!
+            if (test is JSONObject && !test.containsKey("type"))
+                (!test.containsKey("min") || actual >= number(test["min"]!!)) &&
+                    (!test.containsKey("max") || actual <= number(test["max"]!!))
+            else actual == number(test)
+        }
+        else -> error("Unsupported provider condition: $p")
     }
     init {
         val nbtPath = """(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s"'])+"""
         val set = Regex("scoreboard players set (\\S+ \\S+) (-?\\d+)")
         val reset = Regex("scoreboard players reset (\\S+)(?: (\\S+))?")
         val add = Regex("scoreboard players (add|remove) (\\S+ \\S+) (\\d+)")
-        val operation = Regex("scoreboard players operation (\\S+ \\S+) (=|\\+=|-=|\\*=|/=|%=|><) (\\S+ \\S+)")
+        val operation = Regex("scoreboard players operation (\\S+ \\S+) (=|\\+=|-=|\\*=|/=|%=|><|<|>) (\\S+ \\S+)")
         val compare = Regex("execute (if|unless) score (\\S+ \\S+) (=|<|>|<=|>=) (\\S+ \\S+) (?:run (.*)|((?:if|unless) (?:score|data|function) .*))")
-        val matches = Regex("execute (if|unless) score (\\S+ \\S+) matches (-?\\d+|(?:-?\\d+)?\\.\\.(?:-?\\d+)?) (?:run (.*)|((?:if|unless) (?:score|data|function) .*))")
+        val matches = Regex("execute (if|unless) score (\\S+ \\S+) matches (-?\\d+|(?:-?\\d+)?\\.\\.(?:-?\\d+)?) (?:run (.*)|((?:(?:if|unless) (?:score|data|function)|store) .*))")
+        val storedOperation = Regex("execute ((?:store result score \\S+ \\S+ )+)run (scoreboard players operation .*)")
+        val storedDestination = Regex("store result score (\\S+ \\S+)")
         val functionCondition = Regex("execute (if|unless) function (\\S+) (?:run (.*)|((?:if|unless) (?:score|function) .*))")
         val asIdentity = Regex("execute as (\\S+) run (.*)")
         val guardStore = Regex("execute store result storage mcfpp:system ir_branch_stack\\[0].condition byte 1 run scoreboard players get (\\S+ \\S+)")
@@ -462,12 +535,8 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             }
             computeInt.matchEntire(command)?.let {
                 val expression = JSON.parseObject(it.groupValues[2], JSONReader.Feature.AllowUnQuotedFieldNames)
-                check(expression.getString("type") == "minecraft:from_float")
-                // Preserve the int result: converting it back through Float would round Int.MAX_VALUE.
-                val number=provider(expression["input"]!!)
-                val failed=!number.isFinite() || number.toDouble()<Int.MIN_VALUE.toDouble() || number.toDouble()>=2147483648.0
-                if(failed) failedComputations.add(command)
-                values[scoreKey(it.groupValues[1])] = if(failed) 0 else number.toInt()
+                values[scoreKey(it.groupValues[1])] = try { integerProvider(expression) }
+                    catch (_: ArithmeticException) { failedComputations.add(command); 0 }
                 return@command false
             }
             floatCheck.matchEntire(command)?.let {
@@ -583,7 +652,20 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                     "*=" -> values.getValue(target) * right
                     "/=" -> Math.floorDiv(values.getValue(target), right)
                     "%=" -> Math.floorMod(values.getValue(target), right)
+                    "<" -> minOf(values.getValue(target), right)
+                    ">" -> maxOf(values.getValue(target), right)
                     else -> error(command)
+                }
+                return@command false
+            }
+            storedOperation.matchEntire(command)?.let {
+                val body = it.groupValues[2]
+                val target = operation.matchEntire(body)?.groupValues?.get(1) ?: error(body)
+                val failures = failedScoreOperations.size
+                execute(body)
+                val result = if (failedScoreOperations.size > failures) 0 else values.getValue(scoreKey(target))
+                storedDestination.findAll(it.groupValues[1]).forEach { destination ->
+                    values[scoreKey(destination.groupValues[1])] = result
                 }
                 return@command false
             }

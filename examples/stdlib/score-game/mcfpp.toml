@@ -1,0 +1,6 @@
+schema = 1
+name = "stdlib_score_game"
+sourcePath = "src"
+targetPath = "build"
+namespace = "example.stdlib.score_game"
+version = "26.3"

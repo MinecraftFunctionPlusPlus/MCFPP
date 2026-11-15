@@ -91,6 +91,3 @@ against real compiler and DSB child processes. Supply `--compiler`,
 `--compiler-java`, `--dsb`, and `--dsb-java`. `--work` keeps the generated project
 and mappings; `--case` selects a scenario. `--legacy-dsb` additionally verifies
 that a runtime without live debugging is rejected.
-
-The delivered artifact hashes and automated/IDEA verification results are recorded
-in [debugger-acceptance.md](debugger-acceptance.md).

@@ -11,7 +11,7 @@ data class LibraryManifest(
     val dependencies: List<LibraryDependency> = emptyList(),
     val entryEnvironments: List<EnvironmentId> = emptyList(),
     val rootDeclarations: List<DeclarationId> = emptyList(),
-    val semantics: String = "mcfpp.source/1",
+    val semantics: String = "mcfpp.source/2",
     val runtimeAbi: String = "mcfpp.runtime/1",
 )
 
@@ -107,7 +107,7 @@ class LibraryModel private constructor(
 
 /** Target checks are caller-selected; omitted target fields mean target binding is deferred. */
 data class LibraryCompatibility(
-    val semantics: Set<String> = setOf("mcfpp.source/1"),
+    val semantics: Set<String> = setOf("mcfpp.source/1", "mcfpp.source/2"),
     val runtimeAbis: Set<String> = setOf("mcfpp.runtime/1"),
     val minecraftVersion: String? = null,
     val edition: Int = 1,

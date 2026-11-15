@@ -93,7 +93,9 @@ internal class LambdaCaptureScope(private val target: Function, private val lexi
             return borrowed
         }
         sources.putIfAbsent(symbol.id, source)
-        val alias = if (!StorageAccess.hasRuntimeRepresentation(source)) {
+        val alias = if (EntityCaptures.dynamic(source)) {
+            EntityCaptures.alias(source, key, StorageAccess.ensure(environment()).field(captureKey(symbol.id)))
+        } else if (!StorageAccess.hasRuntimeRepresentation(source)) {
             StorageAccess.snapshot(source)?.let { snapshot ->
                 StorageAccess.restore(source.type, snapshot, key, StorageAccess.boundTypes(source))
             } ?: return source.clone().apply { isError = true }
@@ -124,6 +126,15 @@ internal class LambdaCaptureScope(private val target: Function, private val lexi
         val binding = alias.storageBinding ?: return
         if (binding.data.facts.read(binding.place) != null) return
         val source = sources[alias.symbol?.id] ?: return
+        if (EntityCaptures.dynamic(source)) {
+            val declaration = alias.symbol
+            val restored = EntityCaptures.alias(source, alias.identifier,
+                StorageAccess.ensure(environment()).field(captureKey(requireNotNull(declaration).id)))
+            alias.setAs(restored)
+            alias.symbol = declaration
+            alias.storageBinding?.let { it.data.declarations[it.place] = declaration }
+            return
+        }
         val actual = StorageAccess.actualType(source)
         binding.data.types.putAll(StorageAccess.boundTypes(source))
         binding.data.types[actual.typeId] = actual
@@ -133,6 +144,58 @@ internal class LambdaCaptureScope(private val target: Function, private val lexi
 
     /** Run only back in the creator: capture copies are emitted at expression evaluation. */
     fun captures(): List<LambdaCaptureResult> = sources.values.map { LambdaCaptureRules.capture(it, it.symbol) }
+
+    /** Context-dependent bodies compile at invocation; freeze their free variables at creation. */
+    fun discover(syntax: top.mcfpp.antlr.mcfppParser.InlineLambdaContext, parameters: Set<String>) {
+        fun scan(node: org.antlr.v4.runtime.tree.ParseTree, locals: MutableSet<String>) {
+            when (node) {
+                is top.mcfpp.antlr.mcfppParser.InlineLambdaContext -> {
+                    val nested = locals.toMutableSet()
+                    node.lambdaParameterList()?.lambdaParameter()?.forEach { nested += it.Identifier().text }
+                    if (node.lambdaParameterList() == null) nested += "it"
+                    scan(node.lambdaBody(), nested)
+                    return
+                }
+                is top.mcfpp.antlr.mcfppParser.CurlBlockContext -> {
+                    val nested = locals.toMutableSet()
+                    node.statement().forEach { scan(it, nested) }
+                    return
+                }
+                is top.mcfpp.antlr.mcfppParser.FieldDeclarationContext -> {
+                    node.expression()?.let { scan(it, locals) }
+                    locals += node.Identifier().text
+                    return
+                }
+                is top.mcfpp.antlr.mcfppParser.PrimaryContext -> node.`var`()?.varWithSuffix()?.let {
+                    val name = it.Identifier().text
+                    if (name !in locals) getVar(name)
+                }
+                is top.mcfpp.antlr.mcfppParser.FunctionCallContext -> {
+                    val name = node.namespaceID().text
+                    if (name !in locals && !name.contains(':') && lexical.getVar(name) is FunctionValue) getVar(name)
+                }
+            }
+            for (index in 0 until node.childCount) scan(node.getChild(index), locals)
+        }
+        scan(syntax.lambdaBody(), parameters.toMutableSet())
+    }
+
+    internal fun bindAliases(body: Function) {
+        for ((name, alias) in aliases) {
+            val environment = incomingEnvironment?.let { body.scope.getVar(it.identifier) }
+            val sourceBinding = alias.storageBinding
+            val rebound = if (environment != null && sourceBinding != null) {
+                val binding = StorageAccess.ensure(environment).field(captureKey(requireNotNull(alias.symbol).id))
+                StorageAccess.copyRuntimeEvidence(sourceBinding, binding)
+                binding.data.types[alias.type.typeId] = alias.type
+                binding.data.facts.refine(binding.place, ValueFacts(TypeKnowledge.Exact(alias.type.typeId),
+                    ValueKnowledge.Unknown, ValueState.INITIALIZED))
+                StorageAccess.adapter(alias.type, name, binding)
+            } else alias.clone()
+            rebound.symbol = alias.symbol
+            body.scope.putVar(name, rebound, true)
+        }
+    }
 
     /** Type binding may inspect a nested body before runtime name lookup creates its aliases. */
     fun lexicalTypes(): Map<String, top.mcfpp.type.MCFPPType> {

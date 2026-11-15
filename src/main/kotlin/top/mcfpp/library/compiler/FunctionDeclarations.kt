@@ -35,6 +35,7 @@ interface FunctionCaptureBindings : StatementCaptureBindings {
     fun type(value: MCFPPType, owner: DeclarationId, declaredSyntax: NodeRef?): TypeRef
     fun constant(value: CompilerValue, types: Map<top.mcfpp.type.TypeId, MCFPPType>): ConstantRef
     fun storeNode(owner: DeclarationId, node: TypeSyntax): NodeRef
+    fun storeExpressionNode(owner: DeclarationId, node: Expression): NodeRef = error("Expression node capture is unavailable")
     fun storeBody(body: SyntaxBodySource): BodyId
     fun source(function: Function): FunctionSourceSignature? = FunctionDeclarations.sourceSignature(function)
     fun preparedBody(function: Function): Statement.Block? = null
@@ -96,12 +97,15 @@ object FunctionDeclarations {
         }
         val readonlyIds = readonly.mapIndexed { index, parameter -> bindings.reserveParameter(id, parameter, true, index) }
         val normalIds = function.normalParams.mapIndexed { index, parameter -> bindings.reserveParameter(id, parameter, false, index) }
+        val contextIds = function.contextParams.mapIndexed { index, parameter ->
+            bindings.reserveParameter(id, parameter, false, function.normalParams.size + index)
+        }
         require((readonlyIds + normalIds + id).distinct().size == readonlyIds.size + normalIds.size + 1) { "Function and parameter declarations require distinct IDs" }
         val statements = StatementBridge(bindings)
         return bindings.inFunction(function, id, environment) {
             val parameters = linkedMapOf<DeclarationId, ValueDeclaration>()
             fun captureParameter(parameter: FunctionParam, parameterId: DeclarationId, readonly: Boolean, index: Int,
-                          declared: Parser.TypeContext?, default: Parser.ValueContext?) {
+                          declared: Parser.TypeContext?, default: Parser.ValueContext?, context: Boolean = false) {
                 if (!readonly && parameter.isReadOnly) unsupported("Legacy readonly/ref normal parameters cannot be exported")
                 val declaredNode = declared?.let { bindings.storeNode(parameterId, statements.type(it)) }
                 if (parameter.type is UnresolvedType && declaredNode == null)
@@ -117,7 +121,7 @@ object FunctionDeclarations {
                     unsupported("Default for ${parameter.identifier} has neither a structural body nor an immutable value")
                 val common = DeclCommon(null, null, parameter.identifier, id, environment, DeclarationAccess.PRIVATE, 0)
                 parameters[parameterId] = ValueDeclaration(common,
-                    if (readonly) ValueRole.READONLY_PARAMETER else ValueRole.NORMAL_PARAMETER,
+                    if (context) ValueRole.CONTEXT_PARAMETER else if (readonly) ValueRole.READONLY_PARAMETER else ValueRole.NORMAL_PARAMETER,
                     ValueStorage.PARAMETER, type, declaredNode, defaultBody, frozen, parameterIndex = index.toLong())
                 bindings.publishParameter(parameterId, parameter, readonly, index)
             }
@@ -128,6 +132,9 @@ object FunctionDeclarations {
             function.normalParams.forEachIndexed { index, parameter ->
                 val syntax = normalSyntax.getOrNull(index)
                 captureParameter(parameter, normalIds[index], false, index, syntax?.type(), syntax?.value())
+            }
+            function.contextParams.forEachIndexed { index, parameter ->
+                captureParameter(parameter, contextIds[index], false, index, null, null, context = true)
             }
             val resultSyntax = source?.result?.type()?.let { bindings.storeNode(id, statements.type(it)) }
             if (function.returnType is UnresolvedType && resultSyntax == null)
@@ -146,6 +153,7 @@ object FunctionDeclarations {
                     method.parameterTypes.map { parameter -> parameter.name }, method.returnType.name, caller = receiver)
             }
             val flags = (if (function.isFinal) DeclarationFlags.FINAL else 0) or
+                (if (function.isEntityMember) DeclarationFlags.ENTITY else 0) or
                 (if (function.isStatic) DeclarationFlags.STATIC else 0) or
                 (if (function.isAbstract) DeclarationFlags.ABSTRACT else 0) or
                 (if (function.isOverride) DeclarationFlags.OVERRIDE else 0) or
@@ -154,7 +162,7 @@ object FunctionDeclarations {
                 bindings.declarationOwner(function), environment, access(function.accessModifier), flags,
                 function.annotations.map { bindings.annotation(id, it) })
             CapturedFunction(id, FunctionDeclaration(common, execution, receiver, readonlyIds, normalIds, result, body, native,
-                function.tags.map { TagKey(it.namespace, it.identifier) }, bindings.runtime(function)), parameters.toMap())
+                function.tags.map { TagKey(it.namespace, it.identifier) }, bindings.runtime(function), contextIds), parameters.toMap())
         }
     }
 
@@ -204,14 +212,15 @@ object FunctionDeclarations {
         }
         function.isFinal = common.flags and DeclarationFlags.FINAL != 0L
         function.isAbstract = common.flags and DeclarationFlags.ABSTRACT != 0L
+        function.isEntityMember = common.flags and DeclarationFlags.ENTITY != 0L
         function.isOverride = common.flags and DeclarationFlags.OVERRIDE != 0L
         if (function is NativeFunction) function.returnsConstWhenArgsConst = common.flags and DeclarationFlags.CONST != 0L
         bindings.allocated(id, function)
         val parameters = linkedMapOf<DeclarationId, FunctionParam>()
-        fun restoreParameter(reference: DeclarationId, readonly: Boolean, index: Int): FunctionParam {
+        fun restoreParameter(reference: DeclarationId, readonly: Boolean, index: Int, context: Boolean = false): FunctionParam {
             val record = values(reference)
             require(record.common.owner == id && record.parameterIndex == index.toLong())
-            require(record.role == if (readonly) ValueRole.READONLY_PARAMETER else ValueRole.NORMAL_PARAMETER)
+            require(record.role == if (context) ValueRole.CONTEXT_PARAMETER else if (readonly) ValueRole.READONLY_PARAMETER else ValueRole.NORMAL_PARAMETER)
             val parameter = FunctionParam(bindings.type(requireNotNull(record.type)), record.common.name, function,
                 record.defaultBody != null || record.frozen != null, readonly)
             record.frozen?.let { constant -> bindings.constant(constant).let { value ->
@@ -237,6 +246,8 @@ object FunctionDeclarations {
             }
         }
         declaration.normal.forEachIndexed { index, reference -> function.normalParams.add(restoreParameter(reference, false, index)) }
+        function.contextParametersPrepared = true
+        declaration.contexts.forEachIndexed { index, reference -> function.declaredContextParameters.add(restoreParameter(reference, false, index, context = true)) }
         function.returnType = declaration.result?.let(bindings::type) ?: MCFPPPrivateType.Void
         declaration.tags.forEach { function.addTag(FunctionTag(it.namespace, it.name)) }
         function.annotations.addAll(common.annotations.map(bindings::annotation))

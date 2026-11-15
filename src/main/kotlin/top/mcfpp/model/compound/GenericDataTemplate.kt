@@ -577,6 +577,7 @@ open class GenericDataTemplate : DataTemplate {
             return template
         }
         template.isAbstract = isAbstract
+        template.isEntityTemplate = isEntityTemplate
         template.isFinal = isFinal
         template.initialize()
         template.restoreDeclarationEnvironment()
@@ -709,6 +710,8 @@ open class CompiledGenericDataTemplate(
     args: List<Var<*>>,
     argumentValues: List<CompilerValue>
 ) : DataTemplate(identifier, namespace) {
+    init { document = originTemplate.document.copy() }
+
     val args: List<Var<*>>
         get() = originTemplate.readOnlyParams.map { parameter ->
             requireNotNull(scope.getVar(parameter.identifier)) { "Missing readonly binding '${parameter.identifier}'" }

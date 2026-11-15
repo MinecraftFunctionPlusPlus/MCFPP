@@ -89,7 +89,8 @@ class ContextBorrowingTest {
 
     @Test fun sourceLocalAliasesAndCapturesKeepExecutorAndPositionPayloads() = isolated {
         ContextSession().use { session ->
-            val position = session.root().withPosContext(session.openScope())
+            val actor = session.root().withEntityContext(session.openScope())
+            val position = actor.withPosContext(session.openScope(actor.scope))
             lateinit var saved: Var<*>
             ContextBorrowing.withContext(position) {
                 put(ExecutionContextVar("ctx", position, encoder = encoder()))
@@ -264,8 +265,10 @@ class ContextBorrowingTest {
     }
 
     @Test fun publicTypesRoundTripWhileBorrowCapabilitiesCannotBecomeLibraryValues() = isolated {
-        for (type in listOf(ContextTypes.ExecutionContext, ContextTypes.PosContext, ContextTypes.EntityContext,
-            ContextTypes.RelationContext, ContextTypes.Position)) {
+        for (type in listOf(ContextTypes.Context, ContextTypes.DimensionContext, ContextTypes.PosContext,
+            ContextTypes.RotationContext, ContextTypes.AnchorContext, ContextTypes.EntityContext,
+            ContextTypes.ExecutionContext, ContextTypes.EntityExecutionContext, ContextTypes.RelationContext,
+            ContextTypes.Position, ContextTypes.Rotation, ContextTypes.Dimension, ContextTypes.Anchor)) {
             assertEquals(type, MCFPPType.parseFromString(type.typeName, caller.scope))
             val output = Output(4096, -1)
             KryoManager.kryo.writeClassAndObject(output, type)

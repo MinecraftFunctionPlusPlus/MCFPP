@@ -5,6 +5,7 @@ import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.context.ContextBorrowing
+import top.mcfpp.io.FunctionInventory
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.collection.ListTag
@@ -56,6 +57,38 @@ class ContextPreservationTest {
         assertEquals("Nether", machine.blockTests.single().executor)
         assertEquals(rootPosition, machine.blockTests.single().position)
         assertTrue(machine.executed.none { it.startsWith("execute summon ") }, "An executor borrow does not materialize space")
+        machine.assertClean()
+    }
+
+    @Test fun namedContextsRunAsBAtALiveAndSavedPositionsThenRestoreBSpace() = compile("""
+        context(frame: EntityExecutionContext)
+        func probe() {
+            /execute if block ~ ~ ~ minecraft:stone run say probe
+        }
+        func main() {
+            @s.withEntityCtx { owner ->
+                owner.executor.withPosCtx { space ->
+                    entityByName("Nether").withEntityCtx { other ->
+                        other.executor.withPosCtx { inner ->
+                            owner.executor.withPosCtx { live -> probe() }
+                            withPosCtx(space.pos.offset(1, 0, 0)) { saved -> probe(frame = saved) }
+                            /execute if block ~ ~ ~ minecraft:stone run say inner
+                        }
+                    }
+                }
+            }
+        }
+    """.trimIndent()) { main, functions ->
+        val machine = execute(main, functions)
+        assertEquals(List(3) { "Nether" }, machine.blockTests.map { it.executor })
+        assertEquals(listOf(savedPosition, savedPosition + ContextPosition(1.0, 0.0, 0.0), innerPosition),
+            machine.blockTests.map { it.position })
+        assertEquals(listOf("minecraft:overworld", "minecraft:overworld", "minecraft:the_nether"),
+            machine.blockTests.map { it.dimension })
+        assertEquals(listOf(ContextRotation(90.0, 0.0), innerRotation, innerRotation), machine.blockTests.map { it.rotation })
+        val preserveA = machine.executed.indexOfFirst { "set from entity @s UUID" in it }
+        val enterB = machine.executed.indexOfFirst { it.startsWith("execute as Nether ") }
+        assertTrue(preserveA >= 0 && enterB > preserveA, "A must be saved before execute as B")
         machine.assertClean()
     }
 
@@ -126,8 +159,8 @@ class ContextPreservationTest {
     @Test fun absentExecutorEmptyBranchesAndLocalReturnStillCleanEveryMaterialization() = compile("""
         func main() {
             @a.withPosCtx { outer ->
-                entityByName("Nether").withEntityCtx { inner ->
-                    var missed = tp(outer.executor, ~ ~ ~)
+                entityByName("Nether").withPosCtx { inner ->
+                    var missed = tp(@s, outer.pos)
                     if (missed.result == 0) {
                         /say zero
                     }
@@ -198,23 +231,177 @@ class ContextPreservationTest {
 
     private fun ContextCommandExecutor.publicTeleports() = teleports.filterNot { it.target.startsWith("__context_anchor_") }
 
+    @Test fun unusedNativeResultsCanCrossFrameIndependentHelpersWhileReadResultsRemain() = compile("""
+        func observe() {
+            /say between
+        }
+        func main() {
+            @s.withPosCtx { space ->
+                tp(@s, space.pos)
+                observe()
+                var result = tp(@s, space.pos)
+                observe()
+                if (result.success) {
+                    /say moved
+                }
+                tp(@s, space.pos)
+            }
+        }
+    """.trimIndent()) { main, functions ->
+        val machine = execute(main, functions)
+        assertEquals(List(3) { "owner" }, machine.publicTeleports().map { it.target })
+        assertEquals(List(3) { savedPosition }, machine.publicTeleports().map { it.to })
+        assertEquals(listOf("between", "between", "moved"), machine.messages)
+        assertEquals(1, functions.values.flatten().count { "store result storage" in it && "store success storage" in it })
+        machine.assertClean()
+    }
+
+    @Test fun dynamicDimensionEntryPreservesAncestorSpaceBeforeTheMacroSwitch() = compile("""
+        data Dimension { var id: string; constructor(id: string) { this.id = id } }
+        func main() {
+            external name: string = "minecraft:the_nether"
+            var dimension = Dimension(name)
+            @s.withPosCtx { original ->
+                withDimensionCtx(dimension) { other ->
+                    tp(entityByName("Target"), original.pos)
+                    /execute if block ~ ~ ~ minecraft:stone run say inner
+                }
+            }
+            /execute if block ~ ~ ~ minecraft:stone run say after
+        }
+    """.trimIndent()) { main, functions ->
+        val machine = execute(main, functions)
+        assertEquals("Target", machine.publicTeleports().single().target)
+        assertEquals(savedPosition, machine.publicTeleports().single().to)
+        assertEquals("minecraft:overworld", machine.publicTeleports().single().dimension)
+        assertEquals(listOf("inner", "after"), machine.messages)
+        assertEquals(listOf("minecraft:the_nether", "minecraft:overworld"), machine.blockTests.map { it.dimension })
+        assertEquals(listOf(ContextPosition(5.0, 70.0, 2.5), rootPosition), machine.blockTests.map { it.position })
+        val save = machine.executed.indexOfFirst { it.startsWith("execute summon minecraft:marker ") }
+        val switch = machine.executed.indexOfFirst { it.startsWith("execute in minecraft:the_nether ") }
+        assertTrue(save >= 0 && switch > save, "The original position must be saved before the dynamic dimension switch")
+        machine.assertClean()
+    }
+
+    @Test fun localPositionKeepsItsOriginalExecutorEyesRotationAndWorldOffset() = compile("""
+        func main() {
+            @s.withEntityCtx { actor ->
+                withRotationCtx(rotation(90f, 0f)) { frame ->
+                    withAnchorCtx(Anchor.eyes) { eyes ->
+                        entityByName("Nether").withEntityCtx { other ->
+                            other.executor.withPosCtx { elsewhere ->
+                                tp(entityByName("Target"), eyes.local(0, 0, 2).offset(1, 0, 0))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    """.trimIndent()) { main, functions ->
+        val machine = execute(main, functions)
+        val moved = machine.publicTeleports().single()
+        assertEquals("Target", moved.target)
+        assertEquals(ContextPosition(2.0, 65.62, -4.0), moved.to)
+        assertEquals("minecraft:overworld", moved.dimension)
+        machine.assertClean()
+    }
+
+    @Test fun recursiveCallsKeepDistinctContextBindingsInTheSameCommandFrame() = compile("""
+        context(location: PosContext)
+        func recurse(depth: int, other: PosContext) {
+            if (depth > 0) {
+                recurse(depth - 1, other, location = other)
+                return
+            }
+            tp(entityByName("Target"), location.pos)
+        }
+        func main() {
+            @s.withPosCtx { original ->
+                entityByName("Nether").withPosCtx { current ->
+                    external depth: int = 1
+                    recurse(depth, current, location = original)
+                }
+            }
+        }
+    """.trimIndent()) { main, functions ->
+        val machine = execute(main, functions)
+        assertEquals(innerPosition, machine.publicTeleports().single().to)
+        assertEquals("minecraft:the_nether", machine.publicTeleports().single().dimension)
+        machine.assertClean()
+    }
+
+    @Test fun modifierEntriesChangeTheirOwnComponentsAndRestoreTheirCaller() = compile("""
+        data Dimension { var id: string; constructor(id: string) { this.id = id } }
+        data EntityType { var id: string; constructor(id: string) { this.id = id } }
+        func main() {
+            withPosCtx(3.75 64 -4.25) { base ->
+                withAlignedCtx(Axes.xz) { aligned ->
+                    /execute if block ~ ~ ~ minecraft:stone run say aligned
+                }
+                withDimensionCtx(Dimension("minecraft:the_nether")) { nether ->
+                    /execute if block ~ ~ ~ minecraft:stone run say dimension
+                }
+                entityByName("Nether").withPositionedCtx { located ->
+                    /execute if block ~ ~ ~ minecraft:stone run say positioned
+                }
+                withFacingCtx(~-1 ~ ~) { facing ->
+                    /execute if block ~ ~ ~ minecraft:stone run say facing
+                }
+                withAnchorCtx(Anchor.eyes) { eyes ->
+                    /execute if block ~ ~ ~ minecraft:stone run say eyes
+                }
+                withHeightmapCtx(Heightmap.ocean_floor) { surface ->
+                    /execute if block ~ ~ ~ minecraft:stone run say height
+                }
+                withSummonedCtx(EntityType("minecraft:pig")) { pig ->
+                    /execute if block ~ ~ ~ minecraft:stone run say summoned
+                }
+                /execute if block ~ ~ ~ minecraft:stone run say restored
+            }
+        }
+    """.trimIndent()) { main, functions ->
+        val machine = execute(main, functions, heightmap = { dimension, map, x, z ->
+            assertEquals("minecraft:overworld", dimension); assertEquals("ocean_floor", map)
+            assertEquals(3, x); assertEquals(-5, z); 72.0
+        })
+        val observed = machine.blockTests
+        assertEquals(ContextPosition(3.0, 64.0, -5.0), observed[0].position)
+        assertEquals(ContextPosition(3.75 / 8, 64.0, -4.25 / 8), observed[1].position)
+        assertEquals("minecraft:the_nether", observed[1].dimension)
+        assertEquals(innerPosition, observed[2].position)
+        assertEquals(rootRotation, observed[2].rotation)
+        assertEquals("minecraft:overworld", observed[2].dimension)
+        assertEquals(90.0, observed[3].rotation.yaw, 0.0)
+        assertEquals(0.0, observed[3].rotation.pitch, 0.0)
+        assertEquals("eyes", observed[4].anchor)
+        assertEquals(72.0, observed[5].position.y)
+        assertNotEquals("owner", observed[6].executor)
+        assertEquals("minecraft:pig", machine.entities.single { it.name == observed[6].executor }.type)
+        assertEquals("owner", observed[7].executor)
+        assertEquals(ContextPosition(3.75, 64.0, -4.25), observed[7].position)
+        assertEquals(rootRotation, observed[7].rotation)
+        machine.assertClean()
+    }
+
     private fun ContextCommandExecutor.assertClean() {
         assertEquals(73, assertIs<IntTag>(readStorage("mcfpp:system", "stack_frame[0].sentinel")).value)
         assertEquals(1, executedFunctionLines.count { it == "data modify storage mcfpp:system stack_frame prepend value {}" } -
             executedFunctionLines.count { it == "data remove storage mcfpp:system stack_frame[0]" })
-        assertEquals(0, assertIs<ListTag>(readStorage("mcfpp:context", "frames")).size)
+        if (executed.any { "mcfpp:context frames prepend" in it })
+            assertEquals(0, assertIs<ListTag>(readStorage("mcfpp:context", "frames")).size)
         if (executed.any { it.contains("operations prepend") })
             assertEquals(0, assertIs<ListTag>(readStorage("mcfpp:context", "operations")).size)
         assertTrue(entities.none { "mcfpp_context_anchor" in it.tags }, "All internal anchors must be removed")
         assertTrue(entities.all { entity -> entity.tags.none { it.startsWith("mcfpp_ctx_") } }, "Temporary target tags must be removed")
     }
 
-    private fun execute(main: Function, functions: Map<String, List<String>>, root: String? = "owner"): ContextCommandExecutor {
+    private fun execute(main: Function, functions: Map<String, List<String>>, root: String? = "owner",
+                        heightmap: ((String, String, Int, Int) -> Double)? = null): ContextCommandExecutor {
         val initial = entities()
         return ContextCommandExecutor(listOf(Commands.stackIn().analyze(),
             "data modify storage mcfpp:system stack_frame[0].sentinel set value 73", "function ${main.namespaceID}"),
             functions, initial, root?.let { name -> initial.single { it.name == name } }, rootPosition, rootRotation,
-            world = { _, _, _ -> ContextBlock("minecraft:stone") }, macros = Project.macroFunction.toMap())
+            world = { _, _, _ -> ContextBlock("minecraft:stone") }, macros = Project.macroFunction.toMap(), heightmap = heightmap)
     }
 
     private fun compile(source: String, allowErrors: Boolean = false, action: (Function, Map<String, List<String>>) -> Unit) {
@@ -230,13 +417,14 @@ class ContextPreservationTest {
             MCFPPStringTest.readFromString("namespace mcfpp.minecraft.std\n$resultSource", targetPath = resultLibrary.toString(), version = "26.3")
             assertEquals(0, Project.errorCount)
             Project.config.includes = arrayListOf(resultLibrary.toString())
-            val declarations = Files.readString(Path.of("src/main/mcfpp/lang/teleport.mcfpp")) + "\n" +
-                Files.readString(Path.of("src/main/mcfpp/lang/entity.mcfpp"))
+            val declarations = (Files.readString(Path.of("src/main/mcfpp/lang/teleport.mcfpp")) + "\n" +
+                Files.readString(Path.of("src/main/mcfpp/lang/entity.mcfpp")) + "\n" +
+                Files.readString(Path.of("src/main/mcfpp/lang/context.mcfpp"))).lineSequence()
+                .filterNot { it.trimStart().startsWith("import ") }.joinToString("\n")
             MCFPPStringTest.readFromString("import mcfpp.minecraft.std:*\n$declarations\n$source", version = "26.3")
             if (!allowErrors) assertEquals(0, Project.errorCount)
             val main = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
-            val functions = (GlobalScope.localNamespaces.values + GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values)
-                .flatMap { it.scope.functions.values.flatten() }
+            val functions = FunctionInventory.all()
                 .associate { it.namespaceID.toString() to it.commands.flatMap { command -> command.analyze().lines() } }
             action(main, functions)
         } finally {

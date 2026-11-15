@@ -44,9 +44,16 @@ class StatementProjection(
         if (root is Statement.Block) child(this, block(root)) else child(this, statement(root))
     }
 
-    fun statement(value: Statement): P.StatementContext = context(P.StatementContext(null, -1), value) {
+    fun statement(value: Statement, implicitCommandSlash: Boolean = false): P.StatementContext = context(P.StatementContext(null, -1), value) {
         when (value) {
-            is Statement.Block -> unsupported("The current grammar only permits a block in a body position")
+            is Statement.Block -> child(this, context(P.CommandBlockContext(null, -1), value) {
+                token(this, L.COMMAND_BLOCK_OPEN, "/{"); token(this, L.NL, "\n")
+                value.statements.forEach {
+                    if (it !is Statement.Command) token(this, L.SLASH, "/")
+                    child(this, statement(it, implicitCommandSlash = true)); separator(this, value)
+                }
+                token(this, L.RCURL, "}")
+            })
             is Statement.Local -> {
                 declared(this, value.declaration)
                 child(this, local(value))
@@ -98,27 +105,21 @@ class StatementProjection(
                 if (name.namespace != null) unsupported("A store destination must be a local display name")
                 token(this, L.Identifier, name.name); token(this, L.RPAREN, ")")
             })
-            is Statement.Execute -> child(this, context(P.ExecuteStatementContext(null, -1), value) {
-                if (value.contexts.isEmpty()) unsupported("An execute statement requires a context")
-                token(this, L.EXECUTE, "execute"); token(this, L.LPAREN, "(")
-                value.contexts.forEachIndexed { index, execute ->
-                    if (index != 0) token(this, L.COMMA, ",")
-                    child(this, context(P.ExecuteContextContext(null, -1), value) {
-                        child(this, context(P.ExecuteExpressionContext(null, -1), value) {
-                            when (val path = execute.path) {
-                                ExecutePath.As -> token(this, L.AS, "as")
-                                is ExecutePath.Members -> path.parts.forEachIndexed { partIndex, part ->
-                                    if (partIndex != 0) token(this, L.DOT, ".")
-                                    child(this, variable(part))
-                                }
-                            }
-                        })
-                        token(this, L.ASSIGNMENT, "="); child(this, expressions.expression(execute.value))
+            is Statement.ContextScope -> child(this, context(P.ContextScopeStatementContext(null, -1), value) {
+                token(this, L.CONTEXT, "context")
+                child(this, context(P.NormalArgsContext(null, -1), value) {
+                    token(this, L.LPAREN, "(")
+                    child(this, context(P.ExpressionListContext(null, -1), value) {
+                        value.contexts.forEachIndexed { index, expression ->
+                            if (index != 0) token(this, L.COMMA, ",")
+                            child(this, expressions.expression(expression))
+                        }
                     })
-                }
-                token(this, L.RPAREN, ")"); space(); child(this, blockBody(value.body))
+                    token(this, L.RPAREN, ")")
+                })
+                space(); child(this, blockBody(value.body))
             })
-            is Statement.Command -> child(this, command(value))
+            is Statement.Command -> child(this, command(value, implicitCommandSlash))
             is Statement.Break, is Statement.Continue -> child(this, context(P.ControlStatementContext(null, -1), value) {
                 token(this, if (value is Statement.Break) L.BREAK else L.CONTINUE,
                     if (value is Statement.Break) "break" else "continue")
@@ -180,8 +181,8 @@ class StatementProjection(
         return property.primary().`var`() ?: unsupported("An execute path component must be a current grammar var")
     }
 
-    private fun command(value: Statement.Command): P.OrgCommandContext = context(P.OrgCommandContext(null, -1), value) {
-        token(this, L.SLASH, "/")
+    private fun command(value: Statement.Command, implicitSlash: Boolean): P.OrgCommandContext = context(P.OrgCommandContext(null, -1), value) {
+        token(this, L.SLASH, if (implicitSlash) "" else "/")
         value.parts.forEach { part -> child(this, context(P.OrgCommandContentContext(null, -1), value) {
             when (part) {
                 is TextPart.Text -> token(this, L.OrgCommandText, part.value)
@@ -280,6 +281,7 @@ class StatementProjection(
 
     private fun templateField(value: TemplateMember.Declaration, facts: ProjectionTemplateDeclaration.Field): P.TemplateFieldDeclarationContext =
         declared(context(P.TemplateFieldDeclarationContext(null, -1), value) {
+            if (facts.isEntityMember) { token(this, L.ENTITY, "entity"); space() }
             token(this, if (facts.constant) L.CONST else L.VAR, if (facts.constant) "const" else "var")
             space(); token(this, L.Identifier, facts.name)
             facts.type?.let { type ->
@@ -323,9 +325,21 @@ class StatementProjection(
 
     private fun templateFunction(value: TemplateMember.Declaration, facts: ProjectionTemplateDeclaration.Function): P.TemplateFunctionDeclarationContext =
         declared(context(P.TemplateFunctionDeclarationContext(null, -1), value) {
+            if (facts.isEntityMember) { token(this, L.ENTITY, "entity"); space() }
             if (facts.isOverride) { token(this, L.OVERRIDE, "override"); space() }
             if (facts.isAbstract) { token(this, L.ABSTRACT, "abstract"); space() }
             child(this, context(P.FunctionDeclarationPartContext(null, -1), value) {
+                if (facts.contexts.isNotEmpty()) child(this, context(P.ContextParametersContext(null, -1), value) {
+                    token(this, L.CONTEXT, "context"); token(this, L.LPAREN, "(")
+                    facts.contexts.forEachIndexed { index, parameter ->
+                        if (index != 0) token(this, L.COMMA, ",")
+                        child(this, context(P.ContextParameterContext(null, -1), value) {
+                            token(this, L.Identifier, parameter.name); token(this, L.COLON, ":")
+                            child(this, expressions.type(requireNotNull(parameter.type)))
+                        })
+                    }
+                    token(this, L.RPAREN, ")"); space()
+                })
                 token(this, L.FUNCTION, "func"); space(); token(this, L.Identifier, facts.name)
                 child(this, parameters(value, facts.readonly, facts.normal))
                 token(this, L.COLON, ":"); child(this, expressions.returnType(facts.result))

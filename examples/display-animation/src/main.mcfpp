@@ -1,0 +1,63 @@
+// bounce函数计算
+func bounce(t: float): float {
+    const n = 7.5625;
+    const d = 2.75;
+
+    if (t < 1 / d) {
+        return n * t * t;
+    } else if (t < 2 / d) {
+        t -= 1.5 / d;
+        return n * t * t + 0.75;
+    } else if (t < 2.5 / d) {
+        t -= 2.25 / d;
+        return n * t * t + 0.9375;
+    } else {
+        t -= 2.625 / d;
+        return n * t * t + 0.984375;
+    }
+}
+
+// 代码入口，用于控制一个展示实体弹跳
+func main() {
+    // 展示实体的UUID，固定值
+    const uuid = UUID("0-0-0-0-1")
+    // ItemDisplay 是 entity 的子类型。种类由调用者声明，需要时显式 checkType。
+    const blockDisplay = entityByUUID<ItemDisplay>(uuid)
+    // 检查实体是否存在
+    if (!blockDisplay.exists()) {
+        // 若不存在，生成这个实体。并设置它的nbt（summon命令参数之一）。
+        // nbt的值如果是uuid，表示寻找uuid变量。如果是"uuid"才表示uuid字符串。这和原版行为不一样。
+        summon<ItemDisplay>(~ ~ ~, { item: { id: "minecraft:stone", count: 1 }, UUID: uuid })
+    } else if (!blockDisplay.checkType<ItemDisplay>()) {
+        /tellraw @a {text:"UUID 对应的实体不是物品展示实体"}
+        return
+    }
+    const startHeight = 4.0
+    // 表示创建一个 tick 任务。其中的函数将会在每一个tick执行。
+    // 若函数块返回了true，则继续执行，否则不执行。
+    tick { frame ->
+        var progress = frame / 50.0
+        var height = (1.0 - bounce(progress)) * startHeight
+        // 属性 setter 只修改变换的 Y 平移分量。
+        blockDisplay.transform.y = height
+        // 执行到终点这一帧，再结束任务。
+        return frame < 50
+    }
+}
+
+// 每隔 10 tick 执行，共 3 次。
+func demoLoop() {
+    loop(10) { frame ->
+        /say loop
+        return frame < 2
+    }
+}
+
+func demoSchedule() {
+    schedule(0) {
+        /say immediate
+    }
+    schedule(20) {
+        /say after-20-ticks
+    }
+}

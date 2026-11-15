@@ -779,6 +779,7 @@ internal class CodeArena private constructor(
         val positions = linkedMapOf<ExecutionContextId, ExecutionContextId>()
         val rotations = linkedMapOf<ExecutionContextId, ExecutionContextId>()
         val dimensions = linkedMapOf<ExecutionContextId, ExecutionContextId>()
+        val anchors = linkedMapOf<ExecutionContextId, ExecutionContextId>()
         val scanned = java.util.Collections.newSetFromMap(IdentityHashMap<Code, Boolean>())
         val addressDependencies = IdentityHashMap<Code, Boolean>()
         var prepared = false
@@ -798,6 +799,8 @@ internal class CodeArena private constructor(
                 bindComponent(rotations, original.rotation, target.rotation)
                 bindComponent(dimensions, original.id, target.dimension)
                 bindComponent(dimensions, original.dimension, target.dimension)
+                bindComponent(anchors, original.id, target.anchor)
+                bindComponent(anchors, original.anchor, target.anchor)
             }
         }
 
@@ -814,7 +817,8 @@ internal class CodeArena private constructor(
             component(old.executor, executors),
             component(old.position, positions),
             component(old.rotation, rotations),
-            component(old.dimension, dimensions)
+            component(old.dimension, dimensions),
+            component(old.anchor, anchors)
         )
 
         fun prepareContext(parent: ExecutionContextFrame, child: ExecutionContextFrame, body: Block) {
@@ -827,6 +831,7 @@ internal class CodeArena private constructor(
             positions[child.id] = if (child.position == child.id) next else mappedParent.position
             rotations[child.id] = if (child.rotation == child.id) next else mappedParent.rotation
             dimensions[child.id] = if (child.dimension == child.id) next else mappedParent.dimension
+            anchors[child.id] = if (child.anchor == child.id) next else mappedParent.anchor
             registerContext(frame(child), scope((body as OwnedCode).metadata.scopeId))
         }
 

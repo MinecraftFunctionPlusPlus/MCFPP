@@ -70,4 +70,4 @@ int 往返、bool 的 0/1 保存、非零读真、缺失读零均为可观测行
 & ./examples/mni/benchmark/verify-dsb.ps1 -Cases @('score-mapping-Kotlin','score-mapping-Java') -Attempt attempt4
 ```
 
-DSB 只覆盖数据包功能语义，不是 Minecraft 实机，也不测性能；性能与真实游戏验收已按用户要求取消，不是本示例的完成门槛。完整功能 JUnit 与统一验收见 [`regression-results.md`](../../../docs/mni/regression-results.md)、[`acceptance.md`](../../../docs/implementation-review/acceptance.md)。
+DSB 只覆盖数据包功能语义，不是 Minecraft 实机，也不测性能；性能与真实游戏验收已按用户要求取消，不是本示例的完成门槛。

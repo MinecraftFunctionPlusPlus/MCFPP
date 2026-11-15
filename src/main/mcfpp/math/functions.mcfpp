@@ -1,0 +1,104 @@
+import mcfpp.lang:*
+import mcfpp.math.internal:*
+
+/// abs 的 int 重载；采用目标版本的数值精度。
+func abs(x: int): int = top.mcfpp.mni.MathData.absInt
+/// abs 的 float 重载；采用目标版本的数值精度。
+func abs(x: float): float = top.mcfpp.mni.MathData.absFloat
+/// min 的 int, int 重载；采用目标版本的数值精度。
+func min(x: int, y: int): int = top.mcfpp.mni.MathData.minInt
+/// max 的 int, int 重载；采用目标版本的数值精度。
+func max(x: int, y: int): int = top.mcfpp.mni.MathData.maxInt
+/// min 的 float, float 重载；采用目标版本的数值精度。
+func min(x: float, y: float): float = top.mcfpp.mni.MathData.minFloat
+/// max 的 float, float 重载；采用目标版本的数值精度。
+func max(x: float, y: float): float = top.mcfpp.mni.MathData.maxFloat
+/// floor 的 float 重载；采用目标版本的数值精度。
+func floor(x: float): float = top.mcfpp.mni.MathData.floor
+/// ceil 的 float 重载；采用目标版本的数值精度。
+func ceil(x: float): float = top.mcfpp.mni.MathData.ceil
+/// trunc 的 float 重载；采用目标版本的数值精度。
+func trunc(x: float): float = top.mcfpp.mni.MathData.trunc
+/// round 的 float 重载；采用目标版本的数值精度。
+func round(x: float): float = top.mcfpp.mni.MathData.round
+/// sqrt 的 float 重载；采用目标版本的数值精度。
+func sqrt(x: float): float = top.mcfpp.mni.MathData.sqrt
+/// sin 的 float 重载；采用目标版本的数值精度。
+func sin(x: float): float = top.mcfpp.mni.MathData.sin
+/// cos 的 float 重载；采用目标版本的数值精度。
+func cos(x: float): float = top.mcfpp.mni.MathData.cos
+/// isqrt 的 int 重载；采用目标版本的数值精度。
+func isqrt(x: int): int = top.mcfpp.mni.MathData.isqrt
+/// pow 的 int, int 重载；采用目标版本的数值精度。
+func pow(x: int, y: int): int = top.mcfpp.mni.MathData.powInt
+/// pow 的 float, int 重载；采用目标版本的数值精度。
+func pow(x: float, y: int): float = top.mcfpp.mni.MathData.powFloatInt
+#if MC >= 26.3
+/// pow 的 float, float 重载；采用目标版本的数值精度。
+func pow(x: float, y: float): float = top.mcfpp.mni.MathData.powFloat
+#endif
+/// nroot 的 float, int 重载；采用目标版本的数值精度。
+func nroot(x: float, y: int): float = top.mcfpp.mni.MathData.nroot
+/// hypot 的 float, float 重载；采用目标版本的数值精度。
+func hypot(x: float, y: float): float = top.mcfpp.mni.MathData.hypot2
+/// hypot 的 float, float, float 重载；采用目标版本的数值精度。
+func hypot(x: float, y: float, z: float): float = top.mcfpp.mni.MathData.hypot3
+/// floorDiv 的 int, int 重载；采用目标版本的数值精度。
+func floorDiv(x: int, y: int): int = top.mcfpp.mni.MathData.floorDiv
+/// floorMod 的 int, int 重载；采用目标版本的数值精度。
+func floorMod(x: int, y: int): int = top.mcfpp.mni.MathData.floorMod
+
+// Composite operations keep the same arithmetic order on both backends.
+
+/// 返回 -1、0 或 1。
+func sign(x: int): int {
+    if(x > 0){ return 1 }
+    if(x < 0){ return -1 }
+    return 0
+}
+/// 返回 -1、0 或 1；正负零均返回 0。
+func sign(x: float): int {
+    if(x > 0.0){ return 1 }
+    if(x < 0.0){ return -1 }
+    return 0
+}
+/// 将 x 限制在包含两端的范围内。要求 lower <= upper。
+func clamp(x: int, lower: int, upper: int): int { return min(max(x, lower), upper) }
+/// 将 x 限制在包含两端的范围内。要求 lower <= upper。
+func clamp(x: float, lower: float, upper: float): float { return min(max(x, lower), upper) }
+/// 返回平方。
+func square(x: int): int { return pow(x, 2) }
+/// 返回平方。
+func square(x: float): float { return x * x }
+/// 返回实数立方根。
+func cbrt(x: float): float { return nroot(x, 3) }
+
+/// 一次正余弦求值的两个结果。
+data SinCos {
+    var sin: float
+    var cos: float
+    constructor(s: float, c: float) { this.sin = s; this.cos = c }
+}
+/// 以弧度计算正余弦。
+func sinCos(x: float): SinCos = top.mcfpp.mni.MathData.sinCos
+/// 以弧度计算正切。
+func tan(x: float): float { return sin(x) / cos(x) }
+/// 将角度转换为弧度。
+func toRadians(x: float): float { return x * 0.017453292519943295 }
+/// 将弧度转换为角度。
+func toDegrees(x: float): float { return x * 57.29577951308232 }
+/// 返回 y、x 所确定的方位角，单位为弧度；零向量返回 0。
+func atan2(y: float, x: float): float {
+    var scale = max(abs(x), abs(y))
+    if(scale == 0.0){ return 0.0 }
+    return atan2Fixed(toInt(y / scale * 10000.0), toInt(x / scale * 10000.0))
+}
+/// 返回反正切，单位为弧度。
+func atan(x: float): float { return atan2(x, 1.0) }
+/// 返回反正弦，单位为弧度；要求 -1 <= x <= 1。
+func asin(x: float): float { return atan2(x, sqrt(1.0 - x * x)) }
+/// 返回反余弦，单位为弧度；要求 -1 <= x <= 1。
+func acos(x: float): float { return atan2(sqrt(1.0 - x * x), x) }
+/// 按 a+(b-a)*t 插值；t 超出 [0,1] 时外插。
+func lerp(a: float, b: float, t: float): float { return a + (b - a) * t }
+

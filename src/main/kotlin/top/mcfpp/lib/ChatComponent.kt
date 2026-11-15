@@ -18,11 +18,21 @@ abstract class ChatComponent {
      */
     abstract fun toCommandPart(): Command
 
+    protected fun component(vararg fields: Pair<String, Command>): Command {
+        val result = Command("{")
+        fields.forEachIndexed { index, (key, value) ->
+            if (index > 0) result.build(",", false)
+            result.build(JSON.toJSONString(key) + ":", false).build(value, false)
+        }
+        if (styles.isNotEmpty()) result.build(",", false).build(styleToString(), false)
+        return result.build("}", false)
+    }
+
     fun styleToString(): Command{
         val str = Command()
-        for (style in styles){
+        for ((index, style) in styles.withIndex()){
             str.build(style.toCommandPart(), false)
-            if(style != styles.last()) str.build(", ", false)
+            if(index < styles.lastIndex) str.build(", ", false)
         }
         return str
     }
@@ -35,7 +45,8 @@ abstract class ChatComponent {
 }
 
 class EncodedChatComponent(private val snbt: String) : ChatComponent() {
-    override fun toCommandPart(): Command = Command(snbt)
+    override fun toCommandPart(): Command = if (styles.isEmpty()) Command(snbt)
+        else component("text" to Command("\"\""), "extra" to Command("[$snbt]"))
 }
 
 /**
@@ -51,18 +62,19 @@ class ListChatComponent: ChatComponent() {
 
     override fun toCommandPart(): Command {
         val str = Command("[")
-        for (component in components){
+        for ((index, component) in components.withIndex()){
             str.build(component.toCommandPart(), false)
-            if(component != components.last()) str.build(",", false)
+            if(index < components.lastIndex) str.build(",", false)
         }
         str.build("]", false)
-        return str
+        return if (styles.isEmpty()) str else component("text" to Command("\"\""), "extra" to str)
     }
 
     fun append(c: ChatComponent){
         if(components.isEmpty()){
             components.add(c)
-        }else if(c is PlainChatComponent && components.last() is PlainChatComponent){
+        }else if(c is PlainChatComponent && components.last() is PlainChatComponent &&
+            c.styles.isEmpty() && components.last().styles.isEmpty()){
             (components.last() as PlainChatComponent).value += c.value
         }else{
             components.add(c)
@@ -77,81 +89,45 @@ class ListChatComponent: ChatComponent() {
 }
 
 class PlainChatComponent(var value: String) : ChatComponent() {
-    override fun toCommandPart(): Command {
-        val c = Command("""{"type": "text", "text": ${JSON.toJSONString(value)}}""")
-        if(styles.isNotEmpty()){
-            c.build(",").build(styleToString())
-        }
-        return c
-    }
+    override fun toCommandPart(): Command = component("type" to Command("\"text\""), "text" to Command(JSON.toJSONString(value)))
 
 }
 
 class TranslatableChatComponent(val key: String, val fallback: String? = null, val args: List<ChatComponent>? = null) : ChatComponent() {
     override fun toCommandPart(): Command {
-        val str = Command.build("{\"type\": \"translatable\", \"translate\":\"$key\"")
-        if(fallback != null){
-            str.build(",\"fallback\":\"$fallback\"", false)
-        }
-        if(args != null){
-            str.build(",\"with\":[", false)
-            for (component in args){
-                str.build(component.toCommandPart(), false)
-                if(component != args.last()) str.build(",", false)
-            }
-            str.build("]", false)
-        }
-        str.build(", ${styleToString()}", false)
-        return str
+        val fields = arrayListOf("type" to Command("\"translatable\""), "translate" to Command(JSON.toJSONString(key)))
+        fallback?.let { fields += "fallback" to Command(JSON.toJSONString(it)) }
+        args?.let { fields += "with" to ListChatComponent().apply { components += it }.toCommandPart() }
+        return component(*fields.toTypedArray())
     }
 }
 
 class ScoreChatComponent(val value: MCInt) : ChatComponent() {
 
     override fun toCommandPart(): Command {
-        val c = Command("{\"type\":\"score\",\"score\":{\"name\":\"${value.name}\",\"objective\":\"${value.sbObject.name}\"}}")
-        if(styles.isNotEmpty()){
-            c.build(",").build(styleToString())
-        }
-        return c
+        return component("type" to Command("\"score\""), "score" to Command(JSON.toJSONString(
+            mapOf("name" to value.name, "objective" to value.sbObject.name))))
     }
 }
 
 class SelectorChatComponent(val selector: String, val separator: ChatComponent? = null) : ChatComponent() {
     override fun toCommandPart(): Command {
-        val c = if(separator != null){
-            Command("{\"type\":\"selector\",\"selector\":\"$selector\",\"separator\":${separator.toCommandPart()}")
-        }else{
-            Command("{\"type\":\"selector\",\"selector\":\"$selector\"")
-        }
-        if(styles.isNotEmpty()){
-            c.build(",").build(styleToString())
-        }
-        return c
+        val fields = arrayListOf("type" to Command("\"selector\""), "selector" to Command(JSON.toJSONString(selector)))
+        separator?.let { fields += "separator" to it.toCommandPart() }
+        return component(*fields.toTypedArray())
     }
 }
 
 class KeybindChatComponent(val key: String) : ChatComponent() {
-    override fun toCommandPart(): Command {
-        val c = Command("{\"type\":\"keybind\",\"keybind\":\"$key\"")
-        if(styles.isNotEmpty()){
-            c.build(",").build(styleToString())
-        }
-        return c
-    }
+    override fun toCommandPart(): Command = component("type" to Command("\"keybind\""), "keybind" to Command(JSON.toJSONString(key)))
 }
 
 class NBTChatComponent(val nbt: NBTBasedData, val interpret: Boolean = false, val separator: ChatComponent? = null) : ChatComponent() {
     override fun toCommandPart(): Command {
-        val c = if(separator != null){
-            Command("{\"type\":\"nbt\",").build(nbt.nbtPath.toChatComponentPart(), false).build(",\"interpret\":$interpret,\"separator\":${separator.toCommandPart()}}", false)
-        }else{
-            Command("{\"type\":\"nbt\",").build(nbt.nbtPath.toChatComponentPart(), false).build(",\"interpret\":$interpret}", false)
-        }
-        if(styles.isNotEmpty()){
-            c.build(",").build(styleToString())
-        }
-        return c
+        val c = Command("{\"type\":\"nbt\",").build(nbt.nbtPath.toChatComponentPart(), false).build(",\"interpret\":$interpret", false)
+        separator?.let { c.build(",\"separator\":", false).build(it.toCommandPart(), false) }
+        if (styles.isNotEmpty()) c.build(",", false).build(styleToString(), false)
+        return c.build("}", false)
     }
 }
 
@@ -161,7 +137,8 @@ interface ChatComponentStyle{
 
 class ColorStyle(val hex: Int): ChatComponentStyle{
     override fun toCommandPart(): Command {
-        return Command("\"color\": \"#$hex\"")
+        require(hex in 0..0xffffff) { "Text color must fit #RRGGBB" }
+        return Command("\"color\": \"#${hex.toString(16).padStart(6, '0')}\"")
     }
 
     companion object{
@@ -198,7 +175,7 @@ class ItalicStyle(val italic: Boolean): ChatComponentStyle{
 
 class UnderlineStyle(val underline: Boolean): ChatComponentStyle{
     override fun toCommandPart(): Command {
-        return Command("\"underline\": $underline")
+        return Command("\"underlined\": $underline")
     }
 }
 
@@ -216,13 +193,22 @@ class ObfuscatedStyle(val obfuscated: Boolean): ChatComponentStyle{
 
 class InsertionStyle(val string: String): ChatComponentStyle{
     override fun toCommandPart(): Command {
-        return Command("\"insertion\": $string")
+        return Command("\"insertion\": ${JSON.toJSONString(string)}")
     }
 }
 
 class ClickEventStyle(val action: ClickEventAction, val value: String): ChatComponentStyle{
     override fun toCommandPart(): Command {
-        return Command("\"clickEvent\": {\"action\": \"${action.name.lowercase()}\", \"value\": \"$value\"}")
+        val modern = top.mcfpp.backend.StandardTextOperations.modernEvents
+        val field = if (!modern) "value" else when (action) {
+            ClickEventAction.OPEN_URL -> "url"
+            ClickEventAction.RUN_COMMAND, ClickEventAction.SUGGEST_COMMAND -> "command"
+            ClickEventAction.CHANGE_PAGE -> "page"
+            else -> "value"
+        }
+        val payload: Any = if (modern && action == ClickEventAction.CHANGE_PAGE) value.toInt().also { require(it > 0) } else value
+        return Command(JSON.toJSONString(if (modern) "click_event" else "clickEvent") + ":" +
+            JSON.toJSONString(mapOf("action" to action.name.lowercase(), field to payload)))
     }
 
     enum class ClickEventAction{
@@ -230,13 +216,18 @@ class ClickEventStyle(val action: ClickEventAction, val value: String): ChatComp
         OPEN_FILE,
         RUN_COMMAND,
         SUGGEST_COMMAND,
-        CHANGE_PAGE
+            CHANGE_PAGE,
+        COPY_TO_CLIPBOARD
     }
 }
 
 class HoverEventShowTextStyle(val content: ChatComponent): ChatComponentStyle{
     override fun toCommandPart(): Command {
-        return Command("\"hoverEvent\": {\"action\": \"show_text\", \"value\": \"$content\"}")
+        val modern = top.mcfpp.backend.StandardTextOperations.modernEvents
+        val legacyValue = top.mcfpp.Project.config.version.let { it.startsWith("1.13") || it.startsWith("1.14") || it.startsWith("1.15") }
+        val field = if (modern || legacyValue) "value" else "contents"
+        return Command("\"${if (modern) "hover_event" else "hoverEvent"}\":{\"action\":\"show_text\",\"$field\":")
+            .build(content.toCommandPart(), false).build("}", false)
     }
 }
 
@@ -248,24 +239,19 @@ class HoverEventShowTextStyle(val content: ChatComponent): ChatComponentStyle{
 
 class HoverEventShowEntityStyle(val name: ChatComponent?, val type: String, val uuid: NBTBasedData): ChatComponentStyle{
     override fun toCommandPart(): Command {
-        val c = Command("\"hoverEvent\":{\"action\": \"show_entity\", \"contents\": {")
-        if(name != null){
-            c.build("\"name\": \"$name\", ", false)
+        val words = (top.mcfpp.analysis.StorageAccess.constantEncoding(uuid) as? IntArrayTag)?.value
+        if (words == null || words.size != 4) {
+            LogProcessor.error("Hover entity serialization requires a compile-time four-int UUID")
+            return Command("\"hoverEvent\":{\"action\":\"show_text\",\"value\":\"\"}")
         }
-        c.build("\"type\": \"${type}\"", false)
-        if(uuid is NBTBasedData && top.mcfpp.analysis.StorageAccess.snapshot(uuid) != null){
-            if(uuid.value is IntArrayTag && (uuid.value as IntArrayTag).value.size == 4){
-                c.build("\"id\": \"${uuid.value}\"", false)
-            }else{
-                LogProcessor.error("Invalid UUID: $uuid")
-            }
-        }else{
-            if(uuid.nbtType == NBTBasedData.Companion.NBTTypeWithTag.INT_ARRAY){
-                c.build("\"id\": ", false).buildMacro(uuid.toJson(), false)
-            }
-            c.build("\"id\": ").buildMacro(uuid, false)
-        }
-        c.build("}}")
-        return c
+        val id = java.util.UUID((words[0].toLong() shl 32) or (words[1].toLong() and 0xffffffffL),
+            (words[2].toLong() shl 32) or (words[3].toLong() and 0xffffffffL)).toString()
+        val modern = top.mcfpp.backend.StandardTextOperations.modernEvents
+        val c = Command("\"${if (modern) "hover_event" else "hoverEvent"}\":{\"action\":\"show_entity\",")
+        if (!modern) c.build("\"contents\":{", false)
+        c.build(JSON.toJSONString(if (modern) "id" else "type") + ":" + JSON.toJSONString(type), false)
+            .build("," + JSON.toJSONString(if (modern) "uuid" else "id") + ":" + JSON.toJSONString(id), false)
+        name?.let { c.build(",\"name\":", false).build(it.toCommandPart(), false) }
+        return c.build(if (modern) "}" else "}}", false)
     }
 }

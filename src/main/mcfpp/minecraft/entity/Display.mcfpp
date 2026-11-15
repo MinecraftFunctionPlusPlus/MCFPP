@@ -1,0 +1,29 @@
+/// 展示实体面向玩家时允许旋转的方向。
+enum DisplayBillboard { fixed = "fixed", vertical = "vertical", horizontal = "horizontal", center = "center" }
+
+/// 物品模型的显示变换模式。
+enum ItemDisplayMode {
+    none = "none", thirdperson_lefthand = "thirdperson_lefthand", thirdperson_righthand = "thirdperson_righthand",
+    firstperson_lefthand = "firstperson_lefthand", firstperson_righthand = "firstperson_righthand",
+    head = "head", gui = "gui", ground = "ground", fixed = "fixed"
+}
+
+enum TextAlignment { center = "center", left = "left", right = "right" }
+
+data DisplayBrightness {
+    var block: int = 0
+    var sky: int = 0
+}
+
+data DisplayVector3 {
+    var x: float = 0.0
+    var y: float = 0.0
+    var z: float = 0.0
+}
+
+data DisplayQuaternion {
+    var x: float = 0.0
+    var y: float = 0.0
+    var z: float = 0.0
+    var w: float = 1.0
+}

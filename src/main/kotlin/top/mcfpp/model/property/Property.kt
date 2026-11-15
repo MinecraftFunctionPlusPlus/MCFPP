@@ -119,7 +119,9 @@ data class Property(val identifier: String, val accessor: AbstractAccessor?, val
 
         /** Copy declaration metadata without replacing an instance adapter's storage binding. */
         internal fun copyFieldMetadata(source: Var<*>, target: Var<*>) {
+            target.isEntityMember = source.isEntityMember
             target.isConst = source.isConst
+            target.declarationConstant = source.declarationConstant
             target.isStatic = source.isStatic
             target.isFinal = source.isFinal
             target.accessModifier = source.accessModifier

@@ -7,6 +7,20 @@ boolean afterNewline = true;
 
 @Override
 public Token nextToken() {
+    // Command blocks use the existing command tokens. Supply the implicit slash
+    // before each command line without consuming any of its text.
+    if (_mode == CommandBlock) {
+        while (_input.LA(1) == ' ' || _input.LA(1) == '\t' || _input.LA(1) == '\f') {
+            getInterpreter().consume(_input);
+        }
+        int next = _input.LA(1);
+        if (next != '/' && next != '}' && next != '\r' && next != '\n' && next != IntStream.EOF) {
+            afterNewline = false;
+            pushMode(OrgCommand);
+            return _factory.create(_tokenFactorySourcePair, SLASH, "/", DEFAULT_TOKEN_CHANNEL,
+                getCharIndex(), getCharIndex() - 1, getLine(), getCharPositionInLine());
+        }
+    }
     Token token = super.nextToken();
     if (token.getType() != NL && token.getType() != WS) {
         afterNewline = false;
@@ -90,6 +104,7 @@ STORE:'store';
 AS:'as';
 FROM:'from';
 EXECUTE:'execute';
+CONTEXT:'context';
 
 BREAK:'break';
 CONTINUE:'continue';
@@ -183,7 +198,15 @@ fragment IntConstant : DecimalConstant|HexadecimalConstant|OctalConstant;
 
 Identifier
     : (Letter | '_') (Letter | '_' | UnicodeDigit)*
-      {if (getText().equals("ref")) setType(REF);}
+      {
+          // Keep the old argument-prefix diagnostic while permitting variables named ref.
+          if (getText().equals("ref") && (_input.LA(1) == ' ' || _input.LA(1) == '\t')) {
+              int next = 1;
+              while (_input.LA(next) == ' ' || _input.LA(next) == '\t') next++;
+              int c = _input.LA(next);
+              if (Character.isLetter(c) || c == '_' || c == '@') setType(REF);
+          }
+      }
     ;
 
 Letter
@@ -222,12 +245,7 @@ FloatConstant
     ;
 
 RelativeValue
-    :   '~'
-    |   '^'
-    |   '~' IntConstant?
-    |   '~' FloatConstant?
-    |   '^' IntConstant?
-    |   '^' FloatConstant?
+    :   ('~' | '^') (('+' | '-')? (IntConstant | FloatConstant))?
     ;
 
 BooleanConstant
@@ -241,7 +259,10 @@ LineString
     ;
 
 NL
-    :   ('\r'? '\n')+ {afterNewline = true;}
+    :   ('\r'? '\n')+ {
+            afterNewline = true;
+            if (!_modeStack.isEmpty() && _modeStack.peek() == CommandBlock) popMode();
+        }
     ;
 
 WS  :  [ \t\u000C]+ -> skip
@@ -292,8 +313,16 @@ MultiLineStrText
 // Serialized library parse trees retain token numbers. Allocate new keywords
 // after every existing mode; Identifier emits them in DEFAULT_MODE.
 mode AddedKeywords;
-REF: 'ref'; // Diagnostic-only legacy spelling; never a successful source argument.
+REF: '\u0000ref'; // Compatibility token; ref is an ordinary source identifier.
 
 // Appended token: keep existing token numbers stable for serialized parse trees.
 mode DEFAULT_MODE;
 ARROW: '->' ;
+
+// Append tokens and modes to preserve serialized library token numbers.
+COMMAND_BLOCK_OPEN: '/{' -> pushMode(CommandBlock);
+
+mode CommandBlock;
+CommandBlockEnd: '}' -> type(RCURL), popMode;
+CommandBlockNewline: ('\r'? '\n')+ {afterNewline = true;} -> type(NL);
+CommandBlockStatement: '/' {afterNewline = false;} -> skip, pushMode(DEFAULT_MODE);

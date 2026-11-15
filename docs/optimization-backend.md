@@ -52,6 +52,7 @@ The function pass sequence is:
 5. `control-flow-simplification`
 6. `dead-value-elimination`
 7. `automatic-inlining` (level 2), followed by local cleanup
+8. `number-provider-fusion` (level 1 and 2, when the target supports native float providers)
 
 Local passes repeat until the CFG and values stabilize, including after an inline
 trial. Scalar runtime dependencies are recalculated on the optimized IR, so
@@ -63,6 +64,54 @@ runtime constraints. The original semantic IR and its facts are preserved.
 `minecraft-command-cleanup` runs on the resulting Minecraft IR. The pass manager
 invalidates cached analyses after a changed CFG. Analysis objects belong to the
 current module, rather than a process-wide cache.
+
+After backend generation, `context-region-fusion` lifts controlled context calls
+into context regions with immutable component provenance. At levels 1 and 2 it
+plans context and language frames independently, follows calls and macros for
+saved-slot observations, and fuses ordered execute clauses. This runs before
+library resource publication and final Minecraft command cleanup. A single
+command callback can become `execute at @s on passengers run tp @s ~ ~ ~`;
+unreferenced compiler context helpers are removed.
+
+Generated macro bodies participate in the same region graph. Dynamic operands
+remain prepared at their original call site, while the macro can contain one
+fused execute chain. Ordinary callback text containing literal `$(...)` keeps a
+function boundary so that it cannot capture the entry macro's arguments. Calls
+through macros also retain callback ownership for entrypoint frame planning.
+
+Multiple commands keep one terminal callback function, so selectors are evaluated
+once and each branch completes its body in order. Local returns keep their
+callback boundary. Ancestor snapshots, operand preparation, cleanup, captured
+value environments, unknown calls and outer result stores constrain fusion.
+Saved identities are still captured before the conflicting transition; frames
+whose lexical depths are observed anywhere in the reachable call chain remain.
+Debug command instrumentation retains the original boundaries. Disable this
+pass with `--disable-pass=context-region-fusion`; `stack-frame-planning` also
+controls region frame removal.
+
+At the same boundary, `dead-value-elimination` removes unobserved native
+`CommandResult` initialization, private temporary copies and result/success
+stores. It retains the native operation and any result that is read, escapes to
+another destination, or may be observed by a call. Known calls whose reachable
+bodies cannot observe stack frames allow dead result removal; unresolved calls
+and frame-reading calls retain the payloads. This transformation does not
+discard argument effects or command side effects.
+
+Provider fusion selects single-use float arithmetic results within a basic block
+after local cleanup and inlining. Lowering embeds each selected definition into
+its consumer's provider, including float comparisons, instead of writing and
+reading an intermediate NBT float. For example, `(a+b)*(c-d)` uses one compute
+command with nested `add` and `sub` inputs. Providers stay inline in commands;
+this pass does not create registry resource files. Shared results stay materialized.
+Reads retain their snapshots, and writes, calls and opaque commands bound fusion.
+The IR dump marks selected definitions as `[fused provider input]`.
+
+Fusion keeps the expression's binary tree and float rounding order. It follows
+native nested-provider behavior for exceptional values: non-finite intermediate
+results propagate through the provider tree until the enclosing evaluation.
+Consequently, exceptional expressions can differ from O0, which converts each
+materialized non-finite arithmetic result to positive zero. Use
+`--disable-pass=number-provider-fusion` to keep those intermediate boundaries.
 
 Calls use function-specific score registers for scalar parameters and returns
 when the known call chain permits it. Nonrecursive, closed functions use private
@@ -91,7 +140,7 @@ IDs, declared exports, resource references and lifecycle tags remain entry roots
 ## Inspection and verification
 
 `--dump-ir` includes the semantic and optimized CFGs, pass changes, inline cost
-decisions, calling conventions, opaque regions and final commands. Tests compare
+decisions, calling conventions, opaque regions, final commands and macro bodies. Tests compare
 observable results across all three levels. The command executor also records
 executed commands and frame operations, so a smaller file alone does not establish
 an optimization benefit.

@@ -171,6 +171,12 @@ object EffectAnalysis {
     /** Map the completed callee summary through its receiver binding. */
     fun recordCall(callee: top.mcfpp.model.function.Function,
                    receiver: top.mcfpp.core.lang.Var<*>? = null): Effect {
+        return previewCall(callee, receiver).also(::recordEffect)
+    }
+
+    /** Inspect effects before a provider, command, or receiver writeback can run. */
+    fun previewCall(callee: top.mcfpp.model.function.Function,
+                    receiver: top.mcfpp.core.lang.Var<*>? = null): Effect {
         val effect = if (callee is top.mcfpp.model.function.NativeFunction) {
             val method = callee.javaMethod
             when {
@@ -180,9 +186,11 @@ object EffectAnalysis {
                     ?.let { Effect.Writes(setOf(it), setOf(it)) } ?: Effect.Unknown
                 else -> Effect.Unknown
             }
-        } else if (!callee.bodyCompiled || callee.bodyBeingCompiled) Effect.Unknown else callee.runtimeEffect
+        } else if (!callee.bodyCompiled || callee.bodyBeingCompiled || callee.runtimeEffect == Effect.Unknown)
+            return SourceEffects.preview(callee, receiver)
+        else callee.runtimeEffect
         if (effect !is Effect.Writes || callee is top.mcfpp.model.function.NativeFunction) {
-            recordEffect(effect); return effect
+            return effect
         }
         fun mapped(place: Place): Place? {
             val formal = callee.scope.getVar("this")?.storageBinding?.place
@@ -192,8 +200,8 @@ object EffectAnalysis {
             }
             return place
         }
-        val mappedPlaces = effect.places.map { mapped(it) ?: run { recordEffect(Effect.Unknown); return Effect.Unknown } }.toSet()
-        return writes(mappedPlaces, effect.contents.mapNotNull(::mapped).toSet()).also(::recordEffect)
+        val mappedPlaces = effect.places.map { mapped(it) ?: return Effect.Unknown }.toSet()
+        return writes(mappedPlaces, effect.contents.mapNotNull(::mapped).toSet())
     }
     /** A literal say observes values but cannot mutate compiler storage. */
     fun rawCommandEffect(command: String): Effect {
@@ -274,6 +282,8 @@ object EffectAnalysis {
             root in contents && places.none { it !in contents && it.path.size <= root.path.size && it.overlaps(root) }
         }.toSet())
     }
+    internal fun combine(left: Effect, right: Effect): Effect = join(left, right)
+
     private fun join(left: Effect, right: Effect): Effect = when {
         left == Effect.Unknown || right == Effect.Unknown -> Effect.Unknown
         left is Effect.Writes || right is Effect.Writes -> {

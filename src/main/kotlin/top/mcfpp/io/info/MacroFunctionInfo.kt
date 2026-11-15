@@ -16,14 +16,17 @@ import java.lang.reflect.Method
 import java.util.Collections
 
 /** A library descriptor contains no Method, compiler type, TypeKey, or expansion handle. */
-class MacroFunctionInfo(
+class MacroFunctionInfo @JvmOverloads constructor(
     val providerClass: String,
     val methodName: String,
     parameterClasses: List<String>,
     val returnClass: String,
     val identifier: String,
     parameters: List<MacroParameterInfo>,
-    val sourceReturnType: String
+    val sourceReturnType: String,
+    val documentation: String = "",
+    val sourceFile: String? = null,
+    val sourceLine: Int = 0,
 ) : Serializable {
     private val jvmParameters = ArrayList(parameterClasses)
     private val sourceParameters = ArrayList(parameters)
@@ -64,10 +67,12 @@ class MacroFunctionInfo(
             implementation.returnType, implementation.source)
     }
 
-    internal fun declaredAs(name: String, parameterNames: List<String>): MacroFunctionInfo {
+    internal fun declaredAs(name: String, parameterNames: List<String>, documentation: String = this.documentation,
+                            sourceFile: String? = this.sourceFile, sourceLine: Int = this.sourceLine): MacroFunctionInfo {
         require(parameterNames.size == parameters.size)
         return MacroFunctionInfo(providerClass, methodName, parameterClasses, returnClass, name,
-            parameters.zip(parameterNames).map { (parameter, identifier) -> parameter.copy(name = identifier) }, sourceReturnType)
+            parameters.zip(parameterNames).map { (parameter, identifier) -> parameter.copy(name = identifier) }, sourceReturnType,
+            documentation, sourceFile, sourceLine)
     }
 
     override fun equals(other: Any?): Boolean = other is MacroFunctionInfo &&

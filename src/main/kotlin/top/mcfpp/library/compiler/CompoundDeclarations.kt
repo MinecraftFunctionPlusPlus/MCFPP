@@ -91,7 +91,8 @@ object CompoundDeclarations {
         val context = bindings.declarationContext(template)
         val sourceBody = sourceBody(context) ?: (template as? GenericDataTemplate)?.ctx
         return bindings.inCompound(template, id) {
-            val readonlySource = sourceReadonly(context)?.readOnlyParameterList()?.readOnlyParameter().orEmpty()
+            val readonlySource = if (context is Parser.TemplateDeclarationContext) top.mcfpp.analysis.NestedTemplates.readonly(context)
+                else sourceReadonly(context)?.readOnlyParameterList()?.readOnlyParameter().orEmpty()
             val readonly = (template as? GenericDataTemplate)?.readOnlyParams.orEmpty().mapIndexed { index, parameter ->
                 val parameterId = bindings.id(parameter, id)
                 val source = readonlySource.getOrNull(index)
@@ -139,7 +140,8 @@ object CompoundDeclarations {
                 return reference
             }
             template.scope.forEachFunction { function ->
-                if (function.owner === template && !function.actualCallBody && function !is DataTemplateConstructor && function !is ExtensionFunction && function !in accessorTargets) {
+                if (function.owner === template && !function.actualCallBody && function !is DataTemplateConstructor && function !is ExtensionFunction && function !in accessorTargets &&
+                    function !is top.mcfpp.core.lang.entity.EntityTemplates.SummonFunction) {
                     val reference = captureFunction(function)
                     if (reference is DeclarationReference.Local) members += function to reference.target
                 }
@@ -198,7 +200,7 @@ object CompoundDeclarations {
                 val source = sourceParents(context)
                 if (source.isNotEmpty()) source.mapIndexed { index, parent ->
                     val name = parent.className()
-                    val base = TypeSyntax.Name(bindings.scope(parent), bindings.name(name.classWithoutNamespace().Identifier().text,
+                    val base = TypeSyntax.Name(bindings.scope(parent), bindings.name(name.text.substringAfter(':'),
                         name.namespacePath()?.text, NameRole.TYPE, name))
                     val tree = parent.readOnlyArgs()?.let { TypeSyntax.Apply(bindings.scope(parent), base,
                         it.expressionList()?.expression().orEmpty().map(statements::expression)) } ?: base
@@ -241,7 +243,8 @@ object CompoundDeclarations {
                 else -> CompoundCategory.DATA
             }
             val common = common(template, template.identifier, null, environment, DeclarationAccess.PUBLIC,
-                flags(template.isFinal, false) or if (template.isAbstract) DeclarationFlags.ABSTRACT else 0,
+                flags(template.isFinal, false) or (if (template.isAbstract) DeclarationFlags.ABSTRACT else 0) or
+                    (if (template.isEntityTemplate) DeclarationFlags.ENTITY else 0),
                 bindings.compoundAnnotations(template).map { bindings.annotation(id, it) }, bindings)
             val declaration = CompoundDeclaration(common, category, readonly, parents,
                 (template as? TypeDataTemplate)?.let { bindings.type(it.typeAs, id, null) }, memberIds, ordered,
@@ -267,11 +270,12 @@ object CompoundDeclarations {
             bindings.storeBody(SyntaxBodySource(id, environment, BodyRole.INITIALIZER, statements.expression(context)))
         } }
         val readonly = value.symbol?.readonly == true
-        val frozen = if (readonly) bindings.constant(requireNotNull(StorageAccess.snapshot(value)), StorageAccess.boundTypes(value)) else null
+        val frozen = (value.declarationConstant ?: if (readonly) StorageAccess.snapshot(value) else null)
+            ?.let { bindings.constant(it, StorageAccess.boundTypes(value)) }
         val dataOnly = (value as? OnScoreboard)?.isDataOnly ?: (value as? MCNumber<*>)?.isDataOnly ?: false
         val flags = flags(value.isFinal, value.isStatic) or (if (value.isConst) DeclarationFlags.CONST else 0) or
             (if (value.nullable) DeclarationFlags.NULLABLE else 0) or (if (value.symbol?.forceRuntime == true) DeclarationFlags.FORCE_RUNTIME else 0) or
-            (if (dataOnly) DeclarationFlags.DATA_ONLY else 0)
+            (if (dataOnly) DeclarationFlags.DATA_ONLY else 0) or (if (value.isEntityMember) DeclarationFlags.ENTITY else 0)
         return ValueDeclaration(common(value, value.identifier, owner, environment, access(value.accessModifier), flags,
             bindings.compoundAnnotations(value).map { bindings.annotation(id, it) }, bindings), ValueRole.MEMBER,
             if (value.isConst) ValueStorage.CONST else if (value.symbol?.forceRuntime == true) ValueStorage.EXTERNAL else ValueStorage.VAR,
@@ -281,7 +285,8 @@ object CompoundDeclarations {
     private fun captureConstructor(constructor: DataTemplateConstructor, id: DeclarationId, owner: DeclarationId,
                                    environment: EnvironmentId, bindings: CompoundCaptureBindings): Map<DeclarationId, LibraryDeclaration> {
         val records = linkedMapOf<DeclarationId, LibraryDeclaration>()
-        val syntax = (constructor.ast?.parent as? Parser.TemplateConstructorDeclarationContext)?.normalParams()?.parameterList()?.parameter().orEmpty()
+        val syntax = (constructor.sourceDeclarationContext as? Parser.TemplateConstructorDeclarationContext)?.normalParams()?.parameterList()?.parameter()
+            ?: (constructor.ast?.parent as? Parser.TemplateConstructorDeclarationContext)?.normalParams()?.parameterList()?.parameter().orEmpty()
         val statements = StatementBridge(bindings)
         return bindings.inFunction(constructor, id, environment) {
             val normal = constructor.normalParams.mapIndexed { index, parameter ->
@@ -300,13 +305,15 @@ object CompoundDeclarations {
                 parameterId
             }
             val intrinsic = if (constructor is TypeDataTemplateConstructor) ConstructorIntrinsic.TYPE_AS else ConstructorIntrinsic.USER_BODY
+            val parentCall = constructor.parentCall()?.let { bindings.storeExpressionNode(id, statements.expression(it)) }
             val root = constructor.ast?.let(statements::block) ?: bindings.preparedBody(constructor)
-                ?: if (intrinsic == ConstructorIntrinsic.USER_BODY && constructor.normalParams.isEmpty())
+                ?: if (intrinsic == ConstructorIntrinsic.USER_BODY && (constructor.normalParams.isEmpty() || parentCall != null))
                     bindings.withScope(ParserRuleContext(), id) { Statement.Block(it, emptyList()) } else null
             val body = if (intrinsic == ConstructorIntrinsic.USER_BODY) bindings.storeBody(SyntaxBodySource(id, environment,
                 BodyRole.CONSTRUCTOR, root ?: unsupported("User constructor requires a structural body"))) else null
             records[id] = ConstructorDeclaration(common(constructor, constructor.identifier, owner, environment,
-                access(constructor.accessModifier), 0, constructor.annotations.map { bindings.annotation(id, it) }, bindings), normal, body, intrinsic)
+                access(constructor.accessModifier), if (parentCall != null) DeclarationFlags.PARENT_CONSTRUCTOR else 0,
+                constructor.annotations.map { bindings.annotation(id, it) }, bindings), normal, body, intrinsic, parentCall)
             records.toMap()
         }
     }
@@ -370,6 +377,7 @@ object CompoundDeclarations {
                 val template = shell.value as DataTemplate
                 template.declarationFile = bindings.environment(common.environment); template.declarationEnvironment = null
                 template.isAbstract = common.flags and DeclarationFlags.ABSTRACT != 0L
+                template.isEntityTemplate = common.flags and DeclarationFlags.ENTITY != 0L
                 template.isFinal = common.flags and DeclarationFlags.FINAL != 0L
                 template.scope.parent.clear()
                 template.annotations.addAll(common.annotations.map(bindings::annotation))
@@ -487,21 +495,19 @@ object CompoundDeclarations {
     private fun restoreField(record: ValueDeclaration, owner: DataTemplate?, bindings: CompoundRestoreBindings): Var<*> {
         val type = bindings.type(requireNotNull(record.type))
         val frozen = record.frozen?.let(bindings::constant)
-        val value = if (frozen == null) type.buildUnConcrete(record.common.name) else {
-            requireNotNull(StorageAccess.restore(type, frozen.value, record.common.name, frozen.types)).also {
-                requireNotNull(StorageAccess.freezeReadonly(it, record.common.name))
-            }
-        }
+        val value = type.buildUnConcrete(record.common.name)
         if (type is MCFPPGenericDataTemplateType && value.type.typeId == type.typeId.constructor) value.type = type
         value.accessModifier = access(record.common.access); value.declaredParentTemplate = owner
         value.isFinal = record.common.flags and DeclarationFlags.FINAL != 0L
         value.isStatic = record.common.flags and DeclarationFlags.STATIC != 0L
         value.isConst = record.common.flags and DeclarationFlags.CONST != 0L
+        value.isEntityMember = record.common.flags and DeclarationFlags.ENTITY != 0L
         value.nullable = record.common.flags and DeclarationFlags.NULLABLE != 0L
         value.annotations.addAll(record.common.annotations.map(bindings::annotation))
         if (value is MCNumber<*>) value.isDataOnly = record.common.flags and DeclarationFlags.DATA_ONLY != 0L
         if (value is OnScoreboard) value.isDataOnly = record.common.flags and DeclarationFlags.DATA_ONLY != 0L
-        if (frozen == null) value.bindDeclaration(forceRuntime = record.common.flags and DeclarationFlags.FORCE_RUNTIME != 0L)
+        value.bindDeclaration(forceRuntime = record.common.flags and DeclarationFlags.FORCE_RUNTIME != 0L)
+        if (frozen != null) top.mcfpp.analysis.ConstantBinding.bindDeclaration(value, frozen.value, frozen.types)
         return value
     }
 

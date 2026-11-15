@@ -21,6 +21,7 @@ import top.mcfpp.util.LogProcessor
 /** The shared public-reference boundary for source methods, projections and MNI. */
 object ReferenceAccess {
     fun requireReadable(reference: Var<*>) {
+        top.mcfpp.core.lang.entity.DisplayProperties.readable(reference)
         requireReference(reference)
         ReferenceValues.provenance(reference).forEach(ContextBorrowing::requireUsable)
         val metadata = ReferenceValues.metadata(reference)
@@ -31,6 +32,8 @@ object ReferenceAccess {
     }
 
     fun set(reference: Var<*>, input: Var<*>): Var<*> = try {
+        if (top.mcfpp.core.lang.entity.DisplayProperties.recognizes(reference))
+            return top.mcfpp.core.lang.entity.DisplayProperties.set(reference, input)
         val type = requireReference(reference)
         ReferenceValues.provenance(reference).forEach(ContextBorrowing::requireUsable)
         ContextBorrowing.escapeDiagnostic(input, "an external reference target")?.let { throw ContextAccessException(it) }
@@ -63,6 +66,10 @@ object ReferenceAccess {
     /** The result slot is empty on failure; success is independent of the numeric value. */
     fun readInto(reference: Var<*>, destination: Var<*>, success: ScoreBool) {
         requireReadable(reference)
+        if (top.mcfpp.core.lang.entity.DisplayProperties.recognizes(reference)) {
+            top.mcfpp.core.lang.entity.DisplayProperties.readInto(reference, destination, success)
+            return
+        }
         val type = requireReference(reference)
         if (destination.type != type.valueType)
             throw ContextAccessException("Reference read destination must have type '${type.valueType.typeName}'")
@@ -93,7 +100,7 @@ object ReferenceAccess {
     private fun requireReference(value: Var<*>): MCFPPReferenceType = value.type as? MCFPPReferenceType
         ?: throw ContextAccessException("Reference access requires ScoreRef or NBTRef<T>")
 
-    private fun emitKnown(reference: Var<*>, descriptor: ReferenceDescriptor, build: (Command?) -> Command) {
+    internal fun emitKnown(reference: Var<*>, descriptor: ReferenceDescriptor, build: (Command?) -> Command) {
         val command = if (descriptor.targetShape == ReferenceTargetShape.BoundExecutor) {
             val targetRecord = descriptor.fields.fields["target"] as? CompilerValue.Record
             val marker = (targetRecord?.fields?.get("borrow") as? CompilerValue.Text)?.value

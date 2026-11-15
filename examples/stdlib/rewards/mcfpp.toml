@@ -1,0 +1,6 @@
+schema = 1
+name = "stdlib_rewards"
+sourcePath = "src"
+targetPath = "build"
+namespace = "example.stdlib.rewards"
+version = "26.3"

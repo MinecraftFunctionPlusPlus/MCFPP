@@ -185,6 +185,8 @@ internal class DeclarationStateJournal private constructor(
             UnsolvedGenericTemplate::class.java, UnsolvedGenericObjectTemplate::class.java, Enum::class.java
         )
         private val functionClasses = setOf<Class<*>>(
+            top.mcfpp.core.lang.entity.EntityTemplates.SummonFunction::class.java,
+            top.mcfpp.core.lang.entity.EntityTemplates.LegacySummonFunction::class.java,
             Function::class.java, NativeFunction::class.java,
             GenericFunction::class.java, ExtensionFunction::class.java, GenericExtensionFunction::class.java,
             InlineFunction::class.java, InternalFunction::class.java, NoStackFunction::class.java, MCFunction::class.java,
@@ -192,6 +194,8 @@ internal class DeclarationStateJournal private constructor(
             UnresolvedFunction::class.java, UnresolvedNativeFunction::class.java
         )
         private val variableClasses = setOf<Class<*>>(
+            top.mcfpp.core.lang.entity.EntityRefVar::class.java,
+            top.mcfpp.type.UUIDVar::class.java, top.mcfpp.core.lang.entity.DisplayView::class.java,
             top.mcfpp.core.lang.ref.ReferenceVar::class.java,
             MCInt::class.java, MCFloat::class.java, MCAny::class.java, MCObject::class.java, top.mcfpp.core.lang.FunctionValue::class.java,
             ScoreBool::class.java, DataTemplateObject::class.java, TypeDataTemplateObject::class.java,
@@ -208,6 +212,8 @@ internal class DeclarationStateJournal private constructor(
             top.mcfpp.core.lang.context.BoundPositionVar::class.java
         )
         private val typeClasses = setOf<Class<*>>(
+            MCFPPEntityRefType::class.java,
+            MCFPPUUIDType::class.java, top.mcfpp.core.lang.entity.DisplayProperties.ViewType::class.java,
             MCFPPReferenceType::class.java, MCFPPScoreRefType::class.java, MCFPPNBTRefType::class.java,
             MCFPPType::class.java, MCFPPConcreteType::class.java, MCFPPFunctionType::class.java,
             MCFPPGenericParamType::class.java, UnresolvedType::class.java, MCFPPTypeAliasType::class.java,
@@ -227,12 +233,14 @@ internal class DeclarationStateJournal private constructor(
             MCFPPNBTType.Long::class.java, MCFPPNBTType.Double::class.java, MCFPPNBTType.ByteArray::class.java,
             MCFPPNBTType.IntArray::class.java, MCFPPNBTType.LongArray::class.java,
             top.mcfpp.core.lang.context.MCFPPExecutionContextType::class.java,
-            top.mcfpp.core.lang.context.MCFPPBoundPositionType::class.java
+            top.mcfpp.core.lang.context.MCFPPBoundPositionType::class.java,
+            top.mcfpp.core.lang.context.MCFPPBoundComponentType::class.java
         )
         private val documentTags = setOf<Class<*>>(
             SinceTag::class.java, DeprecatedTag::class.java, SeeTag::class.java,
             VersionTag::class.java, AuthorTag::class.java, BaseTag::class.java, ParamTag::class.java,
-            ReturnTag::class.java, ThrowsTag::class.java, ContextTag::class.java
+            ReturnTag::class.java, ThrowsTag::class.java, ContextTag::class.java,
+            ReceiverTag::class.java, PropertyTag::class.java, ConstructorTag::class.java, SampleTag::class.java, UnknownTag::class.java
         )
         private val chatClasses = setOf<Class<*>>(
             ListChatComponent::class.java,
@@ -565,11 +573,13 @@ internal class DeclarationStateJournal private constructor(
                     }
                 }
                 val dynamic = value.alwaysDynamic
+                val entity = value.isEntityTemplate
                 val companion = value.companionObject
                 val abstract = value.isAbstract
                 val final = value.isFinal
                 restores.add {
                     value.alwaysDynamic = dynamic
+                    value.isEntityTemplate = entity
                     value.companionObject = companion
                     value.isAbstract = abstract
                     value.isFinal = final

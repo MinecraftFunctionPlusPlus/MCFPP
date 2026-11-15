@@ -921,9 +921,15 @@ internal class CompilerSourceIndex(
             }
             type.parentType.forEach(::collect)
             if (type is top.mcfpp.core.lang.context.MCFPPExecutionContextType) {
-                val owner = top.mcfpp.core.lang.context.ContextTypes.ExecutionContext.typeId
-                for (name in listOf("executor", "pos")) {
-                    val member = requireNotNull(top.mcfpp.core.lang.context.ContextTypes.memberType(type, name))
+                for (name in listOf("executor", "pos", "rotation", "dimension", "anchor")) {
+                    val member = top.mcfpp.core.lang.context.ContextTypes.memberType(type, name) ?: continue
+                    val owner = with(top.mcfpp.core.lang.context.ContextTypes) { when (name) {
+                        "executor" -> EntityContext
+                        "pos" -> PosContext
+                        "rotation" -> RotationContext
+                        "dimension" -> DimensionContext
+                        else -> AnchorContext
+                    } }.typeId
                     collect(member)
                     val identity = SourceFieldId(owner, "context-field:$name")
                     val declaration = SourceFieldDeclaration(identity, owner, name, member.typeId, false, source)

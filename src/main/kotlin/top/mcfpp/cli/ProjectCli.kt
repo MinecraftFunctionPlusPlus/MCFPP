@@ -25,6 +25,7 @@ object ProjectCli {
         val cli = CommandLine(root).setOut(out).setErr(err)
         cli.addSubcommand("init", Init(root))
         cli.addSubcommand("build", Build(root))
+        cli.addSubcommand("doc", Documentation(root))
         cli.addSubcommand("test", TestSources(root))
         cli.addSubcommand("debug", Debug(root))
         cli.addSubcommand("ide-model", IdeModel(root))
@@ -123,6 +124,33 @@ object ProjectCli {
                         }
                     }
                     exit
+                }
+            }
+        }
+    }
+
+    @Command(name = "doc", description = ["Export API documentation after declaration checking."], mixinStandardHelpOptions = true)
+    private class Documentation(val root: Root) : Callable<Int> {
+        @Option(names = ["--format"], description = ["Output format: html, json, both (default: both)."])
+        var format = top.mcfpp.doc.DocumentationFormat.both
+        @Option(names = ["--output"], description = ["Destination directory, relative to the project (default: build output/docs)."])
+        var output: Path? = null
+        @Option(names = ["--include-private"], description = ["Include private project declarations."])
+        var includePrivate = false
+        @Option(names = ["--include-dependencies"], description = ["Include loaded dependency library APIs."])
+        var includeDependencies = false
+
+        override fun call(): Int = root.withProject { project ->
+            ProjectPackages(root.err).prepare(project, root.offline, root.locked, mode = "build").use { prepared ->
+                prepared.commit()
+                URLClassLoader(prepared.classpath.map { it.toUri().toURL() }.toTypedArray(), LibraryCompilerApi::class.java.classLoader).use { loader ->
+                    val model = top.mcfpp.doc.DocumentationExport.generate(prepared.compilerRequest(loader),
+                        top.mcfpp.doc.DocumentationOptions(includePrivate, includeDependencies))
+                    model.warnings.forEach(root.err::println)
+                    val destination = output?.let { project.root.resolve(it).normalize() } ?: project.output.resolve("docs")
+                    val result = top.mcfpp.doc.DocumentationExport.write(model, destination, format)
+                    result.files.forEach { root.out.println("Documentation: $it") }
+                    0
                 }
             }
         }

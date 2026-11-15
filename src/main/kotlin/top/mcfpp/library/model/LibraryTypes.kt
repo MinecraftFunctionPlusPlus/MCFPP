@@ -22,7 +22,7 @@ sealed interface LibraryType {
     data class Intersection(val components: List<TypeRef>, val declaration: DeclarationId? = null) : LibraryType {
         init { require(components.isNotEmpty()) }
     }
-    data class Function(val execution: FunctionExecution, val parameters: List<TypeRef>, val result: TypeRef) : LibraryType
+    data class Function(val execution: FunctionExecution, val parameters: List<TypeRef>, val result: TypeRef, val contexts: List<TypeRef> = emptyList()) : LibraryType
     data class NbtRef(val value: TypeRef) : LibraryType
     data class Dependent(val syntax: NodeRef, val environment: EnvironmentId, val owner: DeclarationId) : LibraryType
     /** Exact pending TypeId.Declaration data; it supplies neither a model nor executable name binding. */
@@ -40,7 +40,7 @@ class LibraryTables(types: List<LibraryType>, constants: List<ConstantValue>) {
         is LibraryType.Specialized -> type.copy(arguments = frozen(type.arguments))
         is LibraryType.Union -> type.copy(alternatives = frozen(type.alternatives))
         is LibraryType.Intersection -> type.copy(components = frozen(type.components))
-        is LibraryType.Function -> type.copy(parameters = frozen(type.parameters))
+        is LibraryType.Function -> type.copy(parameters = frozen(type.parameters), contexts = frozen(type.contexts))
         else -> type
     } })
     val constants: List<ConstantValue> = frozen(constants.map { constant -> when (constant) {

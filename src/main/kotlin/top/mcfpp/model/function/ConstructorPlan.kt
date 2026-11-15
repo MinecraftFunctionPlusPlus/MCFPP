@@ -66,6 +66,9 @@ class ConstructorPlan private constructor(
             }
             if (diagnostics.isNotEmpty()) return Result(null, diagnostics.toList())
 
+            if (template.isEntityTemplate && template.constructors.isNotEmpty() && template.constructors.all { it.parentCall() != null })
+                return Result(ConstructorPlan(template, emptyList()), emptyList())
+
             val stages = arrayListOf<Stage>()
             for (owner in ordered.dropLast(1)) {
                 if (owner.constructors.isEmpty()) {

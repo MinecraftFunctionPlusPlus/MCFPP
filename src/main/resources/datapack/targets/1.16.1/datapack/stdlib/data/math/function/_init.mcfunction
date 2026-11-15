@@ -1,15 +1,5 @@
-#math:_init
-# 初始化数学库
-# 使用数学库之前必须手动执行
-
-#主世界设置
-execute in minecraft:the_overworld run function math:init_overworld
-
-#全局记分板
-scoreboard objectives add id dummy
+# Numeric initialization only. Calculation entities are scoped to individual calls.
 scoreboard objectives add int dummy
-
-#常量设置
 scoreboard players set -10000 int -10000
 scoreboard players set -1000 int -1000
 scoreboard players set -2 int -2
@@ -50,29 +40,7 @@ scoreboard players set 10000000 int 10000000
 scoreboard players set 100000000 int 100000000
 scoreboard players set 1000000000 int 1000000000
 scoreboard players set 1103515245 int 1103515245
-
-#高频循环
-schedule function math:tick 1t replace
-
-#数据模板
-data modify storage math:class cmp_rules set value {"a<b":0b,"a>b":1b,"a<=b":0b,"a>=b":1b}
-data modify storage math:class chars set value ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"]
-data modify storage math:class items set value [{id:"minecraft:red_wool",Count:1b,name:"r"},{id:"minecraft:green_wool",Count:1b,name:"g"},{id:"minecraft:blue_wool",Count:1b,name:"b"}]
-
-#临时对象初始化
-data modify storage math:io item set value {}
-
-data modify storage math:io classify set value []
-scoreboard players set classify_cnt int 0
-
-data modify storage math:io rand_lst set value [8593,45316,3528,4112,43,296358,12936510]
-execute store result score rand_seed int run data get storage math:io rand_lst[0]
-
-scoreboard players set particle int 4
-scoreboard players set 3vec_n int 200
-
-#递归函数栈
-data modify storage math:io rec set value [{}]
-
-#标记已经初始化
+scoreboard players set 4750 int 4750
+scoreboard players set 24703 int 24703
+scoreboard players set 79249 int 79249
 scoreboard players set math mcfpp_init 1

@@ -14,7 +14,7 @@ if (-not [IO.Path]::IsPathRooted($ProviderJar)) { $ProviderJar = Join-Path $repo
 $RuntimeJar = (Resolve-Path -LiteralPath $RuntimeJar).Path
 $ProviderJar = (Resolve-Path -LiteralPath $ProviderJar).Path
 if ([string]::IsNullOrWhiteSpace($ReportPath)) {
-    $ReportPath = Join-Path $repoRoot 'docs/mni/generated-code-report.md'
+    $ReportPath = Join-Path $repoRoot "build/inheritance-mni/comparison-check/$Attempt/generated-code-report.md"
 } elseif (-not [IO.Path]::IsPathRooted($ReportPath)) {
     $ReportPath = Join-Path $repoRoot $ReportPath
 }

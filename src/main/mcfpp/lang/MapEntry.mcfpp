@@ -1,0 +1,6 @@
+/// 映射中的一项，投影返回独立的值快照。
+data MapEntry<T> {
+    var key: string
+    var value: T
+    constructor(key: string, value: T) { this.key = key; this.value = value }
+}

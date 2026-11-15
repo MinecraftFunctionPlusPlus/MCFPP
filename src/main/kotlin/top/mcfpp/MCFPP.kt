@@ -1,11 +1,8 @@
 package top.mcfpp
 
-import org.apache.logging.log4j.core.config.ConfigurationSource
-import org.apache.logging.log4j.core.config.Configurator
+import top.mcfpp.compiler.CompilationPipeline
 import top.mcfpp.io.DatapackCreator
-import top.mcfpp.library.mcfpm.McfpmCliCompiler
 import top.mcfpp.model.scope.GlobalScope
-import top.mcfpp.util.LogLevel
 import top.mcfpp.util.LogProcessor
 import java.io.PrintWriter
 import kotlin.io.path.absolutePathString
@@ -27,6 +24,7 @@ internal fun runCompiler(
     return top.mcfpp.cli.ProjectCli.run(args, out, err)
 }
 
+/** 直接编译入口；保留逐阶段收集诊断的策略，完成源码阶段后再决定是否生成产物。 */
 fun compile(config: ProjectConfig){
     val start: Long = System.currentTimeMillis()
 
@@ -36,11 +34,7 @@ fun compile(config: ProjectConfig){
     Project.init() //初始化
     if(!Project.checkConfig()) return   //检查配置文件
     Project.readProject() //读取引用的库的索引
-    Project.indexType() //编制类型索引
-    Project.resolveField() //编制函数索引
-    Project.runAnnotation() //执行注解
-    Project.compile() //编译
-    Project.optimization() //优化
+    CompilationPipeline.compileSources(CompilationPipeline.ErrorPolicy.CONTINUE)
     if (Project.errorCount > 0) {
         Project.ctx.clear()
         return

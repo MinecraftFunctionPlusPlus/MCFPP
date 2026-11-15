@@ -24,6 +24,19 @@ import kotlin.test.assertTrue
 import kotlin.test.assertFailsWith
 
 class VersionPreprocessorTest {
+    @Test
+    fun escapedQuotesDoNotHideFollowingDirectives() {
+        val source = """
+            #if MC >= 26.3
+            func quote() { var a = "\""; var b = "\\"; }
+            #endif
+            func after() {}
+        """.trimIndent()
+        parse(source, "26.3")
+        parse(source, "1.21.8")
+        assertTrue(VersionPreprocessor.process(source, "26.3").contains("func after"))
+    }
+
     private fun parse(source: String, version: String) {
         val processed = VersionPreprocessor.process(source, version)
         assertEquals(source.length, processed.length)

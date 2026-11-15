@@ -106,7 +106,12 @@ internal object TypeSyntaxResolver {
                         ?: MCFPPBaseType.Any
                 }
             }
-            return MCFPPFunctionType(parameters, result)
+            val contexts = syntax.contextTypeParameters()?.type().orEmpty().map {
+                resolve(it, context) ?: return context.invalid(it, "Unknown context type '${it.text}'")
+            }
+            if (contexts.any { it !is top.mcfpp.core.lang.context.MCFPPExecutionContextType })
+                return context.invalid(syntax, "Function contexts require named Context types")
+            return MCFPPFunctionType(parameters, result, contexts = contexts)
         }
         body.VecType()?.let { return MCFPPVectorType(it.text.substring(3).toInt()) }
         if (body.LIST() != null || body.IMMUTABLE_LIST() != null || body.DICT() != null || body.MAP() != null) {
@@ -147,7 +152,7 @@ internal object TypeSyntaxResolver {
             if (body.readOnlyArgs() != null) return context.invalid(body, "ScoreRef does not accept type arguments")
             return MCFPPScoreRefType
         }
-        if (namespace == null && identifier == "NBTRef") {
+        if (namespace == null && identifier in setOf("NBTRef", "EntityRef")) {
             val arguments = body.readOnlyArgs()?.expressionList()?.expression().orEmpty()
             if (arguments.size != 1) return context.invalid(body, "NBTRef requires exactly one stored type argument")
             val expression = arguments.single()
@@ -168,13 +173,21 @@ internal object TypeSyntaxResolver {
                 parsed
             }
             val stored = resolve(argument, context) ?: return context.invalid(body, "Unknown NBTRef stored type")
+            if (identifier == "EntityRef") {
+                if (stored is MCFPPGenericParamType) return MCFPPEntityRefType(stored)
+                val entity = stored as? MCFPPDataTemplateType
+                entity?.tryResolve()
+                if (entity?.template?.isEntityTemplate != true)
+                    return context.invalid(body, "EntityRef requires an entity template type")
+                return MCFPPEntityRefType(entity)
+            }
             return try { MCFPPNBTRefType(stored) } catch (failure: IllegalArgumentException) {
                 context.invalid(body, failure.message ?: "NBTRef requires a runtime storage type")
             }
         }
-        val type = context.named(namespace, identifier, body) ?: return if (namespace == null && identifier == "Player")
-            context.invalid(body, "Legacy entity subtype 'Player' is no longer supported; use entity and express player constraints on the target value (@a, @p or entityByName).")
-        else null
+        val type = context.named(namespace, identifier, body)
+            ?: (if (namespace == null || namespace == "mcfpp.minecraft.entity") EntityTypes.named(identifier) else null)
+            ?: return null
         return context.finishNamed(type, body)
     }
 }

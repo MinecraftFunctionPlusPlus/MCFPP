@@ -1,4 +1,5 @@
 #math.float:hpo/float/_sqrt
+# 计算浮点数开根号
 
 scoreboard players operation float_int0 int *= 10000 int
 scoreboard players operation float_int0 int += float_int1 int

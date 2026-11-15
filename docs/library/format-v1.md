@@ -1,6 +1,6 @@
 # MCFPP 发布库格式 v1
 
-本规范落实已批准的预编译库提案 revision 3（`docs/library-package-plan.md` §1–2）。它定义第一版正式发布格式；当前 VERSION=87 的 Kryo 开发缓存不属于兼容承诺。本文是待实现的契约，不代表现有 reader/writer 已实现这些行为。编译器接入见 [compiler-bridge.md](compiler-bridge.md)。
+本规范定义第一版正式发布库格式及其读写契约。早期 Kryo 开发缓存不属于兼容承诺，需要从源码重新导出。编译器接入见 [compiler-bridge.md](compiler-bridge.md)。
 
 ## 1. 兼容边界
 

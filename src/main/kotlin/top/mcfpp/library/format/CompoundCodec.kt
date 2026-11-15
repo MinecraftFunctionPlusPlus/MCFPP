@@ -24,6 +24,7 @@ object CompoundCodec : DeclarationPayloadHandler {
             }
             is ConstructorDeclaration -> {
                 list(declaration.normal) { u32(it.value) }; optional(declaration.body) { u32(it.value) }; u8(declaration.intrinsic.wireValue)
+                if (declaration.common.flags and DeclarationFlags.PARENT_CONSTRUCTOR != 0L) u32(requireNotNull(declaration.parentCall).value)
             }
             is PropertyDeclaration -> {
                 optional(declaration.backing) { TypeTableCodec.writeDeclarationReference(this, it) }
@@ -48,7 +49,8 @@ object CompoundCodec : DeclarationPayloadHandler {
                 list { InheritedEffect(TypeRef(u32()), TypeTableCodec.readDeclarationReference(this), DeclarationId(u32()),
                     optional { DeclarationId(u32()) }, optional { TypeRef(u32()) }, optional { TypeRef(u32()) }) })
             4 -> ConstructorDeclaration(common, list { DeclarationId(u32()) }, optional { BodyId(u32()) },
-                enumValue(u8(), ConstructorIntrinsic.entries, { it.wireValue }, this))
+                enumValue(u8(), ConstructorIntrinsic.entries, { it.wireValue }, this),
+                if (common.flags and DeclarationFlags.PARENT_CONSTRUCTOR != 0L) NodeRef(u32()) else null)
             6 -> PropertyDeclaration(common, optional { TypeTableCodec.readDeclarationReference(this) }, readAccessor(this), readAccessor(this))
             7 -> OperatorDeclaration(common, strings.value(u32()), optional { TypeRef(u32()) }, TypeTableCodec.readDeclarationReference(this))
             8 -> EnumDeclaration(common, list { DeclarationId(u32()) })
@@ -95,6 +97,8 @@ object CompoundCodec : DeclarationPayloadHandler {
             }
             is ConstructorDeclaration -> {
                 require(declaration.common.owner != null)
+                require((declaration.parentCall != null) == (declaration.common.flags and DeclarationFlags.PARENT_CONSTRUCTOR != 0L))
+                declaration.parentCall?.let { require(context.node(it) is Expression.Call) }
                 require((declaration.intrinsic == ConstructorIntrinsic.USER_BODY) == (declaration.body != null))
                 declaration.body?.let { require(context.body(it).role == BodyRole.CONSTRUCTOR && context.body(it).owner == id) }
                 declaration.normal.forEachIndexed { index, parameter ->

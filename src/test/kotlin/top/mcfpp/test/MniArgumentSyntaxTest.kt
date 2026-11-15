@@ -121,17 +121,23 @@ class MniArgumentSyntaxTest {
         )) assertTrue(parse("func main(){ $statement }").errors.isNotEmpty(), statement)
     }
 
-    @Test fun malformedCallbacksReferencesAndNamedArgumentsAreRejected() {
+    @Test fun malformedCallbacksAndReferencePrefixesAreRejected() {
         for (arguments in listOf(
-            "ref",
             "ref ref state",
             "(i: int) => {}",
             "i => {}",
             "(i,) => {}",
             "(i) => i",
-            "name = 1",
             "(i) -> {}"
         )) assertTrue(parse("func main(){ macro($arguments); }").errors.isNotEmpty(), arguments)
+    }
+
+    @Test fun refCanNameAnOrdinaryVariable() {
+        assertEquals(emptyList(), parse("func main(){ var ref = 1; macro(ref); }").errors)
+    }
+
+    @Test fun namedArgumentsUseTheExistingCallArgumentGrammar() {
+        assertEquals(emptyList(), parse("func main(){ macro(name = 1); }").errors)
     }
 
     private data class Parsed(val tree: mcfppParser.CompilationUnitContext, val errors: List<String>) {

@@ -134,6 +134,54 @@ class LibraryFullImportTest {
         } finally { Files.deleteIfExists(path); Files.deleteIfExists(directory) }
     }
 
+    @Test fun contextSignatureScopeAndNamedArgumentsSurviveExportAndImport() = isolated {
+        val directory = Files.createTempDirectory("mcfpp-context-library-")
+        val path = directory.resolve("bin.mclib")
+        try {
+            parse("""
+                namespace full.contexts
+                context(space: PosContext)
+                func probe() {
+                    /say ${'$'}{space.pos}
+                }
+                context(space: PosContext)
+                func wrapper() { context(space) { probe(space = space) } }
+                func entry() { withCurrentCtx { root -> withPosCtx(~ ~1 ~) { space -> wrapper() } } }
+                func compact() {
+                    withCurrentCtx { root ->
+                        withPosCtx(~ ~1 ~) { space ->
+                            /say compact
+                        }
+                    }
+                }
+                func main() {}
+            """.trimIndent())
+            val roots = functions("full.contexts").filter { it.identifier in setOf("probe", "wrapper", "entry", "compact") }
+            LibraryExport.write(OwnedLibrarySelection(packageA, LibraryTarget("26.3"), roots,
+                listOf(sourceFile("full.contexts"))), path)
+            LibraryImportSession().use { session ->
+                parse("""
+                    namespace consumer
+                    import full.contexts:*
+                    func main() {
+                        withPosCtx(~ ~1 ~) { space -> wrapper() }
+                        entry()
+                        compact()
+                    }
+                """.trimIndent()) { session.stage(path); session.bindAll(); session.commit() }
+                assertEquals(listOf("space"), session.functions().single { it.identifier == "wrapper" }.contextParams.map { it.identifier })
+                val all = GlobalScope.localNamespaces.values.flatMap { it.scope.functions.values.flatten() } + session.functions()
+                val commands = all.associate { it.namespaceID.toString() to it.commands.analyzeAll() } +
+                    Project.macroFunction.mapKeys { "mcfpp:dynamic/${it.key}" }.mapValues { listOf(it.value) }
+                val machine = top.mcfpp.test.util.ContextCommandExecutor(
+                    functions("consumer").single { it.identifier == "main" }.commands.analyzeAll(), commands)
+                assertEquals(listOf("~ ~ ~", "~ ~ ~", "compact"), machine.messages)
+                assertEquals(listOf("execute positioned ~ ~1 ~ run say compact"),
+                    session.functions().single { it.identifier == "compact" }.commands.analyzeAll())
+            }
+        } finally { directory.toFile().deleteRecursively() }
+    }
+
     @Test fun twoNativeUnitsShareOneAdmissionDirectoryAndRestoreAnnotationCellsWithoutReplay() = isolated {
         val registry = PortableAnnotationCodecs.builtins().register(MarkCodec, providerPackage, managed)
         val models = nativeModels(registry)

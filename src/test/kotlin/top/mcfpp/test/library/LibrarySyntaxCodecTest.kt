@@ -56,8 +56,7 @@ class LibrarySyntaxCodecTest {
             Statement.If(q, listOf(ConditionalBranch(literal, empty)), Statement.Return(q, null)),
             Statement.While(q, literal, Statement.Continue(q)), Statement.DoWhile(q, Statement.Break(q), literal),
             Statement.Foreach(q, DeclarationId(11), name, empty), Statement.TryStore(q, empty, NameUse.Declaration(local)),
-            Statement.Execute(q, listOf(ExecuteContext(ExecutePath.As, name),
-                ExecuteContext(ExecutePath.Members(listOf(name)), literal)), empty),
+            Statement.ContextScope(q, listOf(name), empty),
             Statement.Command(q, listOf(TextPart.Text("say "), TextPart.Interpolation(name))),
             Statement.Break(q), Statement.Continue(q), Statement.Return(q, literal), empty,
         )
@@ -77,7 +76,7 @@ class LibrarySyntaxCodecTest {
         assertEquals(original.scopes, decoded.scopes)
         assertEquals(original.bodies, decoded.bodies)
         val expectedTags = (0x0101..0x0115).toSet() + (0x0201..0x020a).toSet() +
-            (0x0301..0x030f).toSet() + (0x0401..0x0403).toSet()
+            ((0x0301..0x0310).toSet() - 0x030a) + (0x0401..0x0403).toSet()
         assertEquals(expectedTags, decoded.nodes.map { it.tag }.toSet())
         assertTrue(references.declarations.isNotEmpty())
         assertTrue(references.environments.isNotEmpty())

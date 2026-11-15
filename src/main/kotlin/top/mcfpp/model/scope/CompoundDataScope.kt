@@ -388,7 +388,7 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
             MCFPPObjectDataTemplateType::class.java, MCFPPEnumType::class.java,
             MCFPPGenericDataTemplateType::class.java, MCFPPGenericObjectDataTemplateType::class.java,
             MCFPPUnionType::class.java, MCFPPVectorType::class.java,
-            MCFPPEntityType::class.java, MCFPPEntityType.Player::class.java,
+            MCFPPEntityType::class.java, MCFPPEntityType.Player::class.java, top.mcfpp.type.MCFPPEntityRefType::class.java,
             MCFPPListType::class.java, MCFPPImmutableListType::class.java, MCFPPCompoundType::class.java,
             MCFPPDictType::class.java, MCFPPMapType::class.java,
             MCFPPBaseType.Object::class.java, MCFPPBaseType.Any::class.java, MCFPPBaseType.Int::class.java,
@@ -510,8 +510,7 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
     }
 
     override fun containType(id: String): Boolean {
-        ensureMembers()
-        return types.containsKey(id)
+        return getType(id) != null
     }
 
     override fun removeType(id: String): MCFPPType? {

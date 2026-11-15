@@ -1,14 +1,16 @@
 package top.mcfpp.doc
 
-import top.mcfpp.util.LogProcessor
+import java.io.Serializable
 
-abstract class DocumentTag {
+abstract class DocumentTag : Serializable {
     abstract val tag: String
     abstract val content: String
 
     companion object{
+        val knownTags = setOf("since", "deprecated", "see", "version", "author", "base", "param", "return", "throws", "context", "receiver", "property", "constructor", "sample")
         fun parse(input: String): DocumentTag {
-            val part = input.split(" ", limit = 2)
+            val pieces = input.removePrefix("@").split(Regex("[ \\t]+"), limit = 2)
+            val part = listOf(pieces[0], pieces.getOrElse(1) { "" })
             when(part[0]){
                 "since" -> return SinceTag(part[1])
                 "deprecated" -> return DeprecatedTag(part[1])
@@ -17,7 +19,7 @@ abstract class DocumentTag {
                 "author" -> return AuthorTag(part[1])
                 "base" -> return BaseTag(part[1])
                 "param" -> {
-                    val param = part[1].split(" ", limit = 2)
+                    val param = part[1].split(Regex("[ \\t\\n]+"), limit = 2)
                     if(param.size == 1){
                         return ParamTag(param[0], "")
                     }
@@ -25,24 +27,28 @@ abstract class DocumentTag {
                 }
                 "return" -> return ReturnTag(part[1])
                 "throws" -> {
-                    val exception = part[1].split(" ", limit = 2)
+                    val exception = part[1].split(Regex("[ \\t\\n]+"), limit = 2)
                     if (exception.size == 1) {
                         return ThrowsTag(exception[0], "")
                     }
                     return ThrowsTag(exception[0], exception[1])
                 }
                 "context" -> {
-                    val context = part[1].split(" ", limit = 2)
-                    if(!ContextTag.availableContexts.contains(context[0])){
-                        LogProcessor.warn("Unknown context: ${context[0]}")
-                    }
+                    val context = part[1].split(Regex("[ \\t\\n]+"), limit = 2)
                     return if(context.size == 1){
                         ContextTag(context[0], "")
                     }else{
                         ContextTag(context[0], context[1])
                     }
                 }
-                else -> throw Exception("Unknown tag: ${part[0]}")
+                "receiver" -> return ReceiverTag(part[1])
+                "property" -> {
+                    val property = part[1].split(Regex("[ \\t\\n]+"), limit = 2)
+                    return PropertyTag(property[0], property.getOrElse(1) { "" })
+                }
+                "constructor" -> return ConstructorTag(part[1])
+                "sample" -> return SampleTag(part[1])
+                else -> return UnknownTag(part[0], part[1])
             }
         }
     }
@@ -51,6 +57,12 @@ abstract class DocumentTag {
 data class SinceTag(override val content: String) : DocumentTag(){
     override val tag: String = "since"
 }
+
+data class ReceiverTag(override val content: String) : DocumentTag() { override val tag = "receiver" }
+data class PropertyTag(val property: String, override val content: String) : DocumentTag() { override val tag = "property" }
+data class ConstructorTag(override val content: String) : DocumentTag() { override val tag = "constructor" }
+data class SampleTag(override val content: String) : DocumentTag() { override val tag = "sample" }
+data class UnknownTag(override val tag: String, override val content: String) : DocumentTag()
 
 data class DeprecatedTag(override val content: String) : DocumentTag(){
     override val tag: String = "deprecated"

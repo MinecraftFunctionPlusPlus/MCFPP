@@ -1,0 +1,2 @@
+/// 物品修饰器资源，id 为 namespace:path。
+data ItemModifier: ResourceID

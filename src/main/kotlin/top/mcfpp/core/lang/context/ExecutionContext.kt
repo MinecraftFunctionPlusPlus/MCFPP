@@ -19,10 +19,11 @@ data class ContextComponents internal constructor(
     val executor: ContextSourceId,
     val position: ContextSourceId,
     val rotation: ContextSourceId,
-    val dimension: ContextSourceId
+    val dimension: ContextSourceId,
+    val anchor: ContextSourceId = executor
 ) {
     init {
-        require(listOf(position, rotation, dimension).all { it.session == executor.session }) {
+        require(listOf(position, rotation, dimension, anchor).all { it.session == executor.session }) {
             "Execution context components belong to another session"
         }
     }
@@ -116,7 +117,10 @@ open class ExecutionContext internal constructor(
     val parent: ExecutionContext?,
     val components: ContextComponents,
     val executorPresence: ExecutorPresence,
-    val executorFacts: EntityFacts
+    val executorFacts: EntityFacts,
+    /** Null means inherited from an opaque command source, never an assumed feet anchor. */
+    val anchorMode: ContextAnchor? = parent?.anchorMode,
+    val dimensionResource: String? = parent?.dimensionResource
 ) {
     init {
         session.requireOwned(scope)
@@ -131,6 +135,8 @@ open class ExecutionContext internal constructor(
 
     val executor: BoundExecutor = BoundExecutor(this)
     val pos: BoundPosition = BoundPosition(this)
+    open val relationBinding: Pair<ContextRelation, BoundExecutor>?
+        get() = parent?.takeIf { it.components.executor == components.executor }?.relationBinding
 
     fun requireUsableIn(useScope: ContextScope) {
         session.requireOwned(useScope)
@@ -148,7 +154,24 @@ open class ExecutionContext internal constructor(
         requireChildScope(childScope)
         val child = session.freshSource()
         return PosContext(this, child, childScope,
-            ContextComponents(components.executor, child, child, child))
+            components.copy(position = child, rotation = child, dimension = child))
+    }
+
+    /** Every operation declares exactly the components it establishes. */
+    fun derive(childScope: ContextScope, change: ContextChange): ExecutionContext {
+        requireChildScope(childScope)
+        val next = session.freshSource()
+        val parts = components.copy(
+            executor = if (change.executor) next else components.executor,
+            position = if (change.position) next else components.position,
+            rotation = if (change.rotation) next else components.rotation,
+            dimension = if (change.dimension) next else components.dimension,
+            anchor = if (change.anchor != null) next else components.anchor)
+        val presence = if (change.executor) ExecutorPresence.PRESENT else executorPresence
+        return ExecutionContext(session, next, childScope, this, parts, presence,
+            if (change.executor) (change.executorFacts ?: EntityFacts.SINGLE).let { EntityFacts(1, it.playersOnly, it.knownKinds) } else executorFacts,
+            change.anchor ?: anchorMode,
+            if (change.dimension) change.dimensionResource else dimensionResource)
     }
 
     /** A successful execute as branch supplies exactly one present executor. */
@@ -168,6 +191,18 @@ open class ExecutionContext internal constructor(
     }
 }
 
+enum class ContextAnchor { FEET, EYES }
+
+data class ContextChange(
+    val executor: Boolean = false,
+    val position: Boolean = false,
+    val rotation: Boolean = false,
+    val dimension: Boolean = false,
+    val anchor: ContextAnchor? = null,
+    val dimensionResource: String? = null,
+    val executorFacts: EntityFacts? = null
+)
+
 class PosContext internal constructor(
     parent: ExecutionContext, source: ContextSourceId, scope: ContextScope, components: ContextComponents
 ) : ExecutionContext(parent.session, source, scope, parent, components, parent.executorPresence, parent.executorFacts)
@@ -181,7 +216,9 @@ class RelationContext internal constructor(
     parent: ExecutionContext, source: ContextSourceId, scope: ContextScope, components: ContextComponents,
     val relation: ContextRelation,
     val origin: BoundExecutor = parent.executor
-) : EntityContext(parent, source, scope, components)
+) : EntityContext(parent, source, scope, components) {
+    override val relationBinding: Pair<ContextRelation, BoundExecutor> get() = relation to origin
+}
 
 /** Borrowing retains the original executor identity even when the current @s changes. */
 class BoundExecutor internal constructor(val owner: ExecutionContext) {
@@ -203,18 +240,45 @@ class BoundExecutor internal constructor(val owner: ExecutionContext) {
 }
 
 /** Position and dimension form one binding; relative coordinates alone cannot identify it. */
-class BoundPosition internal constructor(val owner: ExecutionContext) {
+data class PositionTransform(
+    val world: List<Double> = listOf(0.0, 0.0, 0.0),
+    val local: List<Double>? = null,
+    val localComponents: ContextComponents? = null
+)
+
+class BoundPosition internal constructor(val owner: ExecutionContext, val transform: PositionTransform = PositionTransform()) {
     val session: ContextSession get() = owner.session
     val scope: ContextScope get() = owner.scope
     val source: ContextSourceId get() = owner.source
     val provenance: ContextSourceId get() = owner.components.position
     val dimension: ContextSourceId get() = owner.components.dimension
 
+    fun offset(x: Double, y: Double, z: Double): BoundPosition {
+        require(listOf(x, y, z).all { it.isFinite() })
+        return BoundPosition(owner, transform.copy(world = transform.world.zip(listOf(x, y, z)) { a, b -> a + b }))
+    }
+
+    fun local(left: Double, up: Double, forward: Double): BoundPosition {
+        require(listOf(left, up, forward).all { it.isFinite() })
+        return BoundPosition(owner, PositionTransform(local = listOf(left, up, forward), localComponents = owner.components))
+    }
+
+    fun matches(current: ExecutionContext): Boolean = provenance == current.components.position && dimension == current.components.dimension &&
+        (transform.localComponents?.let { source -> source.rotation == current.components.rotation &&
+            source.executor == current.components.executor && source.anchor == current.components.anchor } ?: true)
+
+    fun coordinates(): String {
+        val local = transform.local
+        if (local != null && transform.world.any { it != 0.0 })
+            throw ContextAccessException("Combined local and world offsets require a context-aware operation")
+        return (local ?: transform.world).joinToString(" ") { (if (local == null) "~" else "^") + if (it == 0.0) "" else it.toString() }
+    }
+
     fun requireUsableIn(useScope: ContextScope) = owner.requireUsableIn(useScope)
 
     fun requireDirectUseIn(current: ExecutionContext) {
         requireUsableIn(current.scope)
-        if (provenance != current.components.position || dimension != current.components.dimension)
+        if (!matches(current))
             throw ContextAccessException("Bound position requires preservation before position or dimension changes")
     }
 }

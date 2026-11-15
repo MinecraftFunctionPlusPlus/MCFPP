@@ -22,6 +22,8 @@ group = GROUP
 version = VERSION
 
 val releaseCompression by configurations.creating
+// Documentation extraction uses Kotlin PSI independently of the MCFPP runtime and its dependencies.
+val apiDocumentation by sourceSets.creating
 
 repositories {
     mavenLocal {
@@ -35,6 +37,8 @@ repositories {
 }
 
 dependencies {
+    add(apiDocumentation.implementationConfigurationName, kotlin("compiler-embeddable"))
+    add(apiDocumentation.implementationConfigurationName, "com.alibaba.fastjson2:fastjson2:2.0.28")
     releaseCompression("com.github.luccappellaro:jzopfli:0.0.4") { isTransitive = false }
     releaseCompression("org.apache.commons:commons-compress:1.28.0")
     releaseCompression("org.tukaani:xz:1.10")
@@ -81,6 +85,47 @@ dependencies {
     implementation("info.picocli:picocli:4.7.7")
     implementation("org.eclipse.lsp4j:org.eclipse.lsp4j.debug:0.22.0")
     antlr("org.antlr:antlr4:4.13.1")
+}
+
+tasks.register<JavaExec>("exportKotlinApiDocs") {
+    group = "documentation"
+    description = "Export public Kotlin MNI declarations and KDoc for website hover cards."
+    dependsOn(apiDocumentation.classesTaskName)
+    classpath = apiDocumentation.runtimeClasspath
+    mainClass.set("top.mcfpp.tools.KotlinApiDocsKt")
+    val sourceRoot = layout.projectDirectory.dir("src/main/kotlin")
+    val destination = layout.buildDirectory.file("docs/kotlin-api.json")
+    inputs.dir(sourceRoot.dir("top/mcfpp/mni/api"))
+    inputs.dir(sourceRoot.dir("top/mcfpp/annotations"))
+    inputs.file(sourceRoot.file("top/mcfpp/command/Command.kt"))
+    outputs.file(destination)
+    args(sourceRoot.asFile.absolutePath, destination.get().asFile.absolutePath, "$GROUP:mni-api@$VERSION")
+}
+
+tasks.register<JavaExec>("analyzeKotlinApiSnippets") {
+    group = "documentation"
+    description = "Parse website Kotlin snippets into reference and call facts."
+    dependsOn(apiDocumentation.classesTaskName)
+    classpath = apiDocumentation.runtimeClasspath
+    mainClass.set("top.mcfpp.tools.KotlinSnippetFactsKt")
+    val request = layout.buildDirectory.file("docs/kotlin-snippets-input.json")
+    val result = layout.buildDirectory.file("docs/kotlin-snippets-analysis.json")
+    inputs.file(request)
+    outputs.file(result)
+    args(request.get().asFile.absolutePath, result.get().asFile.absolutePath)
+}
+
+tasks.register<JavaExec>("exportMcfppApiDocs") {
+    group = "documentation"
+    description = "Export explicit core MCFPP declarations and doc comments for website hover cards."
+    dependsOn(tasks.compileKotlin, tasks.compileJava)
+    classpath = sourceSets.main.get().output + sourceSets.main.get().compileClasspath
+    mainClass.set("top.mcfpp.doc.McfppApiDocsKt")
+    val sourceRoot = layout.projectDirectory.dir("src/main/mcfpp/lang")
+    val destination = layout.buildDirectory.file("docs/mcfpp-api.json")
+    inputs.dir(sourceRoot)
+    outputs.file(destination)
+    args(sourceRoot.asFile.absolutePath, destination.get().asFile.absolutePath, "$GROUP:stdlib@$VERSION")
 }
 
 tasks.shadowJar {
@@ -176,6 +221,17 @@ val prepareBuiltinImportPlan by tasks.registering(JavaExec::class) {
 tasks.processResources {
     dependsOn(prepareBuiltinImportPlan)
     from(builtinPlanResources)
+}
+
+tasks.register<JavaExec>("rebuildStdlib") {
+    group = "build"
+    description = "Rebuild bundled standard libraries and scalar math resources from source."
+    dependsOn(tasks.compileKotlin, tasks.compileJava)
+    classpath = files(sourceSets.main.get().output.classesDirs, "src/main/resources") + configurations.runtimeClasspath.get()
+    mainClass.set("top.mcfpp.library.compiler.BuiltinLibraryGenerator")
+    args(projectDir.absolutePath)
+    providers.gradleProperty("stdlibTargets").orNull?.split(",")?.let { args(it) }
+    maxHeapSize = "3g"
 }
 
 tasks.withType<JavaCompile>{

@@ -165,13 +165,22 @@ object LibraryBuiltinTypes {
             "static-member-view" to MCFPPPrivateType.StaticMemberViewType,
             "coordinate.dimension" to MCFPPPrivateType.MCFPPCoordinateDimension,
             "entity" to MCFPPEntityType.NormalSelector, "ScoreRef" to MCFPPScoreRefType,
+            "UUID" to MCFPPUUIDType,
             "DataObject" to DataTemplate.baseDataTemplate.getType(),
             "context.execution" to ContextTypes.ExecutionContext, "context.pos" to ContextTypes.PosContext,
             "context.entity" to ContextTypes.EntityContext, "context.relation" to ContextTypes.RelationContext,
             "context.position" to ContextTypes.Position,
-        )
+            "context.base" to ContextTypes.Context,
+            "context.dimension" to ContextTypes.DimensionContext,
+            "context.rotation" to ContextTypes.RotationContext,
+            "context.anchor" to ContextTypes.AnchorContext,
+            "context.entity_execution" to ContextTypes.EntityExecutionContext,
+            "context.bound.rotation" to ContextTypes.Rotation,
+            "context.bound.dimension" to ContextTypes.Dimension,
+            "context.bound.anchor" to ContextTypes.Anchor,
+        ) + EntityTypes.all.associate { "entity.${it.typeName}" to it }
     }
-    private val constructors = setOf("list", "ImmutableList", "map", "dict", "NBTRef")
+    private val constructors = setOf("list", "ImmutableList", "map", "dict", "NBTRef", "EntityRef")
     fun protocolKey(id: TypeId): String? = values.entries.firstOrNull { it.value.typeId == id }?.key
         ?: (id as? TypeId.Builtin)?.key?.takeIf { it in constructors || it.removePrefix("constructor:") in constructors && it.startsWith("constructor:") }
 
@@ -252,7 +261,7 @@ class CompilerTypeTableCapture(private val bindings: CompilerTypeBindings) : Com
             return LibraryType.Builtin("vec$dimension")
         }
         if (key == TypeId.FUNCTION_CONSTRUCTOR) {
-            require(id.arguments.size == 3)
+            require(id.arguments.size in 3..4)
             val marker = (id.arguments[0] as? TypeId.Builtin)?.key
             val execution = when (marker) {
                 "func.execution:normal" -> FunctionExecution.NORMAL
@@ -262,7 +271,8 @@ class CompilerTypeTableCapture(private val bindings: CompilerTypeBindings) : Com
             }
             val parameters = id.arguments[1] as? TypeId.Applied ?: error("Invalid function parameter identity")
             require(parameters.constructor == TypeId.Builtin(TypeId.FUNCTION_PARAMETERS))
-            return LibraryType.Function(execution, parameters.arguments.map(::identity), identity(id.arguments[2]))
+            return LibraryType.Function(execution, parameters.arguments.map(::identity), identity(id.arguments[2]),
+                (id.arguments.getOrNull(3) as? TypeId.Applied)?.arguments.orEmpty().map(::identity))
         }
         if (key == "NBTRef") return LibraryType.NbtRef(identity(id.arguments.single()))
         return LibraryType.Applied(identity(id.constructor), id.arguments.map(::identity))
@@ -328,6 +338,7 @@ class CompilerTypeTableRestore(private val tables: LibraryTables, private val bi
                     "dict", "constructor:dict" -> MCFPPDictType(arguments.single())
                     "map", "constructor:map" -> MCFPPMapType(arguments.single())
                     "NBTRef", "constructor:NBTRef" -> MCFPPNBTRefType(arguments.single())
+                    "EntityRef", "constructor:EntityRef" -> MCFPPEntityRefType(arguments.single())
                     else -> bindings.apply(type(value.constructor), arguments)
                 }
             }
@@ -338,7 +349,7 @@ class CompilerTypeTableRestore(private val tables: LibraryTables, private val bi
                 FunctionExecution.NORMAL -> MCFPPFunctionType.ExecutionCategory.NORMAL
                 FunctionExecution.PAUSED -> MCFPPFunctionType.ExecutionCategory.PAUSED
                 FunctionExecution.GENERATOR -> MCFPPFunctionType.ExecutionCategory.GENERATOR
-            })
+            }, value.contexts.map(::type))
             is LibraryType.NbtRef -> MCFPPNBTRefType(type(value.value))
             is LibraryType.UnresolvedNominal -> error("LIB_TYPE_UNRESOLVED: Pending nominal identity ${value.kind} ${value.namespace}:${value.name} requires an actual declaration before materialization")
         }
@@ -382,7 +393,7 @@ class CompilerTypeTableRestore(private val tables: LibraryTables, private val bi
             ?: UnionDataTemplate.identityFor(value.components.map(::identity))
         is LibraryType.Function -> TypeId.function(value.parameters.map(::identity), identity(value.result), when (value.execution) {
             FunctionExecution.NORMAL -> "normal"; FunctionExecution.PAUSED -> "paused"; FunctionExecution.GENERATOR -> "generator"
-        })
+        }, value.contexts.map(::identity))
         is LibraryType.NbtRef -> TypeId.Applied(TypeId.Builtin("NBTRef"), listOf(identity(value.value)))
     } }
 }

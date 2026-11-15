@@ -1,0 +1,22 @@
+import mcfpp.lang:*
+import mcfpp.minecraft:*
+import mcfpp.minecraft.std:*
+import mcfpp.minecraft.resource:*
+func setup() {
+    Scoreboard.addObjective("stdlib_points");
+    Scoreboard.setDisplay("sidebar", "stdlib_points");
+    GameRules.keepInventory.set(true);
+}
+func main() {
+    @a.forEach { ctx ->
+        var found = ctx.executor.score["stdlib_points"].tryRead { points ->
+            ctx.executor.score["stdlib_points"].set(points + 5);
+        };
+        if (!found) { ctx.executor.score["stdlib_points"].set(5); }
+        ctx.executor.titleTimes(5, 30, 5);
+        ctx.executor.actionbar("获得 5 点积分");
+    }
+}
+func cleanup() {
+    Scoreboard.removeObjective("stdlib_points");
+}

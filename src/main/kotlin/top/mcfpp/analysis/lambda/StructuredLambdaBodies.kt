@@ -49,7 +49,7 @@ internal object StructuredLambdaBodies {
                 is Statement.If -> { statement.branches.forEach { locals(it.body) }; statement.elseBody?.let(::locals) }
                 is Statement.While -> locals(statement.body)
                 is Statement.DoWhile -> locals(statement.body)
-                is Statement.Execute -> locals(statement.body)
+                is Statement.ContextScope -> locals(statement.body)
                 is Statement.TryStore -> locals(statement.body)
                 else -> Unit
             }

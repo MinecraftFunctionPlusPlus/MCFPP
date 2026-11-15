@@ -103,7 +103,7 @@ object DictionaryOperations {
         }
         binding.data.materialize()
         return ScoreBool().apply {
-            Function.addCommand(Command("execute store success score ${this.name} ${boolObject} if data")
+            Function.addCommand(Command("execute store success score ${this.name} ${boolObject} run execute if data")
                 .build(binding.path.memberIndex(StorageAccess.quotedKey(name)).toCommandPart()))
             StorageAccess.publishBoolean(this, StorageLayout.Scoreboard(this.name, boolObject.toString()))
         }

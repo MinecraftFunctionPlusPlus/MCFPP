@@ -130,6 +130,18 @@ class LibraryStatementTest {
     }
 
     @Test
+    fun commandBlockCapturesCommandsAndOrdinaryDeclarationsInOrder() {
+        val capture = Capture()
+        val root = capture.block("{\n/{\nsay first\n/var count = x\nsay ${'$'}{count}\n}\nreturn count\n}")
+        val block = assertIs<Statement.Block>(root.statements[0])
+        assertEquals(TextPart.Text("say first"), assertIs<Statement.Command>(block.statements[0]).parts.single())
+        val declaration = assertIs<Statement.Local>(block.statements[1]).declaration
+        val interpolation = assertIs<TextPart.Interpolation>(assertIs<Statement.Command>(block.statements[2]).parts[1])
+        assertEquals(declaration, local(interpolation.expression))
+        assertEquals(declaration, local(assertNotNull(assertIs<Statement.Return>(root.statements[1]).value)))
+    }
+
+    @Test
     fun initializerBindsBeforeLocalPublicationAndBlockShadowingDoesNotEscape() {
         val capture = Capture()
         val root = capture.block("{ var x = x; if flag { var x = x; return x; }; return x; }")
@@ -182,20 +194,15 @@ class LibraryStatementTest {
         val root = capture.block("""
             {
                 try { var x = 2; } store(x);
-                execute(as = @e, positioned.x = x) { return; };
+                context(x) { return; };
                 /say value=${'$'}{x}
                 return;
             }
         """.trimIndent())
         val store = assertIs<Statement.TryStore>(root.statements[0])
         assertEquals(NameUse.Local(DeclarationId(1)), store.destination)
-        val execute = assertIs<Statement.Execute>(root.statements[1])
-        assertEquals(ExecutePath.As, execute.contexts[0].path)
-        assertIs<Expression.Selector>(execute.contexts[0].value)
-        val parts = assertIs<ExecutePath.Members>(execute.contexts[1].path).parts
-        assertEquals(2, parts.size)
-        assertIs<NameUse.Declaration>(assertIs<Expression.Name>(parts[1]).use)
-        assertEquals(DeclarationId(1), local(execute.contexts[1].value))
+        val context = assertIs<Statement.ContextScope>(root.statements[1])
+        assertEquals(DeclarationId(1), local(context.contexts.single()))
         val command = assertIs<Statement.Command>(root.statements[2])
         assertEquals(TextPart.Text("say value="), command.parts[0])
         assertEquals(DeclarationId(1), local(assertIs<TextPart.Interpolation>(command.parts[1]).expression))

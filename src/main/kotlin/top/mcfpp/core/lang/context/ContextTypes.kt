@@ -9,8 +9,8 @@ import top.mcfpp.type.TypeId
 class MCFPPExecutionContextType internal constructor(
     override val typeName: String,
     key: String,
-    parent: MCFPPExecutionContextType? = null
-) : MCFPPType(if (parent == null) arrayListOf() else arrayListOf(parent)) {
+    vararg parents: MCFPPExecutionContextType
+) : MCFPPType(arrayListOf(*parents)) {
     override val typeId: TypeId = TypeId.Builtin(key)
     override val hasRuntimeRepresentation: Boolean get() = false
 
@@ -36,33 +36,62 @@ class MCFPPBoundPositionType internal constructor() : MCFPPType() {
 }
 
 object ContextTypes {
-    val ExecutionContext = MCFPPExecutionContextType("ExecutionContext", "context.execution")
-    val PosContext = MCFPPExecutionContextType("PosContext", "context.pos", ExecutionContext)
-    val EntityContext = MCFPPExecutionContextType("EntityContext", "context.entity", ExecutionContext)
-    val RelationContext = MCFPPExecutionContextType("RelationContext", "context.relation", EntityContext)
+    val Context = MCFPPExecutionContextType("Context", "context.base")
+    val DimensionContext = MCFPPExecutionContextType("DimensionContext", "context.dimension", Context)
+    val PosContext = MCFPPExecutionContextType("PosContext", "context.pos", DimensionContext)
+    val RotationContext = MCFPPExecutionContextType("RotationContext", "context.rotation", Context)
+    val AnchorContext = MCFPPExecutionContextType("AnchorContext", "context.anchor", Context)
+    val EntityContext = MCFPPExecutionContextType("EntityContext", "context.entity", Context)
+    val ExecutionContext = MCFPPExecutionContextType("ExecutionContext", "context.execution", PosContext, RotationContext, AnchorContext)
+    val EntityExecutionContext = MCFPPExecutionContextType("EntityExecutionContext", "context.entity_execution", ExecutionContext, EntityContext)
+    val RelationContext = MCFPPExecutionContextType("RelationContext", "context.relation", EntityExecutionContext)
     val Position = MCFPPBoundPositionType()
+    val Rotation = MCFPPBoundComponentType("ContextRotation", "rotation")
+    val Dimension = MCFPPBoundComponentType("ContextDimension", "dimension")
+    val Anchor = MCFPPBoundComponentType("ContextAnchor", "anchor")
 
     fun named(name: String): MCFPPType? = when (name) {
+        "Context" -> Context
+        "DimensionContext" -> DimensionContext
+        "RotationContext" -> RotationContext
+        "AnchorContext" -> AnchorContext
         "ExecutionContext" -> ExecutionContext
+        "EntityExecutionContext" -> EntityExecutionContext
         "PosContext" -> PosContext
         "EntityContext" -> EntityContext
         "RelationContext" -> RelationContext
         "ContextPosition" -> Position
+        "ContextRotation" -> Rotation
+        "ContextDimension" -> Dimension
+        "ContextAnchor" -> Anchor
         else -> null
     }
 
     /** Declaration binding must not instantiate a context value to discover these types. */
     fun memberType(type: MCFPPType, name: String): MCFPPType? =
-        if (type !is MCFPPExecutionContextType) null else when (name) {
-            "executor" -> MCFPPEntityType.NormalSelector
-            "pos" -> Position
+        if (type !is MCFPPExecutionContextType) null else when {
+            name == "executor" && supports(type, EntityContext) -> MCFPPEntityType.NormalSelector
+            name == "pos" && supports(type, PosContext) -> Position
+            name == "rotation" && supports(type, RotationContext) -> Rotation
+            name == "dimension" && supports(type, DimensionContext) -> Dimension
+            name == "anchor" && supports(type, AnchorContext) -> Anchor
             else -> null
         }
 
-    fun of(context: ExecutionContext): MCFPPExecutionContextType = when (context) {
-        is top.mcfpp.core.lang.context.RelationContext -> RelationContext
-        is top.mcfpp.core.lang.context.EntityContext -> EntityContext
-        is top.mcfpp.core.lang.context.PosContext -> PosContext
+    fun supports(type: MCFPPType, capability: MCFPPExecutionContextType): Boolean =
+        top.mcfpp.type.TypeRelations.isSubtype(type, capability)
+
+    fun of(context: ExecutionContext): MCFPPExecutionContextType = when {
+        context.relationBinding != null -> RelationContext
+        context.executorPresence == ExecutorPresence.PRESENT -> EntityExecutionContext
         else -> ExecutionContext
     }
+}
+
+/** A scoped component view, never an ordinary resource or runtime value. */
+class MCFPPBoundComponentType internal constructor(override val typeName: String, val component: String) : MCFPPType() {
+    override val typeId: TypeId = TypeId.Builtin("context.bound.$component")
+    override val hasRuntimeRepresentation: Boolean get() = false
+    override fun build(identifier: String, value: Any?): Var<*> = BoundComponentVar(identifier, value as? ExecutionContext, this)
+    override fun buildUnConcrete(identifier: String): Var<*> = BoundComponentVar(identifier, null, this)
 }

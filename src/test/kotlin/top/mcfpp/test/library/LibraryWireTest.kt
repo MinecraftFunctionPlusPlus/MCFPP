@@ -35,11 +35,15 @@ class LibraryWireTest {
             .chunked(2).map { it.toInt(16).toByte() }.toByteArray()
         val emptySections = LibrarySectionId.requiredIds.map { LibrarySection(it, true, byteArrayOf()) }
         val encoded = LibraryWire.encode(emptySections.reversed())
-        assertContentEquals(fixture, encoded)
+        val current = fixture.copyOf().also {
+            LibraryBinaryWriter().apply { u32(LibraryWire.CURRENT_VERSION) }.toByteArray().copyInto(it, 8)
+        }
+        assertContentEquals(current, encoded)
         val restored = LibraryWire.decode(fixture)
         assertEquals(1L, restored.formatVersion)
         assertEquals(emptySections, restored.sections)
-        assertContentEquals(fixture, LibraryWire.encode(restored.sections))
+        assertContentEquals(current, LibraryWire.encode(restored.sections))
+        assertEquals(LibraryWire.CURRENT_VERSION, LibraryWire.decode(encoded).formatVersion)
     }
 
     @Test fun streamRoundTripKeepsPayloadsAndDoesNotCloseCallerStreams() {
@@ -74,7 +78,7 @@ class LibraryWireTest {
     }
 
     @Test fun futureUnsignedVersionsAreRejectedBeforeReadingTheRestOfTheHeader() {
-        for (version in listOf(2L, 0xffff_ffffL)) {
+        for (version in listOf(LibraryWire.CURRENT_VERSION + 1, 0xffff_ffffL)) {
             val header = LibraryBinaryWriter().apply {
                 rawBytes("MCFPLIB\u0000".toByteArray(Charsets.US_ASCII))
                 u32(version)

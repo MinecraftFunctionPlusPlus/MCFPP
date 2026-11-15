@@ -1,0 +1,2 @@
+/// 内部桥接：将万分之一定点坐标的方位角转换为弧度。
+func atan2Fixed(y: int, x: int): float = top.mcfpp.mni.MathData.atan2Fixed

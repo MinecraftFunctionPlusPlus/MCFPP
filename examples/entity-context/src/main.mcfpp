@@ -1,6 +1,8 @@
 namespace example.entitycontext
 
 import mcfpp.lang:*
+import mcfpp.minecraft.resource:*
+import mcfpp.minecraft.std:*
 
 func main() {
     var qwq = @s
@@ -51,5 +53,34 @@ func commandResults() {
     }
     if (!missed.success) {
         /say missed-failure
+    }
+}
+
+// Dependencies can refer to different ancestors without changing the caller's command frame.
+context(space: PosContext, actor: EntityContext)
+func restoreBorrowed() {
+    tp(actor.executor, space.pos)
+}
+
+context(space: PosContext)
+func spawnAt() {
+    var pig = EntityType()
+    pig.id = "minecraft:pig"
+    summon(pig, space.pos)
+}
+
+func contexts() {
+    @s.withEntityCtx { owner ->
+        owner.executor.withPosCtx { original ->
+            entityByName("Nether").withEntityCtx { other ->
+                other.executor.withPosCtx { current ->
+                    restoreBorrowed(space = original, actor = other)
+                    spawnAt(space = original)
+                    withPosCtx(original.pos.offset(1, 0, 0)) { saved ->
+                        spawnAt()
+                    }
+                }
+            }
+        }
     }
 }

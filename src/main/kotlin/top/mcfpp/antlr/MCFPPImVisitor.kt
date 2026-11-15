@@ -24,7 +24,6 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.bool.BaseBool
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.io.MCFPPFile
-import top.mcfpp.lib.Execute
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.Generic
 import top.mcfpp.model.Namespace
@@ -127,6 +126,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     private fun emitContinuation(branch: Function, condition: Var<*>? = null) {
         fun prefix(value: Var<*>): Command? = when (value) {
+            is top.mcfpp.core.lang.bool.PresenceBool -> value.prefix()
             is BaseBool -> Command("execute if").build(value.toCommandPart())
             else -> { LogProcessor.error("A branch condition must be boolean"); null }
         }
@@ -237,7 +237,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    fun compileFunctionBody(ctx: mcfppParser.CurlBlockContext?, beforeBody: () -> Unit = {}) {
+    fun compileFunctionBody(ctx: mcfppParser.CurlBlockContext?, afterParameters: () -> Unit = {}, beforeBody: () -> Unit = {}) {
         if(Function.currFunction !is Generic<*>){
             val function = Function.currFunction
             if (function.needsActualBinding()) return
@@ -249,8 +249,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 val compiled = ctx != null && top.mcfpp.analysis.PrimitiveCompiler.tryCompile(ctx, function)
                 if (!compiled) {
                     function.bindIncomingParameters()
+                    afterParameters()
                     if (ctx != null) visitStatements(ctx.statement())
-                    if (!function.hasReturnStatement && !function.isEnded) function.registerFrameExit()
+                    if (!function.hasReturnStatement && !function.isEnded) function.registerFrameExit(fallthrough = true)
                 }
             } finally {
                 function.bodyBeingCompiled = false
@@ -276,6 +277,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext):Any? = withCompilationContext(ctx) {
         val declarationErrors = Project.errorCount
         val fieldModifier = ctx.fieldModifier()?.start?.text
+        if (fieldModifier == "const" && ctx.expression() == null) {
+            top.mcfpp.analysis.ConstantBinding.requireValue(ctx.Identifier().text, null)
+            return null
+        }
         val isExternal = ctx.fieldModifier()?.EXTERNAL() != null ||
             Project.config.debugInfo && fieldModifier !in setOf("const", "import")
         var type = ctx.type()?.let {
@@ -314,6 +319,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             return null
         }
         val `var` = type.buildUnConcrete(ctx.Identifier().text, Function.currFunction)
+        if (fieldModifier == "const" && !top.mcfpp.analysis.ConstantBinding.requireValue(
+                ctx.Identifier().text, init?.let(StorageAccess::snapshot))) return null
         val debugBlock = debugBlocks.lastOrNull { it.active }
         if(isInTopStatement){
             `var`.nbtPath = NBTPath.getFileScopePath(`var`)
@@ -364,8 +371,14 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         if(ctx.varWithSelector() != null){
             val left: Var<*> = MCFPPExprVisitor().visitAssignableVarWithSelector(ctx.varWithSelector())
             if (left.isError || left is top.mcfpp.core.lang.UnknownVar) return null
+            if (ctx.assignmentOperator().text == "=" && ctx.expression().text == "null" && left is PropertyVar) {
+                StorageAccess.removeField(left)
+                return null
+            }
             val address = top.mcfpp.core.lang.entity.EntityDataAddress.selected(left)
-            val type = address?.valueType ?: left.type
+            val displayProperty = top.mcfpp.core.lang.entity.DisplayProperties.selected(left)
+            val type = address?.valueType ?: (displayProperty?.type as? top.mcfpp.type.MCFPPReferenceType)?.valueType
+                ?: top.mcfpp.core.lang.entity.DisplayProperties.writeType(left.type) ?: left.type
             val assignment = ctx.assignmentOperator().text
             val current = if (assignment == "=") null else {
                 val value = top.mcfpp.analysis.StorageAccess.read(if (left is PropertyVar) left.get() else left)
@@ -384,7 +397,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 LogProcessor.error(it)
                 return null
             }
-            if (address != null) address.write(assigned) else left.replacedBy(left.assignedBy(assigned))
+            if (address != null) address.write(assigned)
+            else if (left is PropertyVar && (displayProperty != null || left.field is top.mcfpp.core.lang.entity.DisplayView)) left.set(assigned)
+            else left.replacedBy(left.assignedBy(assigned))
         }else{
             MCFPPExprVisitor().visitExpression(ctx.expression())
         }
@@ -452,7 +467,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         val block = if (Project.config.debugInfo && ctx.parent.let { it is mcfppParser.IfStatementContext ||
             it is mcfppParser.ElseIfStatementContext || it is mcfppParser.ElseStatementContext ||
             it is mcfppParser.WhileStatementContext || it is mcfppParser.DoWhileStatementContext ||
-            it is mcfppParser.ForeachStatementContext || it is mcfppParser.ExecuteStatementContext }) DebugBlock(ctx) else null
+            it is mcfppParser.ForeachStatementContext || it is mcfppParser.ContextScopeStatementContext }) DebugBlock(ctx) else null
         if (block != null) debugBlocks.addLast(block)
         try { visitStatements(statements, afterBlock) }
         finally { if (block != null) { leaveDebugBlock(block); debugBlocks.removeLast() } }
@@ -476,12 +491,15 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     private var breakIf = ConditionType.NORMAL
+    private var lastPresence: top.mcfpp.core.lang.bool.PresenceBool? = null
     override fun visitIfStatement(ctx: mcfppParser.IfStatementContext): Any? = withCompilationContext(ctx) {
         val enclosingCondition = breakIf
         var before = top.mcfpp.analysis.StorageAccess.flowSnapshot(flowValues())
         val paths = arrayListOf<Map<top.mcfpp.analysis.StoredData, top.mcfpp.analysis.FlowFacts>>()
+        var conditionProof: top.mcfpp.core.lang.bool.PresenceBool? = null
         fun restoreBranch() {
             top.mcfpp.analysis.StorageAccess.restoreFlow(before)
+            conditionProof?.assume(false)
         }
         fun recordBranch() {
             if (Function.currFunction.hasReturnStatement || Function.currFunction.isReturned) return
@@ -497,9 +515,11 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         do {
             //if分支
             val (c,f) = enterIfBranch(ctx)
+            conditionProof = lastPresence
             before = top.mcfpp.analysis.StorageAccess.flowSnapshot(flowValues())
             if(c){
                 restoreBranch()
+                conditionProof?.assume(true)
                 //此分支会被编译，注册函数
                 if(breakIf != ConditionType.ALWAYS_TRUE) {
                     //并不是必然编译的，所以需要注册函数，让分支内的内容在if_branch函数中执行。如果是必然执行的，那么直接内联即可
@@ -527,8 +547,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             ctx.elseIfStatement().forEach {
                 restoreBranch()
                 val (c2, f2) = enterElseIfBranch(it)
+                conditionProof = lastPresence
                 before = top.mcfpp.analysis.StorageAccess.flowSnapshot(flowValues())
                 if(c2){
+                    conditionProof?.assume(true)
                     //这条else if分支会被编译
                     if(breakIf != ConditionType.ALWAYS_TRUE) {
                         //如果这里breakIf是1，只能是这一条分支必然会被执行而上一条分支不可能执行（参见enterElseIfBranch中的逻辑
@@ -622,6 +644,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             return false to f
         }
         val exp = MCFPPExprVisitor().visitConditionExpression(expr)
+        lastPresence = exp as? top.mcfpp.core.lang.bool.PresenceBool
         knownCondition(exp)?.let { condition ->
                 if (condition) {
                     // visitIfStatement inlines a branch that is known to run.
@@ -668,6 +691,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             return false to f
         }
         val exp = MCFPPExprVisitor().visitConditionExpression(expr)
+        lastPresence = exp as? top.mcfpp.core.lang.bool.PresenceBool
         knownCondition(exp)?.let { condition ->
                 if (condition) {
                     // A runtime chain registers this branch; a static chain inlines it.
@@ -737,11 +761,19 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         fun compileHeader() = header.runInFunction {
             val value = condition()
             known = knownCondition(value)
-            if (known != true) naturalExit = StorageAccess.flowSnapshot(visible)
+            val proof = value as? top.mcfpp.core.lang.bool.PresenceBool
+            if (known != true) {
+                val afterCondition = StorageAccess.flowSnapshot(visible)
+                proof?.assume(false)
+                naturalExit = StorageAccess.flowSnapshot(visible)
+                StorageAccess.restoreFlow(afterCondition)
+            }
+            proof?.assume(true)
             if (known != false) {
                 if (known == null) {
                     val falseCondition = StorageAccess.unary(value, "!")
                     val command = when (falseCondition) {
+                        is top.mcfpp.core.lang.bool.PresenceBool -> falseCondition.prefix()
                         is BaseBool -> Command("execute if").build(falseCondition.toCommandPart())
                         else -> { LogProcessor.error("The loop condition must be boolean"); null }
                     }
@@ -868,34 +900,21 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    //进入execute语句
-    override fun visitExecuteStatement(ctx: mcfppParser.ExecuteStatementContext): Any? = withCompilationContext(ctx) {
-        val exec = Execute()
-        for (context in ctx.executeContext()){
-            var arg: Execute.WriteOnlyVar? = null
-            for (exp in context.executeExpression().`var`()){
-                if(arg == null){
-                    val qwq = exec.data.scope.getVar(exp.text) as Execute.WriteOnlyVar?
-                    if(qwq == null){
-                        LogProcessor.error("Cannot find argument: ${exp.text}")
-                        continue
-                    }
-                    arg = qwq
-                }else{
-                    arg = arg.getData().scope.getVar(exp.text) as Execute.WriteOnlyVar
-                }
+    override fun visitContextScopeStatement(ctx: mcfppParser.ContextScopeStatementContext): Any? = withCompilationContext(ctx) {
+        val syntax = ctx.normalArgs()
+        val expressions = syntax.expressionList()?.expression()
+            ?: syntax.callArgumentList()?.callArgument()?.map { it.expression() }.orEmpty()
+        try {
+            val values = expressions.map { expression ->
+                val value = MCFPPExprVisitor().visitExpression(expression)
+                value as? top.mcfpp.core.lang.context.ExecutionContextVar
+                    ?: throw top.mcfpp.core.lang.context.ContextAccessException("context(...) requires bound Context values")
             }
-            val value = MCFPPExprVisitor().visitExpression(context.expression())
-            arg?.accept(value)
+            top.mcfpp.core.lang.context.ContextParameters.provide(values) { visit(ctx.block()) }
+        } catch (failure: top.mcfpp.core.lang.context.ContextAccessException) {
+            LogProcessor.error(failure.message.orEmpty())
         }
-        val execFunction = NoStackFunction(TempPool.getFunctionIdentify("execute"), Function.currFunction)
-        GlobalScope.localNamespaces[execFunction.namespace]!!.scope.addFunction(execFunction, false)
-        val l = Function.currFunction
-        Function.currFunction = execFunction
-        super.visitExecuteStatement(ctx)
-        Function.currFunction = l
-        Function.addCommand(exec.run(execFunction))
-        return null
+        null
     }
 
     override fun visitForeachStatement(ctx: mcfppParser.ForeachStatementContext): Any? {

@@ -42,7 +42,13 @@ class StaticMemberView(val declaration: CanSelectMember, identifier: String = Te
                 return UnknownVar(key).apply { isError = true } to true
             }
         }
-        return declaration.getMemberVar(key, accessModifier).apply {
+        val selected = declaration.getMemberVar(key, accessModifier)
+        val property = (objectOwner as? DataTemplate)?.scope?.getProperty(key)
+        val member = selected.first
+        val resolved = if (member != null && property?.accessor != null &&
+            property.accessor !is top.mcfpp.model.property.SimpleAccessor)
+            PropertyVar(property.clone(), member, this) to selected.second else selected
+        return resolved.apply {
             first?.parent = declaration
             if(objectOwner != null) {
                 first?.let { member ->

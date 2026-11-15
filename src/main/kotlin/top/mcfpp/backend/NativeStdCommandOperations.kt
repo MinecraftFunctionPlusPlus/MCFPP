@@ -458,6 +458,7 @@ object NativeStdCommandOperations {
     }
 
     private fun damageCommand(target: Var<*>, amount: Var<*>, kind: Var<*>, vararg extras: Any): Command {
+        if (!StandardCommandOperations.requireDamageCommand()) return Command()
         val entity = requireEntityTarget(target) ?: return Command()
         val multi = !(entity as EntityTargetAccess).entityFacts.selectingSingleEntity
         return if (multi) nativeEntityCommand("execute as", entity, "run damage @s", amount, kind, *extras, changesExecutor = true)
@@ -552,7 +553,9 @@ object NativeStdCommandOperations {
         }
         val errors = top.mcfpp.Project.errorCount
         val command = build(args)
-        if (top.mcfpp.Project.errorCount == errors && args.none { it.isError })
-            command.buildMacroFunction().forEach { Function.addCommand(it) }
+        if (top.mcfpp.Project.errorCount == errors && args.none { it.isError }) {
+            if (context.declaredReturnType != top.mcfpp.type.MCFPPPrivateType.Void) captureCommandResult(context) { command }
+            else command.buildMacroFunction().forEach { Function.addCommand(it) }
+        }
     }
 }

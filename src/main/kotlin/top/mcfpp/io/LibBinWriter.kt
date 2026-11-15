@@ -18,7 +18,13 @@ import java.security.MessageDigest
 import java.util.Locale
 
 object LibBinWriter {
-    fun write(path: String) {
+    fun write(path: String) = write(path, ::publish)
+
+    /** Inspect/copy a complete export without replacing a live publication directory. */
+    internal fun withStagedExport(path: String, action: (Path) -> Unit) =
+        write(path) { staging, _, _ -> action(staging) }
+
+    private fun write(path: String, install: (Path, Path, Set<String>) -> Unit) {
         if (path == "null") return
         val config = Project.config
         val publication = config.library ?: LibraryPublicationConfig(
@@ -65,7 +71,7 @@ object LibBinWriter {
             }
             Files.writeString(staging.resolve("module.json"), JSON.toJSONString(moduleJson))
             Files.createDirectories(staging.resolve("datapack"))
-            publish(staging, destination, modules.keys + config.name)
+            install(staging, destination, modules.keys + config.name)
         } finally {
             staging.toFile().deleteRecursively()
         }

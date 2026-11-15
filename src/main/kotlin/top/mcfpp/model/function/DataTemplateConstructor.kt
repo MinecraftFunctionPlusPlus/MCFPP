@@ -32,6 +32,10 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
             declarationFile = value
         }
 
+    @Transient internal var restoredParentCall: (() -> mcfppParser.FunctionCallContext)? = null
+    internal fun parentCall(): mcfppParser.FunctionCallContext? = restoredParentCall?.invoke()
+        ?: (sourceDeclarationContext as? mcfppParser.TemplateConstructorDeclarationContext)?.functionCall()
+
     /** Selection for a later owner-stage executor; this does not invoke any parent body. */
     internal fun initializationPlan(): ConstructorPlan.Result = ConstructorPlan.build(data)
 
@@ -70,6 +74,27 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
         else target.scope.getVar("this") as DataTemplateObject
         if (receiver is DataTemplateObject) target.constructedReceiver = receiver
         if (receiver is DataTemplateObject) {
+            val parentCall = parentCall()
+            if (parentCall != null) {
+                if (!data.isEntityTemplate) {
+                    LogProcessor.error("Explicit parent constructor calls currently require an entity template")
+                    receiver.isError = true
+                    return
+                }
+                val parent = MCFPPExprVisitor().visitFunctionCall(parentCall) as? DataTemplateObject
+                if (parent == null || data.parent.filterIsInstance<DataTemplate>().none { it.inheritanceIdentity == parent.templateType.inheritanceIdentity }) {
+                    LogProcessor.error("Entity constructor must delegate to a direct parent template")
+                    receiver.isError = true
+                    return
+                }
+                for (field in (parent.type as top.mcfpp.type.MCFPPDataTemplateType).instanceFields) {
+                    val member = parent.getMemberVar(field.identifier, Member.AccessModifier.PRIVATE).first ?: continue
+                    val value = if (member is top.mcfpp.core.lang.PropertyVar) member.get() else member
+                    receiver.initializeDeclaredField(requireNotNull(field.declaredParentTemplate), field.identifier, value)
+                }
+                initializeOwnerFields(data, target, receiver)
+                return
+            }
             val plan = initializationPlan().plan ?: run {
                 receiver.isError = true
                 return
@@ -106,7 +131,10 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
             if (data !is ObjectCompoundData && name in data.deferredFields) continue
             val errors = Project.errorCount
             val value = target.withFieldInitializerOwner(initializerOwner) {
-                MCFPPExprVisitor().visitExpression(expression, data.scope.getVar(name)?.type)
+                val field = data.scope.getVar(name)
+                if (field?.isConst == true) top.mcfpp.analysis.ConstantBinding.restore(field)
+                    ?: UnknownVar(name).apply { isError = true }
+                else MCFPPExprVisitor().visitExpression(expression, field?.type)
             }
             if (value is UnknownVar || value.isError || Project.errorCount != errors) continue
             TypeUsage.ordinaryDiagnostic(value.type, StorageAccess.snapshot(value))?.let {
@@ -121,7 +149,8 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
                 if (declaration != null && MCFPPFieldVisitor().completeTemplateField(data, declaration, value.type) == null) continue
             }
             val field = receiver.getMemberVar(name, Member.AccessModifier.PRIVATE).first ?: continue
-            val assigned = field.assignedBy(value)
+            val assigned = if (field.isConst) StorageAccess.initializeFixedField(
+                (field as? top.mcfpp.core.lang.PropertyVar)?.field ?: field, value) else field.assignedBy(value)
             if (assigned.isError || Project.errorCount != errors) continue
             if (data is ObjectCompoundData) {
                 assigned.isConst = field.isConst
@@ -138,10 +167,14 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
 
     private fun initializeOwnerFields(owner: DataTemplate, target: Function, receiver: DataTemplateObject) {
         for ((name, expression) in owner.preInit) {
+            if (owner.scope.getVar(name)?.isEntityMember == true) continue
             if (name in owner.deferredFields) continue
             val errors = Project.errorCount
             val value = target.withFieldInitializerOwner(owner) {
-                MCFPPExprVisitor().visitExpression(expression, owner.scope.getVar(name)?.type)
+                val field = owner.scope.getVar(name)
+                if (field?.isConst == true) top.mcfpp.analysis.ConstantBinding.restore(field)
+                    ?: UnknownVar(name).apply { isError = true }
+                else MCFPPExprVisitor().visitExpression(expression, field?.type)
             }
             if (value is UnknownVar || value.isError || Project.errorCount != errors) continue
             TypeUsage.ordinaryDiagnostic(value.type, StorageAccess.snapshot(value))?.let(LogProcessor::error)

@@ -22,10 +22,18 @@ class NativeCallContext internal constructor(
     val function: Function,
     receiver: Var<*>?,
     arguments: List<Var<*>>,
-    val declaredReturnType: MCFPPType = MCFPPPrivateType.Void
+    val declaredReturnType: MCFPPType = MCFPPPrivateType.Void,
+    contextArguments: Map<String, Var<*>> = emptyMap()
 ) {
     private val receiverAdapter = receiver?.let(::normalize)
     private val argumentAdapters = arguments.map(::normalize)
+    private val contextAdapters = contextArguments.mapValues { normalize(it.value) }
+    /** Scoped dependencies, separate from the provider's ordinary JVM argument order. */
+    val contextArguments: Map<String, ValueRef> = contextAdapters.mapValues { reference(it.value) }
+
+    internal fun withContextArguments(action: (Map<String, Var<*>>) -> Unit) {
+        function.runInFunction { action(contextAdapters) }
+    }
     private val binding = receiverAdapter?.let(StorageAccess::ensure)
     private var publishedResult: Var<*>? = null
 

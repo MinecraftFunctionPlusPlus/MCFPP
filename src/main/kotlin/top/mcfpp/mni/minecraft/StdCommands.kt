@@ -6,6 +6,73 @@ import top.mcfpp.mni.NativeCallContext
 
 /** Builds Minecraft commands for MCFPP standard-library functions. */
 object StdCommands {
+    @JvmStatic @MNIFunction(identifier = "damageResult", normalParams = ["entity", "float"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun damageResultDefault(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.genericDamage(context)
+    @JvmStatic @MNIFunction(identifier = "damageAtResult", normalParams = ["entity", "float", "pos3"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun damageAtResultDefault(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.genericDamage(context, "at")
+    @JvmStatic @MNIFunction(identifier = "damageByResult", normalParams = ["entity", "float", "entity"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun damageByResultDefault(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.genericDamage(context, "by")
+    @JvmStatic @MNIFunction(identifier = "damageFromResult", normalParams = ["entity", "float", "entity", "entity"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun damageFromResultDefault(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.genericDamage(context, "from")
+    @JvmStatic @MNIFunction(identifier = "cloneResult", normalParams = ["Area", "pos3"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun cloneResultDefault(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.cloneDefault(context)
+    @JvmStatic @MNIFunction(identifier = "enchantResult", normalParams = ["entity", "Enchant"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun enchantResultDefault(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.enchantResult(context)
+    /** 执行 damage 并返回结果；兼容已有省略返回值的入口。 */
+    @JvmStatic @MNIFunction(normalParams = ["entity", "float", "DamageType"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun damageResult(context: NativeCallContext) = NativeStdCommandOperations.damage(context)
+    /** 执行 damageBy 并返回结果；兼容已有省略返回值的入口。 */
+    @JvmStatic @MNIFunction(normalParams = ["entity", "float", "entity", "DamageType"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun damageByResult(context: NativeCallContext) = NativeStdCommandOperations.damageBy(context)
+    /** 执行 damageFrom 并返回结果；兼容已有省略返回值的入口。 */
+    @JvmStatic @MNIFunction(normalParams = ["entity", "float", "entity", "entity", "DamageType"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun damageFromResult(context: NativeCallContext) = NativeStdCommandOperations.damageFrom(context)
+    /** 执行 damageAt 并返回结果；兼容已有省略返回值的入口。 */
+    @JvmStatic @MNIFunction(normalParams = ["entity", "float", "pos3", "DamageType"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun damageAtResult(context: NativeCallContext) = NativeStdCommandOperations.damageAt(context)
+    /** 执行 killTargets 并返回结果；兼容已有省略返回值的入口。 */
+    @JvmStatic @MNIFunction(normalParams = ["entity"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun killResult(context: NativeCallContext) = NativeStdCommandOperations.killTargets(context)
+    /** 执行 cloneArea 并返回结果；兼容已有省略返回值的入口。 */
+    @JvmStatic @MNIFunction(normalParams = ["Area", "pos3", "CloneMaskMode", "CloneOperation"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun cloneResult(context: NativeCallContext) = NativeStdCommandOperations.cloneArea(context)
+    /** 执行 enchant 并返回结果；兼容已有省略返回值的入口。 */
+    @JvmStatic @MNIFunction(normalParams = ["entity", "Enchant", "int"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun enchantResult(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.enchantResult(context)
+    /** 执行 fillOutline，返回命令结果及成功状态。 */
+    @JvmStatic @MNIFunction(identifier = "fillOutline", normalParams = ["Area", "BlockState"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun fillOutline(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.fillOutline(context)
+    /** 执行 itemReplace，返回命令结果及成功状态。 */
+    @JvmStatic @MNIFunction(identifier = "itemReplace", normalParams = ["entity", "Slot", "Item"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun itemReplaceEntityDefault(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.itemReplaceEntity(context)
+    @JvmStatic @MNIFunction(identifier = "itemReplace", normalParams = ["pos3", "Slot", "Item"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun itemReplaceBlockDefault(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.itemReplaceBlock(context)
+    @JvmStatic @MNIFunction(identifier = "itemReplace", normalParams = ["entity", "Slot", "Item", "int"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun itemReplaceEntity(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.itemReplaceEntity(context)
+    /** 执行 itemReplace，返回命令结果及成功状态。 */
+    @JvmStatic @MNIFunction(identifier = "itemReplace", normalParams = ["pos3", "Slot", "Item", "int"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun itemReplaceBlock(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.itemReplaceBlock(context)
+    /** 执行 itemReplaceFrom，返回命令结果及成功状态。 */
+    @JvmStatic @MNIFunction(identifier = "itemReplaceFrom", normalParams = ["entity", "Slot", "entity", "Slot"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun itemReplaceEntityFromEntity(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.itemReplaceEntityFromEntity(context)
+    /** 执行 itemReplaceFrom，返回命令结果及成功状态。 */
+    @JvmStatic @MNIFunction(identifier = "itemReplaceFrom", normalParams = ["entity", "Slot", "pos3", "Slot"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun itemReplaceEntityFromBlock(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.itemReplaceEntityFromBlock(context)
+    /** 执行 itemReplaceFrom，返回命令结果及成功状态。 */
+    @JvmStatic @MNIFunction(identifier = "itemReplaceFrom", normalParams = ["pos3", "Slot", "entity", "Slot"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun itemReplaceBlockFromEntity(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.itemReplaceBlockFromEntity(context)
+    /** 执行 itemReplaceFrom，返回命令结果及成功状态。 */
+    @JvmStatic @MNIFunction(identifier = "itemReplaceFrom", normalParams = ["pos3", "Slot", "pos3", "Slot"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun itemReplaceBlockFromBlock(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.itemReplaceBlockFromBlock(context)
+    /** 执行 itemModify，返回命令结果及成功状态。 */
+    @JvmStatic @MNIFunction(identifier = "itemModify", normalParams = ["entity", "Slot", "ItemModifier"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun itemModifyEntity(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.itemModifyEntity(context)
+    /** 执行 itemModify，返回命令结果及成功状态。 */
+    @JvmStatic @MNIFunction(identifier = "itemModify", normalParams = ["pos3", "Slot", "ItemModifier"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun itemModifyBlock(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.itemModifyBlock(context)
+    /** 执行 titleTimes，返回命令结果及成功状态。 */
+    @JvmStatic @MNIFunction(identifier = "titleTimes", normalParams = ["entity", "int", "int", "int"], returnType = "mcfpp.minecraft.std:CommandResult")
+    fun titleTimes(context: NativeCallContext) = top.mcfpp.backend.StandardCommandOperations.titleTimes(context)
 
     /** Returns the MCFPP namespace imports used when registering these command implementations. */
     @Suppress("unused")
@@ -13,7 +80,6 @@ object StdCommands {
     fun importToMNI(): Array<String> {
         return arrayOf(
                 "mcfpp.minecraft:*",
-                "mcfpp.minecraft.entity:*",
                 "mcfpp.minecraft.item:*",
                 "mcfpp.minecraft.other:*",
                 "mcfpp.minecraft.predicates:*",
@@ -1186,6 +1252,14 @@ object StdCommands {
     fun summonWithNbt(context: NativeCallContext) {
         NativeStdCommandOperations.summonWithNbt(context)
     }
+
+    @MNIFunction(identifier = "summon", normalParams = ["EntityType", "ContextPosition"], returnType = "mcfpp.minecraft.std:CommandResult")
+    @JvmStatic
+    fun summonAtContext(context: NativeCallContext) = NativeStdCommandOperations.summon(context)
+
+    @MNIFunction(identifier = "summon", normalParams = ["EntityType", "ContextPosition", "nbt"], returnType = "mcfpp.minecraft.std:CommandResult")
+    @JvmStatic
+    fun summonAtContextWithNbt(context: NativeCallContext) = NativeStdCommandOperations.summonWithNbt(context)
     //endregion
 
     //region teammsg

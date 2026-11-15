@@ -18,7 +18,8 @@ data class CompoundDeclaration(
 
 enum class ConstructorIntrinsic(val wireValue: Int) { USER_BODY(0), TYPE_AS(1) }
 data class ConstructorDeclaration(
-    override val common: DeclCommon, val normal: List<DeclarationId>, val body: BodyId?, val intrinsic: ConstructorIntrinsic
+    override val common: DeclCommon, val normal: List<DeclarationId>, val body: BodyId?, val intrinsic: ConstructorIntrinsic,
+    val parentCall: NodeRef? = null
 ) : LibraryDeclaration { override val tag: Int get() = 4 }
 
 sealed interface LibraryAccessor {

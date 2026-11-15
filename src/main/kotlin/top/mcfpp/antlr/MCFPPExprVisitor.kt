@@ -77,6 +77,13 @@ class MCFPPExprVisitor(
         return try { visitExpression(ctx) } finally { expectedLiteral = previous; expectedFunction = previousFunction }
     }
 
+    fun visitValue(ctx: mcfppParser.ValueContext, expectedType: MCFPPType?): Var<*> {
+        val nbt = ctx.nbtValue()?.takeIf { it.nbtList() != null || it.nbtCompound() != null }
+        val previous = expectedLiteral
+        expectedLiteral = expectedType?.let { type -> nbt?.let { it.start.tokenIndex to type } }
+        return try { visitValue(ctx) } finally { expectedLiteral = previous }
+    }
+
     /**
      * 计算一个复杂表达式
      * @param ctx the parse tree
@@ -124,10 +131,19 @@ class MCFPPExprVisitor(
         } finally {
             Function.currFunction = caller
             caller.commands.addAll(temporary.commands)
+            caller.nativeResultSlots += temporary.nativeResultSlots
         }
     }
 
     private fun visitLambdaCall(ctx: mcfppParser.LambdaCallExpressionContext): Var<*> {
+        top.mcfpp.analysis.lambda.LambdaCollections.global(ctx.functionCall(), ctx.inlineLambda(), ctx.varWithSuffix())?.let {
+            currSelector = top.mcfpp.analysis.lambda.LambdaCollections.invoke(null, it, processVarCache)
+            for (selector in ctx.selector()) visitSelector(selector)
+            return currSelector!!
+        }
+        top.mcfpp.core.lang.context.ContextCallbacks.global(ctx.functionCall(), ctx.inlineLambda(), ctx.varWithSuffix())?.let {
+            return top.mcfpp.core.lang.context.ContextCallbackLowering.invoke(Void, it, processVarCache)
+        }
         if (ctx.functionCall() != null && ctx.selector().isEmpty()) {
             val binding = top.mcfpp.analysis.StructuredBindings.name(ctx.functionCall().namespaceID(), Function.currFunction)
             if (binding is top.mcfpp.analysis.StructuredNameBinding.Macros)
@@ -151,7 +167,7 @@ class MCFPPExprVisitor(
                 return currSelector!!
             }
             val context = before.lastOrNull()?.let {
-                top.mcfpp.core.lang.context.ContextCallbacks.selector(it, ctx.inlineLambda())
+                top.mcfpp.core.lang.context.ContextCallbacks.selector(it, ctx.inlineLambda(), currSelector!!.type)
             }
             if (context != null) {
                 if (ctx.selector().size != before.size) {
@@ -182,28 +198,27 @@ class MCFPPExprVisitor(
             call?.namespaceID() ?: ctx.varWithSuffix())
     }
 
-    private var visitCommonBinaryOperatorExpressionRe : Var<*>? = null
     /**
      * 计算其他运算符，例如 a | b
      * @param ctx the parse tree
      * @return 表达式的值
      */
     override fun visitCommonBinaryOperatorExpression(ctx: mcfppParser.CommonBinaryOperatorExpressionContext): Var<*> = withCompilationContext(ctx) {
-        visitCommonBinaryOperatorExpressionRe = visitConditionalOrExpression(ctx.conditionalOrExpression(0))
-        processVarCache.add(visitCommonBinaryOperatorExpressionRe!!)
+        var visitCommonBinaryOperatorExpressionRe = visitConditionalOrExpression(ctx.conditionalOrExpression(0))
+        processVarCache.add(visitCommonBinaryOperatorExpressionRe)
         for (i in 1..<ctx.conditionalOrExpression().size) {
-            visitCommonBinaryOperatorExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitCommonBinaryOperatorExpressionRe!!)
-            processVarCache[processVarCache.lastIndex] = visitCommonBinaryOperatorExpressionRe!!
+            visitCommonBinaryOperatorExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitCommonBinaryOperatorExpressionRe)
+            processVarCache[processVarCache.lastIndex] = visitCommonBinaryOperatorExpressionRe
             var b: Var<*>? = visitConditionalOrExpression(ctx.conditionalOrExpression(i))
             if(b is MCFloat && !FloatProviders.enabled) b = b.toTempEntity()
-            if(visitCommonBinaryOperatorExpressionRe!! !== MCFloat.ssObj){
-                visitCommonBinaryOperatorExpressionRe = visitCommonBinaryOperatorExpressionRe!!.getTempVar()
+            if(visitCommonBinaryOperatorExpressionRe !== MCFloat.ssObj){
+                visitCommonBinaryOperatorExpressionRe = visitCommonBinaryOperatorExpressionRe.getTempVar()
             }
-            visitCommonBinaryOperatorExpressionRe = top.mcfpp.analysis.StorageAccess.binary(visitCommonBinaryOperatorExpressionRe!!, b!!, ctx.op[i-1].text)
-            processVarCache[processVarCache.size - 1] = visitCommonBinaryOperatorExpressionRe!!
+            visitCommonBinaryOperatorExpressionRe = top.mcfpp.analysis.StorageAccess.binary(visitCommonBinaryOperatorExpressionRe, b!!, ctx.op[i-1].text)
+            processVarCache[processVarCache.size - 1] = visitCommonBinaryOperatorExpressionRe
         }
-        processVarCache.remove(visitCommonBinaryOperatorExpressionRe!!)
-        return visitCommonBinaryOperatorExpressionRe!!
+        processVarCache.remove(visitCommonBinaryOperatorExpressionRe)
+        return visitCommonBinaryOperatorExpressionRe
     }
 
     /**
@@ -269,6 +284,7 @@ class MCFPPExprVisitor(
         GlobalScope.localNamespaces.getOrPut(branch.namespace) { top.mcfpp.model.Namespace(branch.namespace) }
             .scope.addFunction(branch, false)
         branch.runInFunction {
+            (left as? top.mcfpp.core.lang.bool.PresenceBool)?.assume(evaluateWhen)
             val value = right()
             if (!value.isError && value.type.isSubOf(MCFPPBaseType.Bool)) StorageAccess.write(result, value)
             else if (!value.isError) LogProcessor.error("Logical operands must have boolean type")
@@ -288,7 +304,6 @@ class MCFPPExprVisitor(
         return StorageAccess.read(result)
     }
 
-    private var visitEqualityExpressionRe : Var<*>? = null
     /**
      * 计算一个等于或不等于表达式，例如a == b和a != b
      * @param ctx the parse tree
@@ -296,20 +311,33 @@ class MCFPPExprVisitor(
      */
     @Override
     override fun visitEqualityExpression(ctx: mcfppParser.EqualityExpressionContext): Var<*> = withCompilationContext(ctx)  {
-        visitEqualityExpressionRe = visitRelationalExpression(ctx.relationalExpression(0))
-        processVarCache.add(visitEqualityExpressionRe!!)
-        for (i in 1..<ctx.relationalExpression().size) {
-            visitEqualityExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitEqualityExpressionRe!!)
-            processVarCache[processVarCache.lastIndex] = visitEqualityExpressionRe!!
-            val b: Var<*> = visitRelationalExpression(ctx.relationalExpression(i))
-            visitEqualityExpressionRe = top.mcfpp.analysis.StorageAccess.binary(visitEqualityExpressionRe!!, b, ctx.op[i-1].text)
-            processVarCache[processVarCache.size - 1] = visitEqualityExpressionRe!!
+        if (ctx.relationalExpression().size == 2 && ctx.op.single().text in setOf("==", "!=")) {
+            val operands = ctx.relationalExpression()
+            val nullIndex = operands.indexOfFirst { it.text == "null" }
+            if (nullIndex >= 0) {
+                var node: org.antlr.v4.runtime.tree.ParseTree = operands[1 - nullIndex]
+                while (node !is mcfppParser.VarWithSelectorContext && node.childCount == 1) node = node.getChild(0)
+                if (node is mcfppParser.VarWithSelectorContext) {
+                    val address = visitAssignableVarWithSelector(node)
+                    if (address is PropertyVar) return@withCompilationContext StorageAccess.presence(address, ctx.op.single().text == "!=")
+                    return@withCompilationContext StorageAccess.binary(address,
+                        visitRelationalExpression(operands[nullIndex]), ctx.op.single().text)
+                }
+            }
         }
-        processVarCache.remove(visitEqualityExpressionRe!!)
-        return visitEqualityExpressionRe!!
+        var visitEqualityExpressionRe = visitRelationalExpression(ctx.relationalExpression(0))
+        processVarCache.add(visitEqualityExpressionRe)
+        for (i in 1..<ctx.relationalExpression().size) {
+            visitEqualityExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitEqualityExpressionRe)
+            processVarCache[processVarCache.lastIndex] = visitEqualityExpressionRe
+            val b: Var<*> = visitRelationalExpression(ctx.relationalExpression(i))
+            visitEqualityExpressionRe = top.mcfpp.analysis.StorageAccess.binary(visitEqualityExpressionRe, b, ctx.op[i-1].text)
+            processVarCache[processVarCache.size - 1] = visitEqualityExpressionRe
+        }
+        processVarCache.remove(visitEqualityExpressionRe)
+        return visitEqualityExpressionRe
     }
 
-    private var visitRelationalExpressionRe : Var<*>? = null
     /**
      * 计算一个比较表达式，例如a > b
      * @param ctx the parse tree
@@ -317,20 +345,19 @@ class MCFPPExprVisitor(
      */
     @Override
     override fun visitRelationalExpression(ctx: mcfppParser.RelationalExpressionContext): Var<*> = withCompilationContext(ctx) {
-        visitRelationalExpressionRe = visitAdditiveExpression(ctx.additiveExpression(0))
-        processVarCache.add(visitRelationalExpressionRe!!)
+        var visitRelationalExpressionRe = visitAdditiveExpression(ctx.additiveExpression(0))
+        processVarCache.add(visitRelationalExpressionRe)
         for (i in 1..<ctx.additiveExpression().size) {
-            visitRelationalExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitRelationalExpressionRe!!)
-            processVarCache[processVarCache.lastIndex] = visitRelationalExpressionRe!!
+            visitRelationalExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitRelationalExpressionRe)
+            processVarCache[processVarCache.lastIndex] = visitRelationalExpressionRe
             val b: Var<*> = visitAdditiveExpression(ctx.additiveExpression(i))
-            visitRelationalExpressionRe = top.mcfpp.analysis.StorageAccess.binary(visitRelationalExpressionRe!!, b, ctx.op[i-1].text)
-            processVarCache[processVarCache.size - 1] = visitRelationalExpressionRe!!
+            visitRelationalExpressionRe = top.mcfpp.analysis.StorageAccess.binary(visitRelationalExpressionRe, b, ctx.op[i-1].text)
+            processVarCache[processVarCache.size - 1] = visitRelationalExpressionRe
         }
-        processVarCache.remove(visitRelationalExpressionRe!!)
-        return visitRelationalExpressionRe!!
+        processVarCache.remove(visitRelationalExpressionRe)
+        return visitRelationalExpressionRe
     }
 
-    private var visitAdditiveExpressionRe : Var<*>? = null
     /**
      * 计算一个加减法表达式，例如a + b
      * @param ctx the parse tree
@@ -338,26 +365,25 @@ class MCFPPExprVisitor(
      */
     @Override
     override fun visitAdditiveExpression(ctx: mcfppParser.AdditiveExpressionContext): Var<*> = withCompilationContext(ctx) {
-        visitAdditiveExpressionRe = visitMultiplicativeExpression(ctx.multiplicativeExpression(0))
-        processVarCache.add(visitAdditiveExpressionRe!!)
+        var visitAdditiveExpressionRe = visitMultiplicativeExpression(ctx.multiplicativeExpression(0))
+        processVarCache.add(visitAdditiveExpressionRe)
         for (i in 1..<ctx.multiplicativeExpression().size) {
-            visitAdditiveExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitAdditiveExpressionRe!!)
-            processVarCache[processVarCache.lastIndex] = visitAdditiveExpressionRe!!
+            visitAdditiveExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitAdditiveExpressionRe)
+            processVarCache[processVarCache.lastIndex] = visitAdditiveExpressionRe
             var b: Var<*>? = visitMultiplicativeExpression(ctx.multiplicativeExpression(i))
             if(b is MCFloat && !FloatProviders.enabled) {
                 b = b.toTempEntity()
-                if(visitAdditiveExpressionRe!! !== MCFloat.ssObj){
-                    visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.getTempVar()
+                if(visitAdditiveExpressionRe !== MCFloat.ssObj){
+                    visitAdditiveExpressionRe = visitAdditiveExpressionRe.getTempVar()
                 }
             }
-            visitAdditiveExpressionRe = top.mcfpp.analysis.StorageAccess.binary(visitAdditiveExpressionRe!!, b!!, ctx.op[i-1].text)
-            processVarCache[processVarCache.size - 1] = visitAdditiveExpressionRe!!
+            visitAdditiveExpressionRe = top.mcfpp.analysis.StorageAccess.binary(visitAdditiveExpressionRe, b!!, ctx.op[i-1].text)
+            processVarCache[processVarCache.size - 1] = visitAdditiveExpressionRe
         }
-        processVarCache.remove(visitAdditiveExpressionRe!!)
-        return visitAdditiveExpressionRe!!
+        processVarCache.remove(visitAdditiveExpressionRe)
+        return visitAdditiveExpressionRe
     }
 
-    private var visitMultiplicativeExpressionRe : Var<*>? = null
     /**
      * 计算一个乘除法表达式，例如a * b
      * @param ctx the parse tree
@@ -366,21 +392,21 @@ class MCFPPExprVisitor(
     //乘法
     @Override
     override fun visitMultiplicativeExpression(ctx: mcfppParser.MultiplicativeExpressionContext): Var<*> = withCompilationContext(ctx) {
-        visitMultiplicativeExpressionRe = visitCastExpression(ctx.castExpression(0))
-        processVarCache.add(visitMultiplicativeExpressionRe!!)
+        var visitMultiplicativeExpressionRe = visitCastExpression(ctx.castExpression(0))
+        processVarCache.add(visitMultiplicativeExpressionRe)
         for (i in 1..<ctx.castExpression().size) {
-            visitMultiplicativeExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitMultiplicativeExpressionRe!!)
-            processVarCache[processVarCache.lastIndex] = visitMultiplicativeExpressionRe!!
+            visitMultiplicativeExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitMultiplicativeExpressionRe)
+            processVarCache[processVarCache.lastIndex] = visitMultiplicativeExpressionRe
             var b: Var<*>? = visitCastExpression(ctx.castExpression(i))
             if(b is MCFloat && !FloatProviders.enabled) b = b.toTempEntity()
             if((!FloatProviders.enabled || visitMultiplicativeExpressionRe !is MCFloat) && visitMultiplicativeExpressionRe !== MCFloat.ssObj){
-                visitMultiplicativeExpressionRe = visitMultiplicativeExpressionRe!!.getTempVar()
+                visitMultiplicativeExpressionRe = visitMultiplicativeExpressionRe.getTempVar()
             }
-            visitMultiplicativeExpressionRe = top.mcfpp.analysis.StorageAccess.binary(visitMultiplicativeExpressionRe!!, b!!, ctx.op[i-1].text)
-            processVarCache[processVarCache.size - 1] = visitMultiplicativeExpressionRe!!
+            visitMultiplicativeExpressionRe = top.mcfpp.analysis.StorageAccess.binary(visitMultiplicativeExpressionRe, b!!, ctx.op[i-1].text)
+            processVarCache[processVarCache.size - 1] = visitMultiplicativeExpressionRe
         }
-        processVarCache.remove(visitMultiplicativeExpressionRe!!)
-        return visitMultiplicativeExpressionRe!!
+        processVarCache.remove(visitMultiplicativeExpressionRe)
+        return visitMultiplicativeExpressionRe
     }
 
     /**
@@ -514,7 +540,7 @@ class MCFPPExprVisitor(
             currSelector = top.mcfpp.core.lang.ref.ReferenceReadCallbacks.invoke(selectedReference(currSelector!!), read, processVarCache)
             return@withCompilationContext currSelector!!
         }
-        top.mcfpp.core.lang.context.ContextCallbacks.selector(ctx)?.let { context ->
+        top.mcfpp.core.lang.context.ContextCallbacks.selector(ctx, receiver = currSelector!!.type)?.let { context ->
             currSelector = top.mcfpp.core.lang.context.ContextCallbackLowering.invoke(currSelector!!, context, processVarCache)
             return@withCompilationContext currSelector!!
         }
@@ -526,8 +552,16 @@ class MCFPPExprVisitor(
         val variable = ctx.`var`()
         if (variable == null) {
             val keyword = ctx.memberKeyword()?.text ?: ctx.text
-            if (keyword == "set") {
+            if (keyword == "text" && ctx.arguments() == null) {
+                currSelector = Var.checkMember(currSelector!!.getMemberVar(keyword, Function.currFunction), keyword)
+                return@withCompilationContext currSelector!!
+            }
+            if (keyword == "set" && currSelector!!.type is top.mcfpp.type.MCFPPReferenceType) {
                 currSelector = invokeReferenceSet(currSelector!!, ctx)
+                return@withCompilationContext currSelector!!
+            }
+            KeywordMemberCalls.call(ctx)?.let { call ->
+                currSelector = visitFunctionCall(call)
                 return@withCompilationContext currSelector!!
             }
             LogProcessor.error("Member function '$keyword' requires a function-value call binding, which is not executable yet")
@@ -644,6 +678,19 @@ class MCFPPExprVisitor(
     }
 
     override fun visitFunctionCall(ctx: mcfppParser.FunctionCallContext): Var<*> = withCompilationContext(ctx) {
+        val contextReceiver = currSelector
+        if (contextReceiver == null) top.mcfpp.analysis.lambda.LambdaCollections.global(ctx)?.let {
+            return@withCompilationContext top.mcfpp.analysis.lambda.LambdaCollections.invoke(null, it, processVarCache)
+        }
+        if (contextReceiver == null) top.mcfpp.core.lang.context.ContextCallbacks.global(ctx)?.let {
+            return@withCompilationContext top.mcfpp.core.lang.context.ContextCallbackLowering.invoke(Void, it, processVarCache)
+        }
+        if (contextReceiver != null && top.mcfpp.core.lang.context.ContextPositions.recognizes(contextReceiver.type, ctx.namespaceID().text)) {
+            try { return@withCompilationContext top.mcfpp.core.lang.context.ContextPositions.invoke(contextReceiver, ctx, processVarCache) }
+            catch (failure: top.mcfpp.core.lang.context.ContextAccessException) {
+                LogProcessor.error(failure.message.orEmpty()); return@withCompilationContext UnknownVar("context_position").apply { isError = true }
+            }
+        }
         val boundName = if (currSelector == null && superSelector == null)
             top.mcfpp.analysis.StructuredBindings.name(ctx.namespaceID(), Function.currFunction) else null
         if (boundName is top.mcfpp.analysis.StructuredNameBinding.Macros)
@@ -674,6 +721,9 @@ class MCFPPExprVisitor(
         if (currSelector == null && superSelector == null && boundCandidates == null) {
             val macro = MacroCallPipeline.visitFunctionCall(ctx, Function.currFunction)
             if (macro != null) return@withCompilationContext macro
+            if (ctx.arguments().normalArgs().callArgumentList() != null)
+                return@withCompilationContext top.mcfpp.analysis.lambda.LambdaLowering.call(
+                    ctx.namespaceID().text, ctx.arguments(), null, processVarCache)
             if (top.mcfpp.analysis.lambda.LambdaLowering.hasCallbackTarget(ctx.namespaceID().text))
                 return@withCompilationContext top.mcfpp.analysis.lambda.LambdaLowering.call(
                     ctx.namespaceID().text, ctx.arguments(), null, processVarCache)
@@ -685,6 +735,7 @@ class MCFPPExprVisitor(
         //参数获取
         val normalArgs: ArrayList<Var<*>> = ArrayList()
         val readOnlyArgs: ArrayList<Var<*>> = ArrayList()
+        val explicitContexts = linkedMapOf<String, Var<*>>()
         val exprVisitor = MCFPPExprVisitor()
         val concreteExprVisitor = MCFPPReadonlyExprVisitor()
         for (expr in ctx.arguments().readOnlyArgs()?.expressionList()?.expression()?: emptyList()) {
@@ -699,8 +750,66 @@ class MCFPPExprVisitor(
             }
             readOnlyArgs.add(arg)
         }
-        for (expr in ctx.arguments().normalArgs().expressionList()?.expression()?: emptyList()) {
-            val arg = exprVisitor.visit(expr)!!
+        val mixedArguments = ctx.arguments().normalArgs().callArgumentList()?.callArgument()
+        val orderedExpressions = mixedArguments?.map { (if (it.ASSIGNMENT() != null) it.Identifier().text else null) to it.expression() }
+            ?: ctx.arguments().normalArgs().expressionList()?.expression().orEmpty().map { null to it }
+        val p = ctx.namespaceID().text.splitNamespaceID()
+        val declaration = ((boundName as? top.mcfpp.analysis.StructuredNameBinding.Type)?.type as? top.mcfpp.type.MCFPPDataTemplateType)?.template
+            ?: if (currSelector == null && superSelector == null && boundCandidates == null) GlobalScope.getTemplate(p.first, p.second) else null
+            ?: (((currSelector as? StaticMemberView)?.declaration as? top.mcfpp.type.MCFPPDataTemplateType)?.template
+                ?.let { top.mcfpp.analysis.NestedTemplates.child(it, p.second) })
+        val earlyFunctions: List<Function> = when {
+            declaration != null && currSelector != null -> declaration.constructors
+            currSelector?.isError == true -> emptyList()
+            superSelector != null -> superSelector!!.scope.getFunctionCandidates(p.second, Function.currFunction)
+            currSelector == null -> (boundCandidates ?: GlobalScope.getFunctionCandidates(p.first, p.second, top.mcfpp.io.MCFPPFile.currFile?.field)).ifEmpty {
+                if (declaration != null) {
+                    try {
+                        val specialized = if (declaration is GenericDataTemplate) declaration.compile(readOnlyArgs) else if (readOnlyArgs.isEmpty()) declaration else null
+                        specialized?.constructors.orEmpty()
+                    } catch (_: Throwable) { emptyList() }
+                } else emptyList()
+            }
+            memberCandidates != null -> memberCandidates
+            currSelector is DataTemplateObject -> (currSelector as DataTemplateObject).templateType.scope.getFunctionCandidates(p.second, Function.currFunction).filterNot { it.isEntityMember }
+            currSelector is StaticMemberView -> ((currSelector as StaticMemberView).declaration as? MCFPPType)?.objectData?.scope?.getFunctionCandidates(p.second).orEmpty()
+            else -> currSelector!!.type.instanceData.scope.getFunctionCandidates(p.second)
+        }
+        val readonlyBounds = readOnlyArgs.map {
+            top.mcfpp.analysis.DeclarationBinding.Bound(ParameterMatcher.argumentType(it), StorageAccess.snapshot(it), descriptors = StorageAccess.boundTypes(it))
+        }
+        val receiverTypeMap = (currSelector?.type as? top.mcfpp.type.MCFPPTypeWithGeneric)?.generic?.firstOrNull()?.let { mapOf("E" to it) }.orEmpty()
+        val positionalCount = orderedExpressions.count { it.first == null }
+        val candidateSignatures: List<List<MCFPPType>> = earlyFunctions.mapNotNull { candidate ->
+            val readonlyParams = (candidate as? Generic<*>)?.readOnlyParams ?: (candidate as? NativeFunction)?.readOnlyParams.orEmpty()
+            val sig = top.mcfpp.model.function.SpecializationPolicy.resolveDeclaredSignature(candidate, readonlyParams, readonlyBounds, receiverTypeMap) ?: return@mapNotNull null
+            if (positionalCount > sig.normalTypes.size || candidate.normalParams.drop(positionalCount).any { !it.hasDefault }) null else sig.normalTypes
+        }
+        val contextTargetByName = earlyFunctions.flatMap { it.contextParams }.groupBy { it.identifier }.mapValues { (_, list) ->
+            list.map { it.type }.distinctBy { it.typeId }.singleOrNull()
+        }
+        for ((contextName, expr) in orderedExpressions) {
+            if (contextName != null && contextName in explicitContexts) {
+                LogProcessor.error("Duplicate context argument '$contextName'")
+                top.mcfpp.analysis.StorageAccess.restore(spills)
+                return UnknownVar(contextName).apply { isError = true }
+            }
+            val expectedArgType = if (contextName != null) contextTargetByName[contextName] else {
+                val argIndex = normalArgs.size
+                val targets = candidateSignatures.filter { sig ->
+                    normalArgs.indices.all { i -> ParameterMatcher.accepts(normalArgs[i], sig[i]) }
+                }.mapNotNull { it.getOrNull(argIndex) }.distinctBy { it.typeId }
+                top.mcfpp.analysis.TemplateLiteralSupport.selectExpectedLiteralType(expr, targets) { candidate ->
+                    val nbt = top.mcfpp.analysis.TemplateLiteralSupport.unwrapNbtLiteral(expr) ?: return@selectExpectedLiteralType false
+                    try { top.mcfpp.analysis.DeclarationBinding(Function.currFunction, emptyMap()).nbtLiteral(nbt, candidate); true }
+                    catch (_: top.mcfpp.analysis.DeclarationBinding.Failure) { false }
+                }
+            }
+            val arg = exprVisitor.visitExpression(expr, expectedArgType)
+            if (arg.isError) {
+                top.mcfpp.analysis.StorageAccess.restore(spills)
+                return arg
+            }
             TypeUsage.ordinaryDiagnostic(arg.type, top.mcfpp.analysis.StorageAccess.snapshot(arg))?.let {
                 LogProcessor.error(it)
                 top.mcfpp.analysis.StorageAccess.restore(spills)
@@ -708,6 +817,7 @@ class MCFPPExprVisitor(
             }
             if(arg is UnknownVar){
                 LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(arg.identifier))
+                top.mcfpp.analysis.StorageAccess.restore(spills)
                 return UnknownVar("error_" + ctx.text)
             }
             val captured = top.mcfpp.analysis.StorageAccess.capture(arg)
@@ -715,12 +825,11 @@ class MCFPPExprVisitor(
                 top.mcfpp.analysis.StorageAccess.restore(spills)
                 return captured
             }
-            normalArgs.add(captured)
+            if (contextName == null) normalArgs.add(captured) else explicitContexts[contextName] = captured
             exprVisitor.processVarCache.add(captured)
         }
         //Try to get function
-        val p = ctx.namespaceID().text.splitNamespaceID()
-        val func = if (superSelector != null) {
+        val func = if (declaration != null && currSelector != null) UnknownFunction(p.second) else if (superSelector != null) {
             try {
                 Function.currFunction.selectSuper(superSelector!!, p.second, readOnlyArgs.map {
                     top.mcfpp.analysis.DeclarationBinding.Bound(ParameterMatcher.argumentType(it),
@@ -752,7 +861,7 @@ class MCFPPExprVisitor(
                 StorageAccess.restore(spills)
                 return it
             }
-            val returnVar = if(func is Generic<*>){
+            val returnVar = top.mcfpp.core.lang.context.ContextParameters.withExplicit(explicitContexts) { if(func is Generic<*>){
                 if(readOnlyArgs.any { it is UnknownVar } || normalArgs.any { it is UnknownVar }){
                     UnknownVar("re")
                 }else{
@@ -770,7 +879,7 @@ class MCFPPExprVisitor(
                 }else {
                     func.invoke(normalArgs, currSelector)
                 }
-            }
+            } }
             //函数树
             Function.currFunction.child.add(func)
             func.parent.add(Function.currFunction)
@@ -779,8 +888,6 @@ class MCFPPExprVisitor(
                 else top.mcfpp.analysis.StorageAccess.capture(returnVar)
         }
         //可能是模板的构造函数
-        val declaration = ((boundName as? top.mcfpp.analysis.StructuredNameBinding.Type)?.type as? top.mcfpp.type.MCFPPDataTemplateType)?.template
-            ?: if (boundCandidates != null) null else GlobalScope.getTemplate(p.first, p.second)
         if(declaration != null) {
             fun failedTemplate(message: String? = null): UnknownVar {
                 if (message != null) LogProcessor.error(message)
@@ -878,13 +985,19 @@ class MCFPPExprVisitor(
                 UnknownVar(qwq)
             }else{
                 if (ctx === assignmentTarget) re.first!!
+                else if (re.first is PropertyVar && (re.first as PropertyVar).property.accessor !is top.mcfpp.model.property.SimpleAccessor)
+                    (re.first as PropertyVar).get()
                 else top.mcfpp.core.lang.entity.EntityDataAddress.selected(re.first!!) ?: top.mcfpp.analysis.StorageAccess.read(re.first!!)
             }
         }
         if(re is UnknownVar && currSelector == null){
             //从类型获取
             val typeStr = ctx.Identifier().text
-            val type = MCFPPType.parseExpressionType(typeStr, Function.currFunction.scope, Function.currFunction)
+            val chain = generateSequence(ctx.parent as org.antlr.v4.runtime.tree.ParseTree?) { it.parent }
+                .filterIsInstance<mcfppParser.VarWithSelectorContext>().firstOrNull()
+            val owner = if (chain?.start?.tokenIndex == ctx.start.tokenIndex && chain.selector().isNotEmpty())
+                GlobalScope.getTemplate(null, typeStr) else null
+            val type = owner?.getType() ?: MCFPPType.parseExpressionType(typeStr, Function.currFunction.scope, Function.currFunction)
             if(type != null){
                 re = StaticMemberView(type)
             }
@@ -1048,24 +1161,41 @@ class MCFPPExprVisitor(
         if (ctx.nbtCompound() == null && ctx.nbtList() == null) {
             return closedLiteral(top.mcfpp.analysis.DeclarationBinding(Function.currFunction, emptyMap()).nbtLiteral(ctx))
         }
+        val rawExpected = expectedLiteral?.takeIf { it.first == ctx.start.tokenIndex }?.second
         if(ctx.nbtCompound() != null){
+            val compoundExpected = when (rawExpected) {
+                is top.mcfpp.type.MCFPPUnionType -> top.mcfpp.analysis.TemplateLiteralSupport.resolveCompoundUnionTarget(rawExpected) { candidate ->
+                    try { top.mcfpp.analysis.DeclarationBinding(Function.currFunction, emptyMap()).nbtLiteral(ctx, candidate); true }
+                    catch (_: top.mcfpp.analysis.DeclarationBinding.Failure) { false }
+                } ?: rawExpected
+                else -> rawExpected
+            }
+            if (compoundExpected != null && top.mcfpp.analysis.TemplateLiteralSupport.isTemplateLiteralType(compoundExpected)) {
+                return visitTemplateCompound(ctx, compoundExpected as top.mcfpp.type.MCFPPDataTemplateType)
+            }
+            val expectedDict = compoundExpected as? top.mcfpp.type.MCFPPDictType
+            val expectedValueType = expectedDict?.generic?.single()
             val fields = linkedMapOf<String, Var<*>>()
             for (kv in ctx.nbtCompound().nbtKeyValuePair()){
                 val sourceKey = kv.key.text
                 val key = if (sourceKey.startsWith("\"") || sourceKey.startsWith("'"))
                     (Tag.toNBT(sourceKey) as StringTag).value else sourceKey
-                val value = top.mcfpp.analysis.StorageAccess.capture(visit(kv.expression())).also { processVarCache.add(it) }
+                val value = top.mcfpp.analysis.StorageAccess.capture(
+                    MCFPPExprVisitor(enumType = expectedValueType as? MCFPPEnumType, processVarCache = processVarCache)
+                        .visitExpression(kv.expression(), expectedValueType)
+                ).also { processVarCache.add(it) }
                 if (value.isError) return value
                 fields[key] = value
             }
             val types = fields.values.map { it.type }.distinctBy { it.typeId }
+            if (compoundExpected == top.mcfpp.type.MCFPPNBTType.NBT)
+                return top.mcfpp.analysis.StorageAccess.dictionaryLiteral(top.mcfpp.type.MCFPPNBTType.NBT, fields)
             val element = when (types.size) {
                 0 -> MCFPPBaseType.Any
                 1 -> types.single()
                 else -> top.mcfpp.type.MCFPPUnionType(*types.toTypedArray())
             }
-            val expected = expectedLiteral?.takeIf { it.first == ctx.start.tokenIndex }?.second as? top.mcfpp.type.MCFPPDictType
-            val contextual = expected?.takeIf { target -> fields.values.all {
+            val contextual = expectedDict?.takeIf { target -> fields.values.all {
                 top.mcfpp.model.function.ParameterMatcher.accepts(it, target.generic.single())
             } }
             val typedFields = if (contextual == null) fields else fields.mapValues { (_, value) ->
@@ -1073,24 +1203,241 @@ class MCFPPExprVisitor(
             }
             return top.mcfpp.analysis.StorageAccess.dictionaryLiteral(contextual ?: top.mcfpp.type.MCFPPDictType(element), typedFields)
         }else if(ctx.nbtList() != null){
+            val listExpected = when (rawExpected) {
+                is top.mcfpp.type.MCFPPUnionType -> top.mcfpp.analysis.TemplateLiteralSupport.resolveListUnionTarget(rawExpected) ?: rawExpected
+                else -> rawExpected
+            }
+            val expectedList = listExpected?.takeIf { it is MCFPPListType || it is top.mcfpp.type.MCFPPImmutableListType }
+            val expectedElementType = (expectedList as? top.mcfpp.type.MCFPPTypeWithGeneric)?.generic?.single()
             val valueList = ArrayList<Var<*>>()
             for (expr in ctx.nbtList().expression()){
-                val value = top.mcfpp.analysis.StorageAccess.capture(visit(expr)).also { processVarCache.add(it) }
+                val value = top.mcfpp.analysis.StorageAccess.capture(
+                    MCFPPExprVisitor(enumType = expectedElementType as? MCFPPEnumType, processVarCache = processVarCache)
+                        .visitExpression(expr, expectedElementType)
+                ).also { processVarCache.add(it) }
                 if (value.isError) return value
                 valueList.add(value)
             }
-            val re = if(valueList.isEmpty()){
-                val expected = expectedLiteral?.takeIf { it.first == ctx.start.tokenIndex }?.second as? MCFPPListType
-                expected ?: MCFPPListType(top.mcfpp.type.MCFPPPrivateType.Wildcard)
-            }else{
-                val types = valueList.map { it.type }.distinctBy { it.typeId }
-                val elementType = if (types.size == 1) types.single() else top.mcfpp.type.MCFPPUnionType(*types.toTypedArray())
-                MCFPPListType(elementType)
+            val contextual = expectedList?.takeIf { expectedElementType != null && valueList.all {
+                ParameterMatcher.accepts(it, expectedElementType)
+            } }
+            val typedList = if (contextual == null || expectedElementType == null) valueList else valueList.map {
+                val cast = it.implicitCast(expectedElementType)
+                if (cast.isError) it else top.mcfpp.analysis.StorageAccess.capture(cast)
             }
-            return top.mcfpp.analysis.StorageAccess.listLiteral(re, valueList)
+            val re = if(typedList.isEmpty()){
+                expectedList ?: MCFPPListType(top.mcfpp.type.MCFPPPrivateType.Wildcard)
+            }else{
+                val types = typedList.map { it.type }.distinctBy { it.typeId }
+                val elementType = if (types.size == 1) types.single() else top.mcfpp.type.MCFPPUnionType(*types.toTypedArray())
+                contextual ?: MCFPPListType(elementType)
+            }
+            return top.mcfpp.analysis.StorageAccess.listLiteral(re, typedList)
         }else {
             LogProcessor.error("Invalid NBT value")
             throw IllegalArgumentException("nbt:" + ctx.text)
         }
+    }
+
+    private fun visitTemplateCompound(ctx: mcfppParser.NbtValueContext, expected: top.mcfpp.type.MCFPPDataTemplateType): Var<*> {
+        expected.tryResolve()
+        val template = expected.template
+        top.mcfpp.analysis.TemplateLiteralSupport.canInstantiateTemplateLiteral(template, Function.currFunction)?.let {
+            LogProcessor.error(it)
+            return UnknownVar("error_" + ctx.text).apply { isError = true }
+        }
+        val instanceFields = expected.instanceFields
+        val fieldsByName = instanceFields.associateBy { it.identifier }
+        val supplied = linkedMapOf<String, Var<*>>()
+        var hasError = false
+        for (kv in ctx.nbtCompound().nbtKeyValuePair()) {
+            val key = top.mcfpp.analysis.TemplateLiteralSupport.unquoteKey(kv.key.text)
+            if (key in supplied) {
+                LogProcessor.error("Duplicate field '$key' in template literal '${template.namespaceID}'")
+                hasError = true
+                continue
+            }
+            val declared = fieldsByName[key]
+            if (declared == null) {
+                if (template.scope.getVar(key) != null) {
+                    LogProcessor.error("Field '$key' of '${template.namespaceID}' is not an instance field")
+                } else {
+                    LogProcessor.error("Unknown field '$key' for template '${template.namespaceID}'")
+                }
+                hasError = true
+                continue
+            }
+            val fieldOwner = declared.declaredParentTemplate ?: template
+            if (declared.isConst) {
+                LogProcessor.error("Cannot initialize fixed constant field '$key' of '${template.namespaceID}'")
+                hasError = true
+                continue
+            }
+            val access = template.scope.getProperty(key)?.accessModifier ?: declared.accessModifier
+            if (Function.currFunction.accessTo(fieldOwner) < access) {
+                LogProcessor.error("Cannot access field '$key' of '${template.namespaceID}'")
+                hasError = true
+                continue
+            }
+            val evaluated = MCFPPExprVisitor(enumType = declared.type as? MCFPPEnumType, processVarCache = processVarCache)
+                .visitExpression(kv.expression(), declared.type)
+            if (evaluated.isError) {
+                hasError = true
+                continue
+            }
+            if (evaluated is UnknownVar) {
+                LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(evaluated.identifier))
+                hasError = true
+                continue
+            }
+            TypeUsage.ordinaryDiagnostic(evaluated.type, top.mcfpp.analysis.StorageAccess.snapshot(evaluated))?.let {
+                LogProcessor.error(it)
+                hasError = true
+                continue
+            }
+            if (evaluated is Null) {
+                if (!declared.nullable) {
+                    LogProcessor.error("Cannot assign null to non-nullable field '$key' of '${template.namespaceID}'")
+                    hasError = true
+                    continue
+                }
+                supplied[key] = Null
+                continue
+            }
+            if (!ParameterMatcher.accepts(evaluated, declared.type)) {
+                LogProcessor.error("Field '$key' of '${template.namespaceID}' expects '${declared.type.typeName}', found '${evaluated.type.typeName}'")
+                hasError = true
+                continue
+            }
+            val converted = evaluated.implicitCast(declared.type).let { if (it.isError) evaluated else it }
+            val captured = top.mcfpp.analysis.StorageAccess.capture(converted).also { processVarCache.add(it) }
+            if (captured.isError) {
+                hasError = true
+                continue
+            }
+            supplied[key] = captured
+        }
+        val missingDefaults = linkedMapOf<String, Pair<DataTemplate, mcfppParser.ExpressionContext>>()
+        for (field in instanceFields) {
+            if (field.isConst) {
+                val value = top.mcfpp.analysis.ConstantBinding.restore(field)
+                if (value == null) hasError = true else supplied[field.identifier] = value
+                continue
+            }
+            if (field.identifier in supplied) continue
+            val init = top.mcfpp.analysis.TemplateLiteralSupport.resolveFieldInitializer(template, field)
+            if (init != null) {
+                missingDefaults[field.identifier] = init
+            } else if (!field.nullable) {
+                LogProcessor.error("Missing required field '${field.identifier}' for template '${template.namespaceID}'")
+                hasError = true
+            }
+        }
+        if (hasError) return UnknownVar("error_" + ctx.text).apply { isError = true }
+
+        val allSuppliedConstant = supplied.values.all { it is Null || top.mcfpp.analysis.StorageAccess.snapshot(it) != null }
+        if (allSuppliedConstant) {
+            val known = linkedMapOf<String, top.mcfpp.analysis.DeclarationBinding.Bound>()
+            val recordFields = linkedMapOf<String, CompilerValue>()
+            val collectedTypes = linkedMapOf<top.mcfpp.type.TypeId, MCFPPType>(expected.typeId to expected)
+            var allConstant = true
+            for ((key, suppliedVar) in supplied) {
+                if (suppliedVar is Null) {
+                    known[key] = top.mcfpp.analysis.DeclarationBinding.Bound(
+                        top.mcfpp.type.MCFPPPrivateType.Null,
+                        CompilerValue.Typed(top.mcfpp.type.MCFPPPrivateType.Null.typeId, CompilerValue.NullValue)
+                    )
+                } else {
+                    val snap = top.mcfpp.analysis.StorageAccess.snapshot(suppliedVar)!!
+                    val types = top.mcfpp.analysis.StorageAccess.boundTypes(suppliedVar)
+                    collectedTypes.putAll(types)
+                    collectedTypes[suppliedVar.type.typeId] = suppliedVar.type
+                    recordFields[key] = snap
+                    known[key] = top.mcfpp.analysis.DeclarationBinding.Bound(suppliedVar.type, snap, descriptors = types)
+                }
+            }
+            for (field in top.mcfpp.analysis.TemplateLiteralSupport.inheritanceOrderedFields(template, instanceFields)) {
+                val key = field.identifier
+                if (key in supplied) continue
+                val defaultPair = missingDefaults[key] ?: continue
+                val (owner, expr) = defaultPair
+                val evalDefault: () -> top.mcfpp.analysis.DeclarationBinding.Bound? = eval@{
+                    val dummy = Function("template-literal", owner, null).apply {
+                        declarationFile = owner.declarationFile
+                        declarationEnvironment = owner.declarationEnvironment
+                    }
+                    val thisSnap = if (allConstant) CompilerValue.Typed(expected.typeId, CompilerValue.Record(recordFields)) else null
+                    val envValues = known + mapOf("this" to top.mcfpp.analysis.DeclarationBinding.Bound(expected, thisSnap, descriptors = collectedTypes))
+                    val binder = top.mcfpp.analysis.DeclarationBinding(dummy, owner.scope.allVars.associate { it.identifier to it.type }, envValues)
+                    try {
+                        val raw = binder.expression(expr, field.type)
+                        if (raw.type == top.mcfpp.type.MCFPPPrivateType.Null) raw else binder.constrain(raw, field.type)
+                    } catch (_: top.mcfpp.analysis.DeclarationBinding.Failure) {
+                        null
+                    }
+                }
+                val file = owner.restoreDeclarationEnvironment()
+                val bound = if (file == null) evalDefault() else file.withDeclarationContext(evalDefault)
+                if (bound == null) { allConstant = false; break }
+                known[key] = bound
+                collectedTypes.putAll(bound.descriptors)
+                collectedTypes[bound.type.typeId] = bound.type
+                if (bound.type != top.mcfpp.type.MCFPPPrivateType.Null) {
+                    val snap = bound.constant
+                    if (snap == null) { allConstant = false; break }
+                    recordFields[key] = snap
+                }
+            }
+            if (allConstant) {
+                return top.mcfpp.analysis.StorageAccess.literal(expected, CompilerValue.Record(recordFields), types = collectedTypes)
+            }
+        }
+
+        val receiver = expected.buildUnConcrete(TempPool.getVarIdentify()) as? DataTemplateObject
+            ?: return UnknownVar("error_" + ctx.text).apply { isError = true }
+        top.mcfpp.analysis.StorageAccess.initializeTemplateReceiver(receiver)
+        for ((key, value) in supplied) {
+            val field = fieldsByName.getValue(key)
+            val ownerForSlot = field.declaredParentTemplate ?: template
+            val assigned = receiver.initializeDeclaredField(ownerForSlot, key, value)
+            if (assigned == null || assigned.isError) {
+                receiver.isError = true
+                return receiver
+            }
+        }
+        for (field in top.mcfpp.analysis.TemplateLiteralSupport.inheritanceOrderedFields(template, instanceFields)) {
+            val key = field.identifier
+            if (key in supplied) continue
+            val value = run {
+                val defaultPair = missingDefaults[key] ?: return@run null
+                val (owner, expr) = defaultPair
+                val callerScope = Function.currFunction.scope
+                val hadThis = callerScope.vars.containsKey("this")
+                val previousThis = callerScope.vars["this"]
+                callerScope.vars["this"] = receiver.clone()
+                try {
+                    Function.currFunction.withFieldInitializerOwner(owner) {
+                        val errors = Project.errorCount
+                        val v = MCFPPExprVisitor(enumType = field.type as? MCFPPEnumType, processVarCache = processVarCache)
+                            .visitExpression(expr, field.type)
+                        if (v.isError || v is UnknownVar || Project.errorCount != errors) {
+                            hasError = true
+                            null
+                        } else v
+                    }
+                } finally {
+                    if (hadThis && previousThis != null) callerScope.vars["this"] = previousThis
+                    else callerScope.vars.remove("this")
+                }
+            } ?: continue
+            val ownerForSlot = field.declaredParentTemplate ?: template
+            val assigned = receiver.initializeDeclaredField(ownerForSlot, key, value)
+            if (assigned == null || assigned.isError) {
+                receiver.isError = true
+                return receiver
+            }
+        }
+        if (hasError) receiver.isError = true
+        return receiver
     }
 }

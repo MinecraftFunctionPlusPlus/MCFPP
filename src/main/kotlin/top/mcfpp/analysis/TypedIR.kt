@@ -6,7 +6,9 @@ import top.mcfpp.type.TypeId
 data class TypedIR(val entry: Int, val blocks: List<BasicBlock>, val runtimeValues: Set<Int> = emptySet(),
                    val parameters: List<SymbolId> = emptyList(), val externalRoots: Set<SymbolId> = emptySet(),
                    val declarations: Map<SymbolId, Symbol> = emptyMap(),
-                   val boundTypes: Map<TypeId, top.mcfpp.type.MCFPPType> = emptyMap())
+                   val boundTypes: Map<TypeId, top.mcfpp.type.MCFPPType> = emptyMap(),
+                   /** Binary results evaluated inside their consumer's native float provider. */
+                   val fusedFloatResults: Set<Int> = emptySet())
 data class BasicBlock(val id: Int, val instructions: List<Instruction>, val terminator: Terminator)
 
 sealed interface Instruction {
@@ -64,7 +66,8 @@ sealed interface Effect {
 /** Conservative forward fixed point, including backedges and unreachable predecessor filtering. */
 object FlowAnalysis {
     fun allowsWrite(symbol: Symbol, place: Place, before: FlowFacts, contents: Boolean = false): Boolean =
-        !symbol.readonly && (contents || symbol.mutable || before.read(place)?.state == ValueState.UNINITIALIZED)
+        !symbol.readonly && (symbol.mutable || symbol.isLiteral ||
+            !contents && place.path.isEmpty() && before.read(place)?.state == ValueState.UNINITIALIZED)
 
     fun canWrite(symbol: Symbol, place: Place, before: FlowFacts, contents: Boolean = false): Boolean {
         if (!allowsWrite(symbol, place, before, contents)) {

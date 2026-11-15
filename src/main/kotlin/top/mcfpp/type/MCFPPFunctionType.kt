@@ -23,14 +23,16 @@ import java.util.Collections
 class MCFPPFunctionType(
     parameters: List<MCFPPType>,
     val result: MCFPPType,
-    val executionCategory: ExecutionCategory = ExecutionCategory.NORMAL
+    val executionCategory: ExecutionCategory = ExecutionCategory.NORMAL,
+    contexts: List<MCFPPType> = emptyList()
 ) : MCFPPType(), MCFPPTypeWithGeneric {
 
     /** Parameter types in declaration order. The list is a defensive, read-only copy. */
     val parameters: List<MCFPPType> = Collections.unmodifiableList(ArrayList(parameters))
+    val contexts: List<MCFPPType> = Collections.unmodifiableList(ArrayList(contexts))
 
     override val typeId: TypeId
-        get() = TypeId.function(parameters.map { it.typeId }, result.typeId, executionCategory.identityName)
+        get() = TypeId.function(parameters.map { it.typeId }, result.typeId, executionCategory.identityName, contexts.map { it.typeId })
 
     /** Function payloads use the existing NBT-backed value storage. */
     override val isValueType: Boolean get() = true
@@ -38,11 +40,12 @@ class MCFPPFunctionType(
     override val hasRuntimeRepresentation: Boolean get() = true
 
     /** Parameters followed by the result, for type traversal and generic substitution. */
-    override val generic: List<MCFPPType> get() = parameters + result
+    override val generic: List<MCFPPType> get() = contexts + parameters + result
 
     override val typeName: String
         get() = buildString {
             append(executionCategory.displayPrefix)
+            if (contexts.isNotEmpty()) append("context(${contexts.joinToString(", ") { it.typeName }}) ")
             append("(")
             append(parameters.joinToString(", ") { it.typeName })
             append(") -> ")
@@ -55,7 +58,8 @@ class MCFPPFunctionType(
         MCFPPFunctionType(
             parameters.map { substitute(it, type) },
             substitute(result, type),
-            executionCategory
+            executionCategory,
+            contexts.map { substitute(it, type) }
         )
 
     override fun build(identifier: String, value: Any?): Var<*> = when (value) {
@@ -96,7 +100,7 @@ class MCFPPFunctionType(
          */
         fun fromIdentity(id: TypeId): MCFPPFunctionType? {
             if (id !is TypeId.Applied || id.constructor != TypeId.Builtin(TypeId.FUNCTION_CONSTRUCTOR)) return null
-            if (id.arguments.size != 3) return null
+            if (id.arguments.size !in 3..4) return null
             val category = ExecutionCategory.values().firstOrNull {
                 id.arguments[0] == TypeId.Builtin(TypeId.FUNCTION_EXECUTION_PREFIX + it.identityName)
             } ?: return null
@@ -104,7 +108,12 @@ class MCFPPFunctionType(
             if (parameterList.constructor != TypeId.Builtin(TypeId.FUNCTION_PARAMETERS)) return null
             val parameterTypes = parameterList.arguments.map { resolve(it) ?: return null }
             val resultType = resolve(id.arguments[2]) ?: return null
-            return MCFPPFunctionType(parameterTypes, resultType, category)
+            val contexts = if (id.arguments.size == 4) {
+                val values = id.arguments[3] as? TypeId.Applied ?: return null
+                if (values.constructor != TypeId.Builtin(TypeId.FUNCTION_CONTEXTS)) return null
+                values.arguments.map { resolve(it) ?: return null }
+            } else emptyList()
+            return MCFPPFunctionType(parameterTypes, resultType, category, contexts)
         }
 
         private fun resolve(id: TypeId): MCFPPType? =

@@ -18,8 +18,10 @@ class TemplateFieldInferenceTest {
     private fun compile(source: String, errors: Int = 0): Function {
         fun sourceCalls() = Function.extraFunction.commands.analyzeAll().filter { "function default.test:" in it }
         val discardedCalls = sourceCalls()
-        MCFPPStringTest.readFromString(source.trimIndent(), version = "26.3")
-        assertEquals(errors, Project.errorCount)
+        val diagnostics = top.mcfpp.test.util.compilerDiagnostics {
+            MCFPPStringTest.readFromString(source.trimIndent(), version = "26.3")
+        }
+        assertEquals(errors, Project.errorCount, diagnostics.joinToString("\n"))
         assertEquals(discardedCalls, sourceCalls(), "Declaration binding must not execute a discarded source call")
         return GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
     }
@@ -48,7 +50,7 @@ class TemplateFieldInferenceTest {
         val main = compile("""
             data Box {
                 @DataOnly
-                const value = produce(initial)
+                var value = produce(initial) { get }
                 var next = this.value + 1
                 constructor(initial: int){}
             }
@@ -76,7 +78,7 @@ class TemplateFieldInferenceTest {
         val main = compile("""
             data Box {
                 var erased: any = produce(initial)
-                const value = (this.erased as int) + 1
+                var value = (this.erased as int) + 1 { get }
                 constructor(initial: int){}
             }
             func produce(value: int): any { return value; }
@@ -88,14 +90,14 @@ class TemplateFieldInferenceTest {
         """)
         val value = template().scope.getVar("value")!!
         assertEquals(MCFPPBaseType.Int.typeId, value.type.typeId)
-        assertFalse(value.symbol!!.mutable)
+        assertTrue(value.symbol!!.mutable)
         assertEquals(47, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun inconsistentConstructorsAndPendingReadsDiagnoseWithoutChoosingTheFirstCall() {
         compile("""
             data Box {
-                const value = initial
+                var value = initial { get }
                 constructor(initial: int){}
                 constructor(initial: bool){}
             }
@@ -121,9 +123,10 @@ class TemplateFieldInferenceTest {
         assertNotNull(copy.returnVar.getMemberVar("value", top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
     }
 
-    @Test fun anonymousTemplateSignaturesAlsoWaitForForwardFunctionDeclarations() {
+    @Test fun nestedTemplateSignaturesAlsoWaitForForwardFunctionDeclarations() {
         compile("""
-            func inspect(box: data { const value = produce(); }) : int { return box.value; }
+            data Outer { data Box { var value = produce() { get } } }
+            func inspect(box: Outer.Box) : int { return box.value; }
             func produce(): int { return 4; }
             func main(){}
         """)

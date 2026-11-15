@@ -4,6 +4,7 @@ import top.mcfpp.CompileSettings
 import top.mcfpp.CompilerOptions
 import top.mcfpp.Project
 import top.mcfpp.api.library.LibraryCompilerApi
+import top.mcfpp.compiler.CompilationPipeline
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.io.LibBinReader
 import top.mcfpp.library.compiler.LibraryIdentity
@@ -40,7 +41,8 @@ class LibraryCompilerSession private constructor(
     private var closed = false
     private var started = false
     private var pluginLoader: URLClassLoader? = null
-    private var savedSettings: SavedSettings? = null
+    private var savedSettings: CompilerHostSettings? = null
+    private var documentationOptions: top.mcfpp.doc.DocumentationOptions? = null
 
     @Synchronized
     private fun execute(): Map<String, Any> {
@@ -55,20 +57,16 @@ class LibraryCompilerSession private constructor(
     }
 
     private fun executeOnce(input: CompilerRequest): Map<String, Any> {
-        savedSettings = SavedSettings()
+        savedSettings = CompilerHostSettings()
         val capture = LogProcessor.beginDiagnosticCapture()
         try {
         val failures = arrayListOf<Map<String, Any>>()
         val outputs = arrayListOf<Map<String, Any>>()
+        var documentation: top.mcfpp.doc.DocumentationModel? = null
         var loadedLibraries = 0
         var loadedModules = 0
         try {
-            CompileSettings.isDebug = false
-            CompileSettings.ignoreStdLib = false
-            CompileSettings.isLib = false
-            CompileSettings.maxWhileInline = 32
-            CompileSettings.printAll = false
-            LogProcessor.level = options?.level ?: LogLevel.DEBUG
+            CompilerHostSettings.applyDefaults(options?.level ?: LogLevel.DEBUG)
             Project.errorCount = 0
             Project.warningCount = 0
             val compilerOptions = options ?: CompilerOptions().also { it.file = input.configuration.toFile() }
@@ -93,12 +91,14 @@ class LibraryCompilerSession private constructor(
                     Project.readProject(input.libraries)
                     loadedLibraries = Project.loadedLibraryCount
                     loadedModules = Project.modules.size
-                    if (Project.errorCount == 0) Project.indexType()
-                    if (Project.errorCount == 0) Project.resolveField()
-                    if (Project.errorCount == 0) Project.runAnnotation()
-                    if (Project.errorCount == 0) Project.compile()
-                    if (Project.errorCount == 0) Project.optimization()
-                    if (Project.errorCount == 0) {
+                    val docOptions = documentationOptions
+                    if (docOptions == null) CompilationPipeline.compileSources()
+                    else {
+                        CompilationPipeline.prepareDeclarations()
+                        if (Project.errorCount == 0) Project.completeTemplateDeclarations()
+                        if (Project.errorCount == 0) documentation = top.mcfpp.doc.DocumentationExport.captureCurrentProject(docOptions)
+                    }
+                    if (Project.errorCount == 0 && docOptions == null) {
                         val target = requireNotNull(config.targetPath).toAbsolutePath().normalize()
                         if (!config.noMcLib) {
                             Project.genIndex()
@@ -162,7 +162,7 @@ class LibraryCompilerSession private constructor(
             "compilerErrors" to errors,
             "diagnostics" to Collections.unmodifiableList(diagnostics),
             "outputs" to Collections.unmodifiableList(outputs),
-        ))
+        ) + (documentation?.let { mapOf("documentation" to it) } ?: emptyMap()))
         } finally {
             capture.close()
         }
@@ -265,19 +265,6 @@ class LibraryCompilerSession private constructor(
     private data class CompilerRequest(val configuration: Path, val libraries: List<LibBinReader.Payload>, val plugins: List<Artifact>,
         val resourcePacks: List<Artifact>, val datapacks: List<Artifact>, val hostClassLoader: ClassLoader)
 
-    private class SavedSettings {
-        val debug = CompileSettings.isDebug
-        val stdlib = CompileSettings.ignoreStdLib
-        val library = CompileSettings.isLib
-        val inline = CompileSettings.maxWhileInline
-        val print = CompileSettings.printAll
-        val level = LogProcessor.level
-        fun restore() {
-            CompileSettings.isDebug = debug; CompileSettings.ignoreStdLib = stdlib; CompileSettings.isLib = library
-            CompileSettings.maxWhileInline = inline; CompileSettings.printAll = print; LogProcessor.level = level
-        }
-    }
-
     companion object {
         private var active: AutoCloseable? = null
 
@@ -296,6 +283,15 @@ class LibraryCompilerSession private constructor(
         @JvmStatic
         fun compileSession(session: AutoCloseable): Map<String, Any> {
             require(session is LibraryCompilerSession) { "Session was not created by LibraryCompilerApi.openSession" }
+            return session.execute()
+        }
+
+        /** Collects a detached documentation snapshot after declaration preparation, then closes the session. */
+        @JvmStatic
+        fun documentSession(session: AutoCloseable, options: top.mcfpp.doc.DocumentationOptions): Map<String, Any> {
+            require(session is LibraryCompilerSession) { "Session was not created by LibraryCompilerApi.openSession" }
+            check(!session.used && !session.closed) { "A compiler session can execute only once" }
+            session.documentationOptions = options
             return session.execute()
         }
 

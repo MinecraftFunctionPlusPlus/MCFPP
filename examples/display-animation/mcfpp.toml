@@ -1,0 +1,7 @@
+schema = 1
+name = "display-animation"
+namespace = "example.displayanimation"
+version = "1.21.8"
+sourcePath = "src"
+targetPath = "build"
+description = "Typed display entities and tick scheduling"

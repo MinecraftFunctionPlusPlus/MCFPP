@@ -49,11 +49,12 @@ object SyntaxTags {
     const val CONTINUE = 0x030d
     const val RETURN = 0x030e
     const val EMPTY = 0x030f
+    const val CONTEXT_SCOPE = 0x0310
     const val TEMPLATE_BODY = 0x0401
     const val MEMBER_DECLARATION = 0x0402
     const val ANNOTATION_APPLICATION = 0x0403
     const val ANNOTATION_CONSTRUCTION = 0x0404
 
     fun isKnown(tag: Int): Boolean = tag in LITERAL..INTERPOLATED_STRING ||
-        tag in TYPE_NAME..INFERRED_TYPE || tag in BLOCK..EMPTY || tag in TEMPLATE_BODY..ANNOTATION_CONSTRUCTION
+        tag in TYPE_NAME..INFERRED_TYPE || tag in BLOCK..CONTEXT_SCOPE || tag in TEMPLATE_BODY..ANNOTATION_CONSTRUCTION
 }

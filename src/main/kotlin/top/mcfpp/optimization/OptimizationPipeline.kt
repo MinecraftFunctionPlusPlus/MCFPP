@@ -80,6 +80,8 @@ internal object OptimizationPipeline {
             context.trace(pass.id, before, result)
             result = manager.simplify(result, context)
         }
+        // Provider selection must see the final use counts and cannot precede inlining.
+        result = PassManager(listOf(NumberProviderFusion())).run(result, context)
         IRVerifier.verify(result)
         function.optimizedIR = result
         return result
@@ -107,8 +109,34 @@ internal object OptimizationPipeline {
                 if (function.declarationId !in invalid) generate()
             }
         }
+        val functions = FunctionInventory.all()
+        val config = Project.config.optimization
+        val contextOptimization = !Project.config.debugInfo && config.enabled(PassIds.CONTEXTS)
+        // Run before the first publication boundary as well as final cleanup: library
+        // resources must contain the same optimized region graph as the consumer pack.
+        val lowered = functions.associate { function -> function.namespaceID.toString() to
+            function.commands.map { MinecraftLowering.lower(it.analyze()) }
+        }
+        val deadResults = !Project.config.debugInfo && config.enabled(PassIds.DEAD) && functions.any { it.nativeResultSlots.isNotEmpty() }
+        val independentCalls = if (deadResults) MinecraftFrameObservations(lowered).frameIndependentCalls() else emptySet()
+        val inputs = functions.associate { function ->
+            val id = function.namespaceID.toString()
+            id to if (deadResults) DeadCommandResults.run(lowered.getValue(id), function.nativeResultSlots, independentCalls) else lowered.getValue(id)
+        }
+        val fusion = if (contextOptimization) ContextRegionFusion.run(functions, inputs) else ContextFusionResult(inputs, Project.macroFunction.toMap())
+        val regions = fusion.functions
+        if (contextOptimization) Project.macroFunction.putAll(fusion.macros)
+        if (Project.config.irOutputPath != null) functions.forEach { function ->
+            val id = function.namespaceID.toString()
+            if (regions[id] != inputs[id]) function.optimizationTrace += buildString {
+                appendLine("pass ${PassIds.CONTEXTS} | changed=true")
+                appendLine("before\n${inputs.getValue(id).joinToString("\n") { it.render() }}")
+                appendLine("after\n${regions.getValue(id).joinToString("\n") { it.render() }}")
+            }
+        }
+        if (contextOptimization) ContextRegionFusion.prune(functions, regions)
         for (function in FunctionInventory.all()) {
-            val input = function.commands.map { MinecraftLowering.lower(it.analyze()) }
+            val input = regions.getValue(function.namespaceID.toString())
             val planned = if (cleanup && Project.config.optimization.enabled(PassIds.FRAMES)) MinecraftFramePlanning.run(input) else input
             val output = if (cleanup && Project.config.optimization.enabled(PassIds.COMMANDS)) MinecraftCleanup.run(planned) else planned
             function.minecraftIR = output

@@ -109,10 +109,12 @@ sealed interface ValueKnowledge {
 }
 
 enum class ValueState { INITIALIZED, UNINITIALIZED, MAYBE_INITIALIZED, ERROR }
+enum class Presence { Present, Absent, Unknown }
 /** readableLayout proves access to an exact runtime DTO schema, not a complete value snapshot. */
 data class ValueFacts(val type: TypeKnowledge, val value: ValueKnowledge, val state: ValueState = ValueState.INITIALIZED,
                       val readableLayout: TypeId? = null,
-                      val reference: top.mcfpp.core.lang.ref.ReferenceMetadata? = null) {
+                      val reference: top.mcfpp.core.lang.ref.ReferenceMetadata? = null,
+                      val presence: Presence = Presence.Unknown) {
     fun join(other: ValueFacts): ValueFacts {
         val joinedType = type.join(other.type)
         val joinedState = when {
@@ -127,7 +129,7 @@ data class ValueFacts(val type: TypeKnowledge, val value: ValueKnowledge, val st
                 reference != null && other.reference != null -> reference.join(other.reference)
                 reference != null -> reference.invalidated()
                 else -> other.reference?.invalidated()
-            })
+            }, if (presence == other.presence) presence else Presence.Unknown)
     }
 }
 
@@ -350,6 +352,7 @@ class FlowFacts private constructor(private var facts: PersistentMap.Builder<Pla
         lengths.keys.removeAll { it.overlaps(place) && it.path.size >= place.path.size && writable(it) }
         facts.build().forEach { (key, value) ->
             if (key.overlaps(place) && writable(key)) facts[key] = value.copy(value = ValueKnowledge.Unknown,
+                presence = if (key.path.size >= place.path.size) Presence.Unknown else value.presence,
                 reference = value.reference?.invalidated(),
                 state = if (value.state == ValueState.UNINITIALIZED) ValueState.MAYBE_INITIALIZED else value.state,
                 readableLayout = value.readableLayout?.takeIf { preserveAncestorLayout &&
@@ -363,6 +366,7 @@ class FlowFacts private constructor(private var facts: PersistentMap.Builder<Pla
         facts.build().forEach { (key, value) ->
             if (protected.none { it.root == key.root && key.path.take(it.path.size) == it.path }) {
                 facts[key] = value.copy(value = ValueKnowledge.Unknown, type = TypeKnowledge.Unknown, readableLayout = null,
+                    presence = Presence.Unknown,
                     reference = value.reference?.invalidated(),
                     state = if (value.state == ValueState.UNINITIALIZED) ValueState.MAYBE_INITIALIZED else value.state)
             }
@@ -378,8 +382,10 @@ class FlowFacts private constructor(private var facts: PersistentMap.Builder<Pla
             val b = other.facts[place]
             joined[place] = when {
                 a == null -> b!!.copy(value = ValueKnowledge.Unknown,
+                    presence = Presence.Unknown,
                     state = ValueState.MAYBE_INITIALIZED, readableLayout = null)
                 b == null -> a.copy(value = ValueKnowledge.Unknown,
+                    presence = Presence.Unknown,
                     state = ValueState.MAYBE_INITIALIZED, readableLayout = null)
                 else -> a.join(b)
             }

@@ -18,7 +18,9 @@ import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 
 /** Constructor hints are retained for legacy callers; target facts belong to the value. */
-class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, val isName: Boolean = false) : MCFPPConcreteType(arrayListOf(MCFPPBaseType.Object)) {
+open class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, val isName: Boolean = false,
+                          val entityName: String? = null, val entityKinds: Set<String>? = null,
+                          parent: MCFPPEntityType? = null) : MCFPPConcreteType(if (parent == null) arrayListOf(MCFPPBaseType.Object) else arrayListOf(parent)) {
 
     /** A compiler-owned selector member, with its receiver slot kept separate from a dictionary value. */
     private class ScoresDictionary : NBTDictionary("scores"), SelectorVar.SelectorParamMap {
@@ -78,15 +80,15 @@ class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, v
 
     override fun buildUnConcrete(identifier: String): Var<*> = SelectorVar(identifier).apply { type = this@MCFPPEntityType }
 
-    override val typeId: TypeId get() = TypeId.Builtin("entity")
+    override val typeId: TypeId get() = TypeId.Builtin(entityName?.let { "entity.$it" } ?: "entity")
 
     override val instanceData: CompoundData
         get() = SelectorVar.declarationData(this)
 
-    override val typeName: String get() = "entity"
+    override val typeName: String get() = entityName ?: "entity"
 
     override val simpleName: String
-        get() = "entity"
+        get() = typeName
 
     override fun defaultValueVar(): Var<*> {
         return buildUnConcrete("default")
@@ -98,7 +100,7 @@ class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, v
 
 
 
-    fun canCastTo(@Suppress("UNUSED_PARAMETER") other: MCFPPEntityType): Boolean = true
+    fun canCastTo(other: MCFPPEntityType): Boolean = isSubOf(other) || other.isSubOf(this)
 
     companion object {
         val NormalSelector = MCFPPEntityType()

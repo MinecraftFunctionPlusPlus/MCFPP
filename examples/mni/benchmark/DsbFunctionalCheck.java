@@ -42,8 +42,11 @@ public final class DsbFunctionalCheck {
     public static void main(String[] args) throws Exception {
         Path output = null;
         List<Path> manifests = new ArrayList<>();
+        boolean minecraftDataResults = false;
         for (int index = 0; index < args.length; index++) {
-            if ("--output".equals(args[index])) {
+            if ("--minecraft-data-results".equals(args[index])) {
+                minecraftDataResults = true;
+            } else if ("--output".equals(args[index])) {
                 if (++index >= args.length) throw new IllegalArgumentException("--output requires a path");
                 output = Path.of(args[index]).toAbsolutePath().normalize();
             } else {
@@ -58,7 +61,7 @@ public final class DsbFunctionalCheck {
         JsonArray report = new JsonArray();
         boolean anyFailed = false;
         for (Path manifest : manifests) {
-            JsonObject entry = runOne(manifest);
+            JsonObject entry = runOne(manifest, minecraftDataResults);
             report.add(entry);
             boolean passed = entry.get("passed").getAsBoolean();
             anyFailed |= !passed;
@@ -84,7 +87,7 @@ public final class DsbFunctionalCheck {
         return escaped.toString();
     }
 
-    private static JsonObject runOne(Path manifest) {
+    private static JsonObject runOne(Path manifest, boolean minecraftDataResults) {
         JsonObject entry = new JsonObject();
         entry.addProperty("path", manifest.toString());
         entry.addProperty("commandTraceMode", "OFF");
@@ -108,6 +111,24 @@ public final class DsbFunctionalCheck {
             List<Path> packs = readPacks(root, version, manifest.getParent());
             SandboxWorld world = new SandboxWorld();
             world.setCommandTraceMode(CommandTraceMode.OFF);
+            if (minecraftDataResults) world.addOutputListener(event -> {
+                if (!"data".equals(event.getChannel())) return;
+                String text = event.getText();
+                JsonElement payload = event.getPayload();
+                // The bundled runtime derives execute-store results from feedback text.
+                // Minecraft returns collection size / UTF-16 length for data-get queries.
+                if ("get".equals(event.getCommand()) && payload != null && !payload.isJsonNull()) {
+                    if (payload.isJsonArray()) text = Integer.toString(payload.getAsJsonArray().size());
+                    else if (payload.isJsonObject()) text = Integer.toString(payload.getAsJsonObject().size());
+                    else if (payload.getAsJsonPrimitive().isString()) text = Integer.toString(payload.getAsString().length());
+                    else if (payload.getAsJsonPrimitive().isBoolean()) text = payload.getAsBoolean() ? "1" : "0";
+                }
+                if (event.getCommand().startsWith("gamerule") && (text.equals("true") || text.equals("false"))) text = text.equals("true") ? "1" : "0";
+                // Mutation feedback includes complete before/after trees. Assertions here
+                // inspect live storage; omit those duplicate payloads from the report.
+                world.getOutputs().set(world.getOutputs().size() - 1, event.copy(event.getTick(), event.getCommand(),
+                    event.getChannel(), List.of(), text, null, List.of(), null, text));
+            });
             SandboxLimits limits = new SandboxLimits(
                 MAX_COMMANDS, MAX_FUNCTION_DEPTH, MAX_TICKS, MAX_OUTPUTS, MAX_SNAPSHOT_BYTES);
             sandbox = SandboxKt.createSandbox(

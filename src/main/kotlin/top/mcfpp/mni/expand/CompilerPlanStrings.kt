@@ -22,7 +22,21 @@ import top.mcfpp.model.scope.GlobalScope
  * every helper and dynamic macro function if generation fails.
  */
 internal class CompilerPlanStrings(private val out: CompilerPlanEmitter) {
-    private val addresses = out.slot("addresses")
+    private val runtime = RuntimeStringConcatenation(out.slot("addresses"),
+        { hint -> out.bindings.session.reserveCompilerName("string_$hint", "backend") }, out.bindings.target,
+        out::score, out::emit)
+    fun add(operation: PlanOperation.Binary) = runtime.add(
+        { out.values.copyTo(it, operation.left) }, { out.values.copyTo(it, operation.right) }, out.values.slot(operation.result))
+}
+
+/** Shared escaping engine for source macros and native string members. */
+internal class RuntimeStringConcatenation(
+    private val addresses: String,
+    private val reserveName: (String) -> String,
+    private val parent: Function,
+    private val allocateScore: (String) -> String,
+    private val emitCommand: (String) -> Unit
+) {
     private val state = "$addresses.s_state"
     private val quote = "\""
     private val backslash = "\\"
@@ -35,7 +49,7 @@ internal class CompilerPlanStrings(private val out: CompilerPlanEmitter) {
         "toppairs", "toppairone", "reducepairs", "reduceone", "levels", "levelsone", "build"
     )
 
-    fun add(operation: PlanOperation.Binary) {
+    fun add(copyLeft: (String) -> Unit, copyRight: (String) -> Unit, result: String) {
         initialize()
         // Keep helper publication tied to every block that can execute a string ADD, not only
         // the block that happened to create the lazy helper set.
@@ -63,8 +77,8 @@ internal class CompilerPlanStrings(private val out: CompilerPlanEmitter) {
             "data modify $state set value {srcL:$quote$quote,srcR:$quote$quote,rem:$quote$quote,cmp:$quote$quote," +
                 "leaf:$quote$quote,leaf0:$quote$quote,leaf1:$quote$quote,out:$quote$quote,a:{},next:{}}"
         )
-        out.values.copyTo("$state.srcL", operation.left)
-        out.values.copyTo("$state.srcR", operation.right)
+        copyLeft("$state.srcL")
+        copyRight("$state.srcR")
         emit("execute unless data $state.srcL run data modify $state.srcL set value $quote$quote")
         emit("execute unless data $state.srcR run data modify $state.srcR set value $quote$quote")
 
@@ -83,7 +97,6 @@ internal class CompilerPlanStrings(private val out: CompilerPlanEmitter) {
         emit("scoreboard players operation $n = $lenL")
         emit("scoreboard players operation $n += $lenR")
 
-        val result = out.values.slot(operation.result)
         emit("execute if score $n matches 0 run data modify $result set value $quote$quote")
         emit("execute if score $n matches 1 if score $lenL matches 1 run data modify $result set from $state.srcL")
         emit("execute if score $n matches 1 if score $lenR matches 1 run data modify $result set from $state.srcR")
@@ -108,8 +121,8 @@ internal class CompilerPlanStrings(private val out: CompilerPlanEmitter) {
     }
 
     private fun helper(hint: String): Function = helpers.getOrPut(hint) {
-        val name = out.bindings.session.reserveCompilerName("string_$hint", "backend")
-        val function = NoStackFunction(name.substringAfter(':'), out.bindings.target).apply {
+        val name = reserveName(hint)
+        val function = NoStackFunction(name.substringAfter(':'), parent).apply {
             namespace = name.substringBefore(':')
             bodyCompiled = true
         }
@@ -128,9 +141,9 @@ internal class CompilerPlanStrings(private val out: CompilerPlanEmitter) {
             ?: GlobalScope.localNamespaces.getOrPut(identifier) { Namespace(identifier) }
     }
 
-    private fun score(hint: String): String = scores.getOrPut(hint) { out.score("string_$hint") }
+    private fun score(hint: String): String = scores.getOrPut(hint) { allocateScore("string_$hint") }
 
-    private fun emit(command: String) = out.emit(command)
+    private fun emit(command: String) = emitCommand(command)
 
     private fun function(hint: String): String = helper(hint).namespaceID.toString()
 

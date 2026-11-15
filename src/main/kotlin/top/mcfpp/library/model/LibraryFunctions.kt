@@ -12,7 +12,9 @@ object DeclarationFlags {
     const val NULLABLE = 32L
     const val FORCE_RUNTIME = 64L
     const val DATA_ONLY = 128L
-    const val ALL = 255L
+    const val ENTITY = 256L
+    const val PARENT_CONSTRUCTOR = 512L
+    const val ALL = 1023L
 }
 
 data class DeclCommon(
@@ -48,11 +50,12 @@ data class FunctionDeclaration(
     override val common: DeclCommon, val execution: FunctionExecutionKind,
     val receiver: TypeRef?, val readonly: List<DeclarationId>, val normal: List<DeclarationId>,
     val result: TypeRef?, val body: BodyId?, val native: NativeBinding?,
-    val tags: List<TagKey> = emptyList(), val linkedRuntime: List<RuntimeRef> = emptyList()
+    val tags: List<TagKey> = emptyList(), val linkedRuntime: List<RuntimeRef> = emptyList(),
+    val contexts: List<DeclarationId> = emptyList()
 ) : LibraryDeclaration { override val tag: Int get() = 2 }
 
 enum class ValueRole(val wireValue: Int) {
-    MEMBER(1), GLOBAL(2), LOCAL(3), READONLY_PARAMETER(4), NORMAL_PARAMETER(5), LAMBDA_PARAMETER(6)
+    MEMBER(1), GLOBAL(2), LOCAL(3), READONLY_PARAMETER(4), NORMAL_PARAMETER(5), LAMBDA_PARAMETER(6), CONTEXT_PARAMETER(7)
 }
 enum class ValueStorage(val wireValue: Int) { VAR(1), CONST(2), EXTERNAL(3), IMPORT_VAR(4), PARAMETER(5) }
 enum class Variance(val wireValue: Int) { INVARIANT(1), IN(2), OUT(3) }
@@ -78,7 +81,7 @@ class LibraryDeclarations(declarations: List<LibraryDeclaration>, environments: 
         val common = declaration.common.copy(annotations = frozen(declaration.common.annotations))
         when (declaration) {
             is FunctionDeclaration -> declaration.copy(common = common, readonly = frozen(declaration.readonly),
-                normal = frozen(declaration.normal), tags = frozen(declaration.tags), linkedRuntime = frozen(declaration.linkedRuntime),
+                normal = frozen(declaration.normal), contexts = frozen(declaration.contexts), tags = frozen(declaration.tags), linkedRuntime = frozen(declaration.linkedRuntime),
                 native = declaration.native?.copy(jvmParameters = frozen(declaration.native.jvmParameters)))
             is ValueDeclaration -> declaration.copy(common = common)
             else -> declaration

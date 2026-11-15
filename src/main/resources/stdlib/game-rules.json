@@ -1,0 +1,756 @@
+{
+  "sources": [
+    "https://piston-data.mojang.com/v1/objects/3872a7f07a1a595e651aef8b058dfc2bb3772f46/server.jar",
+    "https://piston-data.mojang.com/v1/objects/6bce4ef400e4efaa63a13d5e6f6b500be969ef81/server.jar",
+    "https://piston-data.mojang.com/v1/objects/33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c/server.jar",
+    "https://github.com/misode/mcmeta/tree/26.3-summary"
+  ],
+  "rules": [
+    {
+      "id": "minecraft:advance_time",
+      "type": "bool",
+      "since": "26.1",
+      "name": "advanceTime"
+    },
+    {
+      "id": "minecraft:advance_weather",
+      "type": "bool",
+      "since": "26.1",
+      "name": "advanceWeather"
+    },
+    {
+      "id": "minecraft:allow_entering_nether_using_portals",
+      "type": "bool",
+      "since": "26.1",
+      "name": "allowEnteringNetherUsingPortals"
+    },
+    {
+      "id": "minecraft:block_drops",
+      "type": "bool",
+      "since": "26.1",
+      "name": "blockDrops"
+    },
+    {
+      "id": "minecraft:block_explosion_drop_decay",
+      "type": "bool",
+      "since": "26.1",
+      "name": "blockExplosionDropDecay"
+    },
+    {
+      "id": "minecraft:command_block_output",
+      "type": "bool",
+      "since": "26.1",
+      "name": "commandBlockOutput"
+    },
+    {
+      "id": "minecraft:command_blocks_work",
+      "type": "bool",
+      "since": "26.1",
+      "name": "commandBlocksWork"
+    },
+    {
+      "id": "minecraft:drowning_damage",
+      "type": "bool",
+      "since": "26.1",
+      "name": "drowningDamage"
+    },
+    {
+      "id": "minecraft:elytra_movement_check",
+      "type": "bool",
+      "since": "26.1",
+      "name": "elytraMovementCheck"
+    },
+    {
+      "id": "minecraft:ender_pearls_vanish_on_death",
+      "type": "bool",
+      "since": "26.1",
+      "name": "enderPearlsVanishOnDeath"
+    },
+    {
+      "id": "minecraft:entity_drops",
+      "type": "bool",
+      "since": "26.1",
+      "name": "entityDrops"
+    },
+    {
+      "id": "minecraft:fall_damage",
+      "type": "bool",
+      "since": "26.1",
+      "name": "fallDamage"
+    },
+    {
+      "id": "minecraft:fire_damage",
+      "type": "bool",
+      "since": "26.1",
+      "name": "fireDamage"
+    },
+    {
+      "id": "minecraft:fire_spread_radius_around_player",
+      "type": "int",
+      "since": "26.1",
+      "name": "fireSpreadRadiusAroundPlayer"
+    },
+    {
+      "id": "minecraft:forgive_dead_players",
+      "type": "bool",
+      "since": "26.1",
+      "name": "forgiveDeadPlayers"
+    },
+    {
+      "id": "minecraft:freeze_damage",
+      "type": "bool",
+      "since": "26.1",
+      "name": "freezeDamage"
+    },
+    {
+      "id": "minecraft:global_sound_events",
+      "type": "bool",
+      "since": "26.1",
+      "name": "globalSoundEvents"
+    },
+    {
+      "id": "minecraft:immediate_respawn",
+      "type": "bool",
+      "since": "26.1",
+      "name": "immediateRespawn"
+    },
+    {
+      "id": "minecraft:keep_inventory",
+      "type": "bool",
+      "since": "26.1",
+      "name": "keepInventory"
+    },
+    {
+      "id": "minecraft:lava_source_conversion",
+      "type": "bool",
+      "since": "26.1",
+      "name": "lavaSourceConversion"
+    },
+    {
+      "id": "minecraft:limited_crafting",
+      "type": "bool",
+      "since": "26.1",
+      "name": "limitedCrafting"
+    },
+    {
+      "id": "minecraft:locator_bar",
+      "type": "bool",
+      "since": "26.1",
+      "name": "locatorBar"
+    },
+    {
+      "id": "minecraft:log_admin_commands",
+      "type": "bool",
+      "since": "26.1",
+      "name": "logAdminCommands"
+    },
+    {
+      "id": "minecraft:max_block_modifications",
+      "type": "int",
+      "since": "26.1",
+      "name": "maxBlockModifications"
+    },
+    {
+      "id": "minecraft:max_command_forks",
+      "type": "int",
+      "since": "26.1",
+      "name": "maxCommandForks"
+    },
+    {
+      "id": "minecraft:max_command_sequence_length",
+      "type": "int",
+      "since": "26.1",
+      "name": "maxCommandSequenceLength"
+    },
+    {
+      "id": "minecraft:max_entity_cramming",
+      "type": "int",
+      "since": "26.1",
+      "name": "maxEntityCramming"
+    },
+    {
+      "id": "minecraft:max_minecart_speed",
+      "type": "int",
+      "since": "26.1",
+      "name": "maxMinecartSpeed"
+    },
+    {
+      "id": "minecraft:max_snow_accumulation_height",
+      "type": "int",
+      "since": "26.1",
+      "name": "maxSnowAccumulationHeight"
+    },
+    {
+      "id": "minecraft:mob_drops",
+      "type": "bool",
+      "since": "26.1",
+      "name": "mobDrops"
+    },
+    {
+      "id": "minecraft:mob_explosion_drop_decay",
+      "type": "bool",
+      "since": "26.1",
+      "name": "mobExplosionDropDecay"
+    },
+    {
+      "id": "minecraft:mob_griefing",
+      "type": "bool",
+      "since": "26.1",
+      "name": "mobGriefing"
+    },
+    {
+      "id": "minecraft:natural_health_regeneration",
+      "type": "bool",
+      "since": "26.1",
+      "name": "naturalHealthRegeneration"
+    },
+    {
+      "id": "minecraft:player_movement_check",
+      "type": "bool",
+      "since": "26.1",
+      "name": "playerMovementCheck"
+    },
+    {
+      "id": "minecraft:players_nether_portal_creative_delay",
+      "type": "int",
+      "since": "26.1",
+      "name": "playersNetherPortalCreativeDelay"
+    },
+    {
+      "id": "minecraft:players_nether_portal_default_delay",
+      "type": "int",
+      "since": "26.1",
+      "name": "playersNetherPortalDefaultDelay"
+    },
+    {
+      "id": "minecraft:players_sleeping_percentage",
+      "type": "int",
+      "since": "26.1",
+      "name": "playersSleepingPercentage"
+    },
+    {
+      "id": "minecraft:projectiles_can_break_blocks",
+      "type": "bool",
+      "since": "26.1",
+      "name": "projectilesCanBreakBlocks"
+    },
+    {
+      "id": "minecraft:pvp",
+      "type": "bool",
+      "since": "26.1",
+      "name": "pvp"
+    },
+    {
+      "id": "minecraft:raids",
+      "type": "bool",
+      "since": "26.1",
+      "name": "raids"
+    },
+    {
+      "id": "minecraft:random_tick_speed",
+      "type": "int",
+      "since": "26.1",
+      "name": "randomTickSpeed"
+    },
+    {
+      "id": "minecraft:reduced_debug_info",
+      "type": "bool",
+      "since": "26.1",
+      "name": "reducedDebugInfo"
+    },
+    {
+      "id": "minecraft:respawn_radius",
+      "type": "int",
+      "since": "26.1",
+      "name": "respawnRadius"
+    },
+    {
+      "id": "minecraft:send_command_feedback",
+      "type": "bool",
+      "since": "26.1",
+      "name": "sendCommandFeedback"
+    },
+    {
+      "id": "minecraft:show_advancement_messages",
+      "type": "bool",
+      "since": "26.1",
+      "name": "showAdvancementMessages"
+    },
+    {
+      "id": "minecraft:show_death_messages",
+      "type": "bool",
+      "since": "26.1",
+      "name": "showDeathMessages"
+    },
+    {
+      "id": "minecraft:spawn_mobs",
+      "type": "bool",
+      "since": "26.1",
+      "name": "spawnMobs"
+    },
+    {
+      "id": "minecraft:spawn_monsters",
+      "type": "bool",
+      "since": "26.1",
+      "name": "spawnMonsters"
+    },
+    {
+      "id": "minecraft:spawn_patrols",
+      "type": "bool",
+      "since": "26.1",
+      "name": "spawnPatrols"
+    },
+    {
+      "id": "minecraft:spawn_phantoms",
+      "type": "bool",
+      "since": "26.1",
+      "name": "spawnPhantoms"
+    },
+    {
+      "id": "minecraft:spawn_wandering_traders",
+      "type": "bool",
+      "since": "26.1",
+      "name": "spawnWanderingTraders"
+    },
+    {
+      "id": "minecraft:spawn_wardens",
+      "type": "bool",
+      "since": "26.1",
+      "name": "spawnWardens"
+    },
+    {
+      "id": "minecraft:spawner_blocks_work",
+      "type": "bool",
+      "since": "26.1",
+      "name": "spawnerBlocksWork"
+    },
+    {
+      "id": "minecraft:spectators_generate_chunks",
+      "type": "bool",
+      "since": "26.1",
+      "name": "spectatorsGenerateChunks"
+    },
+    {
+      "id": "minecraft:spread_vines",
+      "type": "bool",
+      "since": "26.1",
+      "name": "spreadVines"
+    },
+    {
+      "id": "minecraft:tnt_explodes",
+      "type": "bool",
+      "since": "26.1",
+      "name": "tntExplodes"
+    },
+    {
+      "id": "minecraft:tnt_explosion_drop_decay",
+      "type": "bool",
+      "since": "26.1",
+      "name": "tntExplosionDropDecay"
+    },
+    {
+      "id": "minecraft:universal_anger",
+      "type": "bool",
+      "since": "26.1",
+      "name": "universalAnger"
+    },
+    {
+      "id": "minecraft:water_source_conversion",
+      "type": "bool",
+      "since": "26.1",
+      "name": "waterSourceConversion"
+    },
+    {
+      "id": "announceAdvancements",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "announceAdvancements"
+    },
+    {
+      "id": "commandBlockOutput",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "commandBlockOutput"
+    },
+    {
+      "id": "disableElytraMovementCheck",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "disableElytraMovementCheck"
+    },
+    {
+      "id": "disableRaids",
+      "type": "bool",
+      "since": "1.14",
+      "until": "26.1",
+      "name": "disableRaids"
+    },
+    {
+      "id": "doDaylightCycle",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "doDaylightCycle"
+    },
+    {
+      "id": "doEntityDrops",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "doEntityDrops"
+    },
+    {
+      "id": "doFireTick",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "doFireTick"
+    },
+    {
+      "id": "doImmediateRespawn",
+      "type": "bool",
+      "since": "1.15",
+      "until": "26.1",
+      "name": "doImmediateRespawn"
+    },
+    {
+      "id": "doInsomnia",
+      "type": "bool",
+      "since": "1.15",
+      "until": "26.1",
+      "name": "doInsomnia"
+    },
+    {
+      "id": "doLimitedCrafting",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "doLimitedCrafting"
+    },
+    {
+      "id": "doMobLoot",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "doMobLoot"
+    },
+    {
+      "id": "doMobSpawning",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "doMobSpawning"
+    },
+    {
+      "id": "doPatrolSpawning",
+      "type": "bool",
+      "since": "1.15.2",
+      "until": "26.1",
+      "name": "doPatrolSpawning"
+    },
+    {
+      "id": "doTileDrops",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "doTileDrops"
+    },
+    {
+      "id": "doTraderSpawning",
+      "type": "bool",
+      "since": "1.15.2",
+      "until": "26.1",
+      "name": "doTraderSpawning"
+    },
+    {
+      "id": "doVinesSpread",
+      "type": "bool",
+      "since": "1.19",
+      "until": "26.1",
+      "name": "doVinesSpread"
+    },
+    {
+      "id": "doWardenSpawning",
+      "type": "bool",
+      "since": "1.19",
+      "until": "26.1",
+      "name": "doWardenSpawning"
+    },
+    {
+      "id": "doWeatherCycle",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "doWeatherCycle"
+    },
+    {
+      "id": "drowningDamage",
+      "type": "bool",
+      "since": "1.15",
+      "until": "26.1",
+      "name": "drowningDamage"
+    },
+    {
+      "id": "fallDamage",
+      "type": "bool",
+      "since": "1.15",
+      "until": "26.1",
+      "name": "fallDamage"
+    },
+    {
+      "id": "fireDamage",
+      "type": "bool",
+      "since": "1.15",
+      "until": "26.1",
+      "name": "fireDamage"
+    },
+    {
+      "id": "forgiveDeadPlayers",
+      "type": "bool",
+      "since": "1.16",
+      "until": "26.1",
+      "name": "forgiveDeadPlayers"
+    },
+    {
+      "id": "freezeDamage",
+      "type": "bool",
+      "since": "1.17",
+      "until": "26.1",
+      "name": "freezeDamage"
+    },
+    {
+      "id": "globalSoundEvents",
+      "type": "bool",
+      "since": "1.19.3",
+      "until": "26.1",
+      "name": "globalSoundEvents"
+    },
+    {
+      "id": "keepInventory",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "keepInventory"
+    },
+    {
+      "id": "lavaSourceConversion",
+      "type": "bool",
+      "since": "1.19.3",
+      "until": "26.1",
+      "name": "lavaSourceConversion"
+    },
+    {
+      "id": "logAdminCommands",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "logAdminCommands"
+    },
+    {
+      "id": "maxCommandChainLength",
+      "type": "int",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "maxCommandChainLength"
+    },
+    {
+      "id": "maxCommandForkCount",
+      "type": "int",
+      "since": "1.20.3",
+      "until": "26.1",
+      "name": "maxCommandForkCount"
+    },
+    {
+      "id": "maxEntityCramming",
+      "type": "int",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "maxEntityCramming"
+    },
+    {
+      "id": "mobGriefing",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "mobGriefing"
+    },
+    {
+      "id": "naturalRegeneration",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "naturalRegeneration"
+    },
+    {
+      "id": "playersSleepingPercentage",
+      "type": "int",
+      "since": "1.17",
+      "until": "26.1",
+      "name": "playersSleepingPercentage"
+    },
+    {
+      "id": "randomTickSpeed",
+      "type": "int",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "randomTickSpeed"
+    },
+    {
+      "id": "reducedDebugInfo",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "reducedDebugInfo"
+    },
+    {
+      "id": "sendCommandFeedback",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "sendCommandFeedback"
+    },
+    {
+      "id": "showDeathMessages",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "showDeathMessages"
+    },
+    {
+      "id": "snowAccumulationHeight",
+      "type": "int",
+      "since": "1.19.3",
+      "until": "26.1",
+      "name": "snowAccumulationHeight"
+    },
+    {
+      "id": "spawnRadius",
+      "type": "int",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "spawnRadius"
+    },
+    {
+      "id": "spectatorsGenerateChunks",
+      "type": "bool",
+      "since": "1.13",
+      "until": "26.1",
+      "name": "spectatorsGenerateChunks"
+    },
+    {
+      "id": "universalAnger",
+      "type": "bool",
+      "since": "1.16",
+      "until": "26.1",
+      "name": "universalAnger"
+    },
+    {
+      "id": "waterSourceConversion",
+      "type": "bool",
+      "since": "1.19.3",
+      "until": "26.1",
+      "name": "waterSourceConversion"
+    },
+    {
+      "id": "blockExplosionDropDecay",
+      "type": "bool",
+      "since": "1.19.3",
+      "until": "26.1",
+      "name": "blockExplosionDropDecay"
+    },
+    {
+      "id": "mobExplosionDropDecay",
+      "type": "bool",
+      "since": "1.19.3",
+      "until": "26.1",
+      "name": "mobExplosionDropDecay"
+    },
+    {
+      "id": "tntExplosionDropDecay",
+      "type": "bool",
+      "since": "1.19.3",
+      "until": "26.1",
+      "name": "tntExplosionDropDecay"
+    },
+    {
+      "id": "commandModificationBlockLimit",
+      "type": "int",
+      "since": "1.19.4",
+      "until": "26.1",
+      "name": "commandModificationBlockLimit"
+    },
+    {
+      "id": "playersNetherPortalDefaultDelay",
+      "type": "int",
+      "since": "1.20.3",
+      "until": "26.1",
+      "name": "playersNetherPortalDefaultDelay"
+    },
+    {
+      "id": "playersNetherPortalCreativeDelay",
+      "type": "int",
+      "since": "1.20.3",
+      "until": "26.1",
+      "name": "playersNetherPortalCreativeDelay"
+    },
+    {
+      "id": "projectilesCanBreakBlocks",
+      "type": "bool",
+      "since": "1.20.3",
+      "until": "26.1",
+      "name": "projectilesCanBreakBlocks"
+    },
+    {
+      "id": "enderPearlsVanishOnDeath",
+      "type": "bool",
+      "since": "1.21.2",
+      "until": "26.1",
+      "name": "enderPearlsVanishOnDeath"
+    },
+    {
+      "id": "locatorBar",
+      "type": "bool",
+      "since": "1.21.6",
+      "until": "26.1",
+      "name": "locatorBar"
+    },
+    {
+      "id": "allowFireTicksAwayFromPlayer",
+      "type": "bool",
+      "since": "1.21.5",
+      "until": "26.1",
+      "name": "allowFireTicksAwayFromPlayer"
+    },
+    {
+      "id": "disablePlayerMovementCheck",
+      "type": "bool",
+      "since": "1.21.2",
+      "until": "26.1",
+      "name": "disablePlayerMovementCheck"
+    },
+    {
+      "id": "minecartMaxSpeed",
+      "type": "int",
+      "since": "1.21.2",
+      "until": "26.1",
+      "name": "minecartMaxSpeed"
+    },
+    {
+      "id": "spawnChunkRadius",
+      "type": "int",
+      "since": "1.20.5",
+      "until": "26.1",
+      "name": "spawnChunkRadius"
+    },
+    {
+      "id": "tntExplodes",
+      "type": "bool",
+      "since": "1.21.2",
+      "until": "26.1",
+      "name": "tntExplodes"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+schema = 1
+name = "stdlib_area_skill"
+sourcePath = "src"
+targetPath = "build"
+namespace = "example.stdlib.area_skill"
+version = "26.3"

@@ -21,6 +21,9 @@ sealed class ContextBorrowPayload {
     fun member(name: String): ContextBorrowPayload? = if (this is Context) when (name) {
         "executor" -> Executor(owner.executor, encoder)
         "pos" -> Position(owner.pos, encoder)
+        "rotation" -> Component(owner, encoder, ContextTypes.Rotation)
+        "dimension" -> Component(owner, encoder, ContextTypes.Dimension)
+        "anchor" -> Component(owner, encoder, ContextTypes.Anchor)
         else -> null
     } else null
 
@@ -34,7 +37,11 @@ sealed class ContextBorrowPayload {
         "executor" to CompilerValue.Integral(owner.components.executor.value),
         "position" to CompilerValue.Integral(owner.components.position.value),
         "rotation" to CompilerValue.Integral(owner.components.rotation.value),
-        "dimension" to CompilerValue.Integral(owner.components.dimension.value)
+            "dimension" to CompilerValue.Integral(owner.components.dimension.value),
+        "anchor" to CompilerValue.Integral(owner.components.anchor.value),
+        "positionTransform" to (if (this is Position) CompilerValue.Sequence(
+            binding.transform.world.map { CompilerValue.DoubleBits(it.toRawBits()) } +
+                binding.transform.local.orEmpty().map { CompilerValue.DoubleBits(it.toRawBits()) }) else CompilerValue.NullValue)
     ))
 
     data class Context(override val owner: ExecutionContext, override val encoder: ContextCommandEncoder?) : ContextBorrowPayload() {
@@ -62,11 +69,20 @@ sealed class ContextBorrowPayload {
         }
     }
 
+    data class Component(override val owner: ExecutionContext, override val encoder: ContextCommandEncoder?, val type: MCFPPBoundComponentType) : ContextBorrowPayload() {
+        override val kind: String get() = type.component
+        override fun adapter(name: String, type: MCFPPType): ScopedContextVar<*> {
+            if (type != this.type) throw ContextAccessException("Bound component cannot be erased to '$type'")
+            return BoundComponentVar(name, owner, this.type, encoder)
+        }
+    }
+
     companion object {
         fun direct(value: Var<*>): ContextBorrowPayload? = when (value) {
             is ExecutionContextVar -> value.context?.let { Context(it, value.encoder) }
             is BoundExecutorVar -> Executor(value.binding, value.encoder)
             is BoundPositionVar -> value.binding?.let { Position(it, value.encoder) }
+            is BoundComponentVar -> value.context?.let { Component(it, value.encoder, value.type as MCFPPBoundComponentType) }
             else -> null
         }
     }

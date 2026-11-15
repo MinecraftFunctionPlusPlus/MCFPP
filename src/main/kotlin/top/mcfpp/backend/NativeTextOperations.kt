@@ -39,9 +39,9 @@ object NativeTextOperations {
     }
 
     fun string(context: NativeCallContext) = context.withAdapters { receiver, _ ->
-        val value = receiver as MCString
-        publish(context, if (value is MCString && top.mcfpp.analysis.StorageAccess.snapshot(value) != null) PlainChatComponent(value.value.value)
-            else NBTChatComponent(value, false, null))
+        val snapshot = NativeCallContext(context.function, null, listOf(receiver), MCFPPBaseType.JsonText)
+        StandardTextOperations.of(snapshot)
+        snapshot.resultAdapter()?.let(context::publishResult)
     }
 
     fun template(context: NativeCallContext) = context.withAdapters { receiver, _ ->

@@ -110,6 +110,10 @@ internal object MacroCallPipeline {
             return unexpected(syntax, caller, failure)
         }
         if (!potential) return null
+        if (syntax.arguments()?.normalArgs()?.callArgumentList()?.callArgument()?.any { it.ASSIGNMENT() != null } == true) {
+            LogProcessor.error("Macros cannot receive runtime context arguments")
+            return UnknownVar("macro_context_argument").apply { isError = true }
+        }
         val budget = try {
             // Resolve the compilation-unit owner before the savepoint so an implicit first
             // budget is part of the captured state and failure rollback cannot erase its counts.

@@ -43,7 +43,7 @@ sealed interface KeyType {
     /** Canonical inline C encodings, with all references expanded by the key encoder. */
     data class Specialized(val base: KeyType, val arguments: List<List<Byte>>) : KeyType
     data class Union(val alternatives: List<KeyType>) : KeyType { init { require(alternatives.isNotEmpty()) } }
-    data class Function(val execution: FunctionExecution, val parameters: List<KeyType>, val result: KeyType) : KeyType
+    data class Function(val execution: FunctionExecution, val parameters: List<KeyType>, val result: KeyType, val contexts: List<KeyType> = emptyList()) : KeyType
     /** Canonical inline type/argument tree; never source text or parser bytes. */
     data class Dependent(val canonicalTree: List<Byte>) : KeyType
     data class Anonymous(val library: PackageKey, val classifier: String, val origin: AnonymousOrigin) : KeyType
@@ -133,7 +133,8 @@ sealed interface TypeSyntax : SemanticNode {
     }
     data class Function(
         override val scope: ScopeId, val parameters: List<TypeSyntax>, val result: TypeSyntax,
-        val execution: FunctionExecution = FunctionExecution.NORMAL
+        val execution: FunctionExecution = FunctionExecution.NORMAL,
+        val contexts: List<TypeSyntax> = emptyList()
     ) : TypeSyntax { override val tag: Int get() = 0x0209 }
     data class Void(override val scope: ScopeId) : TypeSyntax { override val tag: Int get() = 0x020a }
 }

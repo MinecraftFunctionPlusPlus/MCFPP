@@ -158,7 +158,8 @@ class SelectorExpression private constructor(
             return SelectorExpression(selector.selectorType, filters).snapshot(type)
         }
         fun restore(snapshot: CompilerValue.Typed): SelectorExpression? {
-            if (snapshot.type != MCFPPEntityType.NormalSelector.typeId && snapshot.type !is TypeId.Selector) return null
+            if (snapshot.type != MCFPPEntityType.NormalSelector.typeId && snapshot.type !is TypeId.Selector &&
+                top.mcfpp.type.EntityTypes.byId(snapshot.type) == null) return null
             val payload = snapshot.payload
             if (payload is CompilerValue.Text) {
                 val kind = EntitySelector.Companion.SelectorType.entries.firstOrNull { it.name == payload.value } ?: return null

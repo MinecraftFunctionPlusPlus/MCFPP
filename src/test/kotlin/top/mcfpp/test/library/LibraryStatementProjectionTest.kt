@@ -126,6 +126,25 @@ class LibraryStatementProjectionTest {
     }
 
     @Test
+    fun commandBlockRoundtripsCommandsAndEscapedStatements() {
+        val f = Fixture()
+        val root = f.block(f.block(
+            Statement.Command(f.scope, listOf(TextPart.Text("say "), TextPart.Interpolation(f.name(1)))),
+            Statement.Assign(f.scope, f.name(1), "+=", f.literal)))
+        f.bodyRoots[BodyId(1)] = root
+        val current = f.start()
+        val projected = current.block(BodyId(1))
+        assertEquals(root, f.capture.block(projected))
+        assertNotNull(projected.statement(0).commandBlock())
+        checkTree(projected, current)
+        val source = current.sourceSlice(projected)
+        val reparsed = P(org.antlr.v4.runtime.CommonTokenStream(top.mcfpp.antlr.mcfppLexer(
+            org.antlr.v4.runtime.CharStreams.fromString(source))))
+        reparsed.curlBlock()
+        assertEquals(0, reparsed.numberOfSyntaxErrors, source)
+    }
+
+    @Test
     fun statementsRoundtripThroughExistingCaptureWithDeclarationBindingsAndControlShapes() {
         val f = Fixture()
         val local = Statement.Local(f.scope, DeclarationId(10), f.name(1))
@@ -152,14 +171,13 @@ class LibraryStatementProjectionTest {
     fun storeExecuteAndCommandsKeepDedicatedNamesPathsAndText() {
         val f = Fixture()
         val root = f.block(Statement.TryStore(f.scope, f.block(), NameUse.Local(DeclarationId(1))),
-            Statement.Execute(f.scope, listOf(ExecuteContext(ExecutePath.As, Expression.Selector(f.scope, SelectorKind.ALL_ENTITIES)),
-                ExecuteContext(ExecutePath.Members(listOf(f.fieldName(92), f.fieldName(93))), f.name(1))),
+            Statement.ContextScope(f.scope, listOf(f.name(1)),
                 f.block(Statement.Return(f.scope, null))),
             Statement.Command(f.scope, listOf(TextPart.Text("say 😀 value="), TextPart.Interpolation(f.name(1)), TextPart.Text("!"))))
         val current = f.start()
         val projected = current.block(root)
         assertEquals(root, f.capture.block(projected))
-        assertEquals(listOf("as", "positioned.x"), all(projected).filterIsInstance<P.ExecuteExpressionContext>().map { it.text })
+        assertEquals(1, all(projected).filterIsInstance<P.ContextScopeStatementContext>().size)
         assertTrue(current.sourceSlice(projected).contains("/say 😀 value=\${x}!\n"))
         val location = assertNotNull(StatementBridge.sourceLocation(projected, "library"))
         assertEquals(current.sourceSlice(projected).length.toLong(), location.end.offset - location.start.offset)

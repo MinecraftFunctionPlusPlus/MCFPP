@@ -80,7 +80,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             Function(identifier, Project.currNamespace, ctx.curlBlock())
         }
         f.sourceDeclarationContext = ctx.functionDeclarationPart()
+        f.document = top.mcfpp.doc.SourceDocumentation.document(ctx)
         ctx.functionDeclarationPart().functionParams()?.let { f.addParamsFromContext(it) }
+        f.contextParams
         f.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
             f.parseDeclaredReturnType(ctx.functionDeclarationPart().functionReturnType().type())
         }else{
@@ -117,8 +119,10 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val identifier : String = ctx.functionDeclarationPart().Identifier().text
         f = InlineFunction(identifier, Project.currNamespace, ctx.curlBlock())
         f.sourceDeclarationContext = ctx.functionDeclarationPart()
+        f.document = top.mcfpp.doc.SourceDocumentation.document(ctx)
         //解析参数
         f.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
+        f.contextParams
         f.returnType = ctx.functionDeclarationPart().functionReturnType()?.type()?.let(f::parseDeclaredReturnType)
             ?: MCFPPPrivateType.Void
         //不是类的成员
@@ -151,6 +155,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             ctx.curlBlock()
         )
         f.sourceDeclarationContext = ctx.functionDeclarationPart()
+        f.document = top.mcfpp.doc.SourceDocumentation.document(ctx)
         f.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
             f.parseDeclaredReturnType(ctx.functionDeclarationPart().functionReturnType().type())
         }else{
@@ -158,6 +163,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         //解析参数
         f.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
+        f.contextParams
         //不是类的成员
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
@@ -207,9 +213,11 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             ExtensionFunction(ctx.Identifier().text, data, Project.currNamespace, ctx.curlBlock())
         }
         f.sourceDeclarationContext = ctx
+        f.document = top.mcfpp.doc.SourceDocumentation.document(ctx)
         //解析参数
         f.accessModifier = AccessModifier.PUBLIC
         f.addParamsFromContext(ctx.functionParams())
+        f.contextParams
         f.returnType = if(ctx.functionReturnType()?.type() != null){
             f.parseDeclaredReturnType(ctx.functionReturnType().type())
         }else{
@@ -233,7 +241,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? = withCompilationContext(ctx) {
         val nf = NativeFunction(ctx.functionDeclarationPart().Identifier().text, Project.currNamespace)
         nf.sourceDeclarationContext = ctx.functionDeclarationPart()
+        nf.document = top.mcfpp.doc.SourceDocumentation.document(ctx)
         nf.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
+        nf.contextParams
         nf.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
             nf.parseDeclaredReturnType(ctx.functionDeclarationPart().functionReturnType().type())
         }else{
@@ -255,10 +265,10 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 val mniRegister = method.getAnnotation(MNIFunction::class.java) ?: continue
                 //解析MNIMethod注解成员
                 val readOnlyType = mniRegister.readOnlyParams.map {
-                    MCFPPType.parseFromString(it.split(" ").last(), Namespace.currNamespaceField)
+                    MCFPPType.parseFromString(it.trim(), Namespace.currNamespaceField)
                 }
                 val normalType = mniRegister.normalParams.map {
-                    MCFPPType.parseFromString(it.split(" ").last(), Namespace.currNamespaceField)
+                    MCFPPType.parseFromString(it.trim(), Namespace.currNamespaceField)
                 }
                 //比对
                 fun matchesNativeType(declared: MCFPPType, registered: MCFPPType?): Boolean =
@@ -304,13 +314,16 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 //region template
     override fun visitTemplateDeclaration(ctx: TemplateDeclarationContext): Any? = withCompilationContext(ctx) {
         //获取注册的模板
-        val id = (ctx.declarationName()?: ctx.compoundDeclaration().declarationName()).classWithoutNamespace().text
+        val id = top.mcfpp.analysis.NestedTemplates.name(ctx)
         val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
         val template = if(namespace1.scope.hasTemplate(id)){
             namespace1.scope.getTemplate(id)!!
         }else{
             throw UndefinedException("Template should have been defined: $id")
         }
+        val previousTemplate = DataTemplate.currTemplate
+        val previousScope = typeScope
+        val previousObject = isInObject
         DataTemplate.currTemplate = template
         typeScope = template.scope
         Project.resolveTemplateInheritance(template)
@@ -327,8 +340,12 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 template.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!, null))
             }
         }
-        DataTemplate.currTemplate = null
-        typeScope = MCFPPFile.currFile!!.field.namespaceField
+        ctx.templateBody()?.templateMemberDeclaration()?.forEach { member ->
+            member.templateMember().templateDeclaration()?.let(::visitTemplateDeclaration)
+        }
+        DataTemplate.currTemplate = previousTemplate
+        typeScope = previousScope
+        isInObject = previousObject
         return null
     }
 
@@ -344,6 +361,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         typeScope = objectTemplate.scope
         if (objectTemplate is GenericDataTemplate) {
             Project.resolveTemplateInheritance(objectTemplate)
+            ctx.templateBody()?.templateMemberDeclaration()?.forEach { member ->
+                member.templateMember().templateDeclaration()?.let(::visitTemplateDeclaration)
+            }
             DataTemplate.currTemplate = null
             typeScope = MCFPPFile.currFile!!.field.namespaceField
             return null
@@ -355,6 +375,10 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //如果没有构造函数，生成默认的构造函数
         if(objectTemplate.constructors.isEmpty()){
             objectTemplate.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!, null))
+        }
+
+        ctx.templateBody()?.templateMemberDeclaration()?.forEach { member ->
+            member.templateMember().templateDeclaration()?.let(::visitTemplateDeclaration)
         }
 
         DataTemplate.currTemplate = null
@@ -450,8 +474,13 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             )
         }
         f.sourceDeclarationContext = ctx.functionDeclarationPart()
+        f.isEntityMember = ctx.ENTITY() != null
+        if (f.isEntityMember && !DataTemplate.currTemplate!!.isEntityTemplate)
+            LogProcessor.error("entity func requires an entity template")
+        f.document = top.mcfpp.doc.SourceDocumentation.document(ctx)
         f.isAbstract = ctx.ABSTRACT() != null
         f.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
+        f.contextParams
         f.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
             f.parseDeclaredReturnType(ctx.functionDeclarationPart().functionReturnType().type())
         }else{
@@ -524,6 +553,11 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
     private fun buildTemplateField(ctx: mcfppParser.TemplateFieldDeclarationContext, `var`: Var<*>): Pair<Var<*>, Property> {
         val isConst = ctx.CONST() != null
+        `var`.isEntityMember = ctx.ENTITY() != null
+        if (`var`.isEntityMember && !DataTemplate.currTemplate!!.isEntityTemplate)
+            LogProcessor.error("entity var requires an entity template")
+        if (`var`.isEntityMember && !`var`.type.hasRuntimeRepresentation)
+            LogProcessor.error("Entity field '${`var`.identifier}' requires a type with an NBT representation")
         `var`.isStatic = isInObject
         `var`.isConst = isConst
         // Object lifetime does not impose an explicit dynamic-value contract on each field.
@@ -536,6 +570,30 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     }
 
     internal fun completeTemplateFields(template: DataTemplate) {
+        inferTemplateFields(template)
+        val context = Function("constant-fields", template, null)
+        val known = linkedMapOf<String, top.mcfpp.analysis.DeclarationBinding.Bound>()
+        val types = template.scope.allVars.associate { it.identifier to it.type }
+        for (field in template.scope.allVars.filter { it.isConst && it.declaredParentTemplate === template }) {
+            val initializer = template.preInit[field.identifier]
+            if (initializer == null) {
+                if (field.declarationConstant == null)
+                    top.mcfpp.analysis.ConstantBinding.requireValue(field.identifier, null)
+                continue
+            }
+            try {
+                val binder = top.mcfpp.analysis.DeclarationBinding(context, types, known)
+                val bound = binder.constrain(binder.expression(initializer, field.type), field.type)
+                if (!top.mcfpp.analysis.ConstantBinding.requireValue(field.identifier, bound.constant)) continue
+                top.mcfpp.analysis.ConstantBinding.bindDeclaration(field, bound.constant!!, bound.descriptors)
+                known[field.identifier] = bound
+            } catch (failure: top.mcfpp.analysis.DeclarationBinding.Failure) {
+                LogProcessor.error("Constant '${field.identifier}' requires a complete compile-time initializer: ${failure.message}")
+            }
+        }
+    }
+
+    private fun inferTemplateFields(template: DataTemplate) {
         // Detach inherited annotation graphs before this declaration's annotations run,
         // including declarations with no fields requiring inference.
         val structuredOrigin = (template as? top.mcfpp.model.compound.CompiledGenericDataTemplate)?.originTemplate
@@ -563,7 +621,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 for ((name, initializer) in template.preInit) {
                     try {
                         val binder = top.mcfpp.analysis.DeclarationBinding(function, types, known)
-                        var bound = binder.expression(initializer)
+                        var bound = binder.expression(initializer, declared[name])
                         if (name in declared) {
                             val origin = (template as? top.mcfpp.model.compound.CompiledGenericDataTemplate)?.originTemplate ?: template
                             fun declarationText(node: org.antlr.v4.runtime.tree.ParseTree): String? {
@@ -654,6 +712,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //创建构造函数对象，注册函数
         val f = DataTemplateConstructor(DataTemplate.currTemplate!!, ctx.curlBlock())
         f.sourceDeclarationContext = ctx
+        f.document = top.mcfpp.doc.SourceDocumentation.document(ctx)
         f.file = MCFPPFile.currFile!!
         ctx.normalParams()?.let { f.addParamsFromContext(ctx.normalParams()) }
         if(isInObject && f.paramCount() != 0){

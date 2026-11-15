@@ -169,7 +169,8 @@ class EntityTargetFactoryTest {
         try {
             Project.config = ProjectConfig().apply { includes = arrayListOf() }
             CompileSettings.ignoreStdLib = true
-            val productionDeclarations = Files.readString(Path.of("src/main/mcfpp/lang/entity.mcfpp"))
+            val productionDeclarations = Files.readString(Path.of("src/main/mcfpp/lang/entity.mcfpp")).lineSequence()
+                .filter { "top.mcfpp.mni.EntityTargetData." in it }.joinToString("\n")
             MCFPPStringTest.readFromString(productionDeclarations + "\n" + program, version = "26.3")
             action()
         } finally {

@@ -208,12 +208,15 @@ object GlobalScope : FieldContainer, IScope {
                 template = nsp.scope.getTemplate(identifier)
                 if(template != null) return template
             }
+            if (identifier == "Entity" || top.mcfpp.type.EntityTypes.named(identifier) != null)
+                return getUnsolvedImportNamespace("mcfpp.minecraft.entity")?.scope?.getTemplate(identifier)
             return null
         }else{
             //命名空间为空，从全局寻找
             val template = MCFPPFile.currFile?.field?.getAccessibleTemplate(namespace, identifier)
             if(template != null) return template
             return stdNamespaces[namespace]?.scope?.getTemplate(identifier)
+                ?: if (namespace == "mcfpp.minecraft.entity") getUnsolvedImportNamespace(namespace)?.scope?.getTemplate(identifier) else null
         }
     }
 

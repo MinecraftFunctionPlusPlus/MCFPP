@@ -180,7 +180,8 @@ class MCFPPBaseType {
                 extends(MCFPPNBTType.NBT.instanceData)
                 injectedBy(JsonTextData::class.java)
 
-                addMember(MCInt("color"))
+                addMember(MCString("color"))
+                addMember(MCString("font"))
                 addMember(ScoreBool("bold"))
                 addMember(ScoreBool("italic"))
                 addMember(ScoreBool("underlined"))
@@ -195,7 +196,7 @@ class MCFPPBaseType {
             get() = "text"
 
         override val nbtType: Class<out Tag<*>>
-            get() = CompoundTag::class.java
+            get() = top.mcfpp.nbt.tags.collection.ListTag::class.java
 
         override fun defaultValue() = PlainChatComponent("")
 

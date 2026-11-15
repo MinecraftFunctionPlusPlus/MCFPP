@@ -260,7 +260,7 @@ internal class SourceCompoundIndex(private val selection: OwnedLibrarySelection)
         val derivedIntersection = original is UnionDataTemplate
         val context = if (derivedIntersection) null else anonymous ?: source?.let { all(unit(it)).firstOrNull { node -> when (node) {
             is P.TemplateDeclarationContext -> template !is ObjectCompoundData &&
-                (node.compoundDeclaration()?.declarationName() ?: node.declarationName())?.classWithoutNamespace()?.text == template.identifier
+                top.mcfpp.analysis.NestedTemplates.name(node) == template.identifier
             is P.ObjectTemplateDeclarationContext -> template is ObjectCompoundData && node.compoundDeclaration().declarationName().classWithoutNamespace().text == template.identifier
             else -> false
         } } ?: fail("Template ${template.identifier} has no parsed declaration") }
@@ -307,7 +307,7 @@ internal class SourceCompoundIndex(private val selection: OwnedLibrarySelection)
         sourceParents.forEach { parent ->
             val name = parent.className()
             val namespace = name.namespacePath()?.text
-            val identifier = name.classWithoutNamespace().Identifier().text
+            val identifier = name.text.substringAfter(':')
             val field = requireNotNull(source) { "A structured parent requires its author source environment" }.field
             val resolved = if (namespace == null) field.getAccessibleTemplate(identifier) else field.getAccessibleTemplate(namespace, identifier)
             if (resolved != null && owns(resolved)) this.template(resolved)
@@ -402,7 +402,7 @@ internal class SourceCompoundIndex(private val selection: OwnedLibrarySelection)
                 if (template.scope.functions.values.flatten().none { it === implementation }) targets[implementation] = slot
             } }
         }
-        val functions = template.scope.functions.values.flatten().filter { it.owner === template && !it.actualCallBody && it !is DataTemplateConstructor && it !is ExtensionFunction } + targets.keys
+        val functions = template.scope.functions.values.flatten().filter { it.owner === template && !it.actualCallBody && it !is DataTemplateConstructor && it !is ExtensionFunction && it !is top.mcfpp.core.lang.entity.EntityTemplates.SummonFunction } + targets.keys
         val seen = IdentityHashMap<Function, Boolean>()
         functions.filter { seen.put(it, true) == null }.forEach { function ->
             add(Entry(function, 2, function.identifier, template.namespace, targets[function] ?: template, source,
@@ -416,8 +416,10 @@ internal class SourceCompoundIndex(private val selection: OwnedLibrarySelection)
                 fail("Metadata constructor ${template.namespaceID} requires a real body or supported linked runtime")
             val name = if (anonymous != null) "_init_${entry.name}_${template.constructors.indexOf(constructor)}" else constructor.identifier
             add(Entry(constructor, 4, name, template.namespace, template, source,
-                constructor.ast?.parent as? ParserRuleContext, public && constructor.accessModifier != Member.AccessModifier.PRIVATE))
-            val syntax = (constructor.ast?.parent as? P.TemplateConstructorDeclarationContext)?.normalParams()?.parameterList()?.parameter().orEmpty()
+                constructor.sourceDeclarationContext ?: constructor.ast?.parent as? ParserRuleContext,
+                public && constructor.accessModifier != Member.AccessModifier.PRIVATE))
+            val syntax = ((constructor.sourceDeclarationContext ?: constructor.ast?.parent) as? P.TemplateConstructorDeclarationContext)
+                ?.normalParams()?.parameterList()?.parameter().orEmpty()
             constructor.normalParams.forEachIndexed { index, parameter -> include(parameter.type, syntax.getOrNull(index)?.type()) }
         }
         if (template !is GenericDataTemplate) body?.let { bindSourceAnnotations(template, it) }

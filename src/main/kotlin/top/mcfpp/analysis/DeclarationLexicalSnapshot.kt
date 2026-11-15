@@ -236,6 +236,7 @@ internal class DeclarationLexicalSnapshot private constructor(
             MCFPPNBTRefType::class.java -> State(children = listOf((type as MCFPPNBTRefType).valueType))
             MCFPPGenericParamType::class.java -> State(text = (type as MCFPPGenericParamType).identifier)
             MCFPPEntityType::class.java -> State(names = (type as MCFPPEntityType).types?.let { ArrayList(it) })
+            top.mcfpp.type.MCFPPEntityRefType::class.java -> State(children = listOf((type as top.mcfpp.type.MCFPPEntityRefType).templateArgument))
             MCFPPDataTemplateType::class.java, MCFPPObjectDataTemplateType::class.java,
             MCFPPGenericDataTemplateType::class.java, MCFPPGenericObjectDataTemplateType::class.java ->
                 State(target = (type as MCFPPDataTemplateType).checkpointPrivateState().elements.single())
@@ -1068,7 +1069,7 @@ internal class DeclarationDomainStamp private constructor(
                 val proof = DeclarationLexicalSnapshot.rawValue(value)
                 RawPreparationFact.row(
                     required(
-                        value, "identifier", "type", "isConst", "isStatic", "nullable", "accessModifier",
+                        value, "identifier", "type", "isConst", "declarationConstant", "isStatic", "nullable", "accessModifier",
                         "isFinal", "annotations", "parent", "declaredParentTemplate", "symbol"
                     ),
                     fields(value, "property", "field", "caller"),
@@ -1833,12 +1834,13 @@ internal class DeclarationPreparationContext private constructor(
             MCFPPNBTType.ByteArray::class.java, MCFPPNBTType.IntArray::class.java, MCFPPNBTType.LongArray::class.java,
             MCFPPPrivateType.Null::class.java, MCFPPPrivateType.Wildcard::class.java,
             MCFPPPrivateType.Void::class.java, MCFPPPrivateType.MCFPPCoordinateDimension::class.java,
-            MCFPPEntityType::class.java, MCFPPEntityType.Player::class.java,
+            MCFPPEntityType::class.java, MCFPPEntityType.Player::class.java, top.mcfpp.type.MCFPPEntityRefType::class.java,
             MCFPPVectorType::class.java, MCFPPEnumType::class.java,
             MCFPPFunctionType::class.java,
             MCFPPScoreRefType::class.java,
             top.mcfpp.core.lang.context.MCFPPExecutionContextType::class.java,
-            top.mcfpp.core.lang.context.MCFPPBoundPositionType::class.java
+            top.mcfpp.core.lang.context.MCFPPBoundPositionType::class.java,
+            top.mcfpp.core.lang.context.MCFPPBoundComponentType::class.java
         )
     }
 }

@@ -39,8 +39,13 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
     val errors = top.mcfpp.Project.errorCount
     val operation = build(args)
     if (top.mcfpp.Project.errorCount != errors || args.any { it.isError }) return@withArguments
+    if (context.declaredReturnType == top.mcfpp.type.MCFPPPrivateType.Void) {
+        Function.addCommands(operation.buildMacroFunction())
+        return@withArguments
+    }
     val result = (context.declaredReturnType.buildUnConcrete(TempPool.getVarIdentify()) as DataTemplateObject).apply { isTemp = true }
     val binding = StorageAccess.ensure(result)
+    Function.currFunction.nativeResultSlots += binding.path.toCommandPart().analyze()
     Function.addCommand(Commands.dataSetValue(binding.path, CompoundTag("result" to IntTag(0), "success" to ByteTag(0))))
     StorageAccess.publishNbt(result)
     val command = Command("execute store result").build(binding.path.memberIndex("result").toCommandPart())

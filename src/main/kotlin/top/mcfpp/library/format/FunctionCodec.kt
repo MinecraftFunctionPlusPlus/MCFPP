@@ -108,6 +108,7 @@ object FunctionCodec {
         optional(value.native) { writeNative(this, it, strings) }
         list(value.tags) { u32(strings.reference(it.namespace)); u32(strings.reference(it.name)) }
         list(value.linkedRuntime) { u32(it.value) }
+        list(value.contexts) { u32(it.value) }
     }
 
     fun readFunctionPayload(reader: LibraryBinaryReader, common: DeclCommon, strings: LibraryStrings): FunctionDeclaration =
@@ -115,7 +116,8 @@ object FunctionCodec {
             FunctionDeclaration(common, enumValue(u8(), FunctionExecutionKind.entries, { it.wireValue }, this, "execution"),
                 optional { TypeRef(u32()) }, list { DeclarationId(u32()) }, list { DeclarationId(u32()) },
                 optional { TypeRef(u32()) }, optional { BodyId(u32()) }, optional { readNative(this, strings) },
-                list { TagKey(strings.value(u32()), strings.value(u32())) }, list { RuntimeRef(u32()) })
+                list { TagKey(strings.value(u32()), strings.value(u32())) }, list { RuntimeRef(u32()) },
+                if (LibraryReadVersion.current >= 2) list { DeclarationId(u32()) } else emptyList())
         } }
 
     fun writeValuePayload(writer: LibraryBinaryWriter, value: ValueDeclaration) = with(writer) {
@@ -163,6 +165,7 @@ object FunctionCodec {
                     }
                     parameters(declaration.readonly, ValueRole.READONLY_PARAMETER)
                     parameters(declaration.normal, ValueRole.NORMAL_PARAMETER)
+                    parameters(declaration.contexts, ValueRole.CONTEXT_PARAMETER)
                     declaration.receiver?.let(references::type); declaration.result?.let(references::type)
                     declaration.body?.let(references::body); declaration.native?.caller?.let(references::type)
                     declaration.linkedRuntime.forEach(references::runtime)
@@ -180,7 +183,7 @@ object FunctionCodec {
             is FunctionDeclaration -> {
                 require(value.tag == 2)
                 require(value.common.flags and (DeclarationFlags.NULLABLE or DeclarationFlags.FORCE_RUNTIME or DeclarationFlags.DATA_ONLY) == 0L)
-                val parameters = value.readonly + value.normal
+                val parameters = value.readonly + value.normal + value.contexts
                 require(parameters.distinct().size == parameters.size) { "Duplicate function parameter reference" }
                 if (value.execution != FunctionExecutionKind.NATIVE)
                     require((value.common.flags and DeclarationFlags.CONST != 0L) == (value.execution == FunctionExecutionKind.COMPILE_TIME))
@@ -195,7 +198,7 @@ object FunctionCodec {
                 require(value.common.flags and (DeclarationFlags.ABSTRACT or DeclarationFlags.OVERRIDE) == 0L)
                 require((value.storage == ValueStorage.CONST) == (value.common.flags and DeclarationFlags.CONST != 0L))
                 require(value.type != null || value.role == ValueRole.LAMBDA_PARAMETER)
-                val parameter = value.role in setOf(ValueRole.READONLY_PARAMETER, ValueRole.NORMAL_PARAMETER, ValueRole.LAMBDA_PARAMETER)
+                val parameter = value.role in setOf(ValueRole.READONLY_PARAMETER, ValueRole.NORMAL_PARAMETER, ValueRole.LAMBDA_PARAMETER, ValueRole.CONTEXT_PARAMETER)
                 require(parameter == (value.parameterIndex != null))
                 if (parameter) require(value.storage == ValueStorage.PARAMETER && value.common.owner != null)
             }

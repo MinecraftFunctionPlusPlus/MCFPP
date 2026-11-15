@@ -6,6 +6,12 @@ import top.mcfpp.mni.annotation.NoExternalWrites
 
 /** Read-only members share the same list query backend in every value state. */
 object ImmutableListData {
+    /** Returns the number of elements. */
+    @NoExternalWrites @JvmStatic @MNIFunction(caller = "ImmutableList", genericType = ["E"], returnType = "int")
+    fun size(context: NativeCallContext) = ListOperations.size(context)
+    /** Tests whether the list has no elements. */
+    @NoExternalWrites @JvmStatic @MNIFunction(caller = "ImmutableList", genericType = ["E"], returnType = "bool")
+    fun isEmpty(context: NativeCallContext) = ListOperations.isEmpty(context)
     /** Returns the first matching zero-based index, or -1 when the element is absent. */
     @NoExternalWrites
     @MNIFunction(normalParams = ["E"], caller = "ImmutableList", genericType = ["E"], returnType = "int")

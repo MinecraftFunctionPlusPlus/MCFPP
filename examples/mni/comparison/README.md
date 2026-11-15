@@ -64,7 +64,7 @@ pwsh -NoProfile -File examples/mni/comparison/verify-comparison.ps1 `
 
 只有 Windows PowerShell 时可用 `powershell -NoProfile -ExecutionPolicy Bypass -File ...` 替代 `pwsh -NoProfile -File ...`。
 
-可选参数：`-Attempt <name>` 选择独立的证据目录（默认 `attempt1`，目录已存在会拒绝覆盖）；`-ReportPath <path>` 覆盖报告路径（默认 `docs/mni/generated-code-report.md`）；`-CommandBudget <n>` 覆盖严格执行器的命令预算（默认 `20000`）。
+可选参数：`-Attempt <name>` 选择独立的证据目录（默认 `attempt1`，目录已存在会拒绝覆盖）；`-ReportPath <path>` 覆盖报告路径（默认 `build/inheritance-mni/comparison-check/<Attempt>/generated-code-report.md`）；`-CommandBudget <n>` 覆盖严格执行器的命令预算（默认 `20000`）。
 
 脚本要求 `build/classes/kotlin/test` 已包含本次 `ContextCommandExecutor.executedFunctionLines` 的编译结果；若不存在会明确失败，不会用旧解释器伪造通过。
 
@@ -79,7 +79,7 @@ pwsh -NoProfile -File examples/mni/comparison/verify-comparison.ps1 `
 7. `MeasureComparison` 读取实际生成的 function 文件，并在每个场景中分别执行 MNI、handwritten、runtime 三方命令。所有执行都通过严格的 `ContextCommandExecutor`；观测 probe 只插入到内存副本中真实 caller frame pop 之前，报告前会检查结果等价性。
 8. 成功后才写 `measurement.json` 并生成 Markdown 报告；`result.json` 无论成功或失败都会保留（失败时包含 `error`），但失败不会生成成功报告。
 
-失败时脚本以非零状态退出，不会生成成功报告；`result.json` 仍保留失败信息。当前 `docs/mni/generated-code-report.md` 在真实测量执行前保持 pending。
+失败时脚本以非零状态退出，不会生成成功报告；`result.json` 仍保留失败信息。实际测量报告与该次执行的其他产物一同保存在构建目录。
 
 ## 指标定义
 

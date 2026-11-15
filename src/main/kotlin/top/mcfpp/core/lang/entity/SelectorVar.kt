@@ -53,7 +53,11 @@ open class SelectorVar : Var<SelectorVar>, EntityTargetAccess {
         return StorageAccess.entityTarget(binding)
     }
 
-    override val entityFacts: EntityFacts get() = entityTargetOrNull()?.facts ?: EntityFacts.UNKNOWN
+    override val entityFacts: EntityFacts get() {
+        val facts = entityTargetOrNull()?.facts ?: EntityFacts.UNKNOWN
+        val kinds = (type as? MCFPPEntityType)?.entityKinds ?: return facts
+        return EntityFacts(facts.upperBound, kinds == setOf("minecraft:player"), kinds)
+    }
 
     val value: EntitySelector get() {
         val selector = (entityTargetOrNull() as? EntityTarget.Selector)?.selector
@@ -79,17 +83,9 @@ open class SelectorVar : Var<SelectorVar>, EntityTargetAccess {
     fun isPlayer(): Boolean = entityFacts.playersOnly
 
     override fun explicitCast(type: MCFPPType): Var<*> {
-        val qwq = super.explicitCast(type)
-        if(!qwq.isError) return qwq
-        return when(type){
-            is MCFPPEntityType -> {
-                if((this.type as MCFPPEntityType).canCastTo(type)){
-                    this.type.build("").setAs(this)
-                }else qwq
-            }
-
-            else -> qwq
-        }
+        if (type is MCFPPEntityType && (this.type as? MCFPPEntityType)?.canCastTo(type) == true)
+            return type.buildUnConcrete(identifier).setAs(this).also { it.type = type }
+        return super.explicitCast(type)
     }
 
     override fun canExplicitCast(type: MCFPPType): Boolean {
@@ -97,21 +93,13 @@ open class SelectorVar : Var<SelectorVar>, EntityTargetAccess {
     }
 
     override fun implicitCast(type: MCFPPType): Var<*> {
-        val qwq = super.implicitCast(type)
-        if(!qwq.isError) return qwq
-        return when(type){
-            is MCFPPEntityType -> {
-                if((this.type as MCFPPEntityType).canCastTo(type)){
-                    this.type.build("").setAs(this)
-                }else qwq
-            }
-
-            else -> qwq
-        }
+        if (type is MCFPPEntityType && this.type.isSubOf(type))
+            return type.buildUnConcrete(identifier).setAs(this).also { it.type = type }
+        return super.implicitCast(type)
     }
 
     override fun canImplicitCast(type: MCFPPType): Boolean {
-        return type is MCFPPEntityType && (this.type as MCFPPEntityType).canCastTo(type) || super.canImplicitCast(type)
+        return type is MCFPPEntityType && this.type.isSubOf(type) || super.canImplicitCast(type)
     }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {

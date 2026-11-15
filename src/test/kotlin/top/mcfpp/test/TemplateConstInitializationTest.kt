@@ -14,8 +14,10 @@ import kotlin.test.Test
 
 class TemplateConstInitializationTest {
     private fun compile(source: String, errors: Int = 0): Function {
-        MCFPPStringTest.readFromString(source.trimIndent(), version = "26.3")
-        assertEquals(errors, Project.errorCount)
+        val diagnostics = top.mcfpp.test.util.compilerDiagnostics {
+            MCFPPStringTest.readFromString(source.trimIndent(), version = "26.3")
+        }
+        assertEquals(errors, Project.errorCount, diagnostics.joinToString("\n"))
         return GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
     }
 
@@ -43,7 +45,8 @@ class TemplateConstInitializationTest {
         // The executor models storage and scores; omit only load's fixed world bootstrap.
         val load = Project.projectLoad.commands.analyzeAll().filterNot {
             it.startsWith("scoreboard objectives add ") ||
-                it == "execute unless score math mcfpp_init matches 1 run function math:_init" ||
+                it == "execute unless score math_version mcfpp_init matches 315 run function math:_init" ||
+                it == "scoreboard players set math_version mcfpp_init 315" ||
                 it.startsWith("summon item 0 0 0 {Tags:[\"mcfpp_ptr_marker\"]") ||
                 it.startsWith("summon marker 0 0 0 {Tags:[\"mcfpp_float_marker\"]")
         }
@@ -52,16 +55,16 @@ class TemplateConstInitializationTest {
             .also { assertEquals(0, it.stackDepth) }
     }
 
-    @Test fun typedAndInferredObjectConstKeepRuntimeCallsAndRejectReassignment() {
+    @Test fun typedAndInferredObjectConstKeepSnapshotsAndRejectReassignment() {
         fun source(assignments: String) = """
             func produce(value: int): int {
                 /say produced
                 return value
             }
             object data Defaults {
-                const typed: int = produce(4)
+                const typed: int = 4
                 @DataOnly
-                const inferred = produce(5)
+                const inferred = 5
             }
             func main(){
                 $assignments
@@ -76,7 +79,7 @@ class TemplateConstInitializationTest {
                 val field = defaults.scope.getVar(name)!!
                 assertTrue(field.isConst)
                 assertFalse(field.symbol!!.mutable)
-                assertNull(top.mcfpp.analysis.StorageAccess.snapshot(field))
+                assertNotNull(top.mcfpp.analysis.StorageAccess.snapshot(field))
                 if (name == "inferred") {
                     assertTrue((field as MCInt).isDataOnly)
                     assertTrue(field.annotations.any { it is top.mcfpp.mni.annotation.DataOnly })
@@ -86,7 +89,7 @@ class TemplateConstInitializationTest {
             val constructor = defaults.constructors.single()
             assertTrue(constructor.bodyCompiled)
             val machine = execute(main)
-            assertEquals(listOf("produced", "produced"), machine.messages)
+            assertTrue(machine.messages.isEmpty())
             assertEquals(45, machine.read(main.scope.getVar("result") as MCInt))
             assertEquals(IntTag(5), machine.readNbt("mcfpp:system", defaults.nbtPath.memberIndex("inferred").pathToCommandPart().toString()))
         }
@@ -109,18 +112,14 @@ class TemplateConstInitializationTest {
         for (fields in listOf("const first = Defaults.first + 1;", "const first = Defaults.later + 1; const later = 4;")) {
             MCFPPStringTest.readFromString("object data Defaults {$fields}\nfunc main(){}", version = "26.3")
             assertTrue(Project.errorCount > 0)
-            val failed = objectTemplate()
-            assertNull(failed.scope.getVar("first"))
-            val path = failed.nbtPath.memberIndex("first").toCommandPart().toString()
-            assertTrue(failed.constructors.single().commands.analyzeAll().none { path in it })
         }
     }
 
-    @Test fun ordinaryTypedReadonlyFieldsInitializeFromEachIncomingReceiverCall() {
+    @Test fun runtimeReadonlyPropertiesInitializeFromEachIncomingReceiverCall() {
         for (assignment in listOf("", "first.value = 99;")) {
             val main = compile("""
                 data Box {
-                    const value: int = initial
+                    var value: int = initial { get }
                     constructor(initial: int){}
                 }
                 func main(){
@@ -131,13 +130,13 @@ class TemplateConstInitializationTest {
                 }
             """, if (assignment.isEmpty()) 0 else 1)
             val box = GlobalScope.getTemplate("default.test", "Box")!!
-            assertTrue(box.scope.getVar("value")!!.isConst)
+            assertFalse(box.scope.getVar("value")!!.isConst)
             assertTrue(box.constructors.single().compiledFunctions.isEmpty())
             assertEquals(12, execute(main).read(main.scope.getVar("result") as MCInt))
         }
     }
 
-    @Test fun constFieldsAcceptLiteralAndRuntimeInitializers() {
+    @Test fun constFieldsAcceptConstantsAndRejectRuntimeInitializers() {
         val main = compile("""
             object data Defaults {
                 const required: int = 3
@@ -153,7 +152,7 @@ class TemplateConstInitializationTest {
         val machine = execute(main)
         assertEquals(IntTag(3), machine.readNbt("mcfpp:system", defaults.nbtPath.memberIndex("required").pathToCommandPart().toString()))
         assertEquals(IntTag(3), machine.readNbt("mcfpp:system", defaults.nbtPath.memberIndex("mirrored").pathToCommandPart().toString()))
-        val runtimeMain = compile("""
+        MCFPPStringTest.readFromString("""
             func produce(value: int, valid: bool): int {
                 /say produced
                 if(valid){ return value; }
@@ -161,10 +160,7 @@ class TemplateConstInitializationTest {
             }
             object data Defaults { const required: int = produce(4, true); }
             func main(){}
-        """)
-        val runtimeDefaults = objectTemplate()
-        val runtimeMachine = execute(runtimeMain)
-        assertEquals(IntTag(4), runtimeMachine.readNbt("mcfpp:system", runtimeDefaults.nbtPath.memberIndex("required").pathToCommandPart().toString()))
-        assertTrue(runtimeDefaults.scope.getVar("required")!!.isConst)
+        """.trimIndent(), version = "26.3")
+        assertTrue(Project.errorCount > 0)
     }
 }

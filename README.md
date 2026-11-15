@@ -21,6 +21,8 @@ The release build prioritizes size. Use `shadowJar` or `installShadowDist` for q
 
 [Type system specification](./docs/type-system/specification.md) · [Migration status and guide](./docs/type-system/migration.md)
 
+[Compiler maintenance guide (Chinese)](./docs/compiler-architecture.md): compilation stages, package responsibilities, resource ownership, and verification.
+
 [ScoreRef / NBTRef usage and migration](./docs/type-system/reference-values.md): save and pass explicit Minecraft addresses, read with synchronous `tryRead`, and write with `set`.
 
 ## [Future Plans](./TODO_CN.md)
@@ -46,7 +48,7 @@ JustMCF simplifies mcfunction projects, allowing both original and streamlined c
 func example(){
   external i: int = 1
   if(i > 0){
-    execute(as = @s) {
+    @s.withEntityCtx { actor ->
       /say Hello Minecraft!
     }
   }
@@ -122,6 +124,8 @@ func test(){
 ```
 
 ## Functions, comments, and fields
+
+Run `mcfpp doc` to export offline HTML and JSON API documentation under the project's output directory in `docs`. Documentation supports Markdown, block tags, symbol links, and library round trips. See [documentation export](docs/documentation.md) and the runnable [example](examples/documentation).
 
 Variables, named parameters, and fields use `:` for type annotations, such as `var x: int`. Declare `const x = 1` and `external x: int = 1` directly, without `var`; variable imports retain `import var`. Function return types use `:`. Ordinary comments start with `//`; documentation comments start with `///` and contain Markdown. Consecutive documentation lines form one block. A single space after `///` is a separator; further indentation and Markdown markers are preserved. Fields in `data`, `object data`, and anonymous `data` bodies use `var` or `const`.
 

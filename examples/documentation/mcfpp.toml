@@ -1,0 +1,14 @@
+schema = 1
+name = "documentation-example"
+namespace = "docs"
+version = "1.21.8"
+sourcePath = "src/main/mcfpp"
+targetPath = "build"
+args = ["-ignoreStdLib", "-isLib"]
+
+[library]
+coordinate = "docs:example"
+version = "1.0.0"
+
+[mni]
+enabled = false

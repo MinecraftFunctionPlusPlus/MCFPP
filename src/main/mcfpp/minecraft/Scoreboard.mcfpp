@@ -1,0 +1,3 @@
+@From("top.mcfpp.mni.minecraft.ScoreboardData")
+/// 管理记分板目标。分数读写使用 entity.score 或 ScoreRef。
+object data Scoreboard

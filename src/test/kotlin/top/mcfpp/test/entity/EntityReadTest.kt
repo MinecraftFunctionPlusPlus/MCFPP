@@ -109,6 +109,7 @@ class EntityReadTest {
 
     @Test fun callbackInheritsAmbientSpaceExecutorAndLocalReturnWithScopedAddresses() = fixture("""
         func main() {
+            @s.withEntityCtx { actor ->
             entityByName("Alice").withPosCtx { origin ->
                 var found = entityByName("Bob").dat.air.tryRead { value ->
                     origin.executor.addTag("borrowed-in-read")
@@ -136,6 +137,7 @@ class EntityReadTest {
                         }
                     }
                 }
+            }
             }
         }
     """.trimIndent()) { main, functions ->
@@ -176,8 +178,8 @@ class EntityReadTest {
         }
         func main() {
             @p.dat.playerOnly.tryRead { value -> consumePlayer(value); }
-            @p.withEntityCtx { context ->
-                context.executor.dat.playerOnly.tryRead { value -> consumePlayer(value); }
+            @p.withEntityCtx { ctx ->
+                ctx.executor.dat.playerOnly.tryRead { value -> consumePlayer(value); }
                 entityByName("carrier").withPosCtx { spatial ->
                     spatial.executor.dat.playerOnly.tryRead { value -> consumePlayer(value); }
                 }
@@ -274,7 +276,7 @@ class EntityReadTest {
                 MCFPPStringTest.readFromString("import mcfpp.minecraft.entity:*\nimport mcfpp.minecraft.resource:*\n$factories\n$conversions\n$program", version = "26.3")
                 capture.seal().diagnostics.map { it.message }
             }
-            if (errors) assertTrue(Project.errorCount > 0) else assertEquals(0, Project.errorCount)
+            if (errors) assertTrue(Project.errorCount > 0) else assertEquals(0, Project.errorCount, diagnostics.joinToString("\n"))
             if (errors) {
                 assertTrue(diagnostics.any { it.contains("condition must be a boolean expression") }, diagnostics.joinToString("\n"))
                 assertTrue(diagnostics.any { it.contains("Unknown entity NBT field 'playerOnly'") }, diagnostics.joinToString("\n"))

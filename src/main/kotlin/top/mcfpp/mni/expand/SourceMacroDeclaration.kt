@@ -16,6 +16,10 @@ internal object SourceMacroDeclaration {
              methods: List<Method>, namespace: Namespace): Boolean {
         val candidates = methods.filter { it.isAnnotationPresent(MNIMacro::class.java) }
         if (candidates.isEmpty()) return false
+        if (declaration.contextParams.isNotEmpty()) {
+            LogProcessor.error("Macro '${declaration.identifier}' cannot declare runtime context parameters")
+            return true
+        }
         if (declaration.readOnlyParams.isNotEmpty()) {
             LogProcessor.error("Macro '${declaration.identifier}' does not accept readonly parameters; use Const parameters in the Kotlin implementation")
             return true
@@ -34,7 +38,8 @@ internal object SourceMacroDeclaration {
                     metadata.normalParams.zip(declaration.normalParams).any { (text, parameter) -> type(text)?.typeId != parameter.type.typeId } ||
                     type(metadata.returnType)?.typeId != declaration.returnType.typeId) return@mapNotNull null
                 requireNotNull(MacroFunctionInfo.from(method)).declaredAs(declaration.identifier,
-                    declaration.normalParams.map { it.identifier })
+                    declaration.normalParams.map { it.identifier }, declaration.document.toSource(),
+                    top.mcfpp.io.MCFPPFile.currFile?.path, syntax.start.line)
             } catch (failure: MacroSignatureException) {
                 failures.add(failure.message.orEmpty())
                 null

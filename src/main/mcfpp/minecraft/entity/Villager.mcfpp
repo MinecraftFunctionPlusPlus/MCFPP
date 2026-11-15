@@ -15,7 +15,8 @@ data VillagerData: EntityData, CreatureData, AIMobData, GrowableData {
     @Name("LastGossipDecay") var lastGossipDecay: long
 
     /// 可提供的交易。
-    @Name("Offers") var offers: data {
+    @Name("Offers") var offers: Offers
+    data Offers {
         /// 配方或交易记录列表。
         @Name("Recipes") var recipes: list<VillagerRecipe>
     }
@@ -24,7 +25,8 @@ data VillagerData: EntityData, CreatureData, AIMobData, GrowableData {
     @Name("RestocksToday") var restocksToday: int
 
     /// 村民的等级、职业和外观数据。
-    @Name("VillagerData") var villagerData: data {
+    @Name("VillagerData") var villagerData: VillagerDetails
+    data VillagerDetails {
         /// 等级。
         var level: int
         /// 职业标识符。
@@ -59,14 +61,16 @@ data VillagerGossip {
 /// 一项村民交易的输入、输出和价格数据。
 data VillagerRecipe {
     /// 第一项交易输入。
-    var buy: data {
+    var buy: Buy
+    data Buy {
         /// 资源标识符。
         var id: string
         /// 物品组件数据。
         var components: nbt
     }
     /// 第二项交易输入。
-    var buyB: data {
+    var buyB: BuyB
+    data BuyB {
         /// 资源标识符。
         var id: string
         /// 物品组件数据。

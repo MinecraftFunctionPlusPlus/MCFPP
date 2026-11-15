@@ -149,7 +149,7 @@ class TemplateInitializationTest {
             namespace fixture.defaults
             func seed(): int { return 4; }
             func produce(): int { return seed(); }
-            data Box { const value: int = produce(); }
+            data Box { var value: int = produce() { get } }
             func main(){}
         """, output)
         val original = GlobalScope.getTemplate("fixture.defaults", "Box")!!

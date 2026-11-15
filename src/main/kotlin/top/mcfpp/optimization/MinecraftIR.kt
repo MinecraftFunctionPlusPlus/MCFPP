@@ -147,13 +147,17 @@ object MinecraftFramePlanning {
         val executable = input.withIndex().filter { it.value !is MinecraftInstruction.Comment }
         if (executable.size < 2 || executable.first().value != MinecraftInstruction.Frame(true) ||
             executable.last().value != MinecraftInstruction.Frame(false)) return input
-        val independent = executable.drop(1).dropLast(1).all { (_, instruction) -> when (instruction) {
+        fun independent(instruction: MinecraftInstruction): Boolean = when (instruction) {
             is MinecraftInstruction.ScoreSet, is MinecraftInstruction.ScoreOperation -> true
+            is MinecraftInstruction.Execute -> instruction.clauses.none {
+                it in setOf("stack_frame", "function", "predicate") || it.startsWith("stack_frame[")
+            } && independent(instruction.body)
             is MinecraftInstruction.Opaque -> instruction.text.startsWith("scoreboard objectives ") ||
-                instruction.text == "say" || instruction.text.startsWith("say ")
+                instruction.text == "say" || instruction.text.startsWith("say ") ||
+                listOf("tp ", "teleport ", "summon ").any { instruction.text.startsWith(it) }
             else -> false
-        } }
-        if (!independent) return input
+        }
+        if (!executable.drop(1).dropLast(1).all { independent(it.value) }) return input
         val enter = executable.first().index
         val exit = executable.last().index
         return input.filterIndexed { index, _ -> index != enter && index != exit }

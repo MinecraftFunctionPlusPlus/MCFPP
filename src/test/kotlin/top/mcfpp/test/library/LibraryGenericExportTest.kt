@@ -65,7 +65,7 @@ class LibraryGenericExportTest {
             val result = LibraryExport.write(selection, output)
             val bytes = Files.readAllBytes(output)
             assertEquals(bytes.size.toLong(), result.bytesWritten)
-            assertEquals(1L, LibraryWire.decode(bytes).formatVersion)
+            assertEquals(2L, LibraryWire.decode(bytes).formatVersion)
             val codec = LibraryModelCodec(listOf(CompoundCodec))
             val model = codec.decode(bytes)
             val declarations = model.declarations.declarations
@@ -152,7 +152,7 @@ class LibraryGenericExportTest {
             assertTrue(model.syntax.nodes.filterIsInstance<Expression.Call>().any { it.readonly.isNotEmpty() })
             assertTrue(model.localReferencesValidated)
             assertTrue(model.syntax.externalReferencesValidated)
-            assertNull(model.debug)
+            assertTrue(model.debug?.documents.orEmpty().isEmpty())
             repeat(3) { TypeId.fresh() }
             assertContentEquals(bytes, codec.encode(LibraryExporter.capture(selection.copy(functions = roots.reversed()))))
         } finally {

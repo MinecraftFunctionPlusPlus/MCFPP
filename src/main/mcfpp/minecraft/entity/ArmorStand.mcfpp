@@ -30,7 +30,8 @@ data ArmorStandData: EntityData, CreatureData {
 
     @Name("Pose")
     /// 各部位的姿态角度。
-    var pose: data {
+    var pose: Pose
+    data Pose {
         @Name("Body")
         /// 身体的姿态角度。
         var body: list<float>

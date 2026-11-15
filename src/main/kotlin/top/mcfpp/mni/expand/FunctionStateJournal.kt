@@ -366,6 +366,8 @@ internal class FunctionStateJournal private constructor(
         private class SetRoot(val items: MutableSet<Any?>)
 
         private val supportedFunctions = setOf<Class<*>>(
+            top.mcfpp.core.lang.entity.EntityTemplates.SummonFunction::class.java,
+            top.mcfpp.core.lang.entity.EntityTemplates.LegacySummonFunction::class.java,
             Function::class.java, NativeFunction::class.java, GenericFunction::class.java,
             ExtensionFunction::class.java, GenericExtensionFunction::class.java, InlineFunction::class.java,
             InternalFunction::class.java, NoStackFunction::class.java, MCFunction::class.java,
@@ -380,7 +382,8 @@ internal class FunctionStateJournal private constructor(
         private val supportedDocumentTags = setOf<Class<*>>(
             SinceTag::class.java, DeprecatedTag::class.java, SeeTag::class.java, VersionTag::class.java,
             AuthorTag::class.java, BaseTag::class.java, ParamTag::class.java, ReturnTag::class.java,
-            ThrowsTag::class.java, ContextTag::class.java
+            ThrowsTag::class.java, ContextTag::class.java, ReceiverTag::class.java, PropertyTag::class.java,
+            ConstructorTag::class.java, SampleTag::class.java, UnknownTag::class.java
         )
     }
 }

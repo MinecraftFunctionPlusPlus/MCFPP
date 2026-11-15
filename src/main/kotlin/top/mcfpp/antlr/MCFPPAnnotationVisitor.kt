@@ -241,7 +241,7 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
 
     override fun visitTemplateDeclaration(ctx: mcfppParser.TemplateDeclarationContext): Unit = withCompilationContext(ctx) {
         //注册模板
-        val id = (ctx.declarationName()?: ctx.compoundDeclaration().declarationName()).classWithoutNamespace().text
+        val id = top.mcfpp.analysis.NestedTemplates.name(ctx)
         val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
         val template = if(namespace1.scope.hasTemplate(id)){
             namespace1.scope.getTemplate(id)!!
@@ -256,9 +256,10 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
         }
         annotationCache.clear()
         recordProcessors(template, ctx)
+        val previousTemplate = DataTemplate.currTemplate
         DataTemplate.currTemplate = template
         visitDeclarationBody(ctx.templateBody(), template)
-        DataTemplate.currTemplate = null
+        DataTemplate.currTemplate = previousTemplate
     }
 
 

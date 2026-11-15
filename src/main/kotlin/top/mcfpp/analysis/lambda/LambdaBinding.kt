@@ -206,7 +206,7 @@ internal object LambdaBinding {
     fun functionType(function: Function, readonlyTypes: Map<String, MCFPPType> = emptyMap()): MCFPPFunctionType? {
         val parameters = function.normalParams.map { specialize(it.type, readonlyTypes) ?: return null }
         val result = specialize(function.returnType, readonlyTypes) ?: return null
-        return MCFPPFunctionType(parameters, result, ExecutionCategory.NORMAL)
+        return MCFPPFunctionType(parameters, result, ExecutionCategory.NORMAL, function.contextParams.map { it.type })
     }
 
     private fun specialize(type: MCFPPType, readonlyTypes: Map<String, MCFPPType>): MCFPPType? {
@@ -377,7 +377,7 @@ internal object LambdaBinding {
             }
         }
 
-        val signature = MCFPPFunctionType(resolved.map { it.type }, resultType, ExecutionCategory.NORMAL)
+        val signature = MCFPPFunctionType(resolved.map { it.type }, resultType, ExecutionCategory.NORMAL, expected?.contexts.orEmpty())
         return Result.Bound(BoundLambda(signature, resolved, implicitIt, resultType, tail, source))
     }
 
@@ -429,6 +429,12 @@ internal object LambdaBinding {
         returns: ReturnScan,
         expectedResult: MCFPPType?
     ): Diagnostic? {
+        statement.commandBlock()?.let { block ->
+            for (nested in block.statement()) {
+                scanStatement(nested, visible, environment, returns, expectedResult)?.let { return it }
+            }
+            return null
+        }
         statement.fieldDeclaration()?.let { declaration ->
             val declared = declaration.type()?.let { environment.resolveType(it) }
             declaration.expression()?.let { initializer ->
@@ -500,7 +506,7 @@ internal object LambdaBinding {
             nested[node.Identifier().text] = null
             return scanBlock(node.block(), nested, environment, returns, expectedResult)
         }
-        statement.executeStatement()?.let { node ->
+        statement.contextScopeStatement()?.let { node ->
             return scanBlock(node.block(), LinkedHashMap(visible), environment, returns, expectedResult)
         }
         statement.tryStoreStatement()?.let { node ->
@@ -607,6 +613,11 @@ internal object LambdaBinding {
         visible: Map<String, MCFPPType?>
     ): MCFPPType? = when {
         syntax.inlineLambda() != null -> null
+        syntax.value()?.nbtValue()?.nbtList() != null -> {
+            val elements = syntax.value().nbtValue().nbtList().expression().map { expressionType(it, environment, visible) }
+            val element = elements.firstOrNull()
+            if (element != null && elements.all { it == element }) top.mcfpp.type.MCFPPListType(element) else null
+        }
         syntax.value() != null -> valueType(syntax.value())
         syntax.`var`() != null -> varType(syntax.`var`(), environment, visible)
         syntax.range() != null -> MCFPPBaseType.Range

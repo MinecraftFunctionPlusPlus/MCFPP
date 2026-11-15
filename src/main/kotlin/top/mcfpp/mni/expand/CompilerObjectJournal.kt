@@ -185,6 +185,7 @@ internal class CompilerObjectJournal private constructor(
                         if (value is MCNumber<*>) enqueue(value.sbObject)
                         if (value is ScoreBool) enqueue(value.boolObject)
                         when (value) {
+                            is top.mcfpp.core.lang.entity.DisplayView -> enqueue(value.target)
                             is DataTemplateObject -> {
                                 val cache = value.journalInstanceField()
                                 restores += { value.restoreJournalInstanceField(cache) }
@@ -359,6 +360,8 @@ internal class CompilerObjectJournal private constructor(
             KeybindChatComponent::class.java
         )
         private val supportedFunctions = setOf<Class<*>>(
+            top.mcfpp.core.lang.entity.EntityTemplates.SummonFunction::class.java,
+            top.mcfpp.core.lang.entity.EntityTemplates.LegacySummonFunction::class.java,
             Function::class.java, NativeFunction::class.java, GenericFunction::class.java,
             ExtensionFunction::class.java, GenericExtensionFunction::class.java, InlineFunction::class.java,
             InternalFunction::class.java, NoStackFunction::class.java, MCFunction::class.java,
@@ -366,6 +369,8 @@ internal class CompilerObjectJournal private constructor(
             UnknownFunction::class.java, UnresolvedFunction::class.java, UnresolvedNativeFunction::class.java
         )
         private val supportedValues = setOf<Class<*>>(
+            top.mcfpp.core.lang.entity.EntityRefVar::class.java,
+            top.mcfpp.type.UUIDVar::class.java, top.mcfpp.core.lang.entity.DisplayView::class.java,
             top.mcfpp.core.lang.ref.ReferenceVar::class.java,
             MCInt::class.java, MCFloat::class.java, MCAny::class.java, MCObject::class.java, top.mcfpp.core.lang.FunctionValue::class.java,
             ScoreBool::class.java, DataTemplateObject::class.java, TypeDataTemplateObject::class.java,

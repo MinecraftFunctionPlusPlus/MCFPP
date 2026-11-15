@@ -45,6 +45,10 @@ class MCFPPFile : File {
 
     var syntaxError = false
 
+    internal val documentation by lazy {
+        top.mcfpp.doc.SourceDocumentation(this, tree() as mcfppParser.CompilationUnitContext)
+    }
+
     constructor(path: String) : super(path) {
         val relativePath = Project.config.sourcePath!!.toAbsolutePath()
             .relativize(toPath().toAbsolutePath().parent).toString()

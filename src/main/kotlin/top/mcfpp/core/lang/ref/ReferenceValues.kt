@@ -138,7 +138,8 @@ object ReferenceValues {
     /** Callers supply explicit Minecraft address operands, already evaluated from left to right. */
     fun create(type: MCFPPReferenceType, kind: ReferenceKind, fields: Map<String, Var<*>>,
                entity: Var<*>? = null, name: String = TempPool.getVarIdentify(),
-               pathSuffix: List<ReferencePathPart> = emptyList()): ReferenceVar {
+               pathSuffix: List<ReferencePathPart> = emptyList(),
+               metadataFields: Map<String, CompilerValue> = emptyMap()): ReferenceVar {
         require((type == MCFPPScoreRefType) == (kind == ReferenceKind.SCORE_HOLDER || kind == ReferenceKind.SCORE_ENTITY))
         val required = when (kind) {
             ReferenceKind.SCORE_HOLDER -> setOf("holder", "objective")
@@ -150,6 +151,8 @@ object ReferenceValues {
         require(fields.keys == required) { "Invalid explicit address fields for $kind: ${fields.keys}" }
         require((entity != null) == (kind == ReferenceKind.SCORE_ENTITY || kind == ReferenceKind.NBT_ENTITY))
         val values = linkedMapOf<String, CompilerValue>("kind" to CompilerValue.Text(kind.key))
+        require(metadataFields.keys.none { it in setOf("kind", "target", "path", "read", "write", "pathSuffix") })
+        values.putAll(metadataFields)
         val dynamic = arrayListOf<Pair<List<Any>, Var<*>>>()
         val types = linkedMapOf<TypeId, MCFPPType>(type.typeId to type)
         fun capture(path: List<Any>, value: Var<*>): CompilerValue? {
@@ -193,7 +196,9 @@ object ReferenceValues {
                 values["target"] = CompilerValue.Record(mapOf("kind" to CompilerValue.Text("bound_executor"),
                     "borrow" to CompilerValue.Text(borrowIdentity(borrow))))
             } else {
-                val binding = StorageAccess.ensure(entity)
+                val accessEntity = if (entity is top.mcfpp.core.lang.entity.EntityRefVar)
+                    top.mcfpp.core.lang.entity.SelectorVar(entity.entityTargetOrNull()) else entity
+                val binding = StorageAccess.ensure(accessEntity)
                 val expression = StorageAccess.selectorProgram(binding)
                     ?: error("Entity address needs a complete entity access description")
                 targetFacts = (entity as? EntityTargetAccess)?.entityFacts ?: targetFacts

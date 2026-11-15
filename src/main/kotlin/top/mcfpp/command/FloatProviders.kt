@@ -90,6 +90,8 @@ object FloatProviders {
 
     private fun invalidFloat() = temporary().apply { isError = true }
 
+    internal fun expression(value: MCFloat): String = provider(value)
+
     private fun evaluate(provider: String): MCFloat {
         val result = temporary()
         emit(Command("data modify").build(result.nbtPath.toCommandPart())

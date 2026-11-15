@@ -47,9 +47,9 @@ class LibraryContainer internal constructor(val formatVersion: Long, sections: L
     fun section(id: Int): LibrarySection? = sections.firstOrNull { it.id == id }
 }
 
-/** Container-only v1 codec. Section payload semantics belong to separate explicit codecs. */
+/** Versioned container codec. Section payload semantics belong to separate explicit codecs. */
 object LibraryWire {
-    const val CURRENT_VERSION = 1L
+    const val CURRENT_VERSION = 3L
     const val HEADER_BYTES = 24
     const val SECTION_HEADER_BYTES = 12
     private val magic = byteArrayOf(0x4d, 0x43, 0x46, 0x50, 0x4c, 0x49, 0x42, 0)
@@ -76,10 +76,10 @@ object LibraryWire {
         }.toByteArray()
     }
 
-    fun decode(bytes: ByteArray): LibraryContainer = read(ByteArrayInputStream(bytes))
+    fun decode(bytes: ByteArray, minimumVersion: Long = 1L): LibraryContainer = read(ByteArrayInputStream(bytes), minimumVersion)
 
     /** The caller owns [input]; this method reads exactly one complete file including its EOF. */
-    fun read(input: InputStream): LibraryContainer {
+    fun read(input: InputStream, minimumVersion: Long = 1L): LibraryContainer {
         val source = ContainerInput(input)
         try {
             val prefix = source.exact(4)
@@ -94,8 +94,8 @@ object LibraryWire {
             when {
                 version > CURRENT_VERSION -> throw LibraryFormatException(LibraryFormatCode.NEWER,
                     "Library format $version is newer than supported format $CURRENT_VERSION; upgrade the compiler", 8)
-                version != CURRENT_VERSION -> throw LibraryFormatException(LibraryFormatCode.UNSUPPORTED,
-                    "Unsupported published library format $version", 8)
+                version !in minimumVersion..CURRENT_VERSION -> throw LibraryFormatException(LibraryFormatCode.UNSUPPORTED,
+                    "Unsupported published library format $version; rebuild the library for the current data/const contract", 8)
             }
             val fileLength = LibraryBinaryReader(source.exact(8), 12).u64()
             if (fileLength < HEADER_BYTES.toULong() || fileLength > Int.MAX_VALUE.toULong())
@@ -110,7 +110,7 @@ object LibraryWire {
             if (source.next() != -1)
                 throw LibraryFormatException(LibraryFormatCode.CORRUPT,
                     "Trailing bytes after the declared container length", fileLength.toLong())
-            return decodeV1(body, count.toInt())
+            return decodeSections(body, count.toInt(), version)
         } catch (failure: LibraryFormatException) {
             throw failure
         } catch (failure: IOException) {
@@ -130,7 +130,7 @@ object LibraryWire {
         }
     }
 
-    private fun decodeV1(body: ByteArray, count: Int): LibraryContainer {
+    private fun decodeSections(body: ByteArray, count: Int, version: Long): LibraryContainer {
         val reader = LibraryBinaryReader(body, HEADER_BYTES.toLong())
         val sections = ArrayList<LibrarySection>()
         var previousId = -1
@@ -155,7 +155,7 @@ object LibraryWire {
         }
         reader.requireEnd()
         validateSections(sections)
-        return LibraryContainer(CURRENT_VERSION, sections)
+        return LibraryContainer(version, sections)
     }
 
     private fun validateSection(id: Int, required: Boolean, offset: Long) {

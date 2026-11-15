@@ -1,6 +1,6 @@
 # MNI 首期实施契约
 
-本契约对照 601 行 `MNI-METAPROGRAMMING-PLAN.md`、35 节点任务图 `.codex-workflow-graph/inheritance-mni-plan.json` 和当前工作区源码制定。它是实现接口与验收约定，不表示这些 API 已实现。公共包使用 `top.mcfpp.mni.api`，编译器内部包使用 `top.mcfpp.mni.expand`。本任务只交付本文；下述路径及任务图调整由协调者落实后交给对应 worker。
+本契约描述 MNI 公共 API、展开层及其验证约定。公共包使用 `top.mcfpp.mni.api`，编译器内部包使用 `top.mcfpp.mni.expand`。当前入口和使用方式见 [README](README.md) 与 [教程](tutorial.md)。
 
 ## 1. 保持的边界与实际接入点
 

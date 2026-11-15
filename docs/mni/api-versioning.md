@@ -189,12 +189,8 @@ fun importToMNI(): Array<String> {
 
 ## 7. 当前状态
 
-下列保存的 CLI/DSB/回归结果均为 **lambda 迁移前历史证据**，不覆盖新语法、只读局部捕获和累加器重载。本次文档编辑未执行迁移后编译或 DSB，实际结果由协调者另行记录。
-
 - API 版本：`0.2.0-experimental`。
 - 版本标识已独立于编译器发行版与构建元数据。
 - 版本检查是 provider 自检，不是编译器强制，也不替代入口/签名/类型校验。
-- 保存的 [`functional-summary.json`](../../build/inheritance-mni/dsb-check/functional-summary.json) 记录 10 个 Java/Kotlin 示例 case 在 DSB 26.3 下全部功能 PASS：8 例复用 `attempt2`，`repeat` 2 例由 `attempt3` 新执行，原产物哈希未变。性能与真实游戏验收已取消，不是版本或交付门槛；DSB 功能通过也不等于游戏实机结论。
 - 运行期字符串 `+` 已由 [`CompilerPlanStrings.kt`](../../src/main/kotlin/top/mcfpp/mni/expand/CompilerPlanStrings.kt) 的平衡转义 helper 实现，语义见 [tutorial.md](tutorial.md) 第 3.5 节。
-- 功能回归已发布：全量运行的 6 项失败由受影响定向运行修复，合并证据为 136 项新执行 + 1873 项复用（不是新的 2009 项全量同轮运行）；编译器导出字符串 DSB 也已实际通过。统一结果与复用边界见 [regression-results.md](regression-results.md)。
-- 本文不声称 API 已通过独立最终验收；API 版本号保持 `0.2.0-experimental`。统一回归结果见 [regression-results.md](regression-results.md)，最终验收记录见 [acceptance.md](../implementation-review/acceptance.md)。
+- MNI 检查入口与执行范围见 [README](README.md#7-验证边界)。

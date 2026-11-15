@@ -166,15 +166,26 @@ class ExpressionBridge(private val bindings: ExpressionCaptureBindings) {
         val values = normal.expressionList()?.expression()?.map { Argument(capture(it)) }
             ?: normal.callArgumentList()?.callArgument()?.map { argument ->
                 if (argument.legacy != null) unsupported("Legacy ref expression cannot be exported")
-                Argument(argument.inlineLambda()?.let(::lambda) ?: capture(argument.expression()))
+                Argument(argument.inlineLambda()?.let(::lambda) ?: capture(argument.expression()),
+                    argument.Identifier()?.text.takeIf { argument.ASSIGNMENT() != null })
             }.orEmpty()
         return Expression.Call(scope(site), callee, readonly, values)
     }
 
     private fun select(receiver: Expression, site: Parser.SelectorContext): Expression {
+        if (site.inlineLambda() != null) {
+            val call = site.`var`()?.functionCall()
+            val name = call?.namespaceID()?.text ?: site.memberKeyword()?.text ?: site.`var`()?.varWithSuffix()?.Identifier()?.text
+                ?: unsupported("Missing trailing callback member")
+            val member = Expression.Member(scope(site), receiver, name,
+                candidates = bindings.memberCandidates(receiver, name, site)?.toList())
+            val selected = (call?.arguments() ?: site.arguments())?.let { arguments(member, it) }
+                ?: Expression.Call(scope(site), member, emptyList(), emptyList())
+            return selected.copy(trailingLambda = lambda(site.inlineLambda()))
+        }
         site.memberKeyword()?.let { keyword ->
             val member = Expression.Member(scope(site), receiver, keyword.text,
-                if (keyword.MAP() != null) MemberKeyword.MAP else MemberKeyword.SET,
+                if (keyword.MAP() != null) MemberKeyword.MAP else if (keyword.SET() != null) MemberKeyword.SET else MemberKeyword.IDENTIFIER,
                 bindings.memberCandidates(receiver, keyword.text, site)?.toList())
             return site.arguments()?.let { arguments(member, it) } ?: member
         }
@@ -339,10 +350,11 @@ class ExpressionBridge(private val bindings: ExpressionCaptureBindings) {
             return TypeSyntax.AnonymousData(scope(site), bindings.anonymousType(it, this))
         }
         site.functionType()?.let {
-            return TypeSyntax.Function(scope(site), it.type().map(::type), returnType(it.functionReturnType()))
+            return TypeSyntax.Function(scope(site), it.type().map(::type), returnType(it.functionReturnType()),
+                contexts = it.contextTypeParameters()?.type().orEmpty().map(::type))
         }
         val className = site.className()
-        val name = className?.classWithoutNamespace()?.Identifier()?.text ?: site.Identifier()?.text
+        val name = className?.text?.substringAfter(':') ?: site.Identifier()?.text
             ?: throw SyntaxCaptureException("LIB_TYPE_UNSUPPORTED", "Type rule has no persistent operation")
         val namespace = className?.namespacePath()?.text
         val base = TypeSyntax.Name(scope(site), bindings.name(name, namespace, NameRole.TYPE, site),

@@ -51,5 +51,7 @@ object PassIds {
     const val DEAD = "dead-value-elimination"
     const val INLINE = "automatic-inlining"
     const val COMMANDS = "minecraft-command-cleanup"
-    val optional = setOf(CONSTANTS, SAVES, FRAMES, ALGEBRA, COPIES, COMMON, CONTROL, DEAD, INLINE, COMMANDS)
+    const val PROVIDERS = "number-provider-fusion"
+    const val CONTEXTS = "context-region-fusion"
+    val optional = setOf(CONSTANTS, SAVES, FRAMES, ALGEBRA, COPIES, COMMON, CONTROL, DEAD, INLINE, COMMANDS, PROVIDERS, CONTEXTS)
 }

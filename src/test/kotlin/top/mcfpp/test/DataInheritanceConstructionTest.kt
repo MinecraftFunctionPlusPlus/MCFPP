@@ -175,7 +175,7 @@ class DataInheritanceConstructionTest {
     }
 
     @Test fun eachConstDeclarationCanInitializeButBodiesAndOrdinaryMembersCannotReassign() {
-        for ((childDeclaration, expected) in listOf("const x:int=8;" to 81, "const x:int;" to 11)) {
+        for ((childDeclaration, expected) in listOf("const x:int=8;" to 81, "" to 11)) {
             val main = compile(
                 """
                 data Parent{const x:int=1;var seen:int=0;constructor(){this.seen=this.x;}}
@@ -199,15 +199,15 @@ class DataInheritanceConstructionTest {
         }
     }
 
-    @Test fun aFirstConstAssignmentInTheParentBodyRemainsLegalBeforeTheChildInitializer() {
-        val main = compile(
+    @Test fun aConstWithoutADeclarationInitializerCannotBeInitializedInAConstructorBody() {
+        val diagnostics = compilerDiagnostics { compile(
             """
             data Parent{const x:int;constructor(){this.x=7;}}
             data Child:Parent{const x:int=8;}
             func main(){var value=Child();external result=value.x;}
-        """
-        )
-        assertEquals(8, execute(main).read(assertIs<MCInt>(main.scope.getVar("result"))))
+        """, valid = false
+        ) }
+        assertTrue(diagnostics.any { "complete compile-time initializer" in it }, diagnostics.joinToString("\n"))
     }
 
     @Test fun compilerOnlyPartialReceiversShareStorageThroughParentPrivateCallsAndChildInitialization() {

@@ -32,6 +32,11 @@ internal object IrTextDump {
                 function.cmdStr.lineSequence().filter(String::isNotEmpty).forEach { appendLine("    $it") }
                 appendLine("  }\n}")
             }
+            Project.macroFunction.toSortedMap().forEach { (id, body) ->
+                appendLine("\nmacro function mcfpp:dynamic/$id {")
+                body.lineSequence().forEach { appendLine("  $it") }
+                appendLine("}")
+            }
         })
     }
 
@@ -91,7 +96,8 @@ internal object IrTextDump {
                         is Instruction.Write -> "write ${place(instruction.place)} <- ${value(instruction.value)}"
                         is Instruction.CaptureIndex -> "%${instruction.result} = capture-index ${value(instruction.value)} in ${place(instruction.container.place)}"
                         is Instruction.CaptureKey -> "%${instruction.result} = capture-key ${value(instruction.value)}"
-                        is Instruction.Binary -> "%${instruction.result} = ${instruction.operation} ${value(instruction.left)}, ${value(instruction.right)}: ${type(instruction.type)}"
+                        is Instruction.Binary -> "%${instruction.result} = ${instruction.operation} ${value(instruction.left)}, ${value(instruction.right)}: ${type(instruction.type)}" +
+                            if (instruction.result in ir.fusedFloatResults) " [fused provider input]" else ""
                         is Instruction.Promote -> "%${instruction.result} = promote ${value(instruction.value)} to ${type(instruction.type)}"
                         is Instruction.Convert -> "%${instruction.result} = convert ${value(instruction.value)} to ${type(instruction.type)}"
                         is Instruction.View -> "%${instruction.result} = ${value(instruction.value)}"

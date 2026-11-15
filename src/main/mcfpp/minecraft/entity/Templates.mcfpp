@@ -1,0 +1,619 @@
+namespace mcfpp.minecraft.entity
+
+/// 可复用的实体生成模板。initialNBT 是生成配置，entity var 保存于每个实体自身。
+abstract entity Entity {
+    var initialNBT: nbt = {}
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+abstract entity DisplayEntity: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Allay: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity AreaEffectCloud: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Armadillo: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity ArmorStand: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Arrow: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Axolotl: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Bat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Bee: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Blaze: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity BlockDisplay: DisplayEntity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Boat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Bogged: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Breeze: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity BreezeWindCharge: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Camel: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Cat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity CaveSpider: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity ChestBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity ChestMinecart: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Chicken: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Cod: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Cow: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Creaking: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Creeper: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Dolphin: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Donkey: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity DragonFireball: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Drowned: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Egg: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity ElderGuardian: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity EndCrystal: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity EnderDragon: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity EnderPearl: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Enderman: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Endermite: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Evoker: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity EvokerFangs: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity ExperienceBottle: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity ExperienceOrb: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity EyeOfEnder: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity FallingBlock: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Fireball: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity FireworkRocket: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity FishingBobber: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Fox: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Frog: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity FurnaceMinecart: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Ghast: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Giant: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity GlowItemFrame: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity GlowSquid: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Goat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Guardian: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity HappyGhast: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Hoglin: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity HopperMinecart: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Horse: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Husk: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Illusioner: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Interaction: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity IronGolem: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Item: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity ItemDisplay: DisplayEntity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity ItemFrame: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity LeashKnot: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity LightningBolt: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Llama: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity LlamaSpit: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity MagmaCube: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Marker: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Minecart: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Mooshroom: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Mule: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Ocelot: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity OminousItemSpawner: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Painting: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Panda: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Parrot: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Phantom: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Pig: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Piglin: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity PiglinBrute: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Pillager: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Player: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity PolarBear: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Potion: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Pufferfish: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Rabbit: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Ravager: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Salmon: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Sheep: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Shulker: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity ShulkerBullet: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Silverfish: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Skeleton: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity SkeletonHorse: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Slime: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity SmallFireball: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Sniffer: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity SnowGolem: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Snowball: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity SpawnerMinecart: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity SpectralArrow: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Spider: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Squid: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Stray: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Strider: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Tadpole: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity TextDisplay: DisplayEntity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Tnt: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity TntMinecart: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity TraderLlama: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Trident: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity TropicalFish: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Turtle: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Vex: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Villager: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Vindicator: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity WanderingTrader: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Warden: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity WindCharge: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Witch: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Wither: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity WitherSkeleton: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity WitherSkull: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Wolf: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Zoglin: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity Zombie: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity ZombieHorse: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity ZombieVillager: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity SplashPotion: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity LingeringPotion: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity AcaciaBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity AcaciaChestBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity BambooRaft: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity BambooChestRaft: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity BirchBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity BirchChestBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity CherryBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity CherryChestBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity DarkOakBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity DarkOakChestBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity JungleBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity JungleChestBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity MangroveBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity MangroveChestBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity OakBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity OakChestBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity PaleOakBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity PaleOakChestBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity SpruceBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}
+
+entity SpruceChestBoat: Entity {
+    constructor(n: nbt = {}) { this.initialNBT = n }
+}

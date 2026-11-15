@@ -1,0 +1,7 @@
+schema = 1
+name = "entity-template"
+namespace = "example.entitytemplate"
+version = "26.3"
+sourcePath = "src"
+targetPath = "build"
+description = "Entity templates with independent persistent state"

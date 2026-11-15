@@ -1,0 +1,18 @@
+/// 锚点决定局部坐标及朝向计算使用脚部还是眼部。
+enum Anchor { feet, eyes }
+
+/// 要向下取整的坐标轴。
+enum Axes { x, y, z, xy, xz, yz, xyz }
+
+/// execute positioned over 使用的高度图。
+enum Heightmap { world_surface, motion_blocking, motion_blocking_no_leaves, ocean_floor }
+
+/// 执行旋转。relativeYaw、relativePitch 分别控制两个轴是否相对当前旋转。
+data Rotation {
+    const yaw: float = 0f
+    const pitch: float = 0f
+    const relativeYaw: bool = false
+    const relativePitch: bool = false
+}
+
+func rotation(yaw: float, pitch: float, relativeYaw: bool = false, relativePitch: bool = false): Rotation = top.mcfpp.mni.ContextData.rotation

@@ -1,287 +1,36 @@
 package top.mcfpp.analysis
 
+import java.util.Collections
+import java.util.IdentityHashMap
 import top.mcfpp.Project
 import top.mcfpp.backend.NbtEncoding
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.command.FloatProviders
 import top.mcfpp.core.lang.*
-import top.mcfpp.core.lang.context.ContextBorrowing
-import top.mcfpp.core.lang.context.ContextBorrowPayload
-import top.mcfpp.core.lang.context.ContextAccessException
-import top.mcfpp.core.lang.bool.BaseBool
 import top.mcfpp.core.lang.bool.ScoreBool
-import top.mcfpp.core.lang.nbt.NBTBasedData
+import top.mcfpp.core.lang.context.ContextAccessException
+import top.mcfpp.core.lang.context.ContextBorrowPayload
+import top.mcfpp.core.lang.context.ContextBorrowing
 import top.mcfpp.core.lang.nbt.MCString
-import top.mcfpp.core.lang.nbt.NBTList
+import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTDictionary
+import top.mcfpp.core.lang.nbt.NBTList
 import top.mcfpp.core.lang.nbt.NBTMap
-import top.mcfpp.core.lang.nbt.NBTArray
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.EncodedChatComponent
 import top.mcfpp.lib.ListChatComponent
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.SbObject
-import top.mcfpp.lib.ChatComponent
-import top.mcfpp.lib.ChatComponentStyle
-import top.mcfpp.lib.PlainChatComponent
-import top.mcfpp.lib.TranslatableChatComponent
-import top.mcfpp.lib.ScoreChatComponent
-import top.mcfpp.lib.SelectorChatComponent
-import top.mcfpp.lib.KeybindChatComponent
-import top.mcfpp.lib.NBTChatComponent
-import top.mcfpp.lib.ColorStyle
-import top.mcfpp.lib.BoldStyle
-import top.mcfpp.lib.ItalicStyle
-import top.mcfpp.lib.UnderlineStyle
-import top.mcfpp.lib.StrikethroughStyle
-import top.mcfpp.lib.ObfuscatedStyle
-import top.mcfpp.lib.InsertionStyle
-import top.mcfpp.lib.ClickEventStyle
-import top.mcfpp.lib.HoverEventShowTextStyle
-import top.mcfpp.lib.HoverEventShowEntityStyle
 import top.mcfpp.model.compound.ObjectCompoundData
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.property.Property
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.collection.ListTag
 import top.mcfpp.nbt.tags.primitive.IntTag
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.TempPool
-import java.util.Collections
-import java.util.IdentityHashMap
-
-/** A live address adapter. Facts and synchronization caches contain immutable values/layouts. */
-class StorageBinding(
-    val data: StoredData,
-    val place: Place,
-    path: NBTPath,
-    val view: ValueRef.TypedView? = null,
-    val trustConstants: Boolean = true,
-    val location: Location = data.location(place, path)
-) {
-    val path: NBTPath get() = data.address(location)
-    fun copy(data: StoredData = this.data, place: Place = this.place, path: NBTPath? = null,
-             view: ValueRef.TypedView? = this.view, trustConstants: Boolean = this.trustConstants,
-             location: Location = if (data === this.data && place == this.place && path == null) this.location else data.location(place, path ?: this.path)) =
-        StorageBinding(data, place, path ?: this.path, view, trustConstants, location)
-    fun field(name: String) = copy(place = place.field(name), path = path.memberIndex(name))
-}
-
-class StoredData(val root: Place, var path: NBTPath, private var initialize: (() -> Unit)? = null,
-                 var layout: StorageLayout = StorageLayout.Nbt(path.source.toString(), path.toCommandPart().toString()),
-                 internal val contextScope: top.mcfpp.core.lang.context.ContextScope? = ContextBorrowing.currentScope) {
-    val facts = FlowFacts()
-    val versions = StorageVersions()
-    val types = mutableMapOf<TypeId, MCFPPType>()
-    val declarations = mutableMapOf<Place, Symbol>()
-    /** Possible compiler-owned code targets, not a claim that the runtime value is constant. */
-    val callableTargets = mutableMapOf<Place, Set<String>>()
-    internal val callableBindings = mutableMapOf<Place, Map<String, Set<FunctionTargetResolver>>>()
-    private val registers = mutableMapOf<Pair<Location, TypeId>, StorageLayout.Scoreboard>()
-    private val childLayouts = mutableMapOf<Place, StorageLayout>()
-    private val sources = mutableMapOf<SymbolId, StoredData>()
-    internal fun retainedSources(): List<StoredData> = sources.values.toList()
-
-    internal fun checkpointStorageState(): () -> Unit {
-        val savedPath = path
-        val savedInitialize = initialize
-        val savedLayout = layout.checkpointCopy()
-        val savedFacts = facts.fork()
-        val restoreVersions = versions.checkpoint()
-        val savedTypes = LinkedHashMap(types)
-        val savedDeclarations = LinkedHashMap(declarations)
-        val savedTargets = callableTargets.mapValues { it.value.toSet() }
-        val savedBindings = callableBindings.mapValues { (_, targets) -> targets.mapValues { it.value.toSet() } }
-        val savedRegisters = LinkedHashMap(registers)
-        val savedChildren = childLayouts.mapValues { (_, value) -> value.checkpointCopy() }
-        val savedSources = LinkedHashMap(sources)
-        return {
-            path = savedPath
-            initialize = savedInitialize
-            layout = savedLayout
-            facts.replaceWith(savedFacts)
-            restoreVersions()
-            types.clear()
-            types.putAll(savedTypes)
-            declarations.clear()
-            declarations.putAll(savedDeclarations)
-            callableTargets.clear()
-            callableTargets.putAll(savedTargets)
-            callableBindings.clear()
-            callableBindings.putAll(savedBindings)
-            registers.clear()
-            registers.putAll(savedRegisters)
-            childLayouts.clear()
-            childLayouts.putAll(savedChildren)
-            sources.clear()
-            sources.putAll(savedSources)
-        }
-    }
-    internal fun retainSource(source: StoredData) { if (source !== this) sources[source.root.root] = source }
-    internal fun inheritSources(source: StoredData) { sources.putAll(source.sources); retainSource(source) }
-    internal fun source(place: Place): StoredData? = if (place.root == root.root) this else sources[place.root]
-    internal fun location(place: Place, address: NBTPath): Location {
-        val captured = linkedMapOf<Int, ValueRef>()
-        val capturedLocations = linkedMapOf<Int, Location>()
-        val predicates = linkedSetOf<Int>()
-        val frameOffset = top.mcfpp.lib.SelectorExpression.frame(address) - top.mcfpp.lib.SelectorExpression.frame(path)
-        val tail = address.pathList.drop(path.pathList.size)
-        for ((relative, segment) in tail.withIndex()) {
-            val index = root.path.size + relative
-            if (place.path.getOrNull(index) != PathSegment.UnknownIndex) continue
-            val value = when (segment) {
-                is top.mcfpp.lib.IntPath -> segment.value
-                is top.mcfpp.lib.NBTPredicatePath -> segment.value.also { predicates += index }
-                is top.mcfpp.lib.MemberPath -> segment.value
-                else -> continue
-            }
-            val original = value.valueRef()
-            val ref = if (original is ValueRef.TypedView) ValueRef.Read(original.type, original.place) else original
-            captured[index] = ref
-            value.storageBinding?.let { binding ->
-                retainSource(binding.data)
-                capturedLocations[index] = binding.location.inFrame(-frameOffset)
-            }
-        }
-        return Location(place, frameOffset = frameOffset, captured = captured, predicates = predicates,
-            capturedLocations = capturedLocations)
-    }
-    internal fun address(location: Location): NBTPath {
-        var address = StorageAccess.offsetFrame(path, location.frameOffset)
-        for ((index, segment) in location.place.path.withIndex()) {
-            if (index < root.path.size) continue
-            address = when (segment) {
-                is PathSegment.Field -> address.memberIndex(StorageAccess.quotedKey(segment.name))
-                is PathSegment.Index -> address.intIndex(segment.index)
-                PathSegment.UnknownIndex -> {
-                    val ref = location.captured[index] ?: error("Dynamic location has no captured operand")
-                    val type = types[ref.type] ?: MCFPPType.resolveTypeId(ref.type) ?: error("Unknown captured operand type")
-                    val value = when (ref) {
-                        is ValueRef.Constant -> StorageAccess.literal(type, ref.value, types = types)
-                        is ValueRef.Read -> {
-                            val owner = source(ref.place) ?: error("Captured operand has no owning location")
-                            StorageAccess.adapter(type, TempPool.getVarIdentify(), StorageBinding(owner, ref.place,
-                                owner.path, location = (location.capturedLocations[index] ?: Location(ref.place)).inFrame(location.frameOffset)))
-                        }
-                        else -> error("A dynamic address requires a captured Place")
-                    }
-                    when {
-                        index in location.predicates -> address.nbtIndex(value as NBTBasedData)
-                        value is MCInt -> address.intIndex(value)
-                        value is MCString -> address.memberIndex(value)
-                        else -> error("Unsupported captured address operand")
-                    }
-                }
-            }
-        }
-        return address
-    }
-    fun layoutAt(place: Place): StorageLayout = childLayouts[place] ?: layout
-    fun registerLayout(place: Place, layout: StorageLayout, replace: Boolean = true) {
-        if (place != root) {
-            if (replace) childLayouts[place] = layout else childLayouts.putIfAbsent(place, layout)
-        }
-    }
-    internal fun retainCompilerValue() {
-        layout = StorageLayout.CompilerOnly
-        initialize = null
-        versions.invalidate(root)
-    }
-    fun materialize(place: Place = root) {
-        val actualLayout = layoutAt(place)
-        if (actualLayout == StorageLayout.CompilerOnly) {
-            LogProcessor.error("Compiler-only place cannot be materialized")
-            return
-        }
-        initialize?.let { it(); initialize = null }
-        versions.materialize(place, actualLayout)
-    }
-
-    internal fun overwriteRoot() { initialize = null }
-    internal fun refreshWriter(writer: () -> Unit) { initialize = writer }
-    internal fun relocate(path: NBTPath, layout: StorageLayout, writer: (() -> Unit)?) {
-        this.path = path
-        this.layout = layout
-        initialize = writer
-        registers.clear()
-        versions.invalidate(root)
-    }
-
-    internal fun allocate(path: NBTPath, layout: StorageLayout, writer: (() -> Unit)?) {
-        check(this.layout == StorageLayout.Constant)
-        this.path = path
-        this.layout = layout
-        initialize = writer
-    }
-
-    fun register(place: Place, type: TypeId, objective: String, location: Location = Location(place)): StorageLayout.Scoreboard =
-        if (PathSegment.UnknownIndex in place.path) StorageLayout.Scoreboard(TempPool.getVarIdentify(), objective)
-        else registers.getOrPut(location to type) { StorageLayout.Scoreboard(TempPool.getVarIdentify(), objective) }
-
-    fun write(place: Place, fact: ValueFacts) {
-        versions.invalidate(place)
-        if (layout == StorageLayout.CompilerOnly) facts.writeConstant(place, fact) else facts.write(place, fact)
-    }
-
-    fun barrier() {
-        if (layout == StorageLayout.CompilerOnly) {
-            for ((place, physical) in childLayouts) {
-                if (physical == StorageLayout.CompilerOnly || declarations[place]?.readonly == true) continue
-                if (facts.read(place)?.state == ValueState.INITIALIZED) materialize(place)
-                versions.invalidate(place)
-                for ((child, fact) in facts.entries()) {
-                    if (child.root != place.root || child.path.take(place.path.size) != place.path || declarations[child]?.readonly == true) continue
-                    facts.refine(child, fact.copy(type = TypeKnowledge.Unknown, value = ValueKnowledge.Unknown, readableLayout = null,
-                        state = if (fact.state == ValueState.UNINITIALIZED) ValueState.MAYBE_INITIALIZED else fact.state))
-                }
-            }
-            return
-        }
-        materialize()
-        versions.invalidate(root)
-        facts.barrier(declarations.filterValues { it.readonly }.keys)
-    }
-}
-
-/**
- * An in-memory compiler savepoint. Both before and prepared-after states can be restored repeatedly.
- * Commands, function/scope publication, diagnostics and temporary-name allocation belong to the
- * composing journal. The caller must enroll its existing adapters (including scope members).
- */
-internal class StorageCheckpoint internal constructor(
-    private val enrolled: List<Any>,
-    private val restoreActions: List<() -> Unit>
-) {
-    fun restore() { restoreActions.forEach { it() } }
-
-    /** Includes the original enrollment as well as any producers/bindings now reachable from it. */
-    fun captureCurrent(
-        additionalRoots: Iterable<Any> = emptyList(),
-        collector: StorageCheckpointCollector? = null
-    ): StorageCheckpoint = StorageAccess.checkpointGraph(enrolled + additionalRoots, collector)
-}
-
-/**
- * One enclosing journal owns the storage snapshot for its nested function/object journals.
- * Children retain their enrollment for captureCurrent(), while the owner captures the union
- * once and restores it after declaration and scope relationships. This avoids repeatedly
- * walking the same adapter graph without sharing snapshots between separate preparations.
- */
-internal class StorageCheckpointCollector {
-    private val roots = arrayListOf<Any>()
-
-    fun enroll(values: Iterable<Any>): StorageCheckpoint {
-        val retained = values.toList()
-        roots.addAll(retained)
-        return StorageCheckpoint(retained, emptyList())
-    }
-
-    fun checkpoint(): StorageCheckpoint = StorageAccess.checkpointGraph(roots)
-}
 
 /** Central boundary between Place/TypedView and the remaining Var-based backends. */
 object StorageAccess {
@@ -289,167 +38,8 @@ object StorageAccess {
     internal fun checkpoint(values: Iterable<Var<*>>, stores: Iterable<StoredData> = emptyList()): StorageCheckpoint =
         checkpointGraph(values.toList() + stores.toList())
 
-    internal fun checkpointGraph(roots: Iterable<Any>, collector: StorageCheckpointCollector? = null): StorageCheckpoint {
-        if (collector != null) return collector.enroll(roots)
-        val pending = ArrayDeque<Any>()
-        roots.forEach(pending::addLast)
-        val seen = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
-        val enrolled = arrayListOf<Any>()
-        val adapters = arrayListOf<() -> Unit>()
-        val paths = arrayListOf<() -> Unit>()
-        val producers = arrayListOf<() -> Unit>()
-        while (pending.isNotEmpty()) {
-            val current = pending.removeFirst()
-            if (!seen.add(current)) continue
-            enrolled += current
-            when (current) {
-                is Var<*> -> {
-                    adapters += current.checkpointStorageState()
-                    current.storageBinding?.data?.let(pending::addLast)
-                    (current.parent as? Var<*>)?.let(pending::addLast)
-                    pending.addLast(current.nbtPath)
-                    if (current is MCFloat) {
-                        listOf(current.sign, current.int0, current.int1, current.exp).forEach(pending::addLast)
-                    }
-                    if (current is MCNumber<*>) pending.addLast(current.sbObject)
-                    if (current is ScoreBool) pending.addLast(current.boolObject)
-                    if (current is PropertyVar) {
-                        pending.addLast(current.field)
-                        pending.addLast(current.caller)
-                        pending.addLast(current.property)
-                    }
-                }
-                is SbObject -> {
-                    val name = current.name
-                    val criterion = current.criterion
-                    val display = current.display
-                    display?.let(pending::addLast)
-                    adapters += {
-                        current.name = name
-                        current.criterion = criterion
-                        current.display = display
-                    }
-                }
-                is Property -> {
-                    val parent = current.parent
-                    val declaredParent = current.declaredParentTemplate
-                    val access = current.accessModifier
-                    val finalFlag = current.isFinal
-                    val staticFlag = current.isStatic
-                    val inheritedFlag = current.isInherited
-                    parent?.let(pending::addLast)
-                    adapters += {
-                        current.parent = parent
-                        current.declaredParentTemplate = declaredParent
-                        current.accessModifier = access
-                        current.isFinal = finalFlag
-                        current.isStatic = staticFlag
-                        current.isInherited = inheritedFlag
-                    }
-                }
-                is ChatComponent -> {
-                    val styles = current.styles.toList()
-                    styles.forEach(pending::addLast)
-                    adapters += {
-                        current.styles.clear()
-                        current.styles.addAll(styles)
-                    }
-                    when (current) {
-                        is ListChatComponent -> {
-                            val components = current.components.toList()
-                            components.forEach(pending::addLast)
-                            adapters += {
-                                current.components.clear()
-                                current.components.addAll(components)
-                            }
-                        }
-                        is PlainChatComponent -> {
-                            val value = current.value
-                            adapters += { current.value = value }
-                        }
-                        is TranslatableChatComponent -> current.args?.let { arguments ->
-                            adapters += checkpointChatArguments(arguments)
-                            arguments.forEach(pending::addLast)
-                        }
-                        is ScoreChatComponent -> pending.addLast(current.value)
-                        is SelectorChatComponent -> current.separator?.let(pending::addLast)
-                        is NBTChatComponent -> {
-                            pending.addLast(current.nbt)
-                            current.separator?.let(pending::addLast)
-                        }
-                        is EncodedChatComponent, is KeybindChatComponent -> Unit
-                        else -> error("Storage journal cannot capture chat component " + current.javaClass.name)
-                    }
-                }
-                is ChatComponentStyle -> when (current) {
-                    is HoverEventShowTextStyle -> pending.addLast(current.content)
-                    is HoverEventShowEntityStyle -> {
-                        current.name?.let(pending::addLast)
-                        pending.addLast(current.uuid)
-                    }
-                    is ColorStyle, is BoldStyle, is ItalicStyle, is UnderlineStyle,
-                    is StrikethroughStyle, is ObfuscatedStyle, is InsertionStyle, is ClickEventStyle -> Unit
-                    else -> error("Storage journal cannot capture chat style " + current.javaClass.name)
-                }
-                is StoredData -> {
-                    producers += current.checkpointStorageState()
-                    pending.addLast(current.path)
-                    current.retainedSources().forEach(pending::addLast)
-                }
-                is NBTPath -> {
-                    val source = current.source
-                    when (source) {
-                        is top.mcfpp.lib.EntitySource -> pending.addLast(source.entity)
-                        is top.mcfpp.lib.BlockSource -> pending.addLast(source.pos)
-                        is top.mcfpp.lib.StorageSource -> Unit
-                        else -> error("Storage journal cannot capture NBT source ${source.javaClass.name}")
-                    }
-                    val segments = current.pathList.toList()
-                    segments.forEach(pending::addLast)
-                    paths += {
-                        current.source = source
-                        current.pathList.clear()
-                        current.pathList.addAll(segments)
-                    }
-                }
-                is top.mcfpp.lib.IntPath -> pending.addLast(current.value)
-                is top.mcfpp.lib.MemberPath -> {
-                    val value = current.value
-                    pending.addLast(value)
-                    paths += { current.value = value }
-                }
-                is top.mcfpp.lib.NBTPredicatePath -> pending.addLast(current.value)
-                is top.mcfpp.lib.IteratorPath -> Unit
-                else -> error("Storage journal cannot capture metadata " + current.javaClass.name)
-            }
-        }
-        return StorageCheckpoint(enrolled.toList(), adapters + paths + producers)
-    }
-
-    /**
-     * args is a host-supplied List rather than an owned ArrayList. Support standard concrete
-     * lists whose mutation contract is known; a read-only view of unknown backing state is rejected.
-     */
-    private fun checkpointChatArguments(arguments: List<ChatComponent>): () -> Unit {
-        return when (arguments.javaClass.name) {
-            "java.util.ArrayList", "java.util.LinkedList" -> {
-                val saved = arguments.toList()
-                val mutable = arguments as MutableList<ChatComponent>
-                val restore: () -> Unit = { mutable.clear(); mutable.addAll(saved) }
-                restore
-            }
-            "java.util.Arrays\$ArrayList" -> {
-                val saved = arguments.toList()
-                val mutable = arguments as MutableList<ChatComponent>
-                val restore: () -> Unit = { saved.forEachIndexed { index, component -> mutable[index] = component } }
-                restore
-            }
-            "kotlin.collections.EmptyList", "java.util.Collections\$EmptyList",
-            "java.util.Collections\$SingletonList", "java.util.ImmutableCollections\$List12",
-            "java.util.ImmutableCollections\$ListN" -> ({ })
-            else -> error("Storage journal cannot capture chat argument list " + arguments.javaClass.name)
-        }
-    }
+    internal fun checkpointGraph(roots: Iterable<Any>, collector: StorageCheckpointCollector? = null): StorageCheckpoint =
+        StorageSnapshots.capture(roots, collector)
 
     fun flowSnapshot(values: Iterable<Var<*>>): Map<StoredData, FlowFacts> =
         values.mapNotNull { value -> value.storageBinding?.also { binding ->
@@ -480,9 +70,10 @@ object StorageAccess {
                 StorageBinding(data, data.root, data.path))).data.materialize()
         }
         val widened = facts.fork()
+        val protected = data.declarations.filter { (place, declaration) -> ConstantBinding.protected(declaration, place, facts) }.keys
         for ((place, fact) in facts.entries()) {
-            if (data.layout != StorageLayout.CompilerOnly && data.declarations[place]?.readonly != true)
-                widened.refine(place, fact.copy(value = ValueKnowledge.Unknown))
+            if (data.layout != StorageLayout.CompilerOnly && protected.none { it.root == place.root && place.path.take(it.path.size) == it.path })
+                widened.refine(place, fact.copy(value = ValueKnowledge.Unknown, presence = Presence.Unknown))
         }
         widened
     }
@@ -642,7 +233,7 @@ object StorageAccess {
         if (actual !is MCFPPDataTemplateType) return false
         return actual.instanceFields.all { field ->
             val child = adapter(field.type, field.identifier, binding.field(field.identifier))
-            field.nullable && binding.data.facts.read(child.storageBinding!!.place) == null || hasActualPayload(child)
+            field.nullable && binding.data.facts.read(child.storageBinding!!.place)?.state.let { it == null || it == ValueState.UNINITIALIZED } || hasActualPayload(child)
         }
     }
 
@@ -736,7 +327,7 @@ object StorageAccess {
             copyCallableEvidence(captured, target)
             return adapter(type, name, target)
         }
-        if (type.typeId != MCFPPEntityType.NormalSelector.typeId && type !in erasedTypes) return null
+        if (type !is MCFPPEntityType && type !in erasedTypes) return null
         val actualSource = inFrame(binding, sourceFrameOffset)
         val entity = expression.target(binding.data.types, actualSource) ?: return null
         val symbol = Symbol(SymbolId.fresh(), name, type.typeId, mutable = true)
@@ -807,6 +398,7 @@ object StorageAccess {
     }
 
     fun unary(value: Var<*>, operation: String): Var<*> {
+        if (value is top.mcfpp.core.lang.bool.PresenceBool && operation == "!") return value.negation()
         if (value.isError) return value
         if (value.type in setOf(MCFPPNBTType.Byte, MCFPPNBTType.Short) && operation in setOf("+", "-")) {
             val widened = top.mcfpp.backend.NumericConversions.convert(value, MCFPPBaseType.Int)
@@ -1053,6 +645,7 @@ object StorageAccess {
     }
 
     fun booleanRegister(value: ScoreBool): StorageLayout.Scoreboard {
+        if (value is top.mcfpp.core.lang.bool.PresenceBool) return booleanRegister(value.materializePredicate())
         val proxy = MCInt(value.identifier).apply { type = value.type; storageBinding = ensure(value) }
         return intRegister(proxy)
     }
@@ -1267,6 +860,7 @@ object StorageAccess {
     }
 
     fun ensure(value: Var<*>): StorageBinding {
+        if (value is top.mcfpp.core.lang.bool.PresenceBool) return ensure(value.materializePredicate())
         value.storageBinding?.let { existing ->
             if (existing.data.layout != StorageLayout.Constant) return existing
             val data = existing.data
@@ -1391,7 +985,8 @@ object StorageAccess {
                 ?: if (place.path.last() == PathSegment.UnknownIndex) root.data.facts.children(root.place).values
                     .map { it.type }.reduceOrNull(TypeKnowledge::join) ?: TypeKnowledge.Unknown else TypeKnowledge.Unknown
                 else TypeKnowledge.Exact(type.typeId)
-            root.data.facts.initialize(place, ValueFacts(actual, ValueKnowledge.Unknown))
+            root.data.facts.initialize(place, ValueFacts(actual, ValueKnowledge.Unknown,
+                readableLayout = type.typeId.takeIf { type is MCFPPDataTemplateType && actual == TypeKnowledge.Exact(it) }))
         }
         return adapter(type, TempPool.getVarIdentify(), root.copy(place = place, path = path)).apply { parent = container }
     }
@@ -1417,7 +1012,8 @@ object StorageAccess {
             return error(target, "Source layout cannot be accessed as '$target'")
         val ref = ValueRef.TypedView(target.typeId, ValueRef.Read(source.type.typeId, binding.place), binding.place)
         val trusted = binding.trustConstants && (target in erasedTypes || binding.data.layoutAt(binding.place) == StorageLayout.CompilerOnly || actualType(source) == target ||
-            source !is MCAny && compatibility is ReinterpretationCompatibility.Result.Compatible || closedMapEncoding(binding, target))
+            source !is MCAny && compatibility is ReinterpretationCompatibility.Result.Compatible || closedMapEncoding(binding, target) ||
+            snapshot(source)?.let { constantLayoutMatches(it, target) } == true)
         val re = adapter(target, source.identifier, binding.copy(view = ref, trustConstants = trusted))
         re.symbol = source.symbol
         re.isConst = source.isConst
@@ -1465,7 +1061,36 @@ object StorageAccess {
 
     fun snapshot(value: Var<*>): CompilerValue? {
         val binding = value.storageBinding ?: return null
+        if (runtimeOnly(binding)) return null
         return constantFor(value.type, binding, value is DataTemplateObject)
+    }
+
+    private fun runtimeOnly(binding: StorageBinding): Boolean {
+        val ancestors = binding.data.declarations.filterKeys { place ->
+            place.root == binding.place.root && binding.place.path.take(place.path.size) == place.path
+        }
+        val runtime = ancestors.filterValues { it.forceRuntime }.keys.maxOfOrNull { it.path.size } ?: return false
+        // An intrinsic constant below a mutable runtime object has its own complete declaration value.
+        return ancestors.none { (place, declaration) -> place.path.size > runtime &&
+            ConstantBinding.protected(declaration, place, binding.data.facts) }
+    }
+
+    /** Prove a constant view from the complete payload, including erased record literals. */
+    internal fun constantLayoutMatches(value: CompilerValue, target: MCFPPType): Boolean {
+        if (target in erasedTypes) return true
+        if (value is CompilerValue.Typed && value.type == target.typeId) return true
+        val payload = if (value is CompilerValue.Typed) value.payload else value
+        if (payload is CompilerValue.Typed) return constantLayoutMatches(payload, target)
+        return when {
+            target is MCFPPDataTemplateType && payload is CompilerValue.Record -> target.instanceFields.all { field ->
+                val part = payload.fields[field.identifier]
+                if (part == null) field.nullable else constantLayoutMatches(part, field.type) &&
+                    (!field.isConst || field.declarationConstant == part)
+            }
+            target is MCFPPListType && payload is CompilerValue.Sequence -> payload.elements.all { constantLayoutMatches(it, target.generic.single()) }
+            target is MCFPPDictType && payload is CompilerValue.Record -> payload.fields.values.all { constantLayoutMatches(it, target.generic.single()) }
+            else -> false
+        }
     }
 
     private fun constantFor(type: MCFPPType, binding: StorageBinding, template: Boolean = false): CompilerValue? {
@@ -1529,6 +1154,7 @@ object StorageAccess {
     }
 
     private fun staticLayoutAccessible(actual: MCFPPType, target: MCFPPType) = target in erasedTypes || actual == target ||
+        actual is MCFPPEntityType && target is MCFPPEntityType ||
         target is MCFPPUnionType && target.types.any { actual.isSubOf(it) } ||
         actual is MCFPPDataTemplateType && target is MCFPPDataTemplateType && actual.isSubOf(target) ||
         (actual is MCFPPListType || actual is MCFPPImmutableListType) && (target is MCFPPListType || target is MCFPPImmutableListType) ||
@@ -1536,6 +1162,7 @@ object StorageAccess {
 
     /** Loading a register is materialization, not a logical write. */
     fun read(value: Var<*>): Var<*> {
+        if (value is top.mcfpp.core.lang.bool.PresenceBool) return value
         if (value.isError) return value
         top.mcfpp.core.lang.entity.EntityDataAddress.selected(value)?.let { return it.bareRead() }
         ContextBorrowing.payload(value)?.let { payload ->
@@ -1557,7 +1184,7 @@ object StorageAccess {
             return UnknownVar(value.identifier).apply { type = value.type; isError = true }
         }
         val version = Function.currFunction to data.versions.version(binding.place)
-        if (actualType(value).typeId == MCFPPEntityType.NormalSelector.typeId && selectorProgram(binding) == null)
+        if (actualType(value) is MCFPPEntityType && selectorProgram(binding) == null)
             return error(value.type, "Entity target structure is unknown at runtime; an accessible captured target is required")
         // Selector operands must be relocated from the current binding after a caller-frame rebase.
         if (selectorProgram(binding) == null &&
@@ -1630,14 +1257,18 @@ object StorageAccess {
     }
 
     /** Receiver calls mutate the same payload without changing the source's nominal type. */
-    fun writeReceiver(target: Var<*>, source: Var<*>) {
+    fun writeReceiver(target: Var<*>, source: Var<*>, effect: Effect? = null) {
         if (source.isError) return
+        if (effect == Effect.Pure || effect == Effect.ReadsRuntime) return
         ContextBorrowing.escapeDiagnostic(source, "object contents")?.let { LogProcessor.error(it); return }
         val binding = target.storageBinding ?: error("Missing receiver storage binding")
-        if (target.symbol?.readonly == true || binding.data.declarations.any { (place, declaration) -> declaration.readonly &&
-                place.root == binding.place.root && binding.place.path.take(place.path.size) == place.path }) {
-            LogProcessor.error("Cannot modify a readonly value '${target.identifier}'")
-            return
+        if (effect is Effect.Writes && effect.places.none { it.overlaps(binding.place) }) return
+        if (!checkCallWrites("receiver writeback", effect ?: Effect.Writes(setOf(binding.place)), listOf(target))) return
+        val fixed = binding.data.facts.entries().filterKeys { candidate ->
+            binding.data.declarations.any { (place, declaration) ->
+                ConstantBinding.protected(declaration, place, binding.data.facts) &&
+                    place.root == candidate.root && candidate.path.take(place.path.size) == place.path
+            }
         }
         if (binding.data.facts.read(binding.place)?.state != ValueState.INITIALIZED) {
             LogProcessor.error("Cannot update contents of an uninitialized value '${target.identifier}'")
@@ -1653,7 +1284,9 @@ object StorageAccess {
         if (binding.data.layoutAt(binding.place) == StorageLayout.CompilerOnly) {
             val errors = Project.errorCount
             val result = writePayload(target, source)
-            if (!result.isError && Project.errorCount == errors) EffectAnalysis.recordWrite(binding.place, contents = true)
+            fixed.forEach { (place, fact) -> binding.data.facts.refine(place, fact) }
+            if (!result.isError && Project.errorCount == errors)
+                EffectAnalysis.recordEffect(effect ?: Effect.Writes(setOf(binding.place), setOf(binding.place)))
             return
         }
         val original = ensure(source)
@@ -1662,6 +1295,13 @@ object StorageAccess {
             return
         }
         val incoming = original.data.facts.withoutValues()
+        // Retain facts proved by the actual constructed payload, not by a possibly narrower view declaration.
+        for ((place, fact) in original.data.facts.entries()) {
+            if (original.data.declarations.any { (protected, declaration) ->
+                    ConstantBinding.protected(declaration, protected, original.data.facts) &&
+                        protected.root == place.root && place.path.take(protected.path.size) == protected.path })
+                incoming.refine(place, fact)
+        }
         val errors = Project.errorCount
         if (!writePhysicalLayout(binding, source)) return
         if (Project.errorCount != errors) return
@@ -1670,8 +1310,65 @@ object StorageAccess {
         binding.data.write(binding.place, incoming.read(original.place)!!)
         binding.data.facts.forgetDescendants(binding.place)
         binding.data.facts.copyFrom(incoming, original.place, binding.place, includeRoot = false)
+        fixed.forEach { (place, fact) -> binding.data.facts.refine(place, fact) }
         copyCallableEvidence(original, binding)
-        EffectAnalysis.recordWrite(binding.place, contents = true)
+        EffectAnalysis.recordEffect(effect ?: Effect.Writes(setOf(binding.place), setOf(binding.place)))
+    }
+
+    internal fun presence(property: top.mcfpp.core.lang.PropertyVar, present: Boolean): Var<*> {
+        val descriptor = MemberDescriptor.of(property.field, property.property)
+        if (!descriptor.backed) return error(MCFPPBaseType.Bool, "Property '${property.identifier}' has no backing position for an existence check")
+        val binding = ensure(property.field)
+        val fact = binding.data.facts.read(binding.place)
+        val known = when {
+            fact?.presence == Presence.Absent || (fact?.value as? ValueKnowledge.Constant)?.value.let {
+                it == CompilerValue.NullValue || it is CompilerValue.Typed && it.payload == CompilerValue.NullValue
+            } -> false
+            fact?.presence == Presence.Present || fact?.state == ValueState.INITIALIZED &&
+                (fact.value is ValueKnowledge.Constant || !descriptor.optional) -> true
+            fact?.state == ValueState.UNINITIALIZED && descriptor.optional -> false
+            else -> null
+        }
+        return if (known != null) literal(MCFPPBaseType.Bool, CompilerValue.Bool(known == present))
+        else top.mcfpp.core.lang.bool.PresenceBool(binding, present)
+    }
+
+    internal fun canReadOptional(property: top.mcfpp.core.lang.PropertyVar): Boolean {
+        val descriptor = MemberDescriptor.of(property.field, property.property)
+        if (!descriptor.optional || !descriptor.backed) return true
+        val binding = ensure(property.field)
+        val fact = binding.data.facts.read(binding.place)
+        val value = (fact?.value as? ValueKnowledge.Constant)?.value
+        if (fact?.presence == Presence.Present || value != null && value != CompilerValue.NullValue &&
+            !(value is CompilerValue.Typed && value.payload == CompilerValue.NullValue)) return true
+        LogProcessor.error("Optional field '${property.identifier}' may be absent; check '${property.identifier} != null' before reading")
+        return false
+    }
+
+    internal fun removeField(property: top.mcfpp.core.lang.PropertyVar) {
+        val target = property.field
+        val descriptor = MemberDescriptor.of(target, property.property)
+        if (!descriptor.backed || !descriptor.optional) {
+            LogProcessor.error("Only an optional field with a backing position can be deleted: '${target.identifier}'")
+            return
+        }
+        if (!canWrite(target)) return
+        val binding = ensure(target)
+        if (binding.data.facts.read(binding.place)?.presence != Presence.Absent &&
+            binding.data.layoutAt(binding.place) != StorageLayout.CompilerOnly)
+            emit(Command.buildAll("data remove", binding.path))
+        binding.data.facts.forgetDescendants(binding.place)
+        binding.data.write(binding.place, ValueFacts(TypeKnowledge.Exact(target.type.typeId), ValueKnowledge.Unknown,
+            ValueState.INITIALIZED, presence = Presence.Absent))
+        EffectAnalysis.recordWrite(binding.place)
+    }
+
+    /** Constructor-only fixed-field installation: no accessor or provider runs in this scope. */
+    internal fun initializeFixedField(target: Var<*>, source: Var<*>): Var<*> {
+        val expected = target.declarationConstant
+        if (expected == null || snapshot(source) != expected)
+            return error(target.type, "Constant '${target.identifier}' has no matching declaration snapshot")
+        return writePayload(target, source)
     }
 
     fun write(target: Var<*>, source: Var<*>): Var<*> {
@@ -1695,6 +1392,9 @@ object StorageAccess {
         if (!canWrite(target)) {
             return UnknownVar(target.identifier).apply { type = target.type; isError = true }
         }
+        if ((target.isConst || target.symbol?.mutable == false) && target.symbol?.isLiteral != true &&
+            !ConstantBinding.requireValue(target.identifier, snapshot(source)))
+            return UnknownVar(target.identifier).apply { type = target.type; isError = true }
         val errors = Project.errorCount
         val result = ContextBorrowing.payload(source)?.let { writeBorrow(target, source, it) } ?: writePayload(target, source)
         if (!result.isError && Project.errorCount == errors) EffectAnalysis.recordWrite(ensure(target).place)
@@ -1789,11 +1489,11 @@ object StorageAccess {
             if (binding.data.layoutAt(binding.place) != StorageLayout.CompilerOnly)
                 emit(Command.buildAll("data remove", binding.path))
             binding.data.write(binding.place, ValueFacts(TypeKnowledge.Exact(MCFPPPrivateType.Null.typeId),
-                ValueKnowledge.Constant(CompilerValue.NullValue)))
+                ValueKnowledge.Constant(CompilerValue.NullValue), presence = Presence.Absent))
             return adapter(target.type, target.identifier, binding).apply { setAs(target) }
         }
-        if (actualType(source).typeId == MCFPPEntityType.NormalSelector.typeId &&
-            (target.type.typeId == MCFPPEntityType.NormalSelector.typeId || target.type in erasedTypes)) {
+        if (actualType(source) is MCFPPEntityType &&
+            (target.type is MCFPPEntityType || target.type in erasedTypes)) {
             val entity = entityTarget(sourcePlace) ?: return error(target.type,
                 "Entity target structure is unknown at runtime; cannot copy '${source.identifier}'")
             val expression = top.mcfpp.lib.SelectorExpression.capture(entity, binding.data,
@@ -1857,7 +1557,10 @@ object StorageAccess {
         }
         val original = source.storageBinding
         val parts = FlowFacts()
-        original?.let { parts.copyFrom(it.data.facts, it.place, binding.place, includeRoot = false) }
+        original?.let {
+            val facts = if (runtimeOnly(it)) it.data.facts.withoutValues() else it.data.facts
+            parts.copyFrom(facts, it.place, binding.place, includeRoot = false)
+        }
         if (original != null && original.data.facts.read(original.place)?.state != ValueState.INITIALIZED) {
             fun projectionFields(type: MCFPPType, from: Place, to: Place, seen: Set<TypeId> = emptySet()) {
                 val accessedType = (original.data.facts.readAccess(from, original.data.declarations,
@@ -1898,7 +1601,7 @@ object StorageAccess {
         binding.data.write(binding.place, ValueFacts(writtenType,
             writtenSnapshot?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown,
             readableLayout = sourceAccess?.readableLayout?.takeIf { !static &&
-                (writtenType as? TypeKnowledge.Exact)?.type == it }, reference = sourceAccess?.reference))
+                (writtenType as? TypeKnowledge.Exact)?.type == it }, reference = sourceAccess?.reference, presence = Presence.Present))
         if (target.type is MCFPPFunctionType && candidates[binding.place].isNullOrEmpty())
             binding.data.callableTargets.remove(binding.place)
         for ((place, ids) in candidates)
@@ -1932,9 +1635,44 @@ object StorageAccess {
         }
     }
 
+    internal fun checkCallWrites(name: String, effect: Effect, values: List<Var<*>>): Boolean {
+        if (effect == Effect.Pure || effect == Effect.ReadsRuntime) return true
+        for (value in values) {
+            val binding = ensure(value)
+            registerProtectedMembers(value)
+            for ((place, declaration) in binding.data.declarations) {
+                if (!ConstantBinding.protected(declaration, place, binding.data.facts)) continue
+                val conflicts = when (effect) {
+                    is Effect.Writes -> effect.places.any { it.overlaps(place) }
+                    Effect.Unknown -> place.overlaps(binding.place)
+                    else -> false
+                }
+                if (conflicts) {
+                    LogProcessor.error("Call '$name' may modify constant '${declaration.name}' through '${value.identifier}'")
+                    return false
+                }
+            }
+        }
+        return true
+    }
+
+    private fun registerProtectedMembers(value: Var<*>) {
+        fun register(type: MCFPPType, binding: StorageBinding, seen: Set<TypeId>) {
+            if (type !is MCFPPDataTemplateType || type.typeId in seen) return
+            for (field in type.instanceFields) {
+                val child = binding.field(field.identifier)
+                registerMember(field, child)
+                register(field.type, child, seen + type.typeId)
+            }
+        }
+        register(actualType(value), ensure(value), emptySet())
+    }
+
     fun canWrite(target: Var<*>): Boolean {
+        if (target is top.mcfpp.core.lang.entity.DisplayView) return !target.isConst
         if (target is top.mcfpp.core.lang.entity.EntityDataAddress) return !target.isConst
         val binding = ensure(target)
+        registerProtectedMembers(target)
         binding.data.declarations.entries.firstOrNull { (place, declaration) ->
             declaration.lambdaCaptureName != null && place.root == binding.place.root &&
                 binding.place.path.take(place.path.size) == place.path
@@ -1943,9 +1681,13 @@ object StorageAccess {
                 "return a new value or accumulate explicitly (for example with fold)")
             return false
         }
-        if (binding.data.declarations.any { (place, declaration) -> declaration.readonly &&
-                place.root == binding.place.root && binding.place.path.take(place.path.size) == place.path }) {
-            LogProcessor.error("Cannot modify readonly value '${target.identifier}'")
+        val protected = binding.data.declarations.entries.firstOrNull { (place, declaration) ->
+            place.overlaps(binding.place) &&
+                !(place.path.size > binding.place.path.size && binding.data.facts.read(binding.place)?.state == ValueState.UNINITIALIZED) &&
+                ConstantBinding.protected(declaration, place, binding.data.facts)
+        }
+        if (protected != null) {
+            LogProcessor.error("Cannot modify constant '${protected.value.name}' through '${target.identifier}'")
             return false
         }
         val accessDeclaration = target.symbol
@@ -1966,6 +1708,7 @@ object StorageAccess {
     }
 
     fun capture(value: Var<*>): Var<*> {
+        if (value is top.mcfpp.core.lang.bool.PresenceBool) return capture(value.materializePredicate())
         if (value.isError) return value
         ContextBorrowing.diagnostic(value)?.let { return error(value.type, it) }
         top.mcfpp.core.lang.entity.EntityDataAddress.selected(value)?.let { return capture(it.bareRead()) }
@@ -2155,7 +1898,7 @@ object StorageAccess {
             Effect.Unknown -> barrier(values)
             is Effect.Writes -> for (data in values.mapNotNull { it.storageBinding?.data }.distinct()) {
                 for (written in effect.places.filter { it.root == data.root.root }) {
-                    val readonly = data.declarations.filterValues { it.readonly }.keys
+                    val readonly = data.declarations.filter { (place, declaration) -> ConstantBinding.protected(declaration, place, data.facts) }.keys
                     val affected = if (data.layout == StorageLayout.CompilerOnly) data.facts.entries().map { it.key }.filter {
                         it.overlaps(written) && data.layoutAt(it) != StorageLayout.CompilerOnly
                     } else listOf(written)
@@ -2194,7 +1937,28 @@ object StorageAccess {
         return values
     }
 
+    /** Object fields retain their global producers even when absent from a caller's lexical scope. */
+    internal fun callGlobals(): List<Var<*>> {
+        val namespaces = top.mcfpp.model.scope.GlobalScope.localNamespaces.values +
+            top.mcfpp.model.scope.GlobalScope.libNamespaces.values + top.mcfpp.model.scope.GlobalScope.stdNamespaces.values
+        return namespaces.flatMap { namespace -> namespace.scope.allVars.filter { it.isStatic } +
+            namespace.scope.objects.filterIsInstance<top.mcfpp.model.compound.DataTemplate>()
+                .flatMap { it.scope.allVars.filter { field -> field.isStatic && field.storageBinding != null } } }
+    }
+
+    internal fun invalidateMutableGlobals(values: List<Var<*>>) {
+        for (data in values.mapNotNull { it.storageBinding?.data }.distinct()) {
+            val protected = data.declarations.filter { (place, declaration) -> ConstantBinding.protected(declaration, place, data.facts) }.keys
+            data.facts.invalidate(data.root, protected)
+            data.versions.invalidate(data.root)
+        }
+    }
+
     fun encodeTo(path: NBTPath, source: Var<*>) {
+        if (source is top.mcfpp.core.lang.bool.PresenceBool) {
+            encodeTo(path, source.materializePredicate())
+            return
+        }
         val referenceBorrows = top.mcfpp.core.lang.ref.ReferenceValues.provenance(source)
         (if (referenceBorrows.isEmpty()) ContextBorrowing.escapeDiagnostic(source, "runtime storage")
             else ContextBorrowing.diagnostic(source))?.let { LogProcessor.error(it); return }
@@ -2304,6 +2068,7 @@ object StorageAccess {
         MCFPPNBTType.Double.typeId -> top.mcfpp.nbt.tags.primitive.DoubleTag::class.java
         MCFPPNBTType.ByteArray.typeId -> top.mcfpp.nbt.tags.collection.ByteArrayTag::class.java
         MCFPPNBTType.IntArray.typeId -> top.mcfpp.nbt.tags.collection.IntArrayTag::class.java
+        MCFPPUUIDType.typeId -> top.mcfpp.nbt.tags.collection.IntArrayTag::class.java
         MCFPPNBTType.LongArray.typeId -> top.mcfpp.nbt.tags.collection.LongArrayTag::class.java
         else -> when (type) {
             is MCFPPUnionType -> type.types.map(::encoding).distinct().singleOrNull()
@@ -2459,7 +2224,7 @@ object StorageAccess {
             if (data.snbt != NbtEncoding.snbt(member.data)) return null
             return type.build(name, member)
         }
-        if (type.typeId == MCFPPEntityType.NormalSelector.typeId && snapshot is CompilerValue.Typed && snapshot.type == type.typeId) {
+        if (type is MCFPPEntityType && snapshot is CompilerValue.Typed) {
             val expression = top.mcfpp.lib.SelectorExpression.restore(snapshot) ?: return null
             val descriptors = types.toMutableMap()
             val session = top.mcfpp.Project.libraryImportSession
@@ -2477,7 +2242,9 @@ object StorageAccess {
             }
             collect(snapshot)
             val entity = expression.target(descriptors) ?: return null
-            return top.mcfpp.core.lang.entity.SelectorVar(entity, name).also {
+            return top.mcfpp.core.lang.entity.SelectorVar(name).also {
+                it.type = type
+                updateEntityTarget(it, entity)
                 ensure(it).data.types.putAll(descriptors)
             }.takeIf { it.type.typeId == type.typeId }
         }
@@ -2560,6 +2327,8 @@ object StorageAccess {
             }
             return initializeLiteral(type.buildUnConcrete(name), payload, types)
         }
+        if (type == MCFPPUUIDType && payload is CompilerValue.Nbt)
+            return initializeLiteral(type.buildUnConcrete(name), snapshot, types)
         if (payload is CompilerValue.Sequence && type in setOf(MCFPPNBTType.ByteArray, MCFPPNBTType.IntArray, MCFPPNBTType.LongArray)) {
             return snapshotTag(payload, type.typeId)?.let { type.build(name, it) }
         }

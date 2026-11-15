@@ -35,7 +35,8 @@ data class ContextEntity(
     val attributes: Map<String, Double> = emptyMap(),
     val xpPoints: Int = 0,
     val xpLevels: Int = 0,
-    val nbt: Map<String, Tag<*>> = emptyMap()
+    val nbt: Map<String, Tag<*>> = emptyMap(),
+    val eyeHeight: Double = 1.62
 )
 
 data class ContextBlock(
@@ -54,7 +55,8 @@ data class ContextBlockTest(
     val isTag: Boolean,
     val states: Map<String, String>,
     val matched: Boolean,
-    val dimension: String = "minecraft:overworld"
+    val dimension: String = "minecraft:overworld",
+    val anchor: String = "feet"
 )
 
 data class ContextTeleport(val target: String, val from: ContextPosition, val to: ContextPosition,
@@ -90,7 +92,9 @@ class ContextCommandExecutor(
     private val macros: Map<String, String> = emptyMap(),
     private val commandBudget: Int = 20_000,
     rootDimension: String = rootContext?.dimension ?: "minecraft:overworld",
-    private val worldInDimension: ((String, Int, Int, Int) -> ContextBlock?)? = null
+    private val worldInDimension: ((String, Int, Int, Int) -> ContextBlock?)? = null,
+    private val heightmap: ((String, String, Int, Int) -> Double)? = null,
+    private val dimensionScale: Map<String, Double> = mapOf("minecraft:overworld" to 1.0, "minecraft:the_nether" to 8.0, "minecraft:the_end" to 1.0)
 ) {
     val entities: MutableList<ContextEntity> = entities.map { it.copy(relations = it.relations.mapValues { (_, names) -> names.toList() }) }.toMutableList()
     private val rootContext = rootContext?.let { original -> this.entities.firstOrNull { it.name == original.name } ?: original.copy() }
@@ -122,7 +126,8 @@ class ContextCommandExecutor(
         val executor: ContextEntity?,
         val position: ContextPosition,
         val rotation: ContextRotation,
-        val dimension: String
+        val dimension: String,
+        val anchor: String = "feet"
     )
 
     private data class CommandResult(
@@ -197,6 +202,20 @@ class ContextCommandExecutor(
         if (command.startsWith("scoreboard ")) return scoreboard(command, context)
 
         if (command.startsWith("data ")) return data(command, context)
+        if (command.startsWith("summon ")) {
+            val (parts, payload) = take(command.removePrefix("summon "), 4)
+            val nbt = if (payload.isBlank()) CompoundTag() else Tag.toNBT(payload) as CompoundTag
+            val uuid = (nbt["UUID"] as? IntArrayTag)?.let { words ->
+                check(words.value.size == 4)
+                top.mcfpp.util.MCUUID(words).uuid
+            } ?: java.util.UUID.nameUUIDFromBytes("summoned-${spawned++}".toByteArray())
+            if (entities.any { it.uuid == uuid }) return CommandResult(success = false)
+            val entity = ContextEntity(uuid.toString(), parts[0].let { if (':' in it) it else "minecraft:$it" },
+                position = position(parts.drop(1), context), rotation = context.rotation, dimension = context.dimension, uuid = uuid, nbt = nbt.value)
+            entities += entity
+            storage["entity:${entity.name}"] = nbt.value.mapValues { it.value.copy() }.toMutableMap()
+            return CommandResult(result = 1)
+        }
         if (command.startsWith("tp ")) return teleport(command.removePrefix("tp "), context)
         if (command.startsWith("teleport ")) return teleport(command.removePrefix("teleport "), context)
         if (command.startsWith("attribute ")) {
@@ -253,11 +272,11 @@ class ContextCommandExecutor(
     }
 
     private fun executeChain(chain: String, context: ExecContext): CommandResult {
+        if (chain.isEmpty()) return CommandResult(result = 1)
         if (chain.startsWith("run ")) return execute(chain.removePrefix("run "), context)
 
         if (chain.startsWith("summon ")) {
             val (type, after) = token(chain.removePrefix("summon "))
-            check(type == "minecraft:marker") { "Unsupported execute summon entity: $type" }
             val marker = ContextEntity("__context_anchor_${spawned++}", type,
                 position = context.position, rotation = ContextRotation(0.0, 0.0), dimension = context.dimension)
             entities += marker
@@ -273,7 +292,9 @@ class ContextCommandExecutor(
         }
         if (chain.startsWith("in ")) {
             val (dimension, after) = token(chain.removePrefix("in "))
-            return executeChain(after, context.copy(dimension = dimension))
+            val ratio = dimensionScale.getValue(context.dimension) / dimensionScale.getValue(dimension)
+            return executeChain(after, context.copy(dimension = dimension,
+                position = context.position.copy(x = context.position.x * ratio, z = context.position.z * ratio)))
         }
         if (chain.startsWith("on ")) {
             val (relation, after) = token(chain.removePrefix("on "))
@@ -282,9 +303,37 @@ class ContextCommandExecutor(
         if (chain.startsWith("positioned as ")) return fanOut(chain.removePrefix("positioned as "), context) { target ->
             context.copy(position = target.position)
         }
+        if (chain.startsWith("positioned over ")) {
+            val (map, after) = token(chain.removePrefix("positioned over "))
+            val y = requireNotNull(heightmap) { "A positioned over test must supply heightmap data" }(
+                context.dimension, map, floor(context.position.x).toInt(), floor(context.position.z).toInt())
+            return executeChain(after, context.copy(position = context.position.copy(y = y)))
+        }
         if (chain.startsWith("positioned ")) {
             val (coordinates, after) = take(chain.removePrefix("positioned "), 3)
-            return executeChain(after, context.copy(position = position(coordinates, context)))
+            return executeChain(after, context.copy(position = position(coordinates, context), anchor = "feet"))
+        }
+        if (chain.startsWith("anchored ")) {
+            val (anchor, after) = token(chain.removePrefix("anchored "))
+            check(anchor in listOf("feet", "eyes"))
+            return executeChain(after, context.copy(anchor = anchor))
+        }
+        if (chain.startsWith("align ")) {
+            val (axes, after) = token(chain.removePrefix("align "))
+            fun axis(name: Char, value: Double) = if (name in axes) floor(value) else value
+            return executeChain(after, context.copy(position = ContextPosition(axis('x', context.position.x),
+                axis('y', context.position.y), axis('z', context.position.z))))
+        }
+        if (chain.startsWith("facing entity ")) {
+            val (parts, after) = take(chain.removePrefix("facing entity "), 2)
+            return each(select(parts[0], context), after) { target ->
+                context.copy(rotation = facing(context, target.position + ContextPosition(0.0,
+                    if (parts[1] == "eyes") target.eyeHeight else 0.0, 0.0)))
+            }
+        }
+        if (chain.startsWith("facing ")) {
+            val (parts, after) = take(chain.removePrefix("facing "), 3)
+            return executeChain(after, context.copy(rotation = facing(context, position(parts, context))))
         }
         if (chain.startsWith("rotated as ")) return fanOut(chain.removePrefix("rotated as "), context) { target ->
             context.copy(rotation = target.rotation)
@@ -410,6 +459,29 @@ class ContextCommandExecutor(
     }
 
     private fun test(rest: String, context: ExecContext): Pair<Boolean, String> {
+        if (rest.startsWith("predicate ")) {
+            val (literal, after) = token(rest.removePrefix("predicate "))
+            val predicate = com.alibaba.fastjson2.JSON.parseObject(literal, com.alibaba.fastjson2.JSONReader.Feature.AllowUnQuotedFieldNames)
+            check(predicate.getString("type") == "minecraft:float_value_check")
+            val actual = numberProvider(predicate["value"]!!, context)
+            val range = predicate["test"]!!
+            val matched = if (range is com.alibaba.fastjson2.JSONObject && !range.containsKey("type"))
+                (!range.containsKey("min") || actual >= numberProvider(range["min"]!!, context)) &&
+                    (!range.containsKey("max") || actual <= numberProvider(range["max"]!!, context))
+            else actual == numberProvider(range, context)
+            return matched to after
+        }
+        if (rest.startsWith("data entity ")) {
+            val (parts, after) = take(rest.removePrefix("data entity "), 2)
+            val selected = select(parts[0], context)
+            check(selected.size <= 1)
+            val present = selected.singleOrNull()?.let { entity ->
+                try { readEntity(entity.name, parts[1]); true }
+                catch (_: IllegalStateException) { false }
+                catch (_: IndexOutOfBoundsException) { false }
+            } ?: false
+            return present to after
+        }
         Regex("^dimension (\\S+)").find(rest)?.let { match ->
             return (context.dimension == match.groupValues[1]) to rest.substring(match.range.last + 1).trimStart()
         }
@@ -611,7 +683,7 @@ class ContextCommandExecutor(
                 trig(-cos(yaw) * sin(pitch)))
             val f = ContextPosition(trig(-sin(yaw) * cos(pitch)), trig(-sin(pitch)),
                 trig(cos(yaw) * cos(pitch)))
-            return context.position + ContextPosition(
+            return origin(context) + ContextPosition(
                 l.x * left + u.x * up + f.x * forward,
                 l.y * left + u.y * up + f.y * forward,
                 l.z * left + u.z * up + f.z * forward)
@@ -624,6 +696,16 @@ class ContextCommandExecutor(
         }
         return ContextPosition(axis(tokens[0], context.position.x),
             axis(tokens[1], context.position.y), axis(tokens[2], context.position.z))
+    }
+
+    private fun origin(context: ExecContext) = context.position + ContextPosition(0.0,
+        if (context.anchor == "eyes") context.executor?.eyeHeight ?: 0.0 else 0.0, 0.0)
+
+    private fun facing(context: ExecContext, target: ContextPosition): ContextRotation {
+        val source = origin(context)
+        val x = target.x - source.x; val y = target.y - source.y; val z = target.z - source.z
+        return ContextRotation(Math.toDegrees(kotlin.math.atan2(-x, z)),
+            -Math.toDegrees(kotlin.math.atan2(y, kotlin.math.sqrt(x * x + z * z))))
     }
 
     private fun rotation(tokens: List<String>, context: ExecContext): ContextRotation {
@@ -651,13 +733,13 @@ class ContextCommandExecutor(
             (if (isTag) resource.removePrefix("#") in block.tags else block.resource == resource) &&
             states.all { (key, value) -> block.states[key] == value }
         blockTests += ContextBlockTest(context.executor?.name, position, context.rotation,
-            resource.removePrefix("#"), isTag, states, matched, context.dimension)
+            resource.removePrefix("#"), isTag, states, matched, context.dimension, context.anchor)
         return matched
     }
 
     private fun scoreboard(command: String, context: ExecContext): CommandResult {
         Regex("scoreboard objectives add (\\S+) (\\S+)(?: (.+))?").matchEntire(command)?.let {
-            check(objectives.add(it.groupValues[1])) { "Objective already exists: ${it.groupValues[1]}" }
+            if (!objectives.add(it.groupValues[1])) return CommandResult(success = false)
             return CommandResult()
         }
         Regex("scoreboard players set (\\S+) (\\S+) (-?\\d+)").matchEntire(command)?.let {
@@ -734,6 +816,31 @@ class ContextCommandExecutor(
     }
 
     private fun data(command: String, context: ExecContext): CommandResult {
+        Regex("^data modify storage (\\S+) ($NBT_PATH) set compute default float (.*)$").matchEntire(command)?.let {
+            val provider = com.alibaba.fastjson2.JSON.parse(it.groupValues[3], com.alibaba.fastjson2.JSONReader.Feature.AllowUnQuotedFieldNames)
+            val result = numberProvider(provider, context)
+            writeNbt(it.groupValues[1], it.groupValues[2], FloatTag(if (result.isFinite()) result else 0f))
+            return CommandResult(result = 1)
+        }
+        Regex("^data modify entity (\\S+) \\{\\} merge from storage (\\S+) ($NBT_PATH)$").matchEntire(command)?.let {
+            val entity = select(it.groupValues[1], context).singleOrNull() ?: return CommandResult(success = false)
+            val source = readNbt(it.groupValues[2], it.groupValues[3]) as CompoundTag
+            val destination = storage.getOrPut("entity:${entity.name}") { mutableMapOf() }
+            for ((key, value) in source.value) {
+                val existing = destination[key]
+                if (existing is CompoundTag && value is CompoundTag) mergeNbt(existing, value)
+                else destination[key] = value.copy()
+            }
+            return CommandResult(result = 1)
+        }
+        Regex("^data modify entity (\\S+) ($NBT_PATH) set value (.*)$").matchEntire(command)?.let {
+            val entity = select(it.groupValues[1], context).singleOrNull() ?: return CommandResult(success = false)
+            val source = "entity:${entity.name}"
+            val value = literalTag(it.groupValues[3])
+            val old = try { readNbt(source, it.groupValues[2]) } catch (_: IllegalStateException) { null }
+            writeNbt(source, it.groupValues[2], value)
+            return CommandResult(result = if (old != value) 1 else 0, success = old != value)
+        }
         if (command == "data modify storage mcfpp:system stack_frame prepend value {}") {
             frames.add(0, mutableMapOf())
             return CommandResult(result = 1)
@@ -744,15 +851,17 @@ class ContextCommandExecutor(
             return CommandResult(result = 1)
         }
         Regex("^data modify storage (\\S+) ($NBT_PATH) set value (.*)$").matchEntire(command)?.let {
-            writeNbt(it.groupValues[1], it.groupValues[2], literalTag(it.groupValues[3]))
-            return CommandResult(result = 1, success = true)
+            val value = literalTag(it.groupValues[3])
+            val old = try { readNbt(it.groupValues[1], it.groupValues[2]) } catch (_: IllegalStateException) { null }
+            writeNbt(it.groupValues[1], it.groupValues[2], value)
+            return CommandResult(result = if (old != value) 1 else 0, success = old != value)
         }
-        Regex("^data modify storage (\\S+) ($NBT_PATH) set string storage (\\S+) ($NBT_PATH) (-?\\d+) (-?\\d+)$")
+        Regex("^data modify storage (\\S+) ($NBT_PATH) set string storage (\\S+) ($NBT_PATH) (-?\\d+)(?: (-?\\d+))?$")
             .matchEntire(command)?.let {
                 val value = (readNbt(it.groupValues[3], it.groupValues[4]) as StringTag).value
                 fun index(raw: String): Int = raw.toInt().let { position -> if (position < 0) value.length + position else position }
                 val start = index(it.groupValues[5])
-                val end = index(it.groupValues[6])
+                val end = it.groupValues[6].takeIf(String::isNotEmpty)?.let(::index) ?: value.length
                 check(start in 0..value.length && end in start..value.length) { "Invalid string slice: $command" }
                 val result = StringTag(value.substring(start, end))
                 val old = try { readNbt(it.groupValues[1], it.groupValues[2]) } catch (_: IllegalStateException) { null }
@@ -849,6 +958,7 @@ class ContextCommandExecutor(
             return CommandResult(result = 1)
         }
         Regex("^data get storage (\\S+) ($NBT_PATH)(?: (\\S+))?$").matchEntire(command)?.let {
+            val scale = it.groupValues[3].ifEmpty { "1" }.toDouble()
             val value = try {
                 readNbt(it.groupValues[1], it.groupValues[2])
             } catch (_: IllegalStateException) {
@@ -860,11 +970,28 @@ class ContextCommandExecutor(
                 is IntArrayTag -> value.value.size
                 is LongArrayTag -> value.value.size
                 is StringTag -> value.value.length
-                else -> (value.value as Number).toDouble().let { floor(it).toInt() }
+                else -> floor((value.value as Number).toDouble() * scale).toInt()
             }
             return CommandResult(result = number, success = true)
         }
         error("Unsupported data command: $command")
+    }
+
+    private fun numberProvider(source: Any, context: ExecContext): Float {
+        if (source is Number) return source.toFloat()
+        val value = source as com.alibaba.fastjson2.JSONObject
+        fun input(name: String) = numberProvider(value[name]!!, context)
+        return when (value.getString("type")) {
+            "minecraft:storage" -> (readNbt(value.getString("storage"), value.getString("path")).value as Number).toFloat()
+            "minecraft:score" -> values.getValue(scoreKey("${value.getJSONObject("target").getString("name")} ${value.getString("score")}", context)).toFloat()
+            "minecraft:from_int" -> input("input").toInt().toFloat()
+            "minecraft:add" -> value.getJSONArray("inputs").map { numberProvider(it, context) }.fold(0f, Float::plus)
+            "minecraft:mul" -> value.getJSONArray("inputs").map { numberProvider(it, context) }.fold(1f, Float::times)
+            "minecraft:sub" -> input("left") - input("right")
+            "minecraft:div" -> input("left") / input("right")
+            "minecraft:negate" -> -input("input")
+            else -> error("Unsupported number provider: $value")
+        }
     }
 
     private fun blockSource(coordinates: List<String>, context: ExecContext): String? {
@@ -999,7 +1126,11 @@ class ContextCommandExecutor(
         val parts = segments(key)
         for (size in parts.size - 1 downTo 1) {
             var parent = root[key.substring(0, parts[size - 1].end)] ?: continue
-            for (part in parts.drop(size).dropLast(1)) parent = element(parent, part)
+            for (part in parts.drop(size).dropLast(1)) {
+                if (parent is CompoundTag && part.name != null && !parent.value.containsKey(part.name))
+                    parent.put(part.name, CompoundTag())
+                parent = element(parent, part)
+            }
             val last = parts.last()
             if (last.name != null) (parent as CompoundTag).put(last.name, value)
             else if (last.predicate != null) (parent as ListTag).value.indices

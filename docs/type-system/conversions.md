@@ -4,7 +4,7 @@
 没有未知 `any` 的兜底重载；已知实际类型的 `any` 按该类型匹配。
 bool 不因 ByteTag 编码而匹配 byte 参数。
 
-已有标量和数组源重载按 ConversionData 的原生函数身份接入 IR Convert，普通同名用户函数仍使用自身函数体。short、double 和原始 nbt 载荷可进入普通参数、返回及控制流；26.3 显式数值转换与 toNBT 可参与循环/递归和擦除返回的实际类型绑定。旧浮点算术、比较、Promote 和 Convert 使用独立四分量 NBT 帧；实际验证状态见 [续接记录](./session-continuation-2026-10-04.md)。
+已有标量和数组源重载按 ConversionData 的原生函数身份接入 IR Convert，普通同名用户函数仍使用自身函数体。short、double 和原始 nbt 载荷可进入普通参数、返回及控制流；26.3 显式数值转换与 toNBT 可参与循环/递归和擦除返回的实际类型绑定。旧浮点算术、比较、Promote 和 Convert 使用独立四分量 NBT 帧。
 
 当前运行时支持如下。`—` 表示编译错误，包括输入为常量的情况；不通过宿主强转假装支持。
 
@@ -35,7 +35,7 @@ long/double 到 int 同样保留 Minecraft `data get` 操作及其范围与舍�
 IR 的 toNBT 结果拥有独立位置和快照，保留来源编码；常量快照同时记录 nbt 结果身份和内部来源格式，避免 short/byte 编码退化为 int。byte/short 保留实际生产位置与原宽度，调用和返回按真实记分板或 NBT 布局捕获，不按访问对象的默认地址猜测来源。
 旧浮点分量后端使用 `{sign:int,int0:int,int1:int,exp:int}` 复合编码，栈保存与恢复逐项搬运四个分量。常量 codec 使用八位十进制有效数字、最近 ties-to-even 舍入，正负零都规范为零分量；非有限值在物化和 toNBT 时诊断。旧转换量化规则见上文，不能与常量 codec 舍入混为一谈。当前库格式及实际验证状态见续接记录；没有实际服务端数值对照。
 26.3 后端使用 FloatTag；这两种持久化格式不会自动互相转换。数值提供器后端的已知非有限输入编码会报错。IR 的 Promote/Convert 折叠遵守 foldIRConstants；关闭优化仍在单独类型分析中检查已知非法输入，不折叠 long/double 到 int 的后端读操作。
-26.3 算术保持所选提供器的求值顺序：sum 从正零开始，product 从 1 开始；非有限运算结果经过安全 float 读取归为正零，非有限输入仍报错。已知与运行时结果遵守相同规则，符号零按位保留。
+26.3 算术保持所选提供器的求值顺序：sum 从正零开始，product 从 1 开始；非有限运算结果经过安全 float 读取归为正零，非有限输入仍报错。O1/O2 的 `number-provider-fusion` 合成后，非有限中间值按原版规则继续参与嵌套计算，到整个提供器的安全读取边界才归零；此类异常计算不要求与逐步物化或常量折叠等价。正常有限计算保持原有规则，符号零按位保留。
 没有集合、text 等源的 toNBT 重载；表中不支持的数值转换保留明确能力诊断，不增加常量专用兜底转换。
 
 语言 `as` 通过 StorageAccess/TypedView 产生解释同一 Place 的临时值；赋值和声明初始化将载荷复制到目标的独立 Place。两个表达式 visitor 均不调用旧 explicitCast 或 NumericConversions。

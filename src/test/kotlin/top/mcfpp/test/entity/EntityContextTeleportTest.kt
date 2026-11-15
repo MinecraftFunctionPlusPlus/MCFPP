@@ -40,9 +40,8 @@ class EntityContextTeleportTest {
         assertEquals(originalRotation, continuation.rotation)
         assertCleanFrame(machine)
         val emitted = functions.values.flatten()
-        assertTrue(emitted.any { it.contains("execute at @s run function ") })
-        assertTrue(emitted.any { it.contains("execute on passengers run function ") })
-        assertTrue(emitted.any { it.contains("run tp @s ~ ~ ~") })
+        assertTrue(main.commands.any { it.analyze() == "execute at @s on passengers run tp @s ~ ~ ~" })
+        assertTrue(machine.executedFunctionLines.none { "mcfpp:context frames" in it })
         assertTrue(emitted.any { it.contains("store result storage ") && it.contains("store success storage ") })
 
         val inspect = GlobalScope.localNamespaces.getValue(exampleNamespace).scope.functions.getValue("inspect").single()
@@ -81,6 +80,21 @@ class EntityContextTeleportTest {
         assertEquals(listOf("Alice", "Bob"), machine.teleports.map { it.target })
         assertEquals(List(2) { ContextPosition(1.0, 2.0, 3.0) }, machine.teleports.map { it.to })
         assertEquals(listOf("moved-result", "moved-success", "missed-result", "missed-failure"), machine.messages)
+        assertCleanFrame(machine)
+    }
+
+    @Test
+    fun contextRequirementsUseAncestorPositionsForTeleportAndSummonFromTheBundledLibrary() = compile(entry = "contexts") { main, functions ->
+        val initial = tree() + ContextEntity("Nether", "minecraft:player", position = ContextPosition(-10.0, 90.0, 8.0),
+            rotation = ContextRotation(135.0, 20.0), dimension = "minecraft:the_nether")
+        val machine = execute(main, functions, initial, "carrier")
+        val other = machine.entities.single { it.name == "Nether" }
+        assertEquals(carrierPosition, other.position)
+        assertEquals("minecraft:overworld", other.dimension)
+        val spawned = machine.entities.filter { entity -> initial.none { it.name == entity.name } }
+        assertEquals(listOf(carrierPosition, carrierPosition + ContextPosition(1.0, 0.0, 0.0)), spawned.map { it.position })
+        assertTrue(spawned.all { it.type == "minecraft:pig" && it.dimension == "minecraft:overworld" })
+        assertTrue(machine.entities.none { "mcfpp_context_anchor" in it.tags })
         assertCleanFrame(machine)
     }
 
@@ -124,14 +138,14 @@ class EntityContextTeleportTest {
             Files.createDirectories(output)
             if (artifact != null) Files.writeString(output.resolve("source.mcfpp"), program)
             DatapackCreator.createDatapack(output.toString())
-            val data = output.resolve(Project.config.name).resolve("data")
             val functions = linkedMapOf<String, List<String>>()
-            Files.walk(data).use { paths ->
+            Files.walk(output).use { paths ->
                 paths.filter { Files.isRegularFile(it) && it.toString().endsWith(".mcfunction") }.forEach { file ->
-                    val relative = data.relativize(file)
-                    if (relative.nameCount >= 3 && relative.getName(1).toString() == "function") {
-                        val name = relative.subpath(2, relative.nameCount).joinToString("/") { it.toString() }.removeSuffix(".mcfunction")
-                        functions["${relative.getName(0)}:$name"] = Files.readAllLines(file)
+                    val relative = output.relativize(file)
+                    val data = (0 until relative.nameCount).firstOrNull { relative.getName(it).toString() == "data" }
+                    if (data != null && relative.nameCount >= data + 4 && relative.getName(data + 2).toString() == "function") {
+                        val name = relative.subpath(data + 3, relative.nameCount).joinToString("/") { it.toString() }.removeSuffix(".mcfunction")
+                        functions["${relative.getName(data + 1)}:$name"] = Files.readAllLines(file)
                     }
                 }
             }

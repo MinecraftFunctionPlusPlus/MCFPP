@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>mcfpp</id>
+    <version>@VERSION@</version>
+    <title>MCFPP CLI</title>
+    <authors>MinecraftFunctionPlusPlus contributors</authors>
+    <owners>Alumopper</owners>
+    <projectUrl>https://www.mcfpp.top</projectUrl>
+    <projectSourceUrl>https://github.com/MinecraftFunctionPlusPlus/MCFPP</projectSourceUrl>
+    <licenseUrl>https://github.com/MinecraftFunctionPlusPlus/MCFPP/blob/kotlin-latest/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <docsUrl>https://github.com/MinecraftFunctionPlusPlus/MCFPP/blob/kotlin-latest/docs/cli.md</docsUrl>
+    <bugTrackerUrl>https://github.com/MinecraftFunctionPlusPlus/MCFPP/issues</bugTrackerUrl>
+    <tags>mcfpp minecraft datapack compiler cli kotlin</tags>
+    <summary>Compile MCFPP projects into Minecraft data packs.</summary>
+    <description>MCFPP is an object-oriented programming language that compiles into Minecraft data packs. This package installs the command-line compiler and its bundled standard library.
+
+Run `mcfpp init hello`, enter the hello directory, and run `mcfpp build` to create your first data pack. Use `mcfpp --help` for project, build, package, and test commands. Kotlin MNI projects can be created with `mcfpp init hello --mni`.
+
+This is an early experimental release. The package includes the Windows distribution, license, release manifest, and frozen project source archive. Eclipse Temurin JDK 25 is installed as a dependency. Open a new terminal after installation. If JAVA_HOME is already configured, it must point to JDK 25. The first Kotlin MNI build needs internet access for Gradle and its dependencies.</description>
+    <releaseNotes>https://github.com/MinecraftFunctionPlusPlus/MCFPP/blob/kotlin-latest/RELEASE-NOTES.md</releaseNotes>
+    <dependencies>
+      <dependency id="Temurin25" version="[25.0,26.0)" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

@@ -110,6 +110,11 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
      */
     open var isConst = false
 
+    /** Fixed template/specialization value; instance storage remains independent. */
+    var declarationConstant: top.mcfpp.analysis.CompilerValue? = null
+
+    var isEntityMember = false
+
     /**
      * 是否是临时变量
      */
@@ -158,6 +163,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         val savedStackIndex = stackIndex
         val savedStatic = isStatic
         val savedConst = isConst
+        val savedDeclarationConstant = declarationConstant
+        val savedEntityMember = isEntityMember
         val savedTemp = isTemp
         val savedParent = parent
         val savedDeclaredParent = declaredParentTemplate
@@ -191,6 +198,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             try { stackIndex = savedStackIndex } finally { restoringStorageState = false }
             isStatic = savedStatic
             isConst = savedConst
+            declarationConstant = savedDeclarationConstant
+            isEntityMember = savedEntityMember
             isTemp = savedTemp
             parent = savedParent
             declaredParentTemplate = savedDeclaredParent
@@ -255,6 +264,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         this.nbtPath = v.nbtPath.clone()
         this.stackIndex = v.stackIndex
         this.isConst = v.isConst
+        this.declarationConstant = v.declarationConstant
+        this.isEntityMember = v.isEntityMember
         this.isError = v.isError
         this.nullable = v.nullable
         this.isFinal = v.isFinal
@@ -285,6 +296,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
      */
     @Suppress("UNCHECKED_CAST")
     fun assignedBy(b: Var<*>): Self {
+        if (this is PropertyVar && (top.mcfpp.core.lang.entity.DisplayProperties.recognizes(field) ||
+                field is top.mcfpp.core.lang.entity.DisplayView)) return doAssignedBy(b) as Self
         if (b is Null && !nullable) {
             LogProcessor.error("Cannot assign null value to a non-nullable variable.")
             isError = true
@@ -342,6 +355,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             return this
         }
         return when(type){
+            MCFPPNBTType.NBT -> if (this.type is MCFPPDictType)
+                top.mcfpp.analysis.StorageAccess.view(this, type, diagnose = false) else buildCastErrorVar(type)
             MCFPPBaseType.Object -> top.mcfpp.analysis.StorageAccess.view(this, type, diagnose = false)
             MCFPPBaseType.Any -> {
                 top.mcfpp.analysis.StorageAccess.view(this, type, diagnose = false)

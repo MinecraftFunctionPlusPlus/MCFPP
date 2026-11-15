@@ -90,7 +90,7 @@ sealed interface Expression : SemanticNode {
 private val binaryOperators = setOf("*", "/", "%", "+", "-", "<", ">", "<=", ">=", "==", "!=", "~=", "&&", "||", "|")
 private val languageIdentifier = Regex("[\\p{L}_][\\p{L}\\p{Nd}_]*")
 
-data class Argument(val expression: Expression) { val kind: Int get() = 1 }
+data class Argument(val expression: Expression, val name: String? = null) { val kind: Int get() = 1 }
 data class PropertyEntry(val name: String, val value: Expression)
 data class CompoundEntry(val key: String, val value: Expression)
 data class Dimension(val mode: DimensionMode, val value: ConstantRef?) {

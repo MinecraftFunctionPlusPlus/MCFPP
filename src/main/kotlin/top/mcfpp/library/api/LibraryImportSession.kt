@@ -213,6 +213,17 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
     }
     /** Returns bound dependencies in reproducible package order for a later library export. */
     fun exportDependencies(): List<LibraryDependency> { requireBound(); return inventory().map { LibraryDependency(it.identity.library, it.identity.classifier) } }
+
+    /** Immutable library protocol snapshots, available without materializing function bodies. */
+    fun documentationModels(): List<LibraryModel> { requireBound(); return inventory().map { it.model } }
+
+    /** Includes aliases, macros and other declarations without a WithDocument compiler object. */
+    fun declarationDocument(identity: LibraryIdentity, declaration: DeclarationId): top.mcfpp.doc.Document {
+        requireBound()
+        val unit = units.getValue(identity)
+        unit.model.declarations.declaration(declaration)
+        return top.mcfpp.doc.Document.parseText(unit.model.debug?.documents?.firstOrNull { it.declaration == declaration }?.text.orEmpty())
+    }
     /** Returns ownership information that lets an exporter retain references to imported declarations. */
     fun exportOwnership(): LibraryExportOwnership {
         requireBound()
@@ -676,7 +687,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
             is LibraryType.Specialized -> unresolved(type.constructor) || type.arguments.any(::unresolved)
             is LibraryType.Union -> type.alternatives.any(::unresolved)
             is LibraryType.Intersection -> type.components.any(::unresolved)
-            is LibraryType.Function -> type.parameters.any(::unresolved) || unresolved(type.result)
+            is LibraryType.Function -> type.contexts.any(::unresolved) || type.parameters.any(::unresolved) || unresolved(type.result)
             is LibraryType.NbtRef -> unresolved(type.value)
             else -> false
         } }
@@ -778,8 +789,12 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 return context
             }
             override fun defaultValue(body: BodyId): top.mcfpp.antlr.mcfppParser.ValueContext = projectDefault(body)
-            override fun allocated(shell: CompoundShell) { shell.value?.let { bindIdentity(shell.id, it) } }
+            override fun allocated(shell: CompoundShell) {
+                restoreDocument(shell)
+                shell.value?.let { bindIdentity(shell.id, it) }
+            }
             override fun bound(shell: CompoundShell) {
+                restoreDocument(shell)
                 shell.value?.let { applyMetadata(model.declarations.declaration(shell.id), it) }
                 shell.value?.let { bindIdentity(shell.id, it) }
                 if (shell.declaration is CompoundDeclaration && shell.value is DataTemplate) {
@@ -815,6 +830,17 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                     constructor.ast = null
                     (shell.declaration as ConstructorDeclaration).body?.let { constructor.bodyHandle = repository.handle(library, it) }
                     val record = shell.declaration as ConstructorDeclaration
+                    record.parentCall?.let { reference -> constructor.restoredParentCall = {
+                        val projection = CurrentSyntaxProjection(this@ImportedUnit, this@ImportedUnit)
+                        val root = projection.expression(model.syntax.node(reference) as Expression)
+                        repository.registerProjection(repository.handle(library, requireNotNull(record.body)), projection, root)
+                        fun find(node: org.antlr.v4.runtime.tree.ParseTree): top.mcfpp.antlr.mcfppParser.FunctionCallContext? {
+                            if (node is top.mcfpp.antlr.mcfppParser.FunctionCallContext) return node
+                            for (index in 0 until node.childCount) find(node.getChild(index))?.let { return it }
+                            return null
+                        }
+                        requireNotNull(find(root)) { "Entity parent constructor must be a call" }
+                    } }
                     record.normal.forEach { parameterId ->
                         val parameterShell = compounds.shell(parameterId)
                         val parameter = parameterShell.value as FunctionParam
@@ -882,6 +908,12 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                     values[DeclarationId(index + 1L)] as? DataTemplate else null
             } + structuralIntersections.values
         }
+        private fun restoreDocument(shell: CompoundShell) {
+            (shell.value as? top.mcfpp.model.WithDocument)?.let { value ->
+                value.document = top.mcfpp.doc.Document.parseText(model.debug?.documents?.firstOrNull { it.declaration == shell.id }?.text.orEmpty())
+            }
+        }
+
         private fun boundValue(id: DeclarationId): Any {
             val record = model.declarations.declaration(id)
             if (record !is CompoundDeclaration && record !is EnumDeclaration && record !is NamespaceDeclaration)
@@ -1082,6 +1114,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
             prototype.declarationFile = files.getValue(record.common.environment)
             prototype.scope.parent.clear(); prototype.scope.parent.add(prototype.declarationFile!!.field)
             prototype.isAbstract = record.common.flags and DeclarationFlags.ABSTRACT != 0L
+            prototype.isEntityTemplate = record.common.flags and DeclarationFlags.ENTITY != 0L
             prototype.isFinal = record.common.flags and DeclarationFlags.FINAL != 0L
             record.readonly.forEach { id ->
                 val value = model.declarations.declaration(id) as ValueDeclaration
@@ -1202,7 +1235,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 is TypeSyntax.Container -> syntax(node.argument, 0)
                 is TypeSyntax.Union -> node.alternatives.forEach { syntax(it, position) }
                 is TypeSyntax.Intersection -> node.components.forEach { syntax(it, position) }
-                is TypeSyntax.Function -> { node.parameters.forEach { syntax(it, -position) }; syntax(node.result, position) }
+                is TypeSyntax.Function -> { node.contexts.forEach { syntax(it, 0) }; node.parameters.forEach { syntax(it, -position) }; syntax(node.result, position) }
                 else -> Unit
             }; Unit }
             table = { ref, position, visiting -> if (visiting.add(ref)) { when (val type = model.tables.type(ref)) {
@@ -1215,7 +1248,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 is LibraryType.NbtRef -> table(type.value, 0, visiting)
                 is LibraryType.Union -> type.alternatives.forEach { table(it, position, visiting) }
                 is LibraryType.Intersection -> type.components.forEach { table(it, position, visiting) }
-                is LibraryType.Function -> { type.parameters.forEach { table(it, -position, visiting) }; table(type.result, position, visiting) }
+                is LibraryType.Function -> { type.contexts.forEach { table(it, 0, visiting) }; type.parameters.forEach { table(it, -position, visiting) }; table(type.result, position, visiting) }
                 else -> Unit
             }; visiting.remove(ref) }; Unit }
             fun fieldPosition(field: ValueDeclaration): Int {
@@ -1296,6 +1329,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 "dict" -> MCFPPDictType(resolveType(type.arguments.single(), frame, facts))
                 "map" -> MCFPPMapType(resolveType(type.arguments.single(), frame, facts))
                 "NBTRef" -> MCFPPNBTRefType(resolveType(type.arguments.single(), frame, facts))
+                "EntityRef" -> MCFPPEntityRefType(resolveType(type.arguments.single(), frame, facts))
                 else -> (resolveType(type.constructor, frame, facts) as MCFPPNotCompiledGenericType).compile(*type.arguments.map { resolveType(it, frame, facts) }.toTypedArray())
             }
             is LibraryType.Union -> MCFPPUnionType(*type.alternatives.map { resolveType(it, frame, facts) }.toTypedArray())
@@ -1303,7 +1337,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 FunctionExecution.NORMAL -> MCFPPFunctionType.ExecutionCategory.NORMAL
                 FunctionExecution.PAUSED -> MCFPPFunctionType.ExecutionCategory.PAUSED
                 FunctionExecution.GENERATOR -> MCFPPFunctionType.ExecutionCategory.GENERATOR
-            })
+            }, type.contexts.map { resolveType(it, frame, facts) })
             is LibraryType.NbtRef -> MCFPPNBTRefType(resolveType(type.value, frame, facts))
             else -> types.type(reference)
         } }
@@ -1362,7 +1396,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 FunctionExecution.NORMAL -> MCFPPFunctionType.ExecutionCategory.NORMAL
                 FunctionExecution.PAUSED -> MCFPPFunctionType.ExecutionCategory.PAUSED
                 FunctionExecution.GENERATOR -> MCFPPFunctionType.ExecutionCategory.GENERATOR
-            })
+            }, node.contexts.map { resolveTypeNode(it, frame, facts) })
             is TypeSyntax.AnonymousData -> compounds.type(node.declaration)
             is TypeSyntax.Void -> MCFPPPrivateType.Void
             is TypeSyntax.Inferred -> evaluate(node.expression, frame, facts).type
@@ -1700,8 +1734,8 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
             private fun bindFunction(id: DeclarationId, function: Function, projection: ProjectedSyntax) {
                 val declaration = model.declarations.declaration(id)
                 members[id] = function
-                val ids = when (declaration) { is FunctionDeclaration -> declaration.readonly + declaration.normal; is ConstructorDeclaration -> declaration.normal; else -> error("Not a callable") }
-                val actual = (function as? top.mcfpp.model.Generic<*>)?.readOnlyParams.orEmpty() + (function as? NativeFunction)?.readOnlyParams.orEmpty() + function.normalParams
+                val ids = when (declaration) { is FunctionDeclaration -> declaration.readonly + declaration.normal + declaration.contexts; is ConstructorDeclaration -> declaration.normal; else -> error("Not a callable") }
+                val actual = (function as? top.mcfpp.model.Generic<*>)?.readOnlyParams.orEmpty() + (function as? NativeFunction)?.readOnlyParams.orEmpty() + function.normalParams + function.contextParams
                 require(ids.size == actual.size) { "Materialized signature differs from D$id" }
                 ids.zip(actual).forEach { (parameterId, parameter) ->
                     val value = model.declarations.declaration(parameterId) as ValueDeclaration
@@ -1874,6 +1908,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 template.declarationFile = files.getValue(record.common.environment)
                 template.declarationEnvironment = null
                 template.isAbstract = record.common.flags and DeclarationFlags.ABSTRACT != 0L
+                template.isEntityTemplate = record.common.flags and DeclarationFlags.ENTITY != 0L
                 template.isFinal = record.common.flags and DeclarationFlags.FINAL != 0L
                 val layout = requireNotNull(lazyPlan).compounds.getValue(number)
                 template.deferLibraryMembers(DeferredLibraryMembers(repository::requireOpen, load = {
@@ -1883,6 +1918,12 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                         finishBody(functionId, heads.getValue(functionId))
                     }
                     compounds.bind(id)
+                    // Compiler-owned entity summon members are intentionally omitted from the
+                    // portable declaration body; recreate the covariant default after the
+                    // imported source members have been materialized so `super.summon(...)`
+                    // remains a valid parent call in imported overrides.
+                    if (template.isEntityTemplate)
+                        top.mcfpp.core.lang.entity.EntityTemplates.installDefaultSummon(template)
                 }, onLoaded = {
                     if (annotationsReady) attachAnnotations(id, template)
                     if (state == LibraryImportState.COMMITTED) top.mcfpp.Project.registerTemplateContract(template)
@@ -2017,7 +2058,8 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 val value: Any? = when (record) {
                     is AnnotationProviderDeclaration -> NativeDeclarations.restoreAnnotationProvider(record.binding, managed)
                     is MacroDeclaration -> requireNotNull(top.mcfpp.io.info.MacroFunctionInfo.from(requireNotNull(nativeDirectory).nativeMethod(nativeUnit, record.binding.native)))
-                        .declaredAs(record.binding.sourceName, record.binding.parameters.map { it.name })
+                        .declaredAs(record.binding.sourceName, record.binding.parameters.map { it.name },
+                            model.debug?.documents?.firstOrNull { it.declaration.value == index + 1L }?.text.orEmpty())
                     is ReferenceHelperDeclaration -> NativeDeclarations.restoreReference(record, types)
                     else -> null
                 }
@@ -2162,8 +2204,13 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 val (unit, id) = resolve(this, use.target)
                 ProjectedName(unit.heads[id]?.function?.identifier ?: unit.name(id), binding = declaration(use.target))
             }
-            is NameUse.Lookup -> if (role == NameRole.TYPE && use.candidates.isEmpty()) {
-                val type = LibraryBuiltinTypes.restore(if (use.name == "type") "Type" else use.name)
+            is NameUse.Lookup -> if (role == NameRole.VALUE && use.namespace == null && use.candidates.isEmpty() &&
+                top.mcfpp.core.lang.context.ContextCallbacks.recognizesGlobal(use.name)) {
+                ProjectedName(use.name)
+            } else if (role == NameRole.TYPE && use.candidates.isEmpty()) {
+                val type = (if (use.namespace == null || use.namespace == "mcfpp.minecraft.entity")
+                    top.mcfpp.type.EntityTypes.named(use.name) else null)
+                    ?: LibraryBuiltinTypes.restore(if (use.name == "type") "Type" else use.name)
                 ProjectedName(use.name, use.namespace, StructuredNameBinding.Type(type))
             } else run {
                 val references = use.candidates.map { resolve(this, it) }
@@ -2304,7 +2351,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
             is LibraryType.Specialized -> TypeSyntax.Apply(scope, typeSyntax(type.constructor, environment, scope), type.arguments.map { Expression.Literal(scope, it) }, reference)
             is LibraryType.Union -> TypeSyntax.Union(scope, type.alternatives.map { typeSyntax(it, environment, scope) })
             is LibraryType.Intersection -> TypeSyntax.Intersection(scope, type.components.map { typeSyntax(it, environment, scope) })
-            is LibraryType.Function -> TypeSyntax.Function(scope, type.parameters.map { typeSyntax(it, environment, scope) }, typeSyntax(type.result, environment, scope), type.execution)
+            is LibraryType.Function -> TypeSyntax.Function(scope, type.parameters.map { typeSyntax(it, environment, scope) }, typeSyntax(type.result, environment, scope), type.execution, type.contexts.map { typeSyntax(it, environment, scope) })
             is LibraryType.Applied -> {
                 val constructor = (model.tables.type(type.constructor) as? LibraryType.Builtin)?.key?.removePrefix("constructor:")
                 val kind = when (constructor) { "list" -> ContainerKind.LIST; "ImmutableList" -> ContainerKind.IMMUTABLE_LIST; "map" -> ContainerKind.MAP; "dict" -> ContainerKind.DICT; else -> null }
@@ -2344,7 +2391,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                     is LibraryType.Specialized -> TypeSyntax.Apply(scope, boundType(type.constructor), type.arguments.map { Expression.Literal(scope, it) }, reference)
                     is LibraryType.Union -> TypeSyntax.Union(scope, type.alternatives.map(::boundType))
                     is LibraryType.Intersection -> TypeSyntax.Intersection(scope, type.components.map(::boundType))
-                    is LibraryType.Function -> TypeSyntax.Function(scope, type.parameters.map(::boundType), boundType(type.result), type.execution)
+                    is LibraryType.Function -> TypeSyntax.Function(scope, type.parameters.map(::boundType), boundType(type.result), type.execution, type.contexts.map(::boundType))
                     is LibraryType.Applied -> {
                         val constructor = model.tables.type(type.constructor) as? LibraryType.Builtin
                         val kind = when (constructor?.key?.removePrefix("constructor:")) {
@@ -2387,11 +2434,13 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                     val property = propertiesByBacking[declaration]
                     ProjectionTemplateDeclaration.Field(record.common.name, record.storage == ValueStorage.CONST,
                         record.declaredType?.let { declaredType(it, record.type) }, record.common.flags and DeclarationFlags.NULLABLE != 0L,
-                        record.defaultBody ?: frozenBodies[declaration], property?.getter?.let(::accessor), property?.setter?.let(::accessor), access)
+                        record.defaultBody ?: frozenBodies[declaration], property?.getter?.let(::accessor), property?.setter?.let(::accessor), access,
+                        record.common.flags and DeclarationFlags.ENTITY != 0L)
                 }
                 is FunctionDeclaration -> ProjectionTemplateDeclaration.Function(record.common.name, record.readonly.map(::parameter), record.normal.map(::parameter),
                     declaredType(null, record.result), record.body, record.common.flags and DeclarationFlags.OVERRIDE != 0L,
-                    record.common.flags and DeclarationFlags.ABSTRACT != 0L, access)
+                    record.common.flags and DeclarationFlags.ABSTRACT != 0L, access, record.contexts.map(::parameter),
+                    record.common.flags and DeclarationFlags.ENTITY != 0L)
                 is ConstructorDeclaration -> ProjectionTemplateDeclaration.Constructor(record.normal.map(::parameter), requireNotNull(record.body), access)
                 is OperatorDeclaration -> {
                     val (unit, id) = resolve(this, record.implementation)
@@ -2417,12 +2466,14 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 is Function -> { value.accessModifier = access; value.isFinal = common.flags and DeclarationFlags.FINAL != 0L
                     value.structuredSignatureBindings = guardedSignatures(this@ImportedUnit)
                     value.isAbstract = common.flags and DeclarationFlags.ABSTRACT != 0L; value.isOverride = common.flags and DeclarationFlags.OVERRIDE != 0L
+                    value.isEntityMember = common.flags and DeclarationFlags.ENTITY != 0L
                     if (value is NativeFunction && record is FunctionDeclaration && record.execution == FunctionExecutionKind.NATIVE) {
                         value.librarySessionGuard = repository::requireOpen
                         value.returnsConstWhenArgsConst = common.flags and DeclarationFlags.CONST != 0L
                     } }
                 is Var<*> -> { value.accessModifier = access; value.isFinal = common.flags and DeclarationFlags.FINAL != 0L
                     value.isStatic = common.flags and DeclarationFlags.STATIC != 0L; value.isConst = common.flags and DeclarationFlags.CONST != 0L
+                    value.isEntityMember = common.flags and DeclarationFlags.ENTITY != 0L
                     value.nullable = common.flags and DeclarationFlags.NULLABLE != 0L
                     if (common.flags and DeclarationFlags.FORCE_RUNTIME != 0L) value.bindDeclaration(forceRuntime = true)
                     if (value is top.mcfpp.core.lang.MCNumber<*>) value.isDataOnly = common.flags and DeclarationFlags.DATA_ONLY != 0L

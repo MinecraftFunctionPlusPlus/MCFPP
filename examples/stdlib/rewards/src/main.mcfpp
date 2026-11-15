@@ -1,0 +1,12 @@
+import mcfpp.lang:*
+func main() {
+    var base = [1, 2, 3, 4];
+    var selected = base.filter { it % 2 == 0 };
+    var rewards = selected.mapIndexed { index, value -> value * 5 + index };
+    var total = rewards.sum().coerceIn(0, 100);
+    var firstReward = rewards.firstOrElse { 0 };
+    var label = "reward: ".contact("ready");
+    print(label);
+    print(total);
+    print(firstReward);
+}

@@ -131,13 +131,24 @@ class NativeFunction : Function, Native {
         val noWrites = javaMethod.isAnnotationPresent(top.mcfpp.mni.annotation.NoExternalWrites::class.java) ||
             javaMethod.declaringClass.isAnnotationPresent(top.mcfpp.mni.annotation.NoExternalWrites::class.java)
         val writesReceiver = javaMethod.isAnnotationPresent(top.mcfpp.mni.annotation.WritesReceiver::class.java)
-        val actualCaller = if (receiverAlreadyAdapted) caller as? Var<*>
+        val preliminary = top.mcfpp.analysis.EffectAnalysis.previewCall(this, caller as? Var<*>)
+        val protectedBeforeRead = listOfNotNull(caller as? Var<*>) + list.take(readOnlyParams.size) +
+            top.mcfpp.analysis.StorageAccess.callGlobals() +
+                top.mcfpp.analysis.StorageAccess.visibleValues(currFunction.scope).filter { it.isStatic }
+        if (!top.mcfpp.analysis.StorageAccess.checkCallWrites(identifier, preliminary, protectedBeforeRead)) return failed()
+        val actualCaller = if (this.caller == MCFPPPrivateType.Void) null
+            else if (receiverAlreadyAdapted) caller as? Var<*>
             else if (caller is top.mcfpp.core.lang.MCAny && caller !is top.mcfpp.core.lang.MCObject)
                 top.mcfpp.analysis.StorageAccess.actualView(caller)
             else (caller as? Var<*>)?.let(top.mcfpp.analysis.StorageAccess::read) ?: caller
-        val callEffect = top.mcfpp.analysis.EffectAnalysis.recordCall(this, actualCaller as? Var<*>)
+        val callEffect = top.mcfpp.analysis.EffectAnalysis.previewCall(this, actualCaller as? Var<*>)
+        val protectedValues = listOfNotNull(actualCaller as? Var<*>) +
+            top.mcfpp.analysis.StorageAccess.callGlobals() +
+                top.mcfpp.analysis.StorageAccess.visibleValues(currFunction.scope).filter { it.isStatic }
+        if (!top.mcfpp.analysis.StorageAccess.checkCallWrites(identifier, callEffect, protectedValues)) return failed()
+        top.mcfpp.analysis.EffectAnalysis.recordEffect(callEffect)
         val observed = if (noWrites || writesReceiver) emptyList() else top.mcfpp.analysis.StorageAccess.visibleValues(currFunction.scope) +
-            observedArguments + listOfNotNull(actualCaller as? Var<*>)
+            top.mcfpp.analysis.StorageAccess.callGlobals() + observedArguments + listOfNotNull(actualCaller as? Var<*>)
         val usesContext = javaMethod.parameterTypes.contentEquals(arrayOf(NativeCallContext::class.java))
         val receiver = if (this.caller == MCFPPPrivateType.Void) null else {
             if (actualCaller !is Var<*>) {
@@ -149,7 +160,23 @@ class NativeFunction : Function, Native {
         if (Project.errorCount != bindingErrors || list.any { it.isError } || receiver?.isError == true)
             return failed()
         top.mcfpp.analysis.StorageAccess.flush(observed)
-        val context = NativeCallContext(Function.currFunction, receiver, list, returnType)
+        val contexts = try { top.mcfpp.core.lang.context.ContextParameters.resolve(this) }
+        catch (failure: top.mcfpp.core.lang.context.ContextAccessException) {
+            LogProcessor.error(failure.message.orEmpty()); return failed()
+        }
+        val arguments = list.mapIndexed { index, value ->
+            if (index < readOnlyParams.size) value else top.mcfpp.analysis.StorageAccess.capture(value).also { copy ->
+                if (!copy.isError) {
+                    val binding = top.mcfpp.analysis.StorageAccess.ensure(copy)
+                    val declaration = binding.data.declarations.getValue(binding.place).copy(mutable = true, readonly = false, isLiteral = false)
+                    copy.isConst = false
+                    copy.symbol = declaration
+                    binding.data.declarations[binding.place] = declaration
+                }
+            }
+        }
+        if (arguments.any { it.isError }) return failed()
+        val context = NativeCallContext(Function.currFunction, receiver, arguments, returnType, contexts)
         val legacyResult = if (!usesContext && returnType != MCFPPPrivateType.Void)
             ValueWrapper(returnType.buildUnConcrete(top.mcfpp.util.TempPool.getVarIdentify()).also {
                 top.mcfpp.analysis.StorageAccess.declareReturnSlot(it)
@@ -162,7 +189,9 @@ class NativeFunction : Function, Native {
         }
         //一定是静态的
         try {
-            javaMethod.invoke(null, *invocationArgs.toTypedArray())
+            top.mcfpp.core.lang.context.ContextParameters.inNative(contexts.values) {
+                javaMethod.invoke(null, *invocationArgs.toTypedArray())
+            }
             if (Project.errorCount == errors && legacyResult != null) {
                 val result = legacyResult.get()
                 when {

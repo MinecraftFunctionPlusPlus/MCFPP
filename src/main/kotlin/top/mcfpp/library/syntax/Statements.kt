@@ -33,8 +33,8 @@ sealed interface Statement : SemanticNode {
     data class TryStore(override val scope: ScopeId, val body: Statement, val destination: NameUse) : Statement {
         override val tag: Int get() = 0x0309
     }
-    data class Execute(override val scope: ScopeId, val contexts: List<ExecuteContext>, val body: Statement) : Statement {
-        override val tag: Int get() = 0x030a
+    data class ContextScope(override val scope: ScopeId, val contexts: List<Expression>, val body: Statement) : Statement {
+        override val tag: Int get() = 0x0310
     }
     data class Command(override val scope: ScopeId, val parts: List<TextPart>) : Statement {
         override val tag: Int get() = 0x030b
@@ -48,11 +48,6 @@ sealed interface Statement : SemanticNode {
 }
 
 data class ConditionalBranch(val condition: Expression, val body: Statement)
-data class ExecuteContext(val path: ExecutePath, val value: Expression)
-sealed interface ExecutePath {
-    data object As : ExecutePath
-    data class Members(val parts: List<Expression>) : ExecutePath { init { require(parts.isNotEmpty()) } }
-}
 
 @JvmInline value class AnnotationId(val value: Long) {
     init { require(value in 1..0xffff_ffffL) { "Annotation reference must be a positive u32" } }

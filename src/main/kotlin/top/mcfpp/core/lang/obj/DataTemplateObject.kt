@@ -53,6 +53,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     override fun getFromStack() { StorageAccess.invalidateReads(listOf(this)) }
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         val declaration = templateType.scope.getVar(key) ?: return null to true
+        if (declaration.isEntityMember) return null to true
         val property = templateType.scope.getProperty(key)?.clone() ?: return null to true
         val binding = StorageAccess.ensure(this)
         val location = StorageAccess.inFrame(binding, stackIndex).field(key)
@@ -73,6 +74,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         val field = StorageAccess.adapter(declaration.type, key, location)
         Property.copyFieldMetadata(declaration, field)
         field.parent = this
+        if (declaration.isConst) return StorageAccess.initializeFixedField(field, value)
         val registered = location.data.declarations[location.place]
         val symbol = field.symbol
         val constant = field.isConst
@@ -96,8 +98,11 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     }
     override fun getMemberFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
         val member = top.mcfpp.model.function.ParameterMatcher.select(
-            templateType.scope.getFunctionCandidates(key, Function.currFunction), key, readOnlyArgs, normalArgs
-        ) ?: UnknownFunction(key)
+            templateType.scope.getFunctionCandidates(key, Function.currFunction).filterNot { it.isEntityMember }, key, readOnlyArgs, normalArgs
+        ) ?: if (key == "summon" && templateType.isEntityTemplate)
+            // Old source remains valid while the public default is summon(nbt).
+            top.mcfpp.core.lang.entity.EntityTemplates.summonFunction(templateType, normalArgs)
+        else UnknownFunction(key)
         return member to (member is UnknownFunction || accessModifier >= member.accessModifier)
     }
     override fun replaceMemberVar(v: Var<*>) {

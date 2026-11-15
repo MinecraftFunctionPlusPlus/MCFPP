@@ -1279,15 +1279,16 @@ class LibFieldAccessTest {
         assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
     }
 
-    @Test fun frozenAnonymousAliasTypeArgumentsRestoreCanonicalTypesAcrossLibraryRoundTrip() = withLibrary { output ->
+    @Test fun frozenNestedAliasTypeArgumentsRestoreCanonicalTypesAcrossLibraryRoundTrip() = withLibrary { output ->
         val namedIdentifier = "data_${TempPool.anonymousTemplateCount}"
         write("""
             namespace fixture.fields
-            typealias data {
+            typealias Outer.Record as X
+            typealias X as Y
+            data Outer { data Record {
                 @DataOnly
                 var value: int
-            } as X
-            typealias X as Y
+            } }
             data $namedIdentifier { var value: int; }
             func readBox(arg: Box<X>):int { return arg.read(); }
             data Box<T> {
@@ -2333,7 +2334,8 @@ class LibFieldAccessTest {
             val objective = (machine.readNbt("fixture:observed", "runtimeInt[0].score.objective") as top.mcfpp.nbt.tags.primitive.StringTag).value
             assertEquals(Tag.toNBT("""[{type:"score",score:{name:"$scoreName",objective:"$objective"}}]"""), machine.readNbt("fixture:observed", "runtimeInt"))
             assertEquals(7, machine.values.getValue("$scoreName $objective"))
-            for ((name, parameter) in listOf("runtimeString" to "s", "runtimeNbt" to "n")) {
+            assertEquals(Tag.toNBT("""[{type:"text",text:"live"}]"""), machine.readNbt("fixture:observed", "runtimeString"))
+            for ((name, parameter) in listOf("runtimeNbt" to "n")) {
                 assertEquals(Tag.toNBT("""[{type:"nbt",storage:"mcfpp:system",nbt:"stack_frame[0].$parameter",interpret:false}]"""), machine.readNbt("fixture:observed", name))
             }
         }
@@ -2385,11 +2387,7 @@ class LibFieldAccessTest {
             for ((name, expected) in observations) {
                 val payload = assertIs<top.mcfpp.nbt.tags.collection.ListTag>(machine.readNbt("fixture:observed", name))
                 assertTrue(payload.isNotEmpty(), name)
-                val actual = payload.joinToString("") { element ->
-                    val component = assertIs<top.mcfpp.nbt.tags.CompoundTag>(element)
-                    assertEquals(Tag.toNBT("\"text\""), component["type"], name)
-                    assertIs<top.mcfpp.nbt.tags.primitive.StringTag>(component["text"]).value
-                }
+                val actual = plainTextPayload(payload)
                 assertEquals(expected, actual, name)
             }
         }
@@ -2430,11 +2428,7 @@ class LibFieldAccessTest {
             for ((name, expected) in listOf("original" to "A", "copied" to "A", "joined" to "AB", "suffixed" to "AS")) {
                 val payload = assertIs<top.mcfpp.nbt.tags.collection.ListTag>(machine.readNbt("fixture:observed", name))
                 assertTrue(payload.isNotEmpty(), name)
-                val actual = payload.joinToString("") { element ->
-                    val component = assertIs<top.mcfpp.nbt.tags.CompoundTag>(element)
-                    assertEquals(Tag.toNBT("\"text\""), component["type"], name)
-                    assertIs<top.mcfpp.nbt.tags.primitive.StringTag>(component["text"]).value
-                }
+                val actual = plainTextPayload(payload)
                 assertEquals(expected, actual, name)
             }
         }
@@ -5382,10 +5376,21 @@ class LibFieldAccessTest {
         check(main)
     }
 
+    private fun plainTextPayload(tag: Tag<*>): String = when (tag) {
+        is top.mcfpp.nbt.tags.collection.ListTag -> tag.joinToString("") { plainTextPayload(it) }
+        is top.mcfpp.nbt.tags.CompoundTag -> {
+            val text = assertIs<top.mcfpp.nbt.tags.primitive.StringTag>(tag["text"]).value
+            text + (tag["extra"]?.let(::plainTextPayload) ?: "")
+        }
+        else -> error("Expected a plain text component, got $tag")
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
-        MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")
-        assertEquals(0, Project.errorCount, "The producer must accept legal field access")
+        val diagnostics = top.mcfpp.test.util.compilerDiagnostics {
+            MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")
+        }
+        assertEquals(0, Project.errorCount, diagnostics.joinToString("\n"))
         Files.newInputStream(output.resolve("bin.mclib")).use {
             assertEquals(LibraryWire.CURRENT_VERSION, LibraryWire.read(it).formatVersion)
         }

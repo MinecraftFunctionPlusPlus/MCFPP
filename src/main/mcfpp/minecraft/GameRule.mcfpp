@@ -1,0 +1,8 @@
+import mcfpp.minecraft.std:CommandResult
+
+/// 游戏规则句柄。使用 GameRules 中与编译目标匹配的 bool 或 int 只读属性。
+data GameRule<T> {
+    var id: string = id { get }
+    constructor(id: string) {}
+}
+

@@ -72,7 +72,8 @@ class StatementBridge(
     fun template(site: Parser.TemplateBodyContext): TemplateBody {
         requireValid(site)
         return bindings.withScope(site, null) { scope ->
-            val members = site.templateMemberDeclaration().map { member ->
+            // Named nested templates have independent qualified declaration records.
+            val members = site.templateMemberDeclaration().filter { it.templateMember().templateDeclaration() == null }.map { member ->
                 val construction = member.templateMember().annotation()?.let { bindings.annotationConstruction(it, this) }
                 (construction ?: bindings.templateMember(member, this)).also {
                     if (it.scope != scope) unsupported("Template member must retain the template body scope")
@@ -179,20 +180,17 @@ class StatementBridge(
                 readName(destination)
                 Statement.TryStore(scope, block(store.block()), destination)
             }
-            site.executeStatement() != null -> {
-                val execute = site.executeStatement()
-                val contexts = execute.executeContext().map { context ->
-                    val path = context.executeExpression()
-                    val capturedPath = if (path.AS() != null) ExecutePath.As else ExecutePath.Members(path.`var`().map {
-                        bindings.executePathPart(it, this).also(::readExpression)
-                    })
-                    ExecuteContext(capturedPath, expression(context.expression()))
-                }
-                Statement.Execute(scope, contexts, block(execute.block()))
+            site.contextScopeStatement() != null -> {
+                val context = site.contextScopeStatement()
+                val arguments = context.normalArgs()
+                val values = arguments.expressionList()?.expression()
+                    ?: arguments.callArgumentList()?.callArgument()?.map { it.expression() }.orEmpty()
+                Statement.ContextScope(scope, values.map { expression(it).also(::readExpression) }, block(context.block()))
             }
             site.orgCommand() != null -> Statement.Command(scope, expressions.commandParts(site.orgCommand()).also { parts ->
                 parts.filterIsInstance<TextPart.Interpolation>().forEach { readExpression(it.expression) }
             })
+            site.commandBlock() != null -> blockContents(site.commandBlock().statement(), scope, site.commandBlock())
             site.controlStatement() != null -> if (site.controlStatement().BREAK() != null)
                 Statement.Break(scope) else Statement.Continue(scope)
             site.returnStatement() != null -> Statement.Return(scope, site.returnStatement().expression()?.let(::expression))
@@ -278,7 +276,7 @@ class StatementBridge(
             is TypeSyntax.Container -> readType(value.argument)
             is TypeSyntax.Union -> value.alternatives.forEach(::readType)
             is TypeSyntax.Intersection -> value.components.forEach(::readType)
-            is TypeSyntax.Function -> { value.parameters.forEach(::readType); readType(value.result) }
+            is TypeSyntax.Function -> { value.contexts.forEach(::readType); value.parameters.forEach(::readType); readType(value.result) }
             is TypeSyntax.Vector, is TypeSyntax.Entity, is TypeSyntax.AnonymousData, is TypeSyntax.Void -> Unit
         }
     }

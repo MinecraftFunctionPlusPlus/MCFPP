@@ -26,9 +26,13 @@ object TypeRelations {
     private fun subtype(source: MCFPPType, target: MCFPPType, visited: MutableSet<Pair<TypeId, TypeId>>): Boolean {
         if (source.typeId == target.typeId) return true
         if (!visited.add(source.typeId to target.typeId)) return false
+        if (source is MCFPPEntityRefType && target is MCFPPEntityRefType)
+            return subtype(source.templateArgument, target.templateArgument, visited)
         if (source is top.mcfpp.core.lang.context.MCFPPExecutionContextType ||
             target is top.mcfpp.core.lang.context.MCFPPExecutionContextType ||
             source is top.mcfpp.core.lang.context.MCFPPBoundPositionType ||
+            source is top.mcfpp.core.lang.context.MCFPPBoundComponentType ||
+            target is top.mcfpp.core.lang.context.MCFPPBoundComponentType ||
             target is top.mcfpp.core.lang.context.MCFPPBoundPositionType)
             return source.parentType.any { subtype(it, target, HashSet(visited)) }
         if (source is MCFPPFunctionType || target is MCFPPFunctionType)
@@ -82,6 +86,7 @@ object TypeRelations {
         if (target is MCFPPUnionType) return target.types.any { subtype(source, it, HashSet(visited)) }
         if (source !is MCFPPFunctionType || target !is MCFPPFunctionType) return false
         if (source.executionCategory != target.executionCategory) return false
+        if (source.contexts.map { it.typeId } != target.contexts.map { it.typeId }) return false
         if (source.parameters.size != target.parameters.size) return false
         for (index in source.parameters.indices) {
             // The source must accept everything the target can pass: targetParam <: sourceParam.
@@ -93,9 +98,16 @@ object TypeRelations {
 
     fun resolveImplicitConversion(source: MCFPPType, target: MCFPPType): Conversion? {
         if (source.typeId == target.typeId) return Conversion.EXACT
+        if (source is MCFPPEntityRefType && target is MCFPPEntityType) {
+            val kinds = (source.templateArgument as? MCFPPDataTemplateType)?.template
+                ?.let(top.mcfpp.core.lang.entity.EntityTemplates::kinds)
+            return if (target.entityKinds == null || kinds != null && target.entityKinds.containsAll(kinds)) Conversion.NOMINAL else null
+        }
         if (source is top.mcfpp.core.lang.context.MCFPPExecutionContextType ||
             target is top.mcfpp.core.lang.context.MCFPPExecutionContextType ||
             source is top.mcfpp.core.lang.context.MCFPPBoundPositionType ||
+            source is top.mcfpp.core.lang.context.MCFPPBoundComponentType ||
+            target is top.mcfpp.core.lang.context.MCFPPBoundComponentType ||
             target is top.mcfpp.core.lang.context.MCFPPBoundPositionType)
             return if (isSubtype(source, target)) Conversion.NOMINAL else null
         if (source is MCFPPFunctionType || target is MCFPPFunctionType) {
@@ -107,6 +119,7 @@ object TypeRelations {
         if (!source.isValueType || !target.isValueType) return null
         if (target == MCFPPBaseType.Object) return Conversion.OBJECT
         if (target == MCFPPBaseType.Any) return Conversion.ANY
+        if (target == MCFPPNBTType.NBT && source is MCFPPDictType) return Conversion.NOMINAL
         if (source == MCFPPBaseType.Int && target == MCFPPBaseType.Float) return Conversion.INT_TO_FLOAT
         if (isSubtype(source, target)) return Conversion.NOMINAL
         return null
