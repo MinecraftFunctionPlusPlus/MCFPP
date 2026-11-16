@@ -9,6 +9,8 @@ internal object TypeUsage {
     const val DIAGNOSTIC = "Type values are only allowed as generic parameters"
 
     fun ordinaryDiagnostic(type: MCFPPType, snapshot: CompilerValue? = null): String? {
+        if (type == top.mcfpp.type.MCFPPPrivateType.Null || snapshot?.containsNull() == true)
+            return "null is only allowed for field deletion and existence checks; it cannot be passed as a function argument or stored as a value"
         fun containsMeta(id: TypeId): Boolean = id == MCFPPConcreteType.Type.typeId ||
             id is TypeId.Union && id.alternatives.any(::containsMeta) ||
             id is TypeId.Applied && id.arguments.any(::containsMeta)
@@ -18,6 +20,14 @@ internal object TypeUsage {
         if (containsHost(type.typeId)) return "Host payloads are only available inside the compiler"
         return if (containsMeta(type.typeId) || snapshot?.containsTypeValue() == true) DIAGNOSTIC else null
     }
+}
+
+internal fun CompilerValue.containsNull(): Boolean = when (this) {
+    CompilerValue.NullValue -> true
+    is CompilerValue.Typed -> payload.containsNull()
+    is CompilerValue.Sequence -> elements.any { it.containsNull() }
+    is CompilerValue.Record -> fields.values.any { it.containsNull() }
+    else -> false
 }
 
 internal fun CompilerValue.containsTypeValue(): Boolean = when (this) {

@@ -247,6 +247,7 @@ class StatementBridge(
             is Expression.Super -> if (lambdas.isNotEmpty()) bindings.receiverCapture(value.owner)?.let(::captureReference) else Unit
             is Expression.TypeValue -> readType(value.type)
             is Expression.Group -> value.value?.let(::readExpression)
+            is Expression.EarlyReturn -> value.value?.let(::readExpression)
             is Expression.Unary -> readExpression(value.operand)
             is Expression.Binary -> { readExpression(value.left); readExpression(value.right) }
             is Expression.Cast -> { readExpression(value.value); readType(value.target) }

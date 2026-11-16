@@ -8,6 +8,8 @@
 
 `formatVersion` 是无符号单调递增整数，首版为 1；它和编译器发行号、语言语义版本、运行时 ABI、Mcfpm adapter ABI 各自独立。writer 默认写当前正式版本。reader 必须先检查版本，再读取任何正文：遇到大于自身上限的版本报 `LIB_FORMAT_NEWER`，要求升级编译器；不得尝试“尽力”读取。未来新版保留历史发布解码器，并把旧模型转换为当前会话模型，保留旧操作的含义。优化器内部修复无需改格式；持久化字段、标识或操作含义发生不兼容变化时升级格式。没有“导出任意旧版本”的接口。
 
+当前 writer 输出版本 5，reader 接受版本 4–5。版本 5 增加安全选择标记、Elvis、后缀存在断言及表达式提前返回；版本 4 的 Member 恢复为普通选择。开发缓存版本为 89，旧缓存需重新编译。
+
 `languageSemantics = "mcfpp.source/1"` 固定本版节点、求值顺序及现有语言行为；`runtimeAbi = "mcfpp.runtime/1"` 固定生成器可复用的运行时约定。具体编译器版本仅是可选调试信息。不得通过改写同一 ABI 字符串的含义来规避版本升级。新编译器可以为旧语义保留兼容适配器；不能适配时必须报明确兼容错误，不能把旧库按新含义编译。
 
 ## 2. 归档与资源路径
@@ -183,7 +185,7 @@ Integral 的 byte/short/int/long 区别由 typed 包装表示；不把浮点值�
 | `0x0107` | Unary | `operator:S, operand:e` |
 | `0x0108` | Binary | `operator:S, left:e, right:e` |
 | `0x0109` | Cast | `value:e, target:t` |
-| `0x010a` | Member | `receiver:e, name:S, keyword:u8, candidates:DeclRef[]?` |
+| `0x010a` | Member | `receiver:e, name:S, keyword:u8, candidates:DeclRef[]?, safe:bool`（safe 自版本 5 起） |
 | `0x010b` | Index | `receiver:e, index:e?` |
 | `0x010c` | PropertyFilter | `receiver:e, entries:(name:S,value:e)[]` |
 | `0x010d` | Call | `callee:e, readonly:e[], normal:Argument[], trailingLambda:e?` |
@@ -195,6 +197,7 @@ Integral 的 byte/short/int/long 区别由 typed 包装表示；不把浮点值�
 | `0x0113` | Compound | `entries:(key:S,value:e)[]`（保留源码条目顺序） |
 | `0x0114` | NbtArray | `element:u8, values:C[]` |
 | `0x0115` | InterpolatedString | `parts:TextPart[]` |
+| `0x0116` | EarlyReturn | `value:e?`（自版本 5 起，用于 Elvis 右侧） |
 
 Argument 为 `kind:u8=1(value), expression:e`；v1 不允许 legacy `ref expression`。ScoreRef/NBTRef 是普通值类型，通过正常 Call 构造，不能恢复旧的 ref 参数标志。保留 Argument 包装给当前混合 lambda/value 调用绑定器，不按参数类型提前重排。
 
@@ -202,7 +205,7 @@ Member.keyword=0 普通标识符，1 `map`，2 `set`；Selector.kind=1 a，2 r�
 
 Member.candidates=null 保留既有的实际 receiver 动态成员解析；非 null 时是作者环境冻结的可调用 D2 候选集，保留其顺序，空集合表示无作者候选，不能回退到消费方后来加载的 overload/extension。该集合冻结作者可见的调用声明，不冻结名义成员的继承、泛型材料化或正常动态派发：调用仍需携带求值一次得到的实际 receiver，将 prototype D 映射到该 receiver 对应的真实成员后按既有语义选择实现。extension 由 D2.receiver 描述并保留其实际 caller，不从消费方 receiver.scope 追加新的 extension 候选。不能把候选编号塞进 name、借助解析别名重查，或将带 receiver 的 Member 改写成丢失 receiver 的全局 Name 调用。
 
-Unary operator 只允许 `!,-`。Binary operator 为 `*,/,%,+,-,<,>,<=,>=,==,!=,~=,&&,||,|` 或语言标识符运算符；显式保存左右结合结构，不能依靠重新解析优先级恢复。`&&/||` 保留短路语义，`|` 和命名运算符沿用现有运算符解析。Call 的 receiver/callee、readonly 实参、普通实参及尾 lambda 保留当前 binder 的语法分类与顺序；不能先把它们冻结成 optimizer 的已知值而丢求值步骤。
+Unary operator 允许 `!,-,!!`，其中 `!!` 投影为后缀断言。Binary operator 为 `*,/,%,+,-,<,>,<=,>=,==,!=,~=,&&,||,|,?:` 或语言标识符运算符；显式保存左右结合结构，不能依靠重新解析优先级恢复。`&&/||/?:` 保留短路语义，`|` 和命名运算符沿用现有运算符解析。Member.safe 为 true 时，接收位置缺失会跳过后续成员选择或调用的实参及正文。Call 的 receiver/callee、readonly 实参、普通实参及尾 lambda 保留当前 binder 的语法分类与顺序；不能先把它们冻结成 optimizer 的已知值而丢求值步骤。
 
 ### 类型语法节点
 

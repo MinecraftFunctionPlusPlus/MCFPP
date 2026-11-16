@@ -15,7 +15,7 @@ class DataPresenceTest {
         val diagnostics = compilerDiagnostics {
             MCFPPStringTest.readFromString("""
                 data Box {
-                    var value: int? { get { this.value = 9; return field; }; set { field = value; } }
+                    var value: int { get { this.value = 9; return field; }; set { field = value; } }
                     func exists(): bool { return this.value != null; }
                 }
                 func main(){
@@ -32,7 +32,7 @@ class DataPresenceTest {
     @Test fun computedPropertiesDoNotAcquireBackingPositions() {
         val diagnostics = compilerDiagnostics {
             MCFPPStringTest.readFromString("""
-                data Box { var computed: int? { get = 4 } }
+                data Box { var computed: int { get = 4 } }
                 func inspect(box: Box){ if(box.computed != null){} }
                 func main(){ var box: Box = {}; inspect(box); }
             """.trimIndent(), version = "26.3")
@@ -96,16 +96,10 @@ class DataPresenceTest {
         assertEquals(3124, executePublishedFunctions(main).read(main.scope.getVar("result") as MCInt))
     }
 
-    @Test fun existenceAndDeletionBypassAccessors() {
+    @Test fun existenceAndDeletionUseBackingPositions() {
         MCFPPStringTest.readFromString("""
             data Box {
-                var value: int? { get {
-                    /say getter
-                    return field
-                }; set {
-                    /say setter
-                    field = value
-                } }
+                var value: int?
             }
             func inspect(box: Box) {
                 if (box.value != null) {

@@ -74,6 +74,20 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         val breakExits = arrayListOf<Map<top.mcfpp.analysis.StoredData, top.mcfpp.analysis.FlowFacts>>()
     }
     private val loops = java.util.ArrayDeque<LoopContext>()
+    private val expressionReturns = top.mcfpp.analysis.ExpressionReturns.Context(
+        emit = { expression ->
+            if (expression != null) {
+                val value = MCFPPExprVisitor().visitExpression(expression, Function.currBaseFunction.returnType)
+                Function.currBaseFunction.assignReturnVar(value)
+            } else if (Function.currBaseFunction.returnType != MCFPPPrivateType.Void) {
+                LogProcessor.error("A value is required when returning from '${Function.currBaseFunction.identifier}'")
+            }
+            Function.currFunction.hasReturnStatement = true
+            if (top.mcfpp.analysis.ExpressionReturns.helperDepth > 0 || loops.isNotEmpty()) Function.addCommand("return 2")
+            else { Function.currFunction.registerFrameExit(); Function.addCommand("return 1") }
+        },
+        propagate = { propagateLoopReturn(it) }
+    )
 
     private fun helper(name: String, parent: Function): NoStackFunction {
         var identifier: String
@@ -171,6 +185,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         afterBlock: List<mcfppParser.StatementContext> = emptyList()
     ) {
         val previous = followingStatements
+        val previousReturns = top.mcfpp.analysis.ExpressionReturns.current
+        val previousDepth = top.mcfpp.analysis.ExpressionReturns.helperDepth
+        if (previousReturns !== expressionReturns) top.mcfpp.analysis.ExpressionReturns.helperDepth = 0
+        top.mcfpp.analysis.ExpressionReturns.current = expressionReturns
         try {
             statements.forEachIndexed { index, statement ->
                 enterDebugStatement(statement)
@@ -180,6 +198,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             }
         } finally {
             followingStatements = previous
+            top.mcfpp.analysis.ExpressionReturns.current = previousReturns
+            top.mcfpp.analysis.ExpressionReturns.helperDepth = previousDepth
         }
     }
 
@@ -381,9 +401,27 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         if(ctx.varWithSelector() != null){
             val left: Var<*> = MCFPPExprVisitor().visitAssignableVarWithSelector(ctx.varWithSelector())
             if (left.isError || left is top.mcfpp.core.lang.UnknownVar) return null
+            if (left is top.mcfpp.analysis.OptionalExpression) {
+                if (ctx.expression().text == "null" && left.deletionAllowed == false) {
+                    LogProcessor.error("Only optional fields can be deleted")
+                    return null
+                }
+                left.emit({ assignExpression(it, ctx) }, {})
+                return null
+            }
+            assignExpression(left, ctx)
+        }else{
+            val value = MCFPPExprVisitor(allowOptionalResult = true).visitExpression(ctx.expression())
+            top.mcfpp.analysis.OptionalExpressions.discard(value)
+        }
+        Function.addComment("expression end: " + ctx.text)
+        return null
+    }
+
+    private fun assignExpression(left: Var<*>, ctx: mcfppParser.StatementExpressionContext) {
             if (ctx.assignmentOperator().text == "=" && ctx.expression().text == "null" && left is PropertyVar) {
                 StorageAccess.removeField(left)
-                return null
+                return
             }
             val address = top.mcfpp.core.lang.entity.EntityDataAddress.selected(left)
             val displayProperty = top.mcfpp.core.lang.entity.DisplayProperties.selected(left)
@@ -402,19 +440,14 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 null -> right
                 else -> top.mcfpp.analysis.StorageAccess.binary(current, right, operator)
             }
-            if (assigned.isError) return null
+            if (assigned.isError) return
             TypeUsage.ordinaryDiagnostic(assigned.type, StorageAccess.snapshot(assigned))?.let {
                 LogProcessor.error(it)
-                return null
+                return
             }
             if (address != null) address.write(assigned)
             else if (left is PropertyVar && (displayProperty != null || left.field is top.mcfpp.core.lang.entity.DisplayView)) left.set(assigned)
             else left.replacedBy(left.assignedBy(assigned))
-        }else{
-            MCFPPExprVisitor().visitExpression(ctx.expression())
-        }
-        Function.addComment("expression end: " + ctx.text)
-        return null
     }
 
     override fun visitExtensionFunctionDeclaration(ctx: mcfppParser.ExtensionFunctionDeclarationContext): Any? = withCompilationContext(ctx) {

@@ -355,6 +355,8 @@ object StorageAccess {
     }
 
     fun binary(left: Var<*>, right: Var<*>, operation: String): Var<*> {
+        if (left is OptionalExpression || right is OptionalExpression)
+            return binary(OptionalExpressions.require(left), OptionalExpressions.require(right), operation)
         if (left.isError) return left
         if (right.isError) return right
         if (left.type is MCFPPLiteralType || right.type is MCFPPLiteralType)
@@ -400,6 +402,7 @@ object StorageAccess {
     }
 
     fun unary(value: Var<*>, operation: String): Var<*> {
+        if (value is OptionalExpression) return unary(OptionalExpressions.require(value), operation)
         if (value is top.mcfpp.core.lang.bool.PresenceBool && operation == "!") return value.negation()
         if (value.isError) return value
         if (value.type is MCFPPLiteralType) return unary(primitiveView(value), operation)
@@ -1280,6 +1283,7 @@ object StorageAccess {
 
     /** Loading a register is materialization, not a logical write. */
     fun read(value: Var<*>): Var<*> {
+        if (value is OptionalExpression) return OptionalExpressions.require(value)
         if (value is top.mcfpp.core.lang.bool.PresenceBool) return value
         if (value.isError) return value
         if (value.storageBinding != null) StorageWriteContracts.accessRejection(value, write = false)?.let {
@@ -1498,6 +1502,7 @@ object StorageAccess {
     }
 
     fun write(target: Var<*>, source: Var<*>): Var<*> {
+        if (source is OptionalExpression) return write(target, OptionalExpressions.require(source))
         if (target is top.mcfpp.core.lang.entity.EntityDataAddress) return target.write(source)
         top.mcfpp.core.lang.entity.EntityDataAddress.selected(source)?.let { return write(target, it.bareRead()) }
         val referenceBorrows = top.mcfpp.core.lang.ref.ReferenceValues.provenance(source)
@@ -1630,8 +1635,9 @@ object StorageAccess {
             }
             if (binding.data.layoutAt(binding.place) != StorageLayout.CompilerOnly)
                 emit(Command.buildAll("data remove", binding.path))
-            binding.data.write(binding.place, ValueFacts(TypeKnowledge.Exact(MCFPPPrivateType.Null.typeId),
-                ValueKnowledge.Constant(CompilerValue.NullValue), presence = Presence.Absent))
+            binding.data.facts.forgetDescendants(binding.place)
+            binding.data.write(binding.place, ValueFacts(TypeKnowledge.Exact(target.type.typeId),
+                ValueKnowledge.Unknown, ValueState.INITIALIZED, presence = Presence.Absent))
             return adapter(target.type, target.identifier, binding).apply { setAs(target) }
         }
         if (actualType(source) is MCFPPEntityType &&
@@ -1918,6 +1924,7 @@ object StorageAccess {
     }
 
     fun capture(value: Var<*>): Var<*> {
+        if (value is OptionalExpression) return capture(OptionalExpressions.require(value))
         if (value is top.mcfpp.core.lang.bool.PresenceBool) return capture(value.materializePredicate())
         if (value.isError) return value
         ContextBorrowing.diagnostic(value)?.let { return error(value.type, it) }

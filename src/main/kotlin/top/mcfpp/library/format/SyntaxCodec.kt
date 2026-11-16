@@ -278,12 +278,14 @@ object SyntaxCodec {
                 is Expression.Super -> TypeTableCodec.writeDeclarationReference(this, node.owner)
                 is Expression.TypeValue -> n(node.type)
                 is Expression.Group -> maybe(node.value)
+                is Expression.EarlyReturn -> maybe(node.value)
                 is Expression.Unary -> { u32(strings.reference(node.operator)); n(node.operand) }
                 is Expression.Binary -> { u32(strings.reference(node.operator)); n(node.left); n(node.right) }
                 is Expression.Cast -> { n(node.value); n(node.target) }
                 is Expression.Member -> {
                     n(node.receiver); u32(strings.reference(node.name)); u8(node.keyword.wireValue)
                     optional(node.candidates) { values -> list(values) { TypeTableCodec.writeDeclarationReference(this, it) } }
+                    bool(node.safe)
                 }
                 is Expression.Index -> { n(node.receiver); maybe(node.index) }
                 is Expression.PropertyFilter -> { n(node.receiver); list(node.entries) { u32(strings.reference(it.name)); n(it.value) } }
@@ -342,6 +344,7 @@ object SyntaxCodec {
     private fun children(node: SemanticNode): List<SemanticNode> = when (node) {
         is Expression.TypeValue -> listOf(node.type)
         is Expression.Group -> listOfNotNull(node.value)
+        is Expression.EarlyReturn -> listOfNotNull(node.value)
         is Expression.Unary -> listOf(node.operand)
         is Expression.Binary -> listOf(node.left, node.right)
         is Expression.Cast -> listOf(node.value, node.target)
@@ -431,13 +434,15 @@ object SyntaxCodec {
             SyntaxTags.SUPER -> TypeTableCodec.readDeclarationReference(this).let { value -> { Expression.Super(scope, value) } }
             SyntaxTags.TYPE_VALUE -> ref().let { value -> { r -> Expression.TypeValue(scope, r.type(value)) } }
             SyntaxTags.GROUP -> maybe().let { value -> { r -> Expression.Group(scope, value?.let(r::expression)) } }
+            SyntaxTags.EARLY_RETURN -> maybe().let { value -> { r -> Expression.EarlyReturn(scope, value?.let(r::expression)) } }
             SyntaxTags.UNARY -> { val op = strings.value(u32()); val value = ref(); { r -> Expression.Unary(scope, op, r.expression(value)) } }
             SyntaxTags.BINARY -> { val op = strings.value(u32()); val a = ref(); val b = ref(); { r -> Expression.Binary(scope, op, r.expression(a), r.expression(b)) } }
             SyntaxTags.CAST -> { val value = ref(); val target = ref(); { r -> Expression.Cast(scope, r.expression(value), r.type(target)) } }
             SyntaxTags.MEMBER -> {
                 val receiver = ref(); val name = strings.value(u32()); val kind = wireEnum(u8(), MemberKeyword.values()) { it.wireValue }
-                val candidates = optional { list { TypeTableCodec.readDeclarationReference(this) } };
-                { r -> Expression.Member(scope, r.expression(receiver), name, kind, candidates) }
+                val candidates = optional { list { TypeTableCodec.readDeclarationReference(this) } }
+                val safe = if (LibraryReadVersion.current >= 5L) bool() else false;
+                { r -> Expression.Member(scope, r.expression(receiver), name, kind, candidates, safe) }
             }
             SyntaxTags.INDEX -> { val receiver = ref(); val value = maybe(); { r -> Expression.Index(scope, r.expression(receiver), value?.let(r::expression)) } }
             SyntaxTags.PROPERTY_FILTER -> { val receiver = ref(); val entries = list { strings.value(u32()) to NodeRef(u32()) }; { r -> Expression.PropertyFilter(scope, r.expression(receiver), entries.mapFrozen { PropertyEntry(it.first, r.expression(it.second)) }) } }

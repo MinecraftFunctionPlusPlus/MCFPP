@@ -873,6 +873,8 @@ internal class PreparedTemplateHeaderReader(
                     if (frozen.constant != null) frozen = PreparedExpressionFact.fromBound(frozen, source, binder).bound
                     val getter = field.accessor()?.getter() != null
                     val setter = field.accessor()?.setter() != null
+                    if (declared?.second == true && (getter || setter))
+                        fail(source, "Field '${field.Identifier().text}' with a getter or setter cannot be optional")
                     val property = when {
                         getter && setter -> PreparedHeaderProperty.GET_SET
                         getter -> PreparedHeaderProperty.GET

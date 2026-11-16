@@ -66,6 +66,8 @@ COLONCOLON: '::' ;
 HASH: '#' ;
 AT: '@' ;
 QUEST: '?' ;
+SAFE_DOT: '?.' ;
+ELVIS: '?:' ;
 LANGLE: '<' ;
 RANGLE: '>' ;
 LE: '<=' ;

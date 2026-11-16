@@ -23,9 +23,15 @@ internal interface SourceCodeBinder {
 internal class SourceBindingFailure(val source: SourceSpan, message: String) : IllegalArgumentException("$message at $source")
 
 internal class SnapshotSourceCodeBinder : SourceCodeBinder {
+    private fun rejectOptionalSelectors(selectors: List<P.SelectorContext>, env: BindingEnvironment) {
+        selectors.firstOrNull { it.SAFE_DOT() != null || it.EXCL().isNotEmpty() }?.let {
+            fail(span(it, env), "Optional operations must be resolved before entering an MNI source projection")
+        }
+    }
     override fun call(syntax: P.FunctionCallContext, env: BindingEnvironment, trailing: P.InlineLambdaContext?): SourceCall = call(syntax, env, receiver = null, name = syntax.namespaceID().text, source = span(syntax, env), trailing = trailing)
 
     override fun memberCall(syntax: P.VarWithSelectorContext, env: BindingEnvironment): SourceCall {
+        rejectOptionalSelectors(syntax.selector(), env)
         val selectors = syntax.selector()
         val last = selectors.lastOrNull()
             ?: fail(span(syntax, env), "A member call requires a final function-call selector")
@@ -188,6 +194,8 @@ internal class SnapshotSourceCodeBinder : SourceCodeBinder {
         is P.ConditionalAndExpressionContext,
         is P.EqualityExpressionContext,
         is P.RelationalExpressionContext,
+        is P.ElvisExpressionContext,
+        is P.ElvisOperandContext,
         is P.AdditiveExpressionContext,
         is P.MultiplicativeExpressionContext -> {
             val operands = (0 until syntax.childCount).mapNotNull { syntax.getChild(it) as? ParserRuleContext }
@@ -362,6 +370,8 @@ internal class SnapshotSourceCodeBinder : SourceCodeBinder {
         is P.ConditionalAndExpressionContext,
         is P.EqualityExpressionContext,
         is P.RelationalExpressionContext,
+        is P.ElvisExpressionContext,
+        is P.ElvisOperandContext,
         is P.AdditiveExpressionContext,
         is P.MultiplicativeExpressionContext -> chain(tree, env)
         is P.CastExpressionContext -> {
@@ -408,6 +418,7 @@ internal class SnapshotSourceCodeBinder : SourceCodeBinder {
     }
 
     private fun bindSelector(syntax: P.VarWithSelectorContext, env: BindingEnvironment): BoundExpr {
+        rejectOptionalSelectors(syntax.selector(), env)
         // Only explicit snapshot fields are readable here; property accessors are never invoked.
         val property = syntax.jvmAccessExpression().propertyOperator()
         if (property.propertyOperatorExpression().isNotEmpty())
@@ -457,6 +468,7 @@ internal class SnapshotSourceCodeBinder : SourceCodeBinder {
         selectors: List<P.SelectorContext>,
         env: BindingEnvironment
     ): BoundLocation {
+        rejectOptionalSelectors(selectors, env)
         val property = jvm.propertyOperator()
         if (property.propertyOperatorExpression().isNotEmpty())
             fail(span(property, env), "Property assignment cannot be captured as a writable location")
@@ -532,7 +544,7 @@ internal class SnapshotSourceCodeBinder : SourceCodeBinder {
     private fun literal(value: P.ValueContext, env: BindingEnvironment): BoundExpr {
         val text = value.text
         val pair = when {
-            value.NULL() != null -> env.types.ref(top.mcfpp.type.MCFPPBaseType.Any) to ConstantValue.NullValue
+            value.NULL() != null -> fail(span(value, env), "null is only allowed for field deletion and existence checks; it cannot be passed as a function argument")
             value.nbtValue()?.nbtBool() != null -> env.types.ref(top.mcfpp.type.MCFPPBaseType.Bool) to ConstantValue.Bool(text == "true")
             value.nbtValue()?.nbtInt() != null -> {
                 val number = text.toLongOrNull() ?: fail(span(value, env), "Invalid integer literal '$text'")

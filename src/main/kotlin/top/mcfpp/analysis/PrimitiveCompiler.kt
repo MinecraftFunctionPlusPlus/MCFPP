@@ -1358,7 +1358,8 @@ object PrimitiveCompiler {
             is Parser.ConditionalOrExpressionContext -> fold(node.conditionalAndExpression(), node.op)
             is Parser.ConditionalAndExpressionContext -> fold(node.equalityExpression(), node.op)
             is Parser.EqualityExpressionContext -> fold(node.relationalExpression(), node.op)
-            is Parser.RelationalExpressionContext -> fold(node.additiveExpression(), node.op)
+            is Parser.RelationalExpressionContext -> fold(node.elvisExpression(), node.op)
+            is Parser.ElvisExpressionContext -> if (node.elvisOperand().isEmpty()) expression(node.additiveExpression()) else unsupported()
             is Parser.AdditiveExpressionContext -> fold(node.multiplicativeExpression(), node.op)
             is Parser.MultiplicativeExpressionContext -> fold(node.castExpression(), node.op)
             is Parser.CastExpressionContext -> {
@@ -1416,6 +1417,7 @@ object PrimitiveCompiler {
             }
             is Parser.RightVarExpressionContext -> expression(node.varWithSelector())
             is Parser.VarWithSelectorContext -> receiverField(node) ?: run {
+                if (node.selector().any { it.SAFE_DOT() != null || it.EXCL().isNotEmpty() }) unsupported()
                 if (initializerFields != null && node.selector().isNotEmpty()) unsupported()
                 node.selector().fold(expression(node.jvmAccessExpression())) { receiver, selector ->
                     val selected = selector.`var`() ?: unsupported()

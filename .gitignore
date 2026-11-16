@@ -47,5 +47,6 @@ bin/
 .repo_memory/
 /.codex-workflow-graph/
 /output/
+/logs/
 **/.mcfpp/
 **/mcfpp.lock

@@ -312,6 +312,7 @@ internal object LambdaBinding {
 
         val tail = syntax.lambdaBody().lambdaTailExpression()?.expression()
         tail?.let { expression ->
+            scanExpressionReturns(expression, visible, environment, explicitReturns, expectedResult)
             scanExpressionForIt(expression, visible, environment, expectedResult)
                 ?.let { failure -> return Result.Rejected(failure) }
         }
@@ -383,9 +384,23 @@ internal object LambdaBinding {
 
     private class ReturnScan(
         val types: MutableList<MCFPPType>,
-        val sites: MutableList<P.ReturnStatementContext>,
+        val sites: MutableList<ParserRuleContext>,
         val valueResults: MutableList<Diagnostic>
     )
+
+    private fun scanExpressionReturns(node: ParseTree, visible: Map<String, MCFPPType?>,
+                                      environment: Environment, returns: ReturnScan, expected: MCFPPType?) {
+        if (node is P.InlineLambdaContext || node is P.BlockContext || node is P.CurlBlockContext || node is P.CommandBlockContext) return
+        if (node is P.ReturnExpressionContext) {
+            val expression = node.expression()
+            val type = if (expression == null) MCFPPPrivateType.Void else expressionType(expression, environment, visible)
+                ?: directLambda(expression)?.let { lambdaExpressionType(it, environment, expected) }
+            if (type == null) returns.valueResults += diagnostic(node, DiagnosticCode.UNRESOLVED_RETURN_TYPE,
+                "Cannot resolve return expression type '${expression?.text}'")
+            else { returns.types += type; returns.sites += node }
+        }
+        for (index in 0 until node.childCount) scanExpressionReturns(node.getChild(index), visible, environment, returns, expected)
+    }
 
     /**
      * Walks a lambda body in source order. Existing local declarations become visible to
@@ -429,6 +444,7 @@ internal object LambdaBinding {
         returns: ReturnScan,
         expectedResult: MCFPPType?
     ): Diagnostic? {
+        scanExpressionReturns(statement, visible, environment, returns, expectedResult)
         statement.commandBlock()?.let { block ->
             for (nested in block.statement()) {
                 scanStatement(nested, visible, environment, returns, expectedResult)?.let { return it }
@@ -708,8 +724,19 @@ internal object LambdaBinding {
             treeType(node.rightVarExpression(), environment, visible)
             else treeType(node.unaryExpression(), environment, visible)
         is P.RightVarExpressionContext -> treeType(node.varWithSelector(), environment, visible)
+        is P.ElvisExpressionContext -> {
+            val types = listOfNotNull(treeType(node.additiveExpression(), environment, visible)) +
+                node.elvisOperand().mapNotNull { it.additiveExpression()?.let { rhs -> treeType(rhs, environment, visible) } }
+            types.reduceOrNull(top.mcfpp.analysis.OptionalExpressions::resultType)
+        }
         is P.VarWithSelectorContext -> {
-            if (node.selector().isEmpty()) treeType(node.jvmAccessExpression(), environment, visible) else null
+            if (node.selector().isEmpty()) treeType(node.jvmAccessExpression(), environment, visible)
+            else environment.caller?.let { caller ->
+                try {
+                    top.mcfpp.analysis.DeclarationBinding(caller,
+                        visible.mapNotNull { (name, type) -> type?.let { name to it } }.toMap()).syntax(node).type
+                } catch (_: top.mcfpp.analysis.DeclarationBinding.Failure) { null }
+            }
         }
         is P.JvmAccessExpressionContext -> treeType(node.propertyOperator(), environment, visible)
         is P.PropertyOperatorContext -> treeType(node.primary(), environment, visible)

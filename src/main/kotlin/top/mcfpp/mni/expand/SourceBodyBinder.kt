@@ -668,6 +668,8 @@ private class SourceCaptureScanner(private val request: SourceCallbackBodyReques
             is P.ConditionalAndExpressionContext,
             is P.EqualityExpressionContext,
             is P.RelationalExpressionContext,
+        is P.ElvisExpressionContext,
+        is P.ElvisOperandContext,
             is P.AdditiveExpressionContext,
             is P.MultiplicativeExpressionContext -> visitChildren(tree)
             is P.CastExpressionContext -> visit(tree.unaryExpression())

@@ -80,7 +80,12 @@ class ExpressionBridge(private val bindings: ExpressionCaptureBindings) {
         is Parser.ConditionalOrExpressionContext -> fold(site, site.conditionalAndExpression(), site.op)
         is Parser.ConditionalAndExpressionContext -> fold(site, site.equalityExpression(), site.op)
         is Parser.EqualityExpressionContext -> fold(site, site.relationalExpression(), site.op)
-        is Parser.RelationalExpressionContext -> fold(site, site.additiveExpression(), site.op)
+        is Parser.RelationalExpressionContext -> fold(site, site.elvisExpression(), site.op)
+        is Parser.ElvisExpressionContext -> site.elvisOperand().fold(capture(site.additiveExpression())) { left, right ->
+            Expression.Binary(scope(site), "?:", left, capture(right))
+        }
+        is Parser.ElvisOperandContext -> capture(site.returnExpression() ?: site.additiveExpression())
+        is Parser.ReturnExpressionContext -> Expression.EarlyReturn(scope(site), site.expression()?.let(::capture))
         is Parser.AdditiveExpressionContext -> fold(site, site.multiplicativeExpression(), site.op)
         is Parser.MultiplicativeExpressionContext -> fold(site, site.castExpression(), site.op)
         is Parser.CastExpressionContext -> capture(site.unaryExpression()).let { value ->
@@ -173,6 +178,23 @@ class ExpressionBridge(private val bindings: ExpressionCaptureBindings) {
     }
 
     private fun select(receiver: Expression, site: Parser.SelectorContext): Expression {
+        if (site.EXCL().isNotEmpty()) {
+            var result: Expression = Expression.Unary(scope(site), "!!", receiver)
+            site.identifierSuffix().forEach { result = Expression.Index(scope(it), result, it.expression()?.let(::capture)) }
+            return result
+        }
+        val result = selectMember(receiver, site)
+        if (site.SAFE_DOT() == null) return result
+        fun mark(value: Expression): Expression = when (value) {
+            is Expression.Member -> value.copy(safe = true)
+            is Expression.Call -> value.copy(callee = mark(value.callee))
+            is Expression.Index -> value.copy(receiver = mark(value.receiver))
+            else -> unsupported("A safe call requires a member")
+        }
+        return mark(result)
+    }
+
+    private fun selectMember(receiver: Expression, site: Parser.SelectorContext): Expression {
         if (site.inlineLambda() != null) {
             val call = site.`var`()?.functionCall()
             val name = call?.namespaceID()?.text ?: site.memberKeyword()?.text ?: site.`var`()?.varWithSuffix()?.Identifier()?.text

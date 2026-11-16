@@ -137,6 +137,10 @@ data class Property(val identifier: String, val accessor: AbstractAccessor?, val
         /** Bind declared accessors without evaluating their bodies or initializer expressions. */
         fun fromContext(ctx: mcfppParser.AccessorContext?, field: Var<*>, template: DataTemplate): Property {
             if (ctx == null) return buildSimpleProperty(field)
+            if (field.nullable) {
+                top.mcfpp.util.LogProcessor.error("Field '${field.identifier}' with a getter or setter cannot be optional")
+                return buildSimpleProperty(field)
+            }
             val getter = ctx.getter()?.let { declaration ->
                 when {
                     declaration.javaRefer() != null && !languageReference(declaration.javaRefer().text, field, template) && nativeReference(declaration.javaRefer().text, field.identifier, true) -> NativeAccessor(declaration.javaRefer().text, template, field)

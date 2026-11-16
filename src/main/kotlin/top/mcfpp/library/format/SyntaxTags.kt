@@ -23,6 +23,7 @@ object SyntaxTags {
     const val COMPOUND = 0x0113
     const val NBT_ARRAY = 0x0114
     const val INTERPOLATED_STRING = 0x0115
+    const val EARLY_RETURN = 0x0116
     const val TYPE_NAME = 0x0201
     const val TYPE_APPLY = 0x0202
     const val CONTAINER_TYPE = 0x0203
@@ -56,6 +57,6 @@ object SyntaxTags {
     const val ANNOTATION_APPLICATION = 0x0403
     const val ANNOTATION_CONSTRUCTION = 0x0404
 
-    fun isKnown(tag: Int): Boolean = tag in LITERAL..INTERPOLATED_STRING ||
+    fun isKnown(tag: Int): Boolean = tag in LITERAL..EARLY_RETURN ||
         tag in TYPE_NAME..OBJECT_TYPE || tag in BLOCK..CONTEXT_SCOPE || tag in TEMPLATE_BODY..ANNOTATION_CONSTRUCTION
 }

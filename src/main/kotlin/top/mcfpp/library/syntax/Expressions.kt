@@ -21,7 +21,7 @@ sealed interface Expression : SemanticNode {
         override val tag: Int get() = 0x0106
     }
     data class Unary(override val scope: ScopeId, val operator: String, val operand: Expression) : Expression {
-        init { require(operator == "!" || operator == "-") }
+        init { require(operator in setOf("!", "-", "!!")) }
         override val tag: Int get() = 0x0107
     }
     data class Binary(
@@ -36,7 +36,8 @@ sealed interface Expression : SemanticNode {
     data class Member(
         override val scope: ScopeId, val receiver: Expression, val name: String,
         val keyword: MemberKeyword = MemberKeyword.IDENTIFIER,
-        val candidates: List<DeclarationReference>? = null
+        val candidates: List<DeclarationReference>? = null,
+        val safe: Boolean = false
     ) : Expression {
         init { require(name.isNotEmpty()) }
         override val tag: Int get() = 0x010a
@@ -85,9 +86,12 @@ sealed interface Expression : SemanticNode {
     data class InterpolatedString(override val scope: ScopeId, val parts: List<TextPart>) : Expression {
         override val tag: Int get() = 0x0115
     }
+    data class EarlyReturn(override val scope: ScopeId, val value: Expression?) : Expression {
+        override val tag: Int get() = 0x0116
+    }
 }
 
-private val binaryOperators = setOf("*", "/", "%", "+", "-", "<", ">", "<=", ">=", "==", "!=", "~=", "&&", "||", "|")
+private val binaryOperators = setOf("*", "/", "%", "+", "-", "<", ">", "<=", ">=", "==", "!=", "~=", "&&", "||", "|", "?:")
 private val languageIdentifier = Regex("[\\p{L}_][\\p{L}\\p{Nd}_]*")
 
 data class Argument(val expression: Expression, val name: String? = null) { val kind: Int get() = 1 }

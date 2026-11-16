@@ -105,6 +105,16 @@ class LibraryExpressionProjectionTest {
         roundtrip("author.lib:take<int>(value)")
     }
 
+    @Test fun optionalOperationsRoundtrip() {
+        roundtrip("box.child?.value ?: fallback + 1")
+        roundtrip("box.child?.value ?: return 4")
+        roundtrip("box.child?.value ?: return")
+        roundtrip("box.value!! + 1")
+        roundtrip("box.items!![0]")
+        roundtrip("!!flag")
+        roundtrip("a ?: b ?: c")
+    }
+
     @Test
     fun valuesSelectorsContainersStringsAndRangesKeepCurrentGrammarFields() {
         roundtrip("receiver.member[][index].next(1)")

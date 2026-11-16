@@ -1210,6 +1210,7 @@ class LibraryImportSession(private val compatibility: LibraryCompatibility = Lib
                 is Expression.Name -> when (val use = node.use) { is NameUse.Local -> occurrence(use.target, position); is NameUse.Declaration -> reference(use.target, position); else -> Unit }
                 is Expression.TypeValue -> syntax(node.type, position)
                 is Expression.Group -> node.value?.let { expression(it, position) }
+                is Expression.EarlyReturn -> node.value?.let { expression(it, position) }
                 is Expression.Unary -> expression(node.operand, position)
                 is Expression.Binary -> { expression(node.left, position); expression(node.right, position) }
                 is Expression.Cast -> { expression(node.value, position); syntax(node.target, position) }

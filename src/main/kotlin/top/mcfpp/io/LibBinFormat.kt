@@ -4,5 +4,5 @@ package top.mcfpp.io
 object LibBinFormat {
     const val MAGIC: Int = 0x4D43464C // MCFL
     // Structural object/literal descriptors and ordinary template factories.
-    const val VERSION: Int = 88
+    const val VERSION: Int = 89
 }

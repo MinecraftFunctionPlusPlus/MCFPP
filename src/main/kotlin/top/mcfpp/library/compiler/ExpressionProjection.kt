@@ -100,24 +100,25 @@ class ExpressionProjection(
 
     private fun precedence(operator: String): Int = when (operator) {
         "||" -> 1; "&&" -> 2; "==", "!=", "~=" -> 3; "<", ">", "<=", ">=" -> 4
-        "+", "-" -> 5; "*", "/", "%" -> 6; else -> 0
+        "?:" -> 5; "+", "-" -> 6; "*", "/", "%" -> 7; else -> 0
     }
 
     private fun operator(operator: String): Int = when (operator) {
         "|" -> L.PIPE; "||" -> L.DISJ; "&&" -> L.CONJ; "==" -> L.EQEQ; "!=" -> L.EXCL_EQ; "~=" -> L.WVEQ
         "<" -> L.LANGLE; ">" -> L.RANGLE; "<=" -> L.LE; ">=" -> L.GE; "+" -> L.ADD; "-" -> L.SUB
-        "*" -> L.MULT; "/" -> L.SLASH; "%" -> L.MOD; else -> L.Identifier
+        "*" -> L.MULT; "/" -> L.SLASH; "%" -> L.MOD; "?:" -> L.ELVIS; else -> L.Identifier
     }
 
     private fun binary(value: Expression, level: Int): ParserRuleContext {
-        if (level == 7) return cast(value)
+        if (level == 8) return cast(value)
         val result: ParserRuleContext = when (level) {
             0 -> P.CommonBinaryOperatorExpressionContext(null, -1)
             1 -> P.ConditionalOrExpressionContext(null, -1)
             2 -> P.ConditionalAndExpressionContext(null, -1)
             3 -> P.EqualityExpressionContext(null, -1)
             4 -> P.RelationalExpressionContext(null, -1)
-            5 -> P.AdditiveExpressionContext(null, -1)
+            5 -> P.ElvisExpressionContext(null, -1)
+            6 -> P.AdditiveExpressionContext(null, -1)
             else -> P.MultiplicativeExpressionContext(null, -1)
         }
         return node(result, value) {
@@ -137,7 +138,13 @@ class ExpressionProjection(
                         is P.MultiplicativeExpressionContext -> this.op.add(op)
                     }
                     space()
-                    child(this, binary(operand.right, level + 1))
+                    if (this is P.ElvisExpressionContext) child(this, node(P.ElvisOperandContext(null, -1), operand.right) {
+                        val right = operand.right
+                        if (right is Expression.EarlyReturn) child(this, node(P.ReturnExpressionContext(null, -1), right) {
+                            token(this, L.RETURN, "return")
+                            right.value?.let { space(); child(this, expression(it)) }
+                        }) else child(this, binary(right, level + 1))
+                    }) else child(this, binary(operand.right, level + 1))
                 } else child(this, binary(operand, level + 1))
             }
             emit(value)
@@ -151,7 +158,7 @@ class ExpressionProjection(
     }
 
     private fun unary(value: Expression): P.UnaryExpressionContext = node(P.UnaryExpressionContext(null, -1), value) {
-        if (value is Expression.Unary) {
+        if (value is Expression.Unary && value.operator != "!!") {
             token(this, if (value.operator == "!") L.EXCL else L.SUB, value.operator)
             child(this, unary(value.operand))
         } else child(this, node(P.RightVarExpressionContext(null, -1), value) { child(this, selected(value)) })
@@ -163,6 +170,12 @@ class ExpressionProjection(
 
     private fun selection(parent: P.VarWithSelectorContext, value: Expression) {
         when (value) {
+            is Expression.Unary -> if (value.operator == "!!") {
+                selection(parent, value.operand)
+                child(parent, node(P.SelectorContext(null, -1), value) {
+                    token(this, L.EXCL, "!"); token(this, L.EXCL, "!")
+                })
+            } else base(parent, value) { primary(value) }
             is Expression.Member -> {
                 selection(parent, value.receiver)
                 child(parent, selector(value, emptyList(), null))
@@ -176,7 +189,13 @@ class ExpressionProjection(
                     selection(parent, receiver.receiver)
                     child(parent, selector(receiver, indices, null))
                 } else if (receiver is Expression.Name) base(parent, value) { variableWithSuffix(receiver, indices) }
-                else unsupported("The current grammar only indexes names and selected members")
+                else if (receiver is Expression.Unary && receiver.operator == "!!") {
+                    selection(parent, receiver)
+                    val assertion = parent.selector().last()
+                    indices.forEach { index -> child(assertion, node(P.IdentifierSuffixContext(null, -1), index) {
+                        token(this, L.LSQUARE, "["); index.index?.let { child(this, expression(it)) }; token(this, L.RSQUARE, "]")
+                    }) }
+                } else unsupported("The current grammar only indexes names, asserted values and selected members")
             }
             is Expression.Call -> {
                 if (value.trailingLambda != null) base(parent, value) { grouped(value) }
@@ -214,7 +233,7 @@ class ExpressionProjection(
 
     private fun selector(member: Expression.Member, indices: List<Expression.Index>, call: Expression.Call?, includeTrailing: Boolean = true): P.SelectorContext =
         node(P.SelectorContext(null, -1), call ?: member) {
-            token(this, L.DOT, ".")
+            token(this, if (member.safe) L.SAFE_DOT else L.DOT, if (member.safe) "?." else ".")
             if (member.keyword != MemberKeyword.IDENTIFIER) {
                 if (indices.isNotEmpty()) unsupported("Keyword members cannot have index suffixes in the current grammar")
                 child(this, node(P.MemberKeywordContext(null, -1), member) {

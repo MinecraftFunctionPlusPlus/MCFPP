@@ -420,7 +420,20 @@ equalityExpression
 
 //比较关系
 relationalExpression
-    :   additiveExpression ({!endsReadonlyCallArguments()}? op+=(LANGLE | RANGLE | LE | GE) NL* additiveExpression )*
+    :   elvisExpression ({!endsReadonlyCallArguments()}? op+=(LANGLE | RANGLE | LE | GE) NL* elvisExpression )*
+    ;
+
+elvisExpression
+    :   additiveExpression (ELVIS NL* elvisOperand)*
+    ;
+
+elvisOperand
+    :   additiveExpression
+    |   returnExpression
+    ;
+
+returnExpression
+    :   RETURN expression?
     ;
 
 //加减
@@ -501,8 +514,9 @@ identifierSuffix
     ;
 
 selector
-    :   DOT NL* var (NL* inlineLambda)?
-    |   DOT NL* memberKeyword NL* arguments? (NL* inlineLambda)?
+    :   (DOT | SAFE_DOT) NL* var (NL* inlineLambda)?
+    |   (DOT | SAFE_DOT) NL* memberKeyword NL* arguments? (NL* inlineLambda)?
+    |   EXCL EXCL (NL* identifierSuffix)*
     ;
 
 // Type/accessor keywords can also name ordinary member calls.

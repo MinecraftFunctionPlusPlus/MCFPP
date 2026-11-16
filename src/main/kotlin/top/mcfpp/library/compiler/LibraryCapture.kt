@@ -712,10 +712,11 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
                     is Expression.TypeValue -> n(value.type)
                     is Expression.Literal -> c(constant(value.constant))
                     is Expression.Group -> optional(value.value) { n(it) }
+                    is Expression.EarlyReturn -> optional(value.value) { n(it) }
                     is Expression.Unary -> { string(value.operator); n(value.operand) }
                     is Expression.Binary -> { string(value.operator); n(value.left); n(value.right) }
                     is Expression.Cast -> { n(value.value); n(value.target) }
-                    is Expression.Member -> { n(value.receiver); string(value.name); u8(value.keyword.wireValue) }
+                    is Expression.Member -> { n(value.receiver); string(value.name); u8(value.keyword.wireValue); if (value.safe) bool(true) }
                     is Expression.Index -> { n(value.receiver); optional(value.index) { n(it) } }
                     is Expression.Call -> {
                         n(value.callee); ns(value.readonly); list(value.normal) { n(it.expression) }; optional(value.trailingLambda) { n(it) }
@@ -753,6 +754,7 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
         is TypeSyntax.Inferred -> listOf(node.expression)
         is Expression.TypeValue -> listOf(node.type)
         is Expression.Group -> listOfNotNull(node.value)
+        is Expression.EarlyReturn -> listOfNotNull(node.value)
         is Expression.Unary -> listOf(node.operand)
         is Expression.Binary -> listOf(node.left, node.right)
         is Expression.Cast -> listOf(node.value, node.target)
@@ -1074,7 +1076,11 @@ internal class LibraryCapture(private val selection: OwnedLibrarySelection) : Co
         is Expression.Cast -> actualType(expression.target)
         is Expression.Literal -> (constants[(expression.constant.value - 1).toInt()] as? ConstantValue.Typed)?.type?.let(actualTypes::get)
         is Expression.Unary -> knownType(expression.operand)
-        is Expression.Binary -> knownType(expression.left)
+        is Expression.Binary -> if (expression.operator == "?:" && expression.right !is Expression.EarlyReturn) {
+            val left = knownType(expression.left)
+            val right = knownType(expression.right)
+            if (left != null && right != null) top.mcfpp.analysis.OptionalExpressions.resultType(left, right) else null
+        } else knownType(expression.left)
         is Expression.Index -> (knownType(expression.receiver) as? MCFPPTypeWithGeneric)?.generic?.singleOrNull()
         is Expression.ListValue -> expression.elements.firstOrNull()?.let(::knownType)?.let(::MCFPPListType)
         is Expression.Member -> knownType(expression.receiver)?.instanceData?.scope?.getVar(expression.name)?.type

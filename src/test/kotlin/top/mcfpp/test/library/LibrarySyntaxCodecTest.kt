@@ -26,6 +26,22 @@ class LibrarySyntaxCodecTest {
     private fun scope(owner: Long = 1, parent: ScopeId? = null) = ScopeRecord(DeclarationId(owner), parent, emptyList())
     private fun strings(syntax: LibrarySyntax) = LibraryStrings.of(SyntaxCodec.collectStrings(syntax))
 
+    @Test fun versionFourMembersDecodeWithoutSafeMarker() {
+        val strings = LibraryStrings.of(setOf("value"))
+        val nodes = LibraryBinaryWriter().apply {
+            u32(2)
+            record { u16(0x0101); u32(1); record { u32(1) } }
+            record { u16(0x010a); u32(1); record {
+                u32(1); u32(strings.reference("value")); u8(0); bool(false)
+            } }
+        }.toByteArray()
+        val restored = LibraryReadVersion.withVersion(4) {
+            SyntaxCodec.decodeUnbound(EncodedSyntax(nodes, SyntaxCodec.encodeScopes(listOf(scope())),
+                SyntaxCodec.encodeBodies(emptyList())), strings)
+        }
+        assertFalse(assertIs<Expression.Member>(restored.nodes[1]).safe)
+    }
+
     @Test fun allFixedNodeKindsAndOutsideReferenceCategoriesRoundTrip() {
         val literal = Expression.Literal(q, ConstantRef(1))
         val name = Expression.Name(q, NameUse.Lookup("run", "library", environment, listOf(local)))
@@ -43,6 +59,9 @@ class LibrarySyntaxCodecTest {
             Expression.Compound(q, listOf(CompoundEntry("z", literal), CompoundEntry("a", name))),
             Expression.NbtArray(q, NbtArrayElement.INT, listOf(ConstantRef(1))),
             Expression.InterpolatedString(q, listOf(TextPart.Text(" text\n"), TextPart.Interpolation(name))),
+            Expression.Member(q, name, "value", safe = true),
+            Expression.Unary(q, "!!", name),
+            Expression.Binary(q, "?:", name, Expression.EarlyReturn(q, literal)),
         )
         val types = listOf<TypeSyntax>(type, TypeSyntax.Apply(q, type, listOf(literal), TypeRef(2)),
             TypeSyntax.Container(q, ContainerKind.DICT, type), TypeSyntax.Vector(q, 3),
@@ -75,7 +94,7 @@ class LibrarySyntaxCodecTest {
         assertEquals(original.nodes, decoded.nodes)
         assertEquals(original.scopes, decoded.scopes)
         assertEquals(original.bodies, decoded.bodies)
-        val expectedTags = (0x0101..0x0115).toSet() + (0x0201..0x020a).toSet() +
+        val expectedTags = (0x0101..0x0116).toSet() + (0x0201..0x020a).toSet() +
             ((0x0301..0x0310).toSet() - 0x030a) + (0x0401..0x0403).toSet()
         assertEquals(expectedTags, decoded.nodes.map { it.tag }.toSet())
         assertTrue(references.declarations.isNotEmpty())

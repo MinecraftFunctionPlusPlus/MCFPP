@@ -95,6 +95,17 @@ internal class DeclarationBinding private constructor(
     internal fun expression(context: Parser.ExpressionContext, expected: MCFPPType?): Bound =
         preparationGuard(context) { bind(context, expected) }
 
+    internal fun syntax(context: ParserRuleContext, expected: MCFPPType? = null): Bound =
+        preparationGuard(context) { bind(context, expected) }
+
+    internal fun selectedType(receiver: MCFPPType, selector: Parser.SelectorContext, trailing: Parser.InlineLambdaContext? = null): MCFPPType {
+        val collection = top.mcfpp.analysis.lambda.LambdaCollections.selector(selector, trailing)
+        if (collection != null && top.mcfpp.analysis.lambda.LambdaCollections.supports(receiver, collection.name))
+            return collectionPlan(receiver, collection).result
+        return selector.`var`()?.let { member(Bound(receiver), it).type }
+            ?: bindSelector(Bound(receiver), selector).type
+    }
+
     internal fun value(context: Parser.ValueContext): Bound = preparationGuard(context) { literal(context) }
     internal fun value(context: Parser.ValueContext, expected: MCFPPType?): Bound = preparationGuard(context) { literal(context, expected) }
 
@@ -679,6 +690,27 @@ internal class DeclarationBinding private constructor(
     }
 
     private fun bind(node: ParseTree, expected: MCFPPType?): Bound = when (node) {
+        is Parser.ElvisExpressionContext -> {
+            var result = bind(node.additiveExpression(), expected)
+            if (node.elvisOperand().isNotEmpty() && result.type == MCFPPPrivateType.Null)
+                throw Failure("null is only allowed for field deletion and existence checks")
+            for (operand in node.elvisOperand()) {
+                if (operand.returnExpression() != null) {
+                    operand.returnExpression().expression()?.let { bind(it, declarationFunction?.returnType) }
+                } else {
+                    val right = bind(operand.additiveExpression(), expected ?: result.type)
+                    if (right.type == MCFPPPrivateType.Null)
+                        throw Failure("null is only allowed for field deletion and existence checks; ?: null is not supported")
+                    if (expected != null && (TypeRelations.resolveImplicitConversion(result.type, expected) == null ||
+                            TypeRelations.resolveImplicitConversion(right.type, expected) == null))
+                        throw Failure("Elvis operands must be assignable to '${expected.typeName}'")
+                    result = Bound(expected ?: OptionalExpressions.resultType(result.type, right.type),
+                        dependencies = result.dependencies + right.dependencies,
+                        descriptors = result.descriptors + right.descriptors)
+                }
+            }
+            result
+        }
         is Parser.InlineLambdaContext -> bindInlineLambda(node, expected)
         is Parser.ExpressionContext -> when {
             node.lambdaCallExpression() != null -> bindLambdaCall(checkNotNull(node.lambdaCallExpression()))
@@ -729,6 +761,16 @@ internal class DeclarationBinding private constructor(
             var result = bind(node.jvmAccessExpression().propertyOperator().primary(),
                 if (node.selector().isEmpty()) expected else null)
             for ((index, selector) in node.selector().withIndex()) {
+                if (selector.EXCL().isNotEmpty()) {
+                    for (suffix in selector.identifierSuffix()) {
+                        val element = (result.type as? MCFPPTypeWithGeneric)?.generic?.singleOrNull()
+                            ?: TypeRelations.arrayElementType(result.type.typeId)
+                            ?: throw Failure("Declaration type '${result.type}' cannot be indexed")
+                        suffix.expression()?.let(::bind)
+                        result = Bound(element, dependencies = result.dependencies)
+                    }
+                    continue
+                }
                 val variable = selector.`var`()
                 if (selector.memberKeyword()?.text == "text" && selector.arguments() == null) {
                     val member = top.mcfpp.core.lang.entity.DisplayProperties.memberType(result.type, "text")

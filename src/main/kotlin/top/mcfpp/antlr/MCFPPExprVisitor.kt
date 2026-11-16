@@ -4,6 +4,10 @@ import top.mcfpp.Project
 import top.mcfpp.analysis.TypeUsage
 import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.analysis.StorageAccess
+import top.mcfpp.analysis.OptionalExpression
+import top.mcfpp.analysis.OptionalExpressions
+import top.mcfpp.analysis.ExpressionReturns
+import top.mcfpp.analysis.DeclarationBinding
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 
@@ -59,13 +63,17 @@ import java.util.*
 
 class MCFPPExprVisitor(
     private var enumType: MCFPPEnumType? = null,
-    var processVarCache: ArrayList<Var<*>> = ArrayList()
+    var processVarCache: ArrayList<Var<*>> = ArrayList(),
+    private val allowOptionalResult: Boolean = false
 ): mcfppParserBaseVisitor<Var<*>>() {
 
     private var currSelector : Var<*>? = null
     private var superSelector: DataTemplate? = null
     private var expectedLiteral: Pair<Int, MCFPPType>? = null
     private var expectedFunction: Pair<Int, top.mcfpp.type.MCFPPFunctionType>? = null
+    private var preserveFieldLocations = false
+    private var preserveOptionalOperand = false
+    private var expectedResultType: MCFPPType? = null
 
     private fun integralLiteral(ctx: ParserRuleContext): Var<*>? =
         when (val parsed = top.mcfpp.analysis.IntegralLiteralSyntax.parse(ctx)) {
@@ -77,17 +85,20 @@ class MCFPPExprVisitor(
             null -> null
         }
 
-    fun visitExpression(ctx: mcfppParser.ExpressionContext, expectedType: MCFPPType?): Var<*> {
-        fun literalToken(node: ParserRuleContext): Int? = when {
+    private fun literalToken(node: ParserRuleContext): Int? = when {
             node is mcfppParser.NbtValueContext && (node.nbtList() != null || node.nbtCompound() != null) -> node.start.tokenIndex
             node is mcfppParser.InlineLambdaContext && top.mcfpp.analysis.TemplateLiteralSupport.ambiguousObjectEntries(node) != null -> node.start.tokenIndex
             else -> node.children.orEmpty().filterIsInstance<ParserRuleContext>().singleOrNull()?.let(::literalToken)
-        }
+    }
+
+    fun visitExpression(ctx: mcfppParser.ExpressionContext, expectedType: MCFPPType?): Var<*> {
         val previous = expectedLiteral
         val previousFunction = expectedFunction
+        val previousResultType = expectedResultType
+        expectedResultType = expectedType
         expectedLiteral = expectedType?.let { type -> literalToken(ctx)?.let { it to type } }
         expectedFunction = (expectedType as? top.mcfpp.type.MCFPPFunctionType)?.let { ctx.start.tokenIndex to it }
-        return try { visitExpression(ctx) } finally { expectedLiteral = previous; expectedFunction = previousFunction }
+        return try { visitExpression(ctx) } finally { expectedLiteral = previous; expectedFunction = previousFunction; expectedResultType = previousResultType }
     }
 
     fun visitValue(ctx: mcfppParser.ValueContext, expectedType: MCFPPType?): Var<*> {
@@ -106,7 +117,10 @@ class MCFPPExprVisitor(
     override fun visitExpression(ctx: mcfppParser.ExpressionContext): Var<*> = withCompilationContext(ctx) {
         top.mcfpp.analysis.StructuredBindings.literal(ctx)?.let { return@withCompilationContext it }
         val lambdaCall = ctx.lambdaCallExpression()
-        if (lambdaCall != null) return@withCompilationContext evaluateInTemporary { visitLambdaCall(lambdaCall) }
+        if (lambdaCall != null) return@withCompilationContext evaluateInTemporary {
+            val result = visitLambdaCall(lambdaCall)
+            if (allowOptionalResult) result else OptionalExpressions.require(result)
+        }
         val result = evaluateInTemporary {
             if(ctx.primary() != null){
                 currSelector = null
@@ -120,7 +134,13 @@ class MCFPPExprVisitor(
             val descriptor = result.declaration as MCFPPType
             top.mcfpp.analysis.StorageAccess.literal(top.mcfpp.type.MCFPPConcreteType.Type,
                 top.mcfpp.analysis.CompilerValue.TypeValue(descriptor.typeId), types = mapOf(descriptor.typeId to descriptor))
-        } else top.mcfpp.core.lang.entity.EntityDataAddress.selected(result)?.let(StorageAccess::read) ?: result
+        } else (top.mcfpp.core.lang.entity.EntityDataAddress.selected(result)?.let(StorageAccess::read) ?: result)
+            .let {
+                if (it === Null) {
+                    LogProcessor.error("null is only allowed for field deletion and existence checks; it cannot be passed as a function argument")
+                    UnknownVar("null_value").apply { isError = true }
+                } else if (allowOptionalResult) it else OptionalExpressions.require(it)
+            }
     }
 
     /** Real condition accessor: if/else-if/while no longer expose their condition as `expression()`. */
@@ -132,7 +152,7 @@ class MCFPPExprVisitor(
                 visitPrimary(primary).let { if (it is PropertyVar) it.get() else it }
             } ?: visitCommonBinaryOperatorExpression(ctx.commonBinaryOperatorExpression())
         }
-        top.mcfpp.core.lang.entity.EntityDataAddress.selected(result)?.let(StorageAccess::read) ?: result
+        OptionalExpressions.require(top.mcfpp.core.lang.entity.EntityDataAddress.selected(result)?.let(StorageAccess::read) ?: result)
     }
 
     private fun evaluateInTemporary(block: () -> Var<*>): Var<*> {
@@ -145,10 +165,15 @@ class MCFPPExprVisitor(
             Function.currFunction = caller
             caller.commands.addAll(temporary.commands)
             caller.nativeResultSlots += temporary.nativeResultSlots
+            if (temporary.hasReturnStatement) caller.hasReturnStatement = true
         }
     }
 
     private fun visitLambdaCall(ctx: mcfppParser.LambdaCallExpressionContext): Var<*> {
+        if (ctx.jvmAccessExpression() != null && ctx.selector().any { it.SAFE_DOT() != null || it.EXCL().isNotEmpty() }) {
+            val lambdaSelector = ctx.selector().lastOrNull { it.start.tokenIndex < ctx.inlineLambda().start.tokenIndex }
+            return resolveOptionalChain(ctx.jvmAccessExpression(), ctx.selector(), false, lambdaSelector, ctx.inlineLambda())
+        }
         if (ctx.functionCall() != null && ctx.selector().isEmpty()) {
             val binding = top.mcfpp.analysis.StructuredBindings.name(ctx.functionCall().namespaceID(), Function.currFunction)
             if (binding is top.mcfpp.analysis.StructuredNameBinding.Macros)
@@ -284,36 +309,12 @@ class MCFPPExprVisitor(
         StorageAccess.ensure(result)
         StorageAccess.write(result, captured)
         StorageAccess.materialize(result)
-        val caller = Function.currFunction
-        val values = StorageAccess.visibleValues(caller.scope) + result
-        val before = StorageAccess.flowSnapshot(values)
-        var branchName: String
-        do {
-            branchName = TempPool.getFunctionIdentify("logical_rhs")
-        } while (listOf(GlobalScope.localNamespaces, GlobalScope.libNamespaces, GlobalScope.stdNamespaces)
-                .any { namespaces -> namespaces[caller.namespace]?.scope?.getFunctionCandidates(branchName)?.isNotEmpty() == true })
-        val branch = top.mcfpp.model.function.NoStackFunction(branchName, caller)
-        caller.child.add(branch)
-        GlobalScope.localNamespaces.getOrPut(branch.namespace) { top.mcfpp.model.Namespace(branch.namespace) }
-            .scope.addFunction(branch, false)
-        branch.runInFunction {
+        OptionalExpressions.branch(condition, listOf(result), {
             (left as? top.mcfpp.core.lang.bool.PresenceBool)?.assume(evaluateWhen)
             val value = right()
-            if (!value.isError && value.type.isSubOf(MCFPPBaseType.Bool)) StorageAccess.write(result, value)
-            else if (!value.isError) LogProcessor.error("Logical operands must have boolean type")
-            Unit
-        }
-        val evaluated = StorageAccess.flowSnapshot(values)
-        StorageAccess.restoreFlow(before)
-        val command = when (condition) {
-            is BaseBool -> Command("execute if").build(condition.toCommandPart())
-            else -> {
-                LogProcessor.error("Logical operands must have boolean type")
-                return UnknownVar("logical_operand")
-            }
-        }
-        Function.addCommand(command.build("run").build(Commands.function(branch)))
-        StorageAccess.restoreFlow(StorageAccess.joinFlow(listOf(before, evaluated)))
+            if (!Function.currFunction.hasReturnStatement && !value.isError && value.type.isSubOf(MCFPPBaseType.Bool)) StorageAccess.write(result, value)
+            else if (!Function.currFunction.hasReturnStatement && !value.isError) LogProcessor.error("Logical operands must have boolean type")
+        }, {})
         return StorageAccess.read(result)
     }
 
@@ -332,6 +333,7 @@ class MCFPPExprVisitor(
                 while (node !is mcfppParser.VarWithSelectorContext && node.childCount == 1) node = node.getChild(0)
                 if (node is mcfppParser.VarWithSelectorContext) {
                     val address = visitAssignableVarWithSelector(node)
+                    if (address is OptionalExpression) return@withCompilationContext OptionalExpressions.presence(address, ctx.op.single().text == "!=")
                     if (address is PropertyVar) return@withCompilationContext StorageAccess.presence(address, ctx.op.single().text == "!=")
                     return@withCompilationContext StorageAccess.binary(address,
                         visitRelationalExpression(operands[nullIndex]), ctx.op.single().text)
@@ -358,17 +360,54 @@ class MCFPPExprVisitor(
      */
     @Override
     override fun visitRelationalExpression(ctx: mcfppParser.RelationalExpressionContext): Var<*> = withCompilationContext(ctx) {
-        var visitRelationalExpressionRe = visitAdditiveExpression(ctx.additiveExpression(0))
+        var visitRelationalExpressionRe = visitElvisExpression(ctx.elvisExpression(0))
         processVarCache.add(visitRelationalExpressionRe)
-        for (i in 1..<ctx.additiveExpression().size) {
+        for (i in 1..<ctx.elvisExpression().size) {
             visitRelationalExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitRelationalExpressionRe)
             processVarCache[processVarCache.lastIndex] = visitRelationalExpressionRe
-            val b: Var<*> = visitAdditiveExpression(ctx.additiveExpression(i))
+            val b: Var<*> = visitElvisExpression(ctx.elvisExpression(i))
             visitRelationalExpressionRe = top.mcfpp.analysis.StorageAccess.binary(visitRelationalExpressionRe, b, ctx.op[i-1].text)
             processVarCache[processVarCache.size - 1] = visitRelationalExpressionRe
         }
         processVarCache.remove(visitRelationalExpressionRe)
         return visitRelationalExpressionRe
+    }
+
+    private fun optionalOperand(body: () -> Var<*>): Var<*> {
+        val previous = preserveOptionalOperand
+        preserveOptionalOperand = true
+        return try { body() } finally { preserveOptionalOperand = previous }
+    }
+
+    override fun visitElvisExpression(ctx: mcfppParser.ElvisExpressionContext): Var<*> {
+        if (ctx.elvisOperand().isEmpty()) return visitAdditiveExpression(ctx.additiveExpression())
+        val bound = try { DeclarationBinding(Function.currFunction, emptyMap()).syntax(ctx, expectedResultType) }
+            catch (failure: DeclarationBinding.Failure) {
+                LogProcessor.error(failure.message.orEmpty()); return UnknownVar("elvis")
+            }
+        var result = optionalOperand { visitAdditiveExpression(ctx.additiveExpression()) }
+        for (operand in ctx.elvisOperand()) {
+            val left = result
+            if (operand.returnExpression() != null) {
+                result = OptionalExpressions.coalesce(left, left.type) {
+                    ExpressionReturns.emit(operand.returnExpression().expression())
+                    Void
+                }
+            } else {
+                // Keep the fallback lazy, including any optional result it produces.
+                val fallbackType = expectedResultType ?: left.type
+                result = OptionalExpression(bound.type) { yes, no ->
+                    OptionalExpressions.inspect(left, { yes(OptionalExpressions.read(it)) }, {
+                        val previous = expectedLiteral
+                        expectedLiteral = literalToken(operand.additiveExpression())?.let { it to fallbackType }
+                        val right = try { optionalOperand { visitAdditiveExpression(operand.additiveExpression()) } }
+                            finally { expectedLiteral = previous }
+                        OptionalExpressions.inspect(right, { yes(OptionalExpressions.read(it)) }, no)
+                    })
+                }
+            }
+        }
+        return result
     }
 
     /**
@@ -490,10 +529,14 @@ class MCFPPExprVisitor(
     }
 
     private fun resolveVarWithSelector(ctx: mcfppParser.VarWithSelectorContext, preserveFinalProperty: Boolean): Var<*> {
+        if (ctx.selector().any { it.SAFE_DOT() != null || it.EXCL().isNotEmpty() })
+            return resolveOptionalChain(ctx, preserveFinalProperty)
         currSelector = null
         superSelector = null
-        currSelector = visitJvmAccessExpression(ctx.jvmAccessExpression())
-        if(currSelector is PropertyVar && (!preserveFinalProperty || ctx.selector().isNotEmpty())){
+        val previousLocations = preserveFieldLocations
+        preserveFieldLocations = preserveOptionalOperand || preserveFinalProperty
+        currSelector = try { visitJvmAccessExpression(ctx.jvmAccessExpression()) } finally { preserveFieldLocations = previousLocations }
+        if(currSelector is PropertyVar && ((!preserveFinalProperty && !preserveOptionalOperand) || ctx.selector().isNotEmpty())){
             currSelector = (currSelector as PropertyVar).get();
         }
         if(currSelector is UnknownVar && !currSelector!!.isError){
@@ -519,10 +562,63 @@ class MCFPPExprVisitor(
                 if (top.mcfpp.analysis.lambda.LambdaMemberReference.hasMethod(receiver.type, member.Identifier().text))
                     return top.mcfpp.analysis.lambda.LambdaMemberReference.create(receiver, member.Identifier().text, expected, selector)
             }
-            visitSelector(selector)
+            preserveFieldLocations = preserveOptionalOperand || preserveFinalProperty
+            try { visitSelector(selector) } finally { preserveFieldLocations = previousLocations }
         }
-        if (!preserveFinalProperty && currSelector is PropertyVar) currSelector = selectedMember(currSelector!!)
+        if (!preserveFinalProperty && !preserveOptionalOperand && currSelector is PropertyVar) currSelector = selectedMember(currSelector!!)
         return currSelector!!
+    }
+
+    private fun selectOptional(receiver: Var<*>, selector: mcfppParser.SelectorContext,
+                               trailing: mcfppParser.InlineLambdaContext? = null): Var<*> {
+        val previous = preserveFieldLocations
+        preserveFieldLocations = true
+        currSelector = OptionalExpressions.read(receiver)
+        return try {
+            if (trailing != null) {
+                val collection = top.mcfpp.analysis.lambda.LambdaCollections.selector(selector, trailing)
+                if (collection != null && top.mcfpp.analysis.lambda.LambdaCollections.supports(currSelector!!.type, collection.name))
+                    return top.mcfpp.analysis.lambda.LambdaCollections.invoke(currSelector!!, collection, processVarCache)
+            }
+            visitSelector(selector)
+        } finally { preserveFieldLocations = previous }
+    }
+
+    private fun resolveOptionalChain(ctx: mcfppParser.VarWithSelectorContext, assignment: Boolean): Var<*> {
+        return resolveOptionalChain(ctx.jvmAccessExpression(), ctx.selector(), assignment)
+    }
+
+    private fun resolveOptionalChain(root: mcfppParser.JvmAccessExpressionContext,
+                                     selectors: List<mcfppParser.SelectorContext>, assignment: Boolean,
+                                     lambdaSelector: mcfppParser.SelectorContext? = null,
+                                     trailing: mcfppParser.InlineLambdaContext? = null): Var<*> {
+        val previous = preserveFieldLocations
+        preserveFieldLocations = true
+        currSelector = null
+        var result = try { visitJvmAccessExpression(root) } finally { preserveFieldLocations = previous }
+        for (selector in selectors) {
+            val lambda = trailing.takeIf { selector === lambdaSelector }
+            if (selector.EXCL().isNotEmpty()) {
+                result = OptionalExpressions.unchecked(result)
+                for (suffix in selector.identifierSuffix()) {
+                    val index = suffix.expression()?.let { MCFPPExprVisitor(processVarCache = processVarCache).visitExpression(it) }
+                    result = if (result is Indexable && index != null) result.getByIndex(index)
+                        else { LogProcessor.error("Cannot index '${result.type}'"); UnknownVar("index") }
+                }
+            } else if (selector.SAFE_DOT() != null) {
+                val receiver = result
+                val type = try { DeclarationBinding(Function.currFunction, emptyMap()).selectedType(receiver.type, selector, lambda) }
+                    catch (failure: DeclarationBinding.Failure) { LogProcessor.error(failure.message.orEmpty()); return UnknownVar("safe_call") }
+                val fieldName = selector.`var`()?.varWithSuffix()?.takeIf { it.identifierSuffix().isEmpty() }?.Identifier()?.text
+                val deletable = fieldName?.let { (receiver.type as? top.mcfpp.type.MCFPPDataTemplateType)?.template?.scope?.getVar(it)?.nullable }
+                result = OptionalExpression(type, deletable) { yes, no ->
+                    OptionalExpressions.inspect(receiver, { yes(selectOptional(it, selector, lambda)) }, no)
+                }
+            } else {
+                result = selectOptional(OptionalExpressions.require(result), selector, lambda)
+            }
+        }
+        return if (assignment || preserveOptionalOperand || result is OptionalExpression) result else OptionalExpressions.read(result)
     }
 
     override fun visitJvmAccessExpression(ctx: mcfppParser.JvmAccessExpressionContext): Var<*> = withCompilationContext(ctx) {
@@ -684,7 +780,7 @@ class MCFPPExprVisitor(
             return UnknownVar("expression").apply { isError = true }
         }
         // Keep separate expression result fields while preserving outer values across nested calls.
-        return MCFPPExprVisitor(processVarCache = processVarCache).visit(ctx.expression())
+        return MCFPPExprVisitor(processVarCache = processVarCache, allowOptionalResult = true).visit(ctx.expression())
     }
 
     override fun visitFunctionCall(ctx: mcfppParser.FunctionCallContext): Var<*> = withCompilationContext(ctx) {
@@ -1038,7 +1134,7 @@ class MCFPPExprVisitor(
                 LogProcessor.error("Cannot access member $qwq")
                 UnknownVar(qwq)
             }else{
-                if (ctx === assignmentTarget) re.first!!
+                if (ctx === assignmentTarget || preserveFieldLocations) re.first!!
                 else if (re.first is PropertyVar && (re.first as PropertyVar).property.accessor !is top.mcfpp.model.property.SimpleAccessor)
                     (re.first as PropertyVar).get()
                 else top.mcfpp.core.lang.entity.EntityDataAddress.selected(re.first!!) ?: top.mcfpp.analysis.StorageAccess.read(re.first!!)
