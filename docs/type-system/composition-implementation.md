@@ -4,10 +4,21 @@
 `codex/type-composition-factories` 开始。该提交保存开始实施前的工作区；本地运行日志未纳入提交。
 本轮是独立任务，不恢复已有的 `.codex-workflow-graph` 工作流。
 
-## 最终交付状态
+## 当前决定：类型命名空间中的普通工厂
+
+用户在前一轮提交后修正了工厂设计。`new` 定义在所属类型命名空间中，没有 `this`，
+按普通实参规则调用并返回独立、完整的值。复用父初始化只写 `Parent.new(args...)`，
+再从返回值显式组装子值；普通调用不要求调用方具有名义祖先关系。
+已撤销父限定接收者语法、隐式插入接收者实参及相关名义父查找要求。
+普通实例方法和扩展方法继续拥有各自的 `this`。
+
+本次修正已完成，验证见本文末尾；下述交付结果属于上一轮实现，
+其中旧父限定测试的历史记录不再定义当前语言规则。
+
+## 前一轮交付状态（提交306275f3）
 
 原始计划阶段1—8已实现并完成迁移文档：开放对象形状、字面量类型、never、规范化交叉/联合、
-中央结构子类型、扁平字段继承、普通函数工厂与父限定调用、对象shorthand、真实存储写约束，
+中央结构子类型、扁平字段继承、普通函数工厂、对象shorthand、真实存储写约束，
 以及类型/工厂库往返和缓存失效。对象展开继续按批准决定推迟。库格式为4，开发缓存版本为88。
 
 验证结果（JDK25.0.4，Gradle9.2.1，离线本地SDK）：
@@ -27,8 +38,8 @@
 
 ## 已确认的设计决定
 
-- 父限定调用采用 `this.Parent.new(args...)`，等价于 `Parent.new(this, args...)`。
-  工厂显式声明接收该值的第一个普通参数；工厂自身没有隐式 `this`。
+- 工厂只接受声明中的普通参数，没有隐式 `this` 或特殊首参数规则。
+  复用父初始化时显式调用 `Parent.new(args...)`，使用独立返回值构造完整子值。
 - 对象字面量的重复字段报错，并指出字段名。
 - 空模板生成返回 `{}` 的默认工厂。
 - 显式工厂每条可达成功路径必须显式 `return`，不采用尾表达式返回。
@@ -680,3 +691,36 @@ LambdaDeliveryIntegration1、LambdaLibrary2全部通过；仅前两类的旧夹�
 其开始时暂存树为 `af94487fc441b42a3ddb9b0d68af23c8e68b38d0`。
 当前只更新上述两个测试夹具和本实施记录，未使其余通过的主实现/资源证据失效。
 所有计划规则均有通过的适用检查；保留两项明确跳过及真实Minecraft未执行的边界。
+
+## 2026-11-16 工厂语义修正（已完成）
+
+用户撤销先前父工厂接收者绑定决定，采用上述普通类型命名空间工厂。已完成：
+1. 删除执行/纯类型绑定/副作用分析中的特殊父查找和隐式实参；保留普通方法接收者。
+2. 将父限定测试迁移为普通父工厂调用、返回独立值、子工厂逐字段合成与类型检查，
+   并拒绝废弃接收者语法及实例上的工厂调用。
+3. 同步修改计划、规范、迁移说明与可运行示例；仅运行受影响工厂、方法、存储、库往返检查。
+
+前一轮全量结果是先前证据，不称为本次新执行验证。后续记录实际命令及结果。
+
+已删除执行、纯绑定和effects中的父限定分支及接收者参数插入，清除仅供该语法使用的
+nominalAncestorsNamed查找；工厂通过实例调用时报告类型命名空间诊断。
+普通this解析、方法接收者传递和TemplateFactory.receiverless保持各自既有合同。
+现有库往返案例增加Derived工厂调用Value.new并显式组合字段，以及导入后total()读取this。
+示例Marker同样采用Position.new返回值组合。
+
+本次首次检查会话61451，日志 `build/factory-namespace-focused.log`：
+`shadowJar verifyDistribution test`，选择FactoryConstruction、ParentFactoryComposition、StorageView、
+TypeCompositionLibrary、DataInheritanceMethod、DataConstantCall、EffectAnalysis、MniGeneratedDeclaration、
+TypeCompositionInheritance九类。
+
+实际结果：3分50秒，73项全部通过，0失败/0跳过；重新编译main、测试和发行JAR，
+发行包冒烟通过。FactoryConstruction10、ParentFactoryComposition5覆盖显式实参、独立值、
+泛型组合、普通参数/返回类型错误、无隐式this、旧绑定语法和实例工厂调用拒绝。
+DataInheritanceMethod10、MniGeneratedDeclaration4和库往返中的total()继续验证普通方法this。
+TypeCompositionLibrary7包含导出/全新导入后的Derived.new字段11/4与方法结果15。
+
+使用新发行JAR在examples/type-composition执行 `build --offline` 成功，compiler为0错误/0警告，
+日志 `build/factory-namespace-example.log`。对新生成mcfunction执行原命令模拟器成功：
+`[3,7,11,4,9], spawn`、Marker `{active:1b,name:"spawn",x:3,y:4}`，最终栈深0；
+日志 `build/factory-namespace-example-command-check.log`。未运行真实Minecraft。
+本次按影响范围执行上述检查，没有重新执行此前2553项全量；旧全量结果仍明确标为前一轮证据。

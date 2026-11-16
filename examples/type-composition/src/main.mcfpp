@@ -16,7 +16,8 @@ data Marker: Position, Named {
     var active: bool
 
     new(x: int, y: int, name: string) {
-        return { x, y, name, active: true }
+        var position = Position.new(x, y)
+        return { x: position.x, y: position.y, name, active: true }
     }
 }
 

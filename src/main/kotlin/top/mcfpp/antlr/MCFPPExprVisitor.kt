@@ -64,7 +64,6 @@ class MCFPPExprVisitor(
 
     private var currSelector : Var<*>? = null
     private var superSelector: DataTemplate? = null
-    private var boundFactoryReceiver: Var<*>? = null
     private var expectedLiteral: Pair<Int, MCFPPType>? = null
     private var expectedFunction: Pair<Int, top.mcfpp.type.MCFPPFunctionType>? = null
 
@@ -493,7 +492,6 @@ class MCFPPExprVisitor(
     private fun resolveVarWithSelector(ctx: mcfppParser.VarWithSelectorContext, preserveFinalProperty: Boolean): Var<*> {
         currSelector = null
         superSelector = null
-        boundFactoryReceiver = null
         currSelector = visitJvmAccessExpression(ctx.jvmAccessExpression())
         if(currSelector is PropertyVar && (!preserveFinalProperty || ctx.selector().isNotEmpty())){
             currSelector = (currSelector as PropertyVar).get();
@@ -514,28 +512,6 @@ class MCFPPExprVisitor(
             currSelector = StaticMemberView(type)
         }
         for ((index, selector) in ctx.selector().withIndex()){
-            if (index == 0 && ctx.jvmAccessExpression().text == "this" && ctx.selector().size >= 2) {
-                val parentName = selector.`var`()?.varWithSuffix()?.takeIf { it.identifierSuffix().isEmpty() }?.Identifier()?.text
-                val next = ctx.selector()[1]
-                val nextName = next.memberKeyword()?.text ?: next.`var`()?.functionCall()?.namespaceID()?.text
-                if (parentName != null && nextName == "new") {
-                    val receiver = currSelector!!
-                    val matching = (receiver.type as? top.mcfpp.type.MCFPPDataTemplateType)?.template
-                        ?.nominalAncestorsNamed(parentName).orEmpty()
-                    if (matching.size > 1) {
-                        LogProcessor.error("Nominal parent qualifier '$parentName' is ambiguous")
-                        return UnknownVar(parentName).apply { isError = true }
-                    }
-                    val parent = matching.singleOrNull()
-                    if (parent == null) {
-                        LogProcessor.error("'$parentName' is not a nominal ancestor of '${receiver.type.typeName}'")
-                        return UnknownVar(parentName).apply { isError = true }
-                    }
-                    boundFactoryReceiver = receiver
-                    currSelector = StaticMemberView(parent.getType())
-                    continue
-                }
-            }
             val expected = expectedFunction?.takeIf { it.first == ctx.start.tokenIndex }?.second
             val member = selector.`var`()?.varWithSuffix()?.takeIf { it.identifierSuffix().isEmpty() }
             if (!preserveFinalProperty && index == ctx.selector().lastIndex && expected != null && member != null) {
@@ -712,10 +688,13 @@ class MCFPPExprVisitor(
     }
 
     override fun visitFunctionCall(ctx: mcfppParser.FunctionCallContext): Var<*> = withCompilationContext(ctx) {
+        if (ctx.namespaceID().text == "new" && currSelector != null && currSelector !is StaticMemberView) {
+            LogProcessor.error("Call a factory through its type namespace")
+            return@withCompilationContext UnknownVar("factory").apply { isError = true }
+        }
         val staticFactory = if (ctx.namespaceID().text == "new")
             ((currSelector as? StaticMemberView)?.declaration as? top.mcfpp.type.MCFPPDataTemplateType)?.template
                 ?.takeUnless { it is top.mcfpp.model.compound.TypeDataTemplate } else null
-        val factoryReceiver = if (staticFactory != null) boundFactoryReceiver.also { boundFactoryReceiver = null } else null
         val contextReceiver = currSelector
         if (contextReceiver != null && top.mcfpp.core.lang.context.ContextPositions.recognizes(contextReceiver.type, ctx.namespaceID().text)) {
             try { return@withCompilationContext top.mcfpp.core.lang.context.ContextPositions.invoke(contextReceiver, ctx, processVarCache) }
@@ -772,7 +751,6 @@ class MCFPPExprVisitor(
         Function.addComment(ctx.text)
         //参数获取
         val normalArgs: ArrayList<Var<*>> = ArrayList()
-        factoryReceiver?.let { normalArgs.add(StorageAccess.capture(it)) }
         val readOnlyArgs: ArrayList<Var<*>> = ArrayList()
         val explicitContexts = linkedMapOf<String, Var<*>>()
         val exprVisitor = MCFPPExprVisitor()

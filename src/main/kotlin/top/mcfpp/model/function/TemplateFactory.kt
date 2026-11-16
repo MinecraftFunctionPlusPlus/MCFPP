@@ -18,7 +18,7 @@ import top.mcfpp.model.compound.TypeDataTemplate
 import top.mcfpp.type.MCFPPNeverType
 import top.mcfpp.type.TypeCompositions
 
-/** A free function associated with a template. Every receiver is an ordinary explicit parameter. */
+/** A function in the template's type namespace. It has no receiver and returns a complete value. */
 class TemplateFactory(
     val template: DataTemplate,
     context: mcfppParser.CurlBlockContext?,

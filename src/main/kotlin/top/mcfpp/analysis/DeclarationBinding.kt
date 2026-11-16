@@ -82,9 +82,7 @@ internal class DeclarationBinding private constructor(
                      val superOwner: DataTemplate? = null,
                      val headerReceiver: PreparedTemplateReservation? = null,
                      val entityFacts: top.mcfpp.lib.EntityFacts? = null,
-                     val entityAddress: Boolean = false,
-                     val nominalReceiver: Boolean = false,
-                     val factoryReceiver: Bound? = null)
+                     val entityAddress: Boolean = false)
     class Failure(message: String) : RuntimeException(message)
     private val template = declarationFunction?.owner as? DataTemplate
     private val readonly = ((template as? top.mcfpp.model.compound.CompiledGenericDataTemplate)?.originTemplate?.readOnlyParams
@@ -770,9 +768,9 @@ internal class DeclarationBinding private constructor(
             node.THIS() != null -> {
                 if (declarationFunction is TemplateFactory)
                     throw Failure("Factory has no implicit 'this'; declare an ordinary parameter")
-                (preparation?.receiver(node) ?: values["this"]
+                preparation?.receiver(node) ?: values["this"]
                     ?: Bound(template?.getType()?.let { if (function.isEntityMember) MCFPPEntityRefType(it) else it }
-                        ?: throw Failure("'this' requires a declaration owner"))).copy(nominalReceiver = true)
+                        ?: throw Failure("'this' requires a declaration owner"))
             }
             node.SUPER() != null -> throw Failure("'super' is unavailable: template functions are receiver functions")
             node.type() != null -> {
@@ -1085,16 +1083,6 @@ internal class DeclarationBinding private constructor(
         if (node.functionCall() != null) return call(node.functionCall(), receiver)
         if (node.bucketExpression() != null) throw Failure("An expression cannot name a member")
         val name = node.varWithSuffix().Identifier().text
-        if (receiver.nominalReceiver && node.varWithSuffix().identifierSuffix().isEmpty()) {
-            val matching = (receiver.type as? MCFPPDataTemplateType)?.template?.nominalAncestorsNamed(name).orEmpty()
-            if (matching.size > 1) throw Failure("Nominal parent qualifier '$name' is ambiguous")
-            matching.singleOrNull()?.getType()?.let { parentType ->
-                return Bound(MCFPPConcreteType.Type,
-                    CompilerValue.Typed(MCFPPConcreteType.Type.typeId, CompilerValue.TypeValue(parentType.typeId)),
-                    receiver.dependencies, descriptors = receiver.descriptors + (parentType.typeId to parentType),
-                    factoryReceiver = receiver)
-            }
-        }
         val structuralField = objectField(receiver.type, name)
         if (meta == null && structuralField != null &&
             (receiver.type is MCFPPObjectType || receiver.type !is MCFPPDataTemplateType)) {
@@ -1209,6 +1197,8 @@ internal class DeclarationBinding private constructor(
         val receiverMeta = ((receiver?.constant as? CompilerValue.Typed)?.payload as? CompilerValue.TypeValue)?.id?.let {
             receiver.descriptors[it] ?: MCFPPType.resolveTypeId(it)
         }
+        if (name == "new" && receiver != null && receiverMeta == null)
+            throw Failure("Call a factory through its type namespace")
         val explicitFactory = (receiverMeta as? MCFPPDataTemplateType)?.template?.takeIf {
             name == "new" && it !is TypeDataTemplate
         }
@@ -1268,11 +1258,11 @@ internal class DeclarationBinding private constructor(
         val signatures = candidateFunctions.mapNotNull { candidate ->
             val readonly = (candidate as? Generic<*>)?.readOnlyParams ?: (candidate as? NativeFunction)?.readOnlyParams.orEmpty()
             val signature = SpecializationPolicy.resolveDeclaredSignature(candidate, readonly, readonlyArguments, earlyReceiverTypes) ?: return@mapNotNull null
-            val count = nodes.size + if (receiver?.factoryReceiver != null) 1 else 0
+            val count = nodes.size
             if (count > signature.normalTypes.size || candidate.normalParams.drop(count).any { !it.hasDefault }) null
                 else signature.normalTypes
         }
-        val arguments = arrayListOf<Bound>().apply { receiver?.factoryReceiver?.let(::add) }
+        val arguments = arrayListOf<Bound>()
         for ((index, node) in nodes.withIndex()) {
             val parameterIndex = arguments.size
             val targets = if (callable != null) listOfNotNull(callable.parameters.getOrNull(parameterIndex))

@@ -174,11 +174,7 @@ internal object SourceEffects {
                         part?.functionCall() != null -> invocation(part.functionCall(), base)
                         part?.varWithSuffix() != null -> {
                             val name = part.varWithSuffix().Identifier().text
-                            val parentFactory = selectors.getOrNull(index + 1)?.memberKeyword()?.text == "new"
-                            val parent = if (parentFactory) top.mcfpp.model.scope.GlobalScope.getTemplate(null, name) else null
-                            if (base != null && parent != null && top.mcfpp.type.TypeRelations.isNominalSubtype(base.type, parent.getType()))
-                                Receiver(parent.getType(), null)
-                            else member(base, name, write && index == selectors.lastIndex, backingOnly && index == selectors.lastIndex)
+                            member(base, name, write && index == selectors.lastIndex, backingOnly && index == selectors.lastIndex)
                         }
                         selector.memberKeyword() != null -> top.mcfpp.antlr.KeywordMemberCalls.call(selector)?.let {
                             invocation(it, base)

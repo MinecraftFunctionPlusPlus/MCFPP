@@ -10,8 +10,8 @@
 > Before changing code, inspect the current branch and implementation
 > because the plan may be applied to a newer local state. Preserve
 > existing working behavior unless it conflicts with an explicit
-> invariant below. Do not silently invent semantics for unresolved
-> questions; record them and ask for a decision.
+> invariant below. The semantic decisions in section 15 are confirmed;
+> object spread remains deferred.
 
 ## 0. Agent operating instructions
 
@@ -53,8 +53,9 @@
 
 -   A data template describes a data contract and the data layout
     derived from that contract.
--   Functions declared in a data-template body are semantically free
-    functions with a receiver parameter bound by member-call syntax.
+-   Ordinary instance functions declared in a data-template body are
+    semantically free functions with a receiver parameter bound by
+    member-call syntax. Factories follow section 1.10.
 -   A subtype relationship does **not** copy, inherit, override, or
     automatically expose a parent template's functions.
 -   Function lookup and receiver compatibility belong to the function
@@ -209,8 +210,9 @@ A = T1 & T2 & { local: int }
 
 ### 1.9 Functions and receiver binding
 
--   A function declared inside a data template is semantically a free
-    function with an explicit receiver parameter of that template type.
+-   An ordinary instance function declared inside a data template is
+    semantically a free function with an explicit receiver parameter of
+    that template type.
 -   Member syntax is a convenient way to bind the receiver.
 -   Such functions are not inherited or copied when another template is
     a subtype.
@@ -223,10 +225,12 @@ A = T1 & T2 & { local: int }
 
 -   Remove the special constructor/init model in favor of factory
     functions.
--   `new` is a dedicated declaration form; users do not write `func`, do
-    not write a return type, and do not write an implicit `this`.
--   A `new` declaration is semantically a free function associated with
-    its declaring template, returning that template's complete `Self`.
+-   `new` is a dedicated declaration form; users do not write `func` or
+    a return type. A factory has no receiver and no `this` in its body.
+-   A `new` declaration is an ordinary factory function in its declaring
+    type's namespace, returning that template's complete `Self`.
+-   All factory parameters and arguments are explicit. The compiler
+    never inserts a receiver or an extra first argument.
 -   `new` participates in ordinary overload resolution.
 -   `A(args...)` is construction-call syntax and resolves to the
     corresponding `A.new(args...)`.
@@ -236,9 +240,9 @@ A = T1 & T2 & { local: int }
 -   A `new` body must return a value whose type is a subtype of `Self`.
 -   Parent `new` functions are never invoked automatically.
 -   A child factory may call any parent or unrelated factory as an
-    ordinary function if its arguments satisfy that function's
-    receiver/parameter types; it must explicitly compose the returned
-    data if desired.
+    ordinary function if its explicit arguments satisfy the declared
+    parameter types. The call returns an independent complete value;
+    the child factory composes its own result from the returned fields.
 -   A template's field initializers are used to synthesize an implicit
     `new` factory.
 -   An explicit `new` with the same signature suppresses/replaces the
@@ -259,31 +263,26 @@ A = T1 & T2 & { local: int }
 -   Shorthand is not restricted to `new`; it is a general object-literal
     feature.
 -   Object literal types are open and can contain extra fields.
+-   Duplicate field names are compilation errors; the diagnostic names
+    the repeated field.
 -   A factory return is validated by ordinary structural subtype
     checking against `Self`.
 
-### 1.12 Parent-qualified factory calls
+### 1.12 Explicit factory reuse
 
-Two forms have distinct rules:
-
-1.  Receiver-bound form, actual syntax to be confirmed against the
-    parser conventions, conceptually `this.Parent.new(args...)`:
-    -   Only available where a `this` receiver exists: member functions
-        and extension functions.
-    -   `Parent` must be a nominal ancestor of the static receiver type;
-        structural compatibility alone is insufficient.
-    -   It binds the current `this` as the receiver argument.
-    -   Parentheses in earlier explanatory notation such as
-        `this.(Parent)` were meta-notation, not literal syntax.
-2.  Explicit free-function form: `Parent.new(this, args...)`:
-    -   Ordinary function call.
-    -   Available anywhere ordinary function calls are available.
-    -   No nominal ancestry requirement; ordinary receiver-argument type
-        compatibility is sufficient.
-
-Do not implement the receiver-bound syntax until the exact parser
-spelling is confirmed from the current grammar/design. Preserve the
-semantic distinction above.
+-   `Parent.new(args...)` calls an ordinary factory in `Parent`'s type
+    namespace. It is available wherever ordinary function calls are
+    permitted, including another factory body.
+-   The call supplies exactly the arguments written by the programmer
+    and uses ordinary visibility, parameter compatibility, overload
+    resolution, and effects. It has no nominal-ancestor requirement.
+-   A parent factory returns an independent, complete parent value.
+    Reusing it requires reading that result and explicitly composing
+    the child result field by field.
+-   Factories cannot bind an instance receiver, mutate a hidden child
+    receiver, or acquire a `this` from a surrounding construction step.
+-   Ordinary instance and extension functions retain their normal
+    receiver and `this` semantics.
 
 ------------------------------------------------------------------------
 
@@ -495,8 +494,9 @@ semantic distinction above.
 11. Ensure inherited methods are not copied or included in data
     composition.
 12. Keep nominal ancestry metadata separately from structural type
-    identity. It is needed for nominal checks and parent-qualified
-    factory syntax, but does not define structural compatibility.
+    identity for declaration access checks, provenance diagnostics, and
+    nominal relationship queries. It does not define structural
+    compatibility or factory argument binding.
 
 ### Tests
 
@@ -530,8 +530,8 @@ semantic distinction above.
 
 ### Tasks
 
-1.  Confirm and document the existing semantic model for template-body
-    functions as receiver-bearing free functions.
+1.  Confirm and document the existing semantic model for ordinary
+    template-body instance functions as receiver-bearing free functions.
 2.  Ensure subtype relationships do not copy or inherit these functions.
 3.  Ensure a subtype receiver can call a parent-declared function
     through ordinary structural receiver compatibility and ordinary
@@ -540,11 +540,12 @@ semantic distinction above.
     declarations:
     -   no `func` keyword;
     -   no explicit return type;
-    -   no implicit `this`;
+    -   no receiver and no `this` in the factory body;
     -   return type is the complete current `Self`;
     -   template generic parameters are in scope.
-5.  Lower `new` to a normal function representation with a
-    template-associated name/owner and return type `Self`.
+5.  Lower `new` to a normal function representation in the declaring
+    type's namespace, with only its declared parameters and return type
+    `Self`.
 6.  Ensure `new` participates in ordinary overload resolution and
     function call semantics.
 7.  Do not retain constructor-specific field assignment completeness
@@ -559,6 +560,9 @@ semantic distinction above.
 -   Child value can call a parent receiver function when structurally
     compatible and lookup rules expose it.
 -   `new` declaration has inferred `Self` return type.
+-   Factory bodies reject `this`; ordinary instance functions still
+    bind their receiver and allow `this`.
+-   Factory invocation inserts no hidden first argument.
 -   Generic `new` sees enclosing template type parameters.
 -   `new` overloads use ordinary overload resolution.
 -   No constructor-specific all-fields-assigned diagnostic is emitted.
@@ -583,8 +587,8 @@ semantic distinction above.
     `{ i: i }`.
 4.  Make shorthand available in all object literal contexts, not only
     `new`.
-5.  Validate duplicate field names according to a deterministic rule; do
-    not silently pick one without an explicit language rule.
+5.  Reject duplicate field names and identify the repeated field in the
+    diagnostic.
 6.  Ensure object literal result is a value with its own appropriate
     data payload/location semantics.
 7.  Implement `new` body return checking:
@@ -604,6 +608,7 @@ semantic distinction above.
 -   `{ i }` shorthand lexical binding.
 -   `{ x: expr }` explicit property value.
 -   Object literal type inference.
+-   Duplicate object-literal field names rejected with the field name.
 -   Extra fields accepted.
 -   Missing required fields rejected.
 -   Wrong field type rejected.
@@ -640,9 +645,8 @@ semantic distinction above.
 6.  Other explicit overloads coexist with remaining implicit overloads.
 7.  If the template has required fields without initializers, do not
     generate an invalid default factory.
-8.  If the template has no fields, generate a default factory only if
-    the language's object literal semantics define a valid empty object
-    satisfying Self.
+8.  If the template has no fields, generate a default zero-argument
+    factory returning `{}`.
 9.  Keep generated factories deterministic and stable across
     compilation/cache/serialization.
 10. Ensure generated factories use the same normal function pipeline as
@@ -652,6 +656,7 @@ semantic distinction above.
 
 -   All fields initialized =\> implicit `new()` generated.
 -   Required field without initializer =\> no invalid implicit `new()`.
+-   An empty template receives an implicit `new()` returning `{}`.
 -   Optional field without initializer can be omitted where object
     literal rules permit.
 -   Explicit zero-argument `new` replaces implicit zero-argument
@@ -673,45 +678,46 @@ semantic distinction above.
 
 ------------------------------------------------------------------------
 
-## 10. Phase 8 --- Parent-qualified factory invocation
+## 10. Phase 8 --- Explicit factory reuse and value composition
 
 ### Tasks
 
-1.  Confirm exact receiver-bound syntax against parser conventions
-    before implementation. The semantic intent is a form such as
-    `this.Parent.new(args...)`; parentheses in earlier notation
-    `this.(Parent)` were explanatory, not literal syntax.
-2.  Implement receiver-bound parent factory lookup only in contexts with
-    a valid `this`, specifically member functions and extension
-    functions.
-3.  Require `Parent` to be a nominal ancestor of the static receiver
-    type. Structural compatibility alone must not qualify.
-4.  Bind current `this` as the receiver argument.
-5.  Implement explicit form `Parent.new(this, args...)` as an ordinary
-    free-function call.
-6.  Permit explicit form wherever ordinary function calls are permitted.
-7.  Explicit form requires ordinary receiver argument type compatibility
-    only; no nominal ancestry requirement.
-8.  Both forms use ordinary overload resolution and effects after
-    receiver binding.
+1.  Resolve `Parent.new(args...)` in `Parent`'s type namespace as an
+    ordinary function call with only the explicitly written arguments.
+2.  Permit that call wherever ordinary calls are permitted, including
+    child factories, ordinary functions, and instance functions.
+3.  Apply ordinary visibility, parameter compatibility, overload
+    resolution, generic substitution, and effects. No nominal ancestry
+    test or receiver binding participates in the call.
+4.  Return a complete independent `Parent` value; do not initialize or
+    mutate an implicit child object.
+5.  Require a child factory reusing that value to construct its complete
+    return value by explicitly selecting the parent result's fields and
+    supplying the child fields.
+6.  Reject factory calls through instance receivers and reject `this`
+    inside a factory body. Preserve `this` in ordinary instance and
+    extension functions.
 
 ### Tests
 
--   Direct nominal parent accepted.
--   Indirect nominal ancestor accepted.
--   Structurally compatible but unrelated type rejected by
-    receiver-bound syntax.
--   Receiver-bound syntax rejected without `this`.
--   Receiver-bound syntax accepted in member and extension functions.
--   Explicit free-function form accepted for structurally compatible
-    receiver.
--   Explicit form accepted outside member/extension contexts.
--   Overload resolution is identical after receiver binding.
+-   A child factory calls `Parent.new(args...)` and explicitly combines
+    the returned parent fields with its local fields.
+-   The parent result is a complete independent value.
+-   An unrelated factory is callable under the same ordinary argument
+    rules; nominal ancestry does not affect applicability.
+-   Generic factory results use the fully instantiated `Self`.
+-   The number and order of call arguments match the declared normal
+    parameters, without a hidden first argument.
+-   Explicit factory calls work inside and outside instance functions.
+-   A factory body rejects `this`; ordinary instance functions keep it.
+-   Factory invocation through an instance receiver is rejected.
+-   Parent factory calls never happen automatically.
 
 ### Acceptance criteria
 
--   Syntax forms differ only in receiver-binding and nominal-ancestry
-    constraints.
+-   Parent reuse consists of an explicit ordinary factory call and
+    explicit field composition of its complete independent result.
+-   Factories have no receiver binding or `this`.
 -   No constructor-specific behavior is introduced.
 
 ------------------------------------------------------------------------
@@ -853,8 +859,8 @@ Before declaring the work complete, verify all of the following:
   `as`                                No structural compatibility
                                       enforcement
 
-  `new`                               Ordinary factory function returning
-                                      Self
+  `new`                               Receiverless ordinary factory in
+                                      its type namespace returning Self
 
   `A()`                               Resolves to `A.new()`
 
@@ -870,9 +876,12 @@ Before declaring the work complete, verify all of the following:
 
   Parent factory                      Never automatically invoked
 
-  Parent-qualified call               Nominal rule for receiver-bound
-                                      form; ordinary compatibility for
-                                      explicit form
+  Factory arguments                   All explicit; no hidden first
+                                      argument or `this`
+
+  Factory reuse                       Explicit `Parent.new(args...)`,
+                                      independent complete result,
+                                      explicit field composition
 
   Object spread                       Deferred until core behavior is
                                       stable
@@ -896,29 +905,30 @@ The implementation is complete when:
     syntax and behavior.
 9.  Any deferred behavior, especially object spread, is clearly
     documented as not yet implemented.
+10. Factories have no receiver or `this`; parent reuse uses explicit
+    factory calls and field composition. Ordinary instance functions
+    retain their receiver semantics.
 
-## 15. Open questions requiring explicit approval
+## 15. Confirmed decisions and deferred work
 
-Do not silently decide these during implementation:
-
-1.  **Exact receiver-bound syntax:** confirm the parser spelling for the
-    nominal-parent form (semantic target: `this.Parent.new(...)`).
-2.  **Duplicate object-literal keys:** decide whether duplicate keys are
-    errors or have a defined overwrite order.
-3.  **Optional-never representation:** confirm the existing type model
-    can represent an optional field whose present value is impossible;
-    otherwise add the smallest internal representation needed.
-4.  **Read/write field contracts:** confirm the exact write-safety rule
-    for structural views and union common members, especially where the
-    current compiler has separate declared and actual storage
-    constraints.
-5.  **Empty object factory:** confirm whether a fieldless template
-    receives an implicit zero-argument factory.
-6.  **Factory control flow:** confirm whether every reachable successful
-    path must return explicitly, or whether a final object expression is
-    permitted.
-7.  **Object spread:** intentionally deferred; do not implement without
-    a separate approved specification.
+1.  **Factory namespace and parameters:** `new` is an ordinary factory
+    in its type namespace, has no receiver or `this`, and accepts only
+    explicitly declared arguments.
+2.  **Parent reuse:** call `Parent.new(args...)` explicitly, obtain an
+    independent complete value, and compose the child result field by
+    field. No automatic parent call or receiver insertion occurs.
+3.  **Duplicate object-literal keys:** reject them at compilation and
+    identify the repeated field.
+4.  **Optional-never:** an optional field of type `never` may only be
+    absent; it does not make the surrounding object `never`.
+5.  **Shared writes:** satisfy both the view contract and the actual
+    storage contract. A union field write must be valid for every
+    possible branch.
+6.  **Empty object factory:** a fieldless template receives an implicit
+    zero-argument factory returning `{}`.
+7.  **Factory control flow:** every reachable successful path must
+    explicitly return a complete value satisfying `Self`.
+8.  **Object spread:** remains deferred to a separate specification.
 
 ------------------------------------------------------------------------
 
@@ -974,11 +984,10 @@ Plain intersection remains valid and narrows the field:
 ``` mcfpp
 data A {
     var i: int
-}
-
-new() {
-    var i = 1
-    return { i }
+    new() {
+        var i = 1
+        return { i }
+    }
 }
 ```
 
@@ -994,10 +1003,14 @@ data A {
 Conceptually synthesizes:
 
 ``` mcfpp
-new() {
-    var x = 1
-    var y = 2
-    return { x, y }
+data A {
+    var x: int
+    var y: int
+    new() {
+        var x = 1
+        var y = 2
+        return { x, y }
+    }
 }
 ```
 
@@ -1009,19 +1022,27 @@ var a: A = A()
 
 Resolves to the ordinary overload selected from `A.new()`.
 
-### F. Parent factory calls
-
-Receiver-bound nominal form (exact syntax to confirm):
+### F. Explicit parent factory reuse
 
 ``` mcfpp
-this.Parent.new(args...)
+data Parent {
+    var x: int
+    new(x: int) { return { x } }
+}
+
+data Child: Parent {
+    var y: int
+    new(x: int, y: int) {
+        var parent = Parent.new(x)
+        return { x: parent.x, y }
+    }
+}
+
+func main() {
+    var child = Child.new(2, 3)
+}
 ```
 
-Explicit ordinary call:
-
-``` mcfpp
-Parent.new(this, args...)
-```
-
-The first requires nominal ancestry and a valid `this` context. The
-second requires only ordinary function-call compatibility.
+`Parent.new(x)` returns a complete independent parent value. The child
+factory selects its fields explicitly and returns the complete child
+value; no factory has a receiver or `this`.

@@ -458,24 +458,6 @@ open class DataTemplate :
         return super.isSubOf(compoundData)
     }
 
-    /** A source parent qualifier names a bound declaration, independently of its emitted name. */
-    internal fun nominalAncestorsNamed(name: String): List<DataTemplate> {
-        val visited = hashSetOf<TypeId>()
-        visited.add(inheritanceIdentity)
-        val pending = ArrayDeque<CompoundData>().apply { addAll(parent) }
-        val matches = arrayListOf<DataTemplate>()
-        while (pending.isNotEmpty()) {
-            val current = pending.removeFirst()
-            if (!visited.add(current.inheritanceIdentity)) continue
-            if (current is DataTemplate) {
-                val sourceName = (current as? CompiledGenericDataTemplate)?.originTemplate?.identifier ?: current.identifier
-                if (sourceName == name) matches.add(current)
-            }
-            pending.addAll(current.parent)
-        }
-        return matches.sortedBy { it.inheritanceIdentity.toString() }
-    }
-
     /**
      * 向这个类中添加一个成员
      * @param member 要添加的成员

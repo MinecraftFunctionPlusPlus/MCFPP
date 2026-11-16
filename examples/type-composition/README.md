@@ -20,7 +20,7 @@ function example.type_composition:main
 
 预期依次输出 `3`、`7`、`11`、`4`、`9` 和 `spawn`。
 
-- `Marker: Position, Named` 将 `x`、`y`、`name` 与本地 `active` 合并到同一个对象，工厂直接返回完整字段。父工厂不会自动运行。
+- `Marker: Position, Named` 将 `x`、`y`、`name` 与本地 `active` 合并到同一个对象。其工厂显式调用 `Position.new(x, y)`，读取独立返回值并组合完整的 `Marker` 字段；父工厂不会自动运行。
 - `total` 接受 `Position`，也接受具有 `x`、`y` 的 `Marker` 和多出 `extra` 字段的对象字面量。
 - `{ x, y }` 使用当前局部变量；`label` 的参数直接写为对象字段合同 `{ name: string }`。
 - `Defaults()` 使用字段初值生成的零参数工厂；`Defaults.new(9)` 使用显式重载。

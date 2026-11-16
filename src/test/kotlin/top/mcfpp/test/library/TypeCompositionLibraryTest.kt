@@ -212,6 +212,14 @@ class TypeCompositionLibraryTest {
                     var x: int = 2
                     new(x: int) { return { x } }
                 }
+                data Derived: Value {
+                    var extra: int
+                    new(x: int, extra: int) {
+                        var parent = Value.new(x)
+                        return { x: parent.x, extra }
+                    }
+                    func total(): int { return this.x + this.extra }
+                }
                 data Generic<T> {
                     var value: T
                     new(value: T) { return { value } }
@@ -227,12 +235,12 @@ class TypeCompositionLibraryTest {
             val file = assertNotNull(scope.functions.getValue("main").single().declarationFile)
             val identity = LibraryIdentity(PackageKey("fixture:factory-library", "1"), "main")
             LibraryExport.write(OwnedLibrarySelection(identity, LibraryTarget("26.3"), emptyList(), listOf(file),
-                templates = listOf(scope.template.getValue("Empty"), scope.template.getValue("Value"), scope.template.getValue("Constants"),
+                templates = listOf(scope.template.getValue("Empty"), scope.template.getValue("Value"), scope.template.getValue("Derived"), scope.template.getValue("Constants"),
                     assertNotNull(scope.getTemplate("Generic")), scope.template.getValue("ItValue"))), path)
             val model = LibraryModelCodec(listOf(CompoundCodec)).decode(Files.readAllBytes(path))
             val factories = model.declarations.declarations.filterIsInstance<FunctionDeclaration>()
                 .filter { it.common.flags and DeclarationFlags.FACTORY != 0L }
-            assertEquals(5, factories.size)
+            assertEquals(6, factories.size)
             assertEquals(2, factories.count { it.common.flags and DeclarationFlags.IMPLICIT_FACTORY != 0L })
             assertTrue(factories.all { it.common.flags and DeclarationFlags.STATIC != 0L })
             val ratio = model.declarations.declarations.filterIsInstance<ValueDeclaration>().single { it.common.name == "ratio" }
@@ -249,6 +257,12 @@ class TypeCompositionLibraryTest {
                 assertEquals(2, overloads.size)
                 assertEquals(1, overloads.count { it.isImplicit })
                 assertTrue(overloads.all { it.isStatic && it.returnType.typeId == restored.template.getValue("Value").getType().typeId })
+                val derived = restored.template.getValue("Derived")
+                val derivedFactory = derived.factories.single()
+                assertFalse(derivedFactory.isImplicit)
+                assertEquals(2, derivedFactory.normalParams.size)
+                assertEquals(derived.getType().typeId, derivedFactory.returnType.typeId)
+                assertFalse(derived.scope.functions.getValue("total").single().isStatic)
                 val generic = assertIs<GenericDataTemplate>(restored.getTemplate("Generic"))
                 val specialized = assertNotNull(generic.compile(listOf(MCFPPTypeVar(MCFPPBaseType.Int))))
                 val factory = specialized.factories.single()
@@ -268,6 +282,10 @@ class TypeCompositionLibraryTest {
                         external stored = objectValue.it
                         var genericValue = Generic<int>(9)
                         external genericStored = genericValue.value
+                        var derivedValue = Derived.new(11, 4)
+                        external derivedX = derivedValue.x
+                        external derivedExtra = derivedValue.extra
+                        external derivedTotal = derivedValue.total()
                     }
                 """.trimIndent(), arrayOf("-ignoreStdLib"), version = "26.3", afterFileCreated = {
                     session.stage(path, identity)
@@ -282,6 +300,9 @@ class TypeCompositionLibraryTest {
                 val machine = ScoreCommandExecutor(main.commands.analyzeAll(), functions)
                 assertEquals(7, machine.read(assertIs<MCInt>(main.scope.getVar("stored"))))
                 assertEquals(9, machine.read(assertIs<MCInt>(main.scope.getVar("genericStored"))))
+                assertEquals(11, machine.read(assertIs<MCInt>(main.scope.getVar("derivedX"))))
+                assertEquals(4, machine.read(assertIs<MCInt>(main.scope.getVar("derivedExtra"))))
+                assertEquals(15, machine.read(assertIs<MCInt>(main.scope.getVar("derivedTotal"))))
             }
         } finally {
             MCFPPFile.currFile = null

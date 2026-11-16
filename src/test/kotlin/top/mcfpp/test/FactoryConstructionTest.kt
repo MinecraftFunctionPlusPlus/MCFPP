@@ -8,6 +8,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
+import top.mcfpp.test.util.compilerDiagnostics
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -121,7 +122,7 @@ class FactoryConstructionTest {
         """)
     }
 
-    @Test fun qualifiedParentFactoryBindsOnlyItsExplicitFirstParameter() {
+    @Test fun typeFactoryUsesExplicitArgumentsAndReturnsIndependentValues() {
         val main = compile("""
             data Parent {
                 var value: int
@@ -129,7 +130,7 @@ class FactoryConstructionTest {
             }
             data Child: Parent {
                 new(value: int) { return { value } }
-                func copy(): Parent { return this.Parent.new(2) }
+                func copy(): Parent { return Parent.new(this, 2) }
             }
             data Other {
                 var value: int
@@ -140,17 +141,18 @@ class FactoryConstructionTest {
                 var copied = child.copy()
                 var other = Other(7)
                 var explicit = Parent.new(other, 1)
-                external result = copied.value * 10 + explicit.value
+                copied.value = 9
+                external result = child.value * 100 + copied.value * 10 + explicit.value
             }
         """)!!
-        assertEquals(68, execute(main).read(main.scope.getVar("result") as MCInt))
+        assertEquals(498, execute(main).read(main.scope.getVar("result") as MCInt))
         assertEquals(1, GlobalScope.getTemplate("default.test", "Child")!!.factories.size)
         compile("""
             data Parent { var value: int; new(source: { value: int }) { return { value: source.value } } }
             data Other {
                 var value: int
                 new(value: int) { return { value } }
-                func copy(): Parent { return this.Parent.new() }
+                func copy(): Parent { return Parent.new() }
             }
             func main() { var other = Other(7); var copied = other.copy() }
         """, valid = false)
@@ -199,6 +201,21 @@ class FactoryConstructionTest {
             val factory = GlobalScope.getTemplate("default.test", "Box")!!.factories.single()
             assertFalse(factory.bodyCompiled)
             assertTrue(main.commands.analyzeAll().none { it == "function ${factory.namespaceID}" })
+        }
+    }
+
+    @Test fun factoriesMustBeCalledThroughTheirTypeNamespace() {
+        for (call in listOf("box.new(2)", "var copied = box.new(2)")) {
+            val messages = compilerDiagnostics {
+                compile("""
+                    data Box { var value: int; new(value: int) { return { value } } }
+                    func main() {
+                        var box = Box.new(1)
+                        $call
+                    }
+                """, valid = false)
+            }.joinToString("\n")
+            assertTrue("type namespace" in messages, messages)
         }
     }
 }
